@@ -1,0 +1,21 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run",
+			"type": "shell",
+			"command": "godot",
+			"args": [
+				"--path",
+				"${workspaceFolder}/src",
+				"--verbose"
+			],
+			"problemMatcher": [],
+			"isBackground": true,
+			"presentation": {
+				"reveal": "never",
+				"panel": "shared"
+			}
+		}
+	]
+}

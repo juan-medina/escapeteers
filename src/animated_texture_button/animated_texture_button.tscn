@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://coissva0v8p6o"]
+
+[ext_resource type="Script" uid="uid://b4lonxb58dejb" path="res://animated_texture_button/animated_texture_button.gd" id="1_1b368"]
+
+[node name="AnimatedTextureButton" type="TextureButton" unique_id=1813095345]
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_1b368")
+
+[connection signal="button_down" from="." to="." method="_on_button_down"]
+[connection signal="button_up" from="." to="." method="_on_button_up"]
+[connection signal="mouse_entered" from="." to="." method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="." to="." method="_on_mouse_exited"]

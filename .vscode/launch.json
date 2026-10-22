@@ -1,0 +1,25 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Godot: Debug Project",
+			"type": "godot",
+			"request": "launch",
+			"project": "${workspaceFolder}/src",
+			"scene": "main"
+		},
+		{
+			"name": "Godot: Debug Project (diagnosis)",
+			"type": "godot",
+			"request": "launch",
+			"project": "${workspaceFolder}/src",
+			"scene": "main",
+			"debug_collisions": true,
+			"debug_paths": true,
+			"debug_navigation": true,
+			"debug_avoidance": true,
+			"debug_stringnames": true,
+			"additional_options": "--verbose"
+		}
+	]
+}

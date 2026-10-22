@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: 2026 Juan Medina
+# SPDX-License-Identifier: MIT
+
+# Godot
+.godot/
+android/
+*.translation
+export_credentials.cfg
+
+# Build output
+bin/
+obj/
+
+# OS / Temp
+.DS_Store
+Thumbs.db
+desktop.ini
+~*
+*~
+*.tmp
+
+# Python
+__pycache__/
+*.py[cod]
+/.venv/
+
+# IDE / Editor
+.idea/
+.vs/
+*.user

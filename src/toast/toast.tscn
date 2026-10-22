@@ -1,0 +1,31 @@
+[gd_scene format=3 uid="uid://x15twmexa4aj"]
+
+[ext_resource type="Script" uid="uid://dscxrs0fqavhj" path="res://toast/toast.gd" id="1_a5brq"]
+
+[node name="Toast" type="CanvasLayer" unique_id=1279799128]
+process_mode = 3
+layer = 99999
+visible = false
+script = ExtResource("1_a5brq")
+
+[node name="Container" type="MarginContainer" parent="." unique_id=1906005369]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -40.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="Message" type="Button" parent="Container" unique_id=1760059298]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
+mouse_default_cursor_shape = 2
+text = "This is a long text for a message"
+
+[connection signal="button_down" from="Container/Message" to="." method="_on_message_button_down"]
+[connection signal="mouse_entered" from="Container/Message" to="." method="_on_message_mouse_entered"]
+[connection signal="mouse_exited" from="Container/Message" to="." method="_on_message_mouse_exited"]

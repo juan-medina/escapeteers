@@ -1,0 +1,31 @@
+[gd_scene format=3 uid="uid://itjf2dspp1me"]
+
+[ext_resource type="Material" uid="uid://cxr7ihe8nn4hv" path="res://addons/crt_shader/ShaderScreen.material" id="1_82d1s"]
+[ext_resource type="Script" uid="uid://cbd3k7nsntf28" path="res://crt/crt.gd" id="1_wfa4q"]
+[ext_resource type="Script" uid="uid://c3hydu5bw0ow1" path="res://addons/crt_shader/crt_screen.gd" id="2_wfa4q"]
+[ext_resource type="Texture2D" uid="uid://b7rrbl58e5lm6" path="res://addons/crt_shader/CRTFrame.png" id="4_oe3vo"]
+
+[node name="CRT" type="CanvasLayer" unique_id=755797995]
+layer = 100000
+script = ExtResource("1_wfa4q")
+
+[node name="CRTScreen" type="ColorRect" parent="." unique_id=353457030]
+material = ExtResource("1_82d1s")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_wfa4q")
+metadata/_custom_type_script = "uid://c3hydu5bw0ow1"
+
+[node name="Border" type="TextureRect" parent="." unique_id=1121833187]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_oe3vo")
+expand_mode = 1
