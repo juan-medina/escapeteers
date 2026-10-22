@@ -5,7 +5,8 @@ class_name Game
 extends Node2D
 
 const SPREAD_MIN_DISTANCE: float = 150.0
-const SPREAD_MAX_DISTANCE: float = 300.0
+const SPREAD_MAX_DISTANCE: float = 200.0
+const MAX_CHARACTERS: int = 80
 
 const _BACKGROUND_SIZE: float = 2000.0
 const _PATTERN_SIZE: int = 64
@@ -148,6 +149,13 @@ func _spawn_characters() -> void:
 
 		if not found:
 			active_points.remove_at(rand_idx)
+
+	if MAX_CHARACTERS > 0 and spawn_points.size() > MAX_CHARACTERS:
+		var seed_point: Vector2 = spawn_points[0]
+		spawn_points.remove_at(0)
+		spawn_points.shuffle()
+		spawn_points.resize(MAX_CHARACTERS - 1)
+		spawn_points.insert(0, seed_point)
 
 	var hero_deck: Array[PackedScene] = []
 
