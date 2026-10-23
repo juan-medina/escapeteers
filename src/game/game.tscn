@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://by10witwjhger" path="res://game/game.gd" id="1_game"]
 [ext_resource type="PackedScene" uid="uid://dtd3cdyi2vtjn" path="res://map/map.tscn" id="2_map"]
 [ext_resource type="PackedScene" uid="uid://q2a2v8w482px" path="res://character/heroes/soldier/soldier.tscn" id="3_soldier"]
+[ext_resource type="PackedScene" uid="uid://bv83mep1xq4k7" path="res://fog/fog.tscn" id="4_fog"]
 
 [node name="Game" type="Node2D" unique_id=676083646]
 script = ExtResource("1_game")
@@ -16,3 +17,5 @@ y_sort_enabled = true
 [node name="Character" parent="Characters" unique_id=1258212986 instance=ExtResource("3_soldier")]
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=520830183]
+
+[node name="Fog" parent="." instance=ExtResource("4_fog")]

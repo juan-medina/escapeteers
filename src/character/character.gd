@@ -13,11 +13,13 @@ const CRESCENT_BLEND_SPEED: float = 5.0
 
 const _ANIM_IDLE: StringName = &"idle"
 const _ANIM_RUN: StringName = &"run"
+const PLAYER_LIGHT_TEXTURE: Texture2D = preload("res://map/light_texture.tres")
 
 @export var is_player: bool = false:
 	set(value):
 		is_player = value
 		_update_collision_mode()
+		_update_player_light()
 @export var speed: float = 100.0
 
 var leader: Character = null
@@ -70,6 +72,7 @@ var sprite_frames: SpriteFrames:
 var _elapsed_time: float = 0.0
 var _pos_history: Array[Vector2] = []
 var _time_history: Array[float] = []
+var _player_light: PointLight2D = null
 
 @onready var _animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var _collision_shape: CollisionShape2D = $CollisionShape2D
@@ -137,11 +140,15 @@ func update_visuals(movement_vector: Vector2) -> void:
 func _ready() -> void:
 	play(_ANIM_IDLE)
 	_update_collision_mode()
+	_update_player_light()
 
 
 func _process(delta: float) -> void:
 	if not is_player:
 		return
+
+	if _player_light != null:
+		_player_light.energy = 0.65 + sin(_elapsed_time * 3.0) * 0.02
 
 	var input_vector: Vector2 = Input.get_vector(&"left", &"right", &"up", &"down")
 
@@ -164,6 +171,25 @@ func _process(delta: float) -> void:
 		move_and_slide()
 		if animation != _ANIM_IDLE:
 			play(_ANIM_IDLE)
+
+
+func _update_player_light() -> void:
+	if not is_inside_tree():
+		return
+
+	if is_player:
+		if _player_light == null:
+			_player_light = PointLight2D.new()
+			_player_light.name = &"PlayerLight"
+			_player_light.texture = PLAYER_LIGHT_TEXTURE
+			_player_light.color = Color(1.0, 0.88, 0.70, 1.0)
+			_player_light.energy = 0.65
+			_player_light.texture_scale = 1.0
+			add_child(_player_light)
+	else:
+		if _player_light != null:
+			_player_light.queue_free()
+			_player_light = null
 
 
 func _update_collision_mode() -> void:

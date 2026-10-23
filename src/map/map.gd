@@ -27,8 +27,8 @@ const WALL_RIGHT_VARIANTS: Array[Vector2i] = [Vector2i(7, 14), Vector2i(7, 15)]
 const TORCH_TOP: Vector2i = Vector2i(12, 20)
 const TORCH_SIDE: Vector2i = Vector2i(12, 19)
 const TORCH_RIGHT_ALT_ID: int = 1
-const TORCH_SPAWN_CHANCE: float = 0.2
-const MIN_TORCH_DISTANCE_SQUARED: int = 9
+const TORCH_SPAWN_CHANCE: float = 0.1
+const MIN_TORCH_DISTANCE_SQUARED: int = 36
 
 const PROP_BARREL: Vector2i = Vector2i(4, 28)
 const PROP_BOX: Vector2i = Vector2i(4, 29)
@@ -60,6 +60,7 @@ var _walkable_cells: Dictionary[Vector2i, bool] = {}
 @onready var _floor: TileMapLayer = $Floor
 @onready var _walls: TileMapLayer = $Walls
 @onready var _decorations: TileMapLayer = $Decorations
+@onready var _lights: Node2D = $Lights
 
 
 func _ready() -> void:
@@ -139,6 +140,7 @@ func generate_map() -> void:
 	_floor.clear()
 	_walls.clear()
 	_decorations.clear()
+	_clear_lights()
 	companion_rooms.clear()
 
 	var cells: Dictionary[Vector2i, bool] = {}
@@ -471,8 +473,17 @@ func _get_random_floor_atlas_coords() -> Vector2i:
 func _create_decorations(cells: Dictionary[Vector2i, bool]) -> void:
 	var placed_torches: Array[Vector2i] = []
 	_place_wall_torches(placed_torches)
+	_ensure_room_torches(placed_torches)
 	_place_room_props(cells)
 	_place_corridor_bones(cells)
+	_spawn_torch_lights(placed_torches)
+
+
+func _clear_lights() -> void:
+	if _lights == null:
+		return
+	for child: Node in _lights.get_children():
+		child.queue_free()
 
 
 func _place_wall_torches(placed_torches: Array[Vector2i]) -> void:
@@ -517,6 +528,59 @@ func _is_far_from_torches(candidate: Vector2i, placed_torches: Array[Vector2i]) 
 		if dist_sq < MIN_TORCH_DISTANCE_SQUARED:
 			return false
 	return true
+
+
+func _ensure_room_torches(placed_torches: Array[Vector2i]) -> void:
+	var all_rooms: Array[Rect2i] = [hero_room]
+	all_rooms.append_array(companion_rooms)
+
+	for room: Rect2i in all_rooms:
+		var top_y: int = room.position.y - 1
+		var north_torch_count: int = 0
+		for x: int in range(room.position.x, room.position.x + room.size.x):
+			if placed_torches.has(Vector2i(x, top_y)):
+				north_torch_count += 1
+
+		var target_count: int = 2 if room.size.x >= 14 else 1
+		if north_torch_count < target_count:
+			var candidate_x_offsets: Array[float] = []
+			if target_count == 1:
+				candidate_x_offsets.append(0.5)
+			else:
+				candidate_x_offsets.append(0.33)
+				candidate_x_offsets.append(0.67)
+			for offset: float in candidate_x_offsets:
+				var target_x: int = room.position.x + int(float(room.size.x) * offset)
+				var candidate: Vector2i = Vector2i(target_x, top_y)
+				if (
+					_walls.get_cell_atlas_coords(candidate) in WALL_TOP_VARIANTS
+					and not placed_torches.has(candidate)
+					and _is_far_from_torches(candidate, placed_torches)
+				):
+					_decorations.set_cell(candidate, TILE_SET_SOURCE_ID, TORCH_TOP)
+					placed_torches.append(candidate)
+				else:
+					for dx: int in range(-2, 3):
+						var alt_candidate: Vector2i = Vector2i(target_x + dx, top_y)
+						if (
+							alt_candidate.x >= room.position.x
+							and alt_candidate.x < room.position.x + room.size.x
+							and _walls.get_cell_atlas_coords(alt_candidate) in WALL_TOP_VARIANTS
+							and not placed_torches.has(alt_candidate)
+							and _is_far_from_torches(alt_candidate, placed_torches)
+						):
+							_decorations.set_cell(alt_candidate, TILE_SET_SOURCE_ID, TORCH_TOP)
+							placed_torches.append(alt_candidate)
+							break
+
+
+func _spawn_torch_lights(placed_torches: Array[Vector2i]) -> void:
+	if _lights == null:
+		return
+	for cell: Vector2i in placed_torches:
+		var torch_light: TorchLight = TorchLight.new()
+		torch_light.position = _decorations.map_to_local(cell)
+		_lights.add_child(torch_light)
 
 
 func _is_corner_cell(cell: Vector2i) -> bool:

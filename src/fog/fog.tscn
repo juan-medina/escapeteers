@@ -1,0 +1,22 @@
+[gd_scene format=3 uid="uid://bv83mep1xq4k7"]
+
+[ext_resource type="Shader" path="res://fog/fog.gdshader" id="1_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_fog"]
+shader = ExtResource("1_shader")
+shader_parameter/fog_color = Color(0.03, 0.03, 0.05, 1)
+shader_parameter/inner_radius = 0.22
+shader_parameter/outer_radius = 0.58
+shader_parameter/max_density = 0.98
+
+[node name="Fog" type="CanvasLayer" unique_id=983174251]
+layer = 5
+
+[node name="FogRect" type="ColorRect" parent="." unique_id=983174252]
+material = SubResource("ShaderMaterial_fog")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
