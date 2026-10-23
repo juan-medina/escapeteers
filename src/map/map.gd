@@ -177,6 +177,9 @@ func _setup_navigation(cells: Dictionary[Vector2i, bool]) -> void:
 	_walkable_cells.clear()
 	for c: Vector2i in cells:
 		if _walls.get_cell_source_id(c) == -1:
+			var decor_tile: Vector2i = _decorations.get_cell_atlas_coords(c)
+			if decor_tile == PROP_BARREL or decor_tile == PROP_BOX:
+				continue
 			_walkable_cells[c] = true
 
 	if _walkable_cells.is_empty():
