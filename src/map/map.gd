@@ -38,6 +38,9 @@ const MAX_PLACEMENT_ATTEMPTS: int = 1500
 var hero_room: Rect2i = Rect2i()
 var companion_rooms: Array[Rect2i] = []
 
+var _astar: AStarGrid2D = AStarGrid2D.new()
+var _walkable_cells: Dictionary[Vector2i, bool] = {}
+
 @onready var _floor: TileMapLayer = $Floor
 @onready var _walls: TileMapLayer = $Walls
 
@@ -67,6 +70,51 @@ func get_companion_spawn_positions() -> Array[Vector2]:
 	return positions
 
 
+func is_cell_walkable(cell: Vector2i) -> bool:
+	return _walkable_cells.has(cell)
+
+
+func clamp_to_walkable(world_pos: Vector2) -> Vector2:
+	var cell: Vector2i = _floor.local_to_map(world_pos)
+	if is_cell_walkable(cell):
+		return world_pos
+	var closest_cell: Vector2i = _find_closest_walkable_cell(cell)
+	return _floor.map_to_local(closest_cell)
+
+
+func get_navigation_path(from_pos: Vector2, to_pos: Vector2) -> PackedVector2Array:
+	if _astar == null:
+		return PackedVector2Array()
+
+	var from_cell: Vector2i = _floor.local_to_map(from_pos)
+	var to_cell: Vector2i = _floor.local_to_map(to_pos)
+
+	if not _astar.is_in_boundsv(from_cell) or not _astar.is_in_boundsv(to_cell):
+		return PackedVector2Array()
+
+	if _astar.is_point_solid(from_cell):
+		from_cell = _find_closest_walkable_cell(from_cell)
+
+	if _astar.is_point_solid(to_cell):
+		to_cell = _find_closest_walkable_cell(to_cell)
+
+	if from_cell == to_cell:
+		return PackedVector2Array([to_pos])
+
+	var cell_path: Array[Vector2i] = _astar.get_id_path(from_cell, to_cell)
+	if cell_path.is_empty():
+		return PackedVector2Array()
+
+	var world_path: PackedVector2Array = PackedVector2Array()
+	for cell: Vector2i in cell_path:
+		world_path.append(_floor.map_to_local(cell))
+
+	if not world_path.is_empty():
+		world_path[world_path.size() - 1] = clamp_to_walkable(to_pos)
+
+	return world_path
+
+
 func generate_map() -> void:
 	_floor.clear()
 	_walls.clear()
@@ -84,6 +132,56 @@ func generate_map() -> void:
 		_floor.set_cell(cell, TILE_SET_SOURCE_ID, atlas_coords)
 
 	_create_all_walls(cells)
+	_setup_navigation(cells)
+
+
+func _find_closest_walkable_cell(target_cell: Vector2i) -> Vector2i:
+	if is_cell_walkable(target_cell):
+		return target_cell
+
+	for r: int in range(1, 6):
+		for dx: int in range(-r, r + 1):
+			for dy: int in range(-r, r + 1):
+				if absi(dx) != r and absi(dy) != r:
+					continue
+				var candidate: Vector2i = target_cell + Vector2i(dx, dy)
+				if is_cell_walkable(candidate):
+					return candidate
+
+	return target_cell
+
+
+func _setup_navigation(cells: Dictionary[Vector2i, bool]) -> void:
+	_walkable_cells.clear()
+	for c: Vector2i in cells:
+		if _walls.get_cell_source_id(c) == -1:
+			_walkable_cells[c] = true
+
+	if _walkable_cells.is_empty():
+		return
+
+	var min_c: Vector2i = Vector2i(2147483647, 2147483647)
+	var max_c: Vector2i = Vector2i(-2147483648, -2147483648)
+	for c: Vector2i in _walkable_cells:
+		min_c.x = mini(min_c.x, c.x)
+		min_c.y = mini(min_c.y, c.y)
+		max_c.x = maxi(max_c.x, c.x)
+		max_c.y = maxi(max_c.y, c.y)
+
+	var margin: int = 4
+	var region_rect: Rect2i = Rect2i(min_c - Vector2i(margin, margin), (max_c - min_c) + Vector2i(margin * 2, margin * 2))
+
+	_astar.region = region_rect
+	_astar.cell_size = Vector2(16, 16)
+	_astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_AT_LEAST_ONE_WALKABLE
+	_astar.default_compute_heuristic = AStarGrid2D.HEURISTIC_OCTILE
+	_astar.default_estimate_heuristic = AStarGrid2D.HEURISTIC_OCTILE
+	_astar.jumping_enabled = true
+	_astar.update()
+
+	_astar.fill_solid_region(region_rect, true)
+	for c: Vector2i in _walkable_cells:
+		_astar.set_point_solid(c, false)
 
 
 func _create_hero_room(cells: Dictionary[Vector2i, bool]) -> void:

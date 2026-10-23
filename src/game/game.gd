@@ -91,7 +91,9 @@ func _spawn_characters() -> void:
 
 func _update_followers(delta: float) -> void:
 	for i: int in range(1, _squad.size()):
-		_squad[i].follow_leader(delta, _squad)
+		var follower: Character = _squad[i]
+		if follower.squad_member != null:
+			follower.squad_member.update(follower, delta, _squad, _map)
 
 
 func _check_recruitment() -> void:
@@ -104,6 +106,7 @@ func _check_recruitment() -> void:
 			if candidate.is_touching(member):
 				_unrecruited_characters.remove_at(i)
 				candidate.leader = _character
+				candidate.squad_member = SquadMember.new()
 				_squad.append(candidate)
 				recruited_any = true
 				break
@@ -117,7 +120,9 @@ func _check_recruitment() -> void:
 func _rebalance_escort_slots() -> void:
 	var follower_count: int = _squad.size() - 1
 	for i: int in range(1, _squad.size()):
-		_squad[i].assign_escort_slot(i - 1, follower_count)
+		var follower: Character = _squad[i]
+		if follower.squad_member != null:
+			follower.squad_member.assign_escort_slot(i - 1, follower_count)
 
 
 func _on_window_resized() -> void:
