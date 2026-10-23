@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://derhacq4fqbxt"]
 
 [ext_resource type="Script" uid="uid://bpjqaxhivbr7m" path="res://character/character.gd" id="1_yf0e5"]
+[ext_resource type="Script" path="res://character/ground_indicator.gd" id="2_ind"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_char"]
 radius = 5.0
@@ -15,3 +16,8 @@ script = ExtResource("1_yf0e5")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1756149742]
 position = Vector2(0, 3)
 shape = SubResource("CircleShape2D_char")
+
+[node name="GroundIndicator" type="Node2D" parent="." unique_id=987123456]
+position = Vector2(0, 4)
+script = ExtResource("2_ind")
+

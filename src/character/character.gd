@@ -20,10 +20,14 @@ const PLAYER_LIGHT_TEXTURE: Texture2D = preload("res://map/light_texture.tres")
 		is_player = value
 		_update_collision_mode()
 		_update_player_light()
+		_update_ground_indicator()
 @export var speed: float = 100.0
 
 var leader: Character = null
-var squad_member: SquadMember = null
+var squad_member: SquadMember = null:
+	set(value):
+		squad_member = value
+		_update_ground_indicator()
 var is_moving: bool = false
 var move_direction: Vector2 = Vector2.RIGHT
 var crescent_blend: float = 0.0
@@ -76,6 +80,7 @@ var _player_light: PointLight2D = null
 
 @onready var _animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var _collision_shape: CollisionShape2D = $CollisionShape2D
+@onready var _ground_indicator: GroundIndicator = $GroundIndicator
 
 
 static func instantiate() -> Character:
@@ -141,6 +146,7 @@ func _ready() -> void:
 	play(_ANIM_IDLE)
 	_update_collision_mode()
 	_update_player_light()
+	_update_ground_indicator()
 
 
 func _process(delta: float) -> void:
@@ -158,6 +164,8 @@ func _process(delta: float) -> void:
 		crescent_blend = move_toward(crescent_blend, 1.0, CRESCENT_BLEND_SPEED * delta)
 		velocity = input_vector * speed
 		move_and_slide()
+		if _ground_indicator != null:
+			_ground_indicator.facing_direction = move_direction
 		if input_vector.x > 0.05:
 			flip_h = false
 		elif input_vector.x < -0.05:
@@ -209,3 +217,11 @@ func _get_sprite() -> AnimatedSprite2D:
 	if _animated_sprite != null:
 		return _animated_sprite
 	return get_node_or_null(^"AnimatedSprite2D") as AnimatedSprite2D
+
+
+func _update_ground_indicator() -> void:
+	if _ground_indicator == null:
+		return
+	_ground_indicator.is_player = is_player
+	_ground_indicator.is_recruited = (is_player or squad_member != null)
+	_ground_indicator.facing_direction = move_direction
