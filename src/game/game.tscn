@@ -9,6 +9,10 @@ script = ExtResource("1_game")
 
 [node name="Map" parent="." instance=ExtResource("2_map")]
 
-[node name="Character" parent="." unique_id=1258212986 instance=ExtResource("3_soldier")]
+[node name="Characters" type="Node2D" parent="." unique_id=1481928371]
+z_index = 1
+y_sort_enabled = true
+
+[node name="Character" parent="Characters" unique_id=1258212986 instance=ExtResource("3_soldier")]
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=520830183]

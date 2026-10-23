@@ -21,7 +21,8 @@ var _squad: Array[Character] = []
 var _unrecruited_characters: Array[Character] = []
 
 @onready var _camera: Camera2D = $Camera2D
-@onready var _character: Character = $Character
+@onready var _characters: Node2D = $Characters
+@onready var _character: Character = $Characters/Character
 @onready var _map: Map = $Map
 
 
@@ -85,7 +86,7 @@ func _spawn_characters() -> void:
 		ch.flip_h = randf() > 0.5
 		ch.frame = randi() % 6
 		ch.frame_progress = randf()
-		add_child(ch)
+		_characters.add_child(ch)
 		_unrecruited_characters.append(ch)
 
 
