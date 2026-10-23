@@ -1,11 +1,14 @@
 [gd_scene format=3 uid="uid://del6uukmi7u2m"]
 
 [ext_resource type="Script" uid="uid://by10witwjhger" path="res://game/game.gd" id="1_game"]
-[ext_resource type="PackedScene" uid="uid://q2a2v8w482px" path="res://character/heroes/soldier/soldier.tscn" id="2_soldier"]
+[ext_resource type="PackedScene" uid="uid://dtd3cdyi2vtjn" path="res://map/map.tscn" id="2_map"]
+[ext_resource type="PackedScene" uid="uid://q2a2v8w482px" path="res://character/heroes/soldier/soldier.tscn" id="3_soldier"]
 
 [node name="Game" type="Node2D" unique_id=676083646]
 script = ExtResource("1_game")
 
-[node name="Character" parent="." unique_id=1258212986 instance=ExtResource("2_soldier")]
+[node name="Map" parent="." instance=ExtResource("2_map")]
+
+[node name="Character" parent="." unique_id=1258212986 instance=ExtResource("3_soldier")]
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=520830183]

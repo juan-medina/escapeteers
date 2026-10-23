@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://dtd3cdyi2vtjn"]
+
+[ext_resource type="Script" uid="uid://ckmbsnqsr8kd2" path="res://map/map.gd" id="1_hgrid"]
+[ext_resource type="TileSet" uid="uid://dynugnietdfql" path="res://map/dungeon.tres" id="2_a0dt8"]
+
+[node name="Map" type="Node2D" unique_id=602158425]
+y_sort_enabled = true
+script = ExtResource("1_hgrid")
+
+[node name="Floor" type="TileMapLayer" parent="." unique_id=448547422]
+z_index = -1
+tile_set = ExtResource("2_a0dt8")
+
+[node name="Walls" type="TileMapLayer" parent="." unique_id=1888945113]
+y_sort_enabled = true
+tile_set = ExtResource("2_a0dt8")

@@ -4,19 +4,7 @@
 class_name Game
 extends Node2D
 
-const SPREAD_MIN_DISTANCE: float = 150.0
-const SPREAD_MAX_DISTANCE: float = 200.0
 const MAX_CHARACTERS: int = 80
-
-const _BACKGROUND_SIZE: float = 2000.0
-const _PATTERN_SIZE: int = 64
-const _CELL_SIZE: int = 32
-const _COLOR_DARK: Color = Color(0.12, 0.14, 0.18, 1.0)
-const _COLOR_LIGHT: Color = Color(0.16, 0.19, 0.24, 1.0)
-const _COLOR_GRID: Color = Color(0.24, 0.28, 0.35, 1.0)
-
-const _MAP_MARGIN: float = 100.0
-const _K_POISSON_ATTEMPTS: int = 30
 
 const HERO_SCENES: Array[PackedScene] = [
 	preload("res://character/heroes/archer/archer.tscn"),
@@ -34,6 +22,7 @@ var _unrecruited_characters: Array[Character] = []
 
 @onready var _camera: Camera2D = $Camera2D
 @onready var _character: Character = $Character
+@onready var _map: Map = $Map
 
 
 func _ready() -> void:
@@ -42,12 +31,12 @@ func _ready() -> void:
 	process_priority = 1
 	y_sort_enabled = true
 
+	_character.position = _map.get_hero_spawn_position()
+	_camera.position = _character.position
 	_character.y_sort_enabled = true
 	_character.is_player = true
 	_character.record_step(0.0)
 	_squad.append(_character)
-
-	_create_background()
 
 	await _spawn_characters()
 
@@ -70,92 +59,11 @@ func remove_member(character: Character) -> void:
 	_rebalance_escort_slots()
 
 
-func _create_background() -> void:
-	var img: Image = Image.create(_PATTERN_SIZE, _PATTERN_SIZE, false, Image.FORMAT_RGBA8)
-	for y: int in _PATTERN_SIZE:
-		for x: int in _PATTERN_SIZE:
-			if x == 0 or y == 0:
-				img.set_pixel(x, y, _COLOR_GRID)
-			elif (x < _CELL_SIZE and y < _CELL_SIZE) or (x >= _CELL_SIZE and y >= _CELL_SIZE):
-				img.set_pixel(x, y, _COLOR_DARK)
-			else:
-				img.set_pixel(x, y, _COLOR_LIGHT)
-
-	var texture: ImageTexture = ImageTexture.create_from_image(img)
-	var background: Sprite2D = Sprite2D.new()
-	background.name = &"Background"
-	background.texture = texture
-	background.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-	background.region_enabled = true
-	background.region_rect = Rect2(-_BACKGROUND_SIZE / 2.0, -_BACKGROUND_SIZE / 2.0, _BACKGROUND_SIZE, _BACKGROUND_SIZE)
-	background.z_index = -1
-	add_child(background)
-	move_child(background, 0)
-
-
 func _spawn_characters() -> void:
-	var half_size: float = (_BACKGROUND_SIZE / 2.0) - _MAP_MARGIN
-	var cell_size: float = SPREAD_MIN_DISTANCE / sqrt(2.0)
-	var grid: Dictionary = {}
-	var active_points: Array[Vector2] = []
-	var spawn_points: Array[Vector2] = []
-
-	# Reserve player position at (0, 0) in grid so no character spawns on top of player.
-	var player_cell: Vector2i = Vector2i(floori(0.0 / cell_size), floori(0.0 / cell_size))
-	grid[player_cell] = Vector2.ZERO
-
-	# Seed point within spread range of player.
-	var seed_angle: float = randf() * TAU
-	var seed_dist: float = randf_range(SPREAD_MIN_DISTANCE, SPREAD_MAX_DISTANCE)
-	var seed_pt: Vector2 = Vector2(cos(seed_angle), sin(seed_angle)) * seed_dist
-	var seed_cell: Vector2i = Vector2i(floori(seed_pt.x / cell_size), floori(seed_pt.y / cell_size))
-	grid[seed_cell] = seed_pt
-	active_points.append(seed_pt)
-	spawn_points.append(seed_pt)
-
-	while not active_points.is_empty():
-		var rand_idx: int = randi() % active_points.size()
-		var pt: Vector2 = active_points[rand_idx]
-		var found: bool = false
-
-		for attempt: int in _K_POISSON_ATTEMPTS:
-			var angle: float = randf() * TAU
-			var dist: float = randf_range(SPREAD_MIN_DISTANCE, SPREAD_MAX_DISTANCE)
-			var candidate: Vector2 = pt + Vector2(cos(angle), sin(angle)) * dist
-
-			if candidate.x < -half_size or candidate.x > half_size or candidate.y < -half_size or candidate.y > half_size:
-				continue
-
-			var cell: Vector2i = Vector2i(floori(candidate.x / cell_size), floori(candidate.y / cell_size))
-			var too_close: bool = false
-
-			for dy: int in range(-2, 3):
-				for dx: int in range(-2, 3):
-					var neighbor_cell: Vector2i = cell + Vector2i(dx, dy)
-					if grid.has(neighbor_cell):
-						var other: Vector2 = grid[neighbor_cell]
-						if candidate.distance_to(other) < SPREAD_MIN_DISTANCE:
-							too_close = true
-							break
-				if too_close:
-					break
-
-			if not too_close:
-				grid[cell] = candidate
-				active_points.append(candidate)
-				spawn_points.append(candidate)
-				found = true
-				break
-
-		if not found:
-			active_points.remove_at(rand_idx)
+	var spawn_points: Array[Vector2] = _map.get_companion_spawn_positions()
 
 	if MAX_CHARACTERS > 0 and spawn_points.size() > MAX_CHARACTERS:
-		var seed_point: Vector2 = spawn_points[0]
-		spawn_points.remove_at(0)
-		spawn_points.shuffle()
-		spawn_points.resize(MAX_CHARACTERS - 1)
-		spawn_points.insert(0, seed_point)
+		spawn_points.resize(MAX_CHARACTERS)
 
 	var hero_deck: Array[PackedScene] = []
 
