@@ -31,7 +31,10 @@ const CRESCENT_BLEND_SPEED: float = 5.0
 const _ANIM_IDLE: StringName = &"idle"
 const _ANIM_RUN: StringName = &"run"
 
-@export var is_player: bool = false
+@export var is_player: bool = false:
+	set(value):
+		is_player = value
+		_update_collision_mode()
 @export var speed: float = 100.0
 
 var leader: Character = null
@@ -88,7 +91,7 @@ var _pos_history: Array[Vector2] = []
 var _time_history: Array[float] = []
 
 @onready var _animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
-# @onready var _collision_shape: CollisionShape2D = $CollisionShape2D
+@onready var _collision_shape: CollisionShape2D = $CollisionShape2D
 
 
 static func instantiate() -> Character:
@@ -198,6 +201,7 @@ func is_touching(other: Character) -> bool:
 
 func _ready() -> void:
 	play(_ANIM_IDLE)
+	_update_collision_mode()
 
 
 func _process(delta: float) -> void:
@@ -210,7 +214,8 @@ func _process(delta: float) -> void:
 		is_moving = true
 		move_direction = input_vector.normalized()
 		crescent_blend = move_toward(crescent_blend, 1.0, CRESCENT_BLEND_SPEED * delta)
-		position += input_vector * speed * delta
+		velocity = input_vector * speed
+		move_and_slide()
 		if input_vector.x > 0.05:
 			flip_h = false
 		elif input_vector.x < -0.05:
@@ -220,8 +225,23 @@ func _process(delta: float) -> void:
 	else:
 		is_moving = false
 		crescent_blend = move_toward(crescent_blend, 0.0, CRESCENT_BLEND_SPEED * delta)
+		velocity = Vector2.ZERO
+		move_and_slide()
 		if animation != _ANIM_IDLE:
 			play(_ANIM_IDLE)
+
+
+func _update_collision_mode() -> void:
+	if is_player:
+		collision_layer = 2
+		collision_mask = 1
+		if _collision_shape != null:
+			_collision_shape.disabled = false
+	else:
+		collision_layer = 4
+		collision_mask = 0
+		if _collision_shape != null:
+			_collision_shape.disabled = true
 
 
 func _get_sprite() -> AnimatedSprite2D:
