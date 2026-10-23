@@ -14,3 +14,7 @@ tile_set = ExtResource("2_a0dt8")
 [node name="Walls" type="TileMapLayer" parent="." unique_id=1888945113]
 y_sort_enabled = true
 tile_set = ExtResource("2_a0dt8")
+
+[node name="Decorations" type="TileMapLayer" parent="." unique_id=2081948215]
+y_sort_enabled = true
+tile_set = ExtResource("2_a0dt8")

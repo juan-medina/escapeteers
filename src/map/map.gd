@@ -24,6 +24,22 @@ const WALL_BOTTOM_VARIANTS: Array[Vector2i] = [Vector2i(3, 18), Vector2i(4, 18)]
 const WALL_LEFT_VARIANTS: Array[Vector2i] = [Vector2i(0, 14), Vector2i(0, 15)]
 const WALL_RIGHT_VARIANTS: Array[Vector2i] = [Vector2i(7, 14), Vector2i(7, 15)]
 
+const TORCH_TOP: Vector2i = Vector2i(12, 20)
+const TORCH_SIDE: Vector2i = Vector2i(12, 19)
+const TORCH_RIGHT_ALT_ID: int = 1
+const TORCH_SPAWN_CHANCE: float = 0.2
+const MIN_TORCH_DISTANCE_SQUARED: int = 9
+
+const PROP_BARREL: Vector2i = Vector2i(4, 28)
+const PROP_BOX: Vector2i = Vector2i(4, 29)
+const PROP_SKULLS_AND_BONES: Array[Vector2i] = [
+	Vector2i(5, 29),
+	Vector2i(6, 29),
+	Vector2i(7, 29),
+	Vector2i(8, 29),
+]
+const CORRIDOR_BONE_CHANCE: float = 0.02
+
 const HERO_ROOM_SIZE: Vector2i = Vector2i(20, 20)
 const COMPANION_ROOM_COUNT: int = 20
 const COMPANION_ROOM_MIN_SIZE: Vector2i = Vector2i(8, 8)
@@ -43,14 +59,18 @@ var _walkable_cells: Dictionary[Vector2i, bool] = {}
 
 @onready var _floor: TileMapLayer = $Floor
 @onready var _walls: TileMapLayer = $Walls
+@onready var _decorations: TileMapLayer = $Decorations
 
 
 func _ready() -> void:
 	y_sort_enabled = true
 	_walls.y_sort_enabled = true
+	_decorations.y_sort_enabled = true
 	_floor.z_index = -1
 	if _walls.tile_set == null:
 		_walls.tile_set = _floor.tile_set
+	if _decorations.tile_set == null:
+		_decorations.tile_set = _floor.tile_set
 	generate_map()
 
 
@@ -118,6 +138,7 @@ func get_navigation_path(from_pos: Vector2, to_pos: Vector2) -> PackedVector2Arr
 func generate_map() -> void:
 	_floor.clear()
 	_walls.clear()
+	_decorations.clear()
 	companion_rooms.clear()
 
 	var cells: Dictionary[Vector2i, bool] = {}
@@ -132,6 +153,7 @@ func generate_map() -> void:
 		_floor.set_cell(cell, TILE_SET_SOURCE_ID, atlas_coords)
 
 	_create_all_walls(cells)
+	_create_decorations(cells)
 	_setup_navigation(cells)
 
 
@@ -441,3 +463,129 @@ func _get_random_floor_atlas_coords() -> Vector2i:
 	var atlas_x: int = randi_range(FLOOR_ATLAS_START.x, FLOOR_ATLAS_START.x + FLOOR_ATLAS_SIZE.x - 1)
 	var atlas_y: int = randi_range(FLOOR_ATLAS_START.y, FLOOR_ATLAS_START.y + FLOOR_ATLAS_SIZE.y - 1)
 	return Vector2i(atlas_x, atlas_y)
+
+
+func _create_decorations(cells: Dictionary[Vector2i, bool]) -> void:
+	var placed_torches: Array[Vector2i] = []
+	_place_wall_torches(placed_torches)
+	_place_room_props(cells)
+	_place_corridor_bones(cells)
+
+
+func _place_wall_torches(placed_torches: Array[Vector2i]) -> void:
+	var wall_cells: Array[Vector2i] = _walls.get_used_cells()
+	for w: Vector2i in wall_cells:
+		var atlas: Vector2i = _walls.get_cell_atlas_coords(w)
+		if atlas in WALL_TOP_VARIANTS:
+			if randf() <= TORCH_SPAWN_CHANCE and _is_far_from_torches(w, placed_torches):
+				_decorations.set_cell(w, TILE_SET_SOURCE_ID, TORCH_TOP)
+				placed_torches.append(w)
+		elif atlas in WALL_LEFT_VARIANTS:
+			var target_cell: Vector2i = w + Vector2i(1, 0)
+			var above: Vector2i = _walls.get_cell_atlas_coords(w + Vector2i(0, -1))
+			var below: Vector2i = _walls.get_cell_atlas_coords(w + Vector2i(0, 1))
+			if (
+				(above in WALL_LEFT_VARIANTS or below in WALL_LEFT_VARIANTS)
+				and _walls.get_cell_source_id(target_cell) == -1
+				and _decorations.get_cell_source_id(target_cell) == -1
+				and randf() <= TORCH_SPAWN_CHANCE
+				and _is_far_from_torches(target_cell, placed_torches)
+			):
+				_decorations.set_cell(target_cell, TILE_SET_SOURCE_ID, TORCH_SIDE, 0)
+				placed_torches.append(target_cell)
+		elif atlas in WALL_RIGHT_VARIANTS:
+			var target_cell: Vector2i = w + Vector2i(-1, 0)
+			var above: Vector2i = _walls.get_cell_atlas_coords(w + Vector2i(0, -1))
+			var below: Vector2i = _walls.get_cell_atlas_coords(w + Vector2i(0, 1))
+			if (
+				(above in WALL_RIGHT_VARIANTS or below in WALL_RIGHT_VARIANTS)
+				and _walls.get_cell_source_id(target_cell) == -1
+				and _decorations.get_cell_source_id(target_cell) == -1
+				and randf() <= TORCH_SPAWN_CHANCE
+				and _is_far_from_torches(target_cell, placed_torches)
+			):
+				_decorations.set_cell(target_cell, TILE_SET_SOURCE_ID, TORCH_SIDE, TORCH_RIGHT_ALT_ID)
+				placed_torches.append(target_cell)
+
+
+func _is_far_from_torches(candidate: Vector2i, placed_torches: Array[Vector2i]) -> bool:
+	for torch: Vector2i in placed_torches:
+		var dist_sq: int = (candidate.x - torch.x) * (candidate.x - torch.x) + (candidate.y - torch.y) * (candidate.y - torch.y)
+		if dist_sq < MIN_TORCH_DISTANCE_SQUARED:
+			return false
+	return true
+
+
+func _is_corner_cell(cell: Vector2i) -> bool:
+	if _walls.get_cell_source_id(cell) != -1:
+		return false
+	var wall_n: bool = _walls.get_cell_source_id(cell + Vector2i(0, -1)) != -1
+	var wall_s: bool = _walls.get_cell_source_id(cell + Vector2i(0, 1)) != -1
+	var wall_w: bool = _walls.get_cell_source_id(cell + Vector2i(-1, 0)) != -1
+	var wall_e: bool = _walls.get_cell_source_id(cell + Vector2i(1, 0)) != -1
+	return (wall_n and wall_w) or (wall_n and wall_e) or (wall_s and wall_w) or (wall_s and wall_e)
+
+
+func _place_room_props(cells: Dictionary[Vector2i, bool]) -> void:
+	var all_rooms: Array[Rect2i] = [hero_room]
+	all_rooms.append_array(companion_rooms)
+
+	for room: Rect2i in all_rooms:
+		var center: Vector2i = room.get_center()
+		var corner_cells: Array[Vector2i] = []
+		var floor_cells: Array[Vector2i] = []
+
+		for x: int in range(room.position.x, room.position.x + room.size.x):
+			for y: int in range(room.position.y, room.position.y + room.size.y):
+				var cell: Vector2i = Vector2i(x, y)
+				if not cells.has(cell) or _walls.get_cell_source_id(cell) != -1:
+					continue
+				if cell.distance_squared_to(center) <= 4:
+					continue
+				if _is_corner_cell(cell):
+					corner_cells.append(cell)
+				else:
+					floor_cells.append(cell)
+
+		corner_cells.shuffle()
+		floor_cells.shuffle()
+
+		# Barrels and boxes only in corners
+		for cell: Vector2i in corner_cells:
+			if _decorations.get_cell_source_id(cell) != -1:
+				continue
+			if randf() <= 0.75:
+				var prop_tile: Vector2i = PROP_BARREL if randf() > 0.5 else PROP_BOX
+				_decorations.set_cell(cell, TILE_SET_SOURCE_ID, prop_tile)
+
+		# Skulls and bones in rooms
+		var bones_count: int = clampi(int(float(room.size.x * room.size.y) * 0.025), 1, 4)
+		var bones_placed: int = 0
+		for cell: Vector2i in floor_cells:
+			if bones_placed >= bones_count:
+				break
+			if _decorations.get_cell_source_id(cell) != -1:
+				continue
+			var bone_tile: Vector2i = _pick_random_tile(PROP_SKULLS_AND_BONES)
+			_decorations.set_cell(cell, TILE_SET_SOURCE_ID, bone_tile)
+			bones_placed += 1
+
+
+func _place_corridor_bones(cells: Dictionary[Vector2i, bool]) -> void:
+	for cell: Vector2i in cells:
+		if _walls.get_cell_source_id(cell) != -1 or _decorations.get_cell_source_id(cell) != -1:
+			continue
+		if _is_inside_any_room(cell):
+			continue
+		if randf() <= CORRIDOR_BONE_CHANCE:
+			var bone_tile: Vector2i = _pick_random_tile(PROP_SKULLS_AND_BONES)
+			_decorations.set_cell(cell, TILE_SET_SOURCE_ID, bone_tile)
+
+
+func _is_inside_any_room(cell: Vector2i) -> bool:
+	if hero_room.has_point(cell):
+		return true
+	for room: Rect2i in companion_rooms:
+		if room.has_point(cell):
+			return true
+	return false
