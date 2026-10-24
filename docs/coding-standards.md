@@ -58,12 +58,18 @@ Welcome to the project! This document outlines the coding conventions and philos
 
 ## 8. Error Handling & Termination
 
-- **App termination:** All app termination should go through the `Alerts` autoload. Please avoid calling `get_tree().quit()` directly.
-  - For graceful user exits (e.g., Exit button): please use `await Alerts.quit_game()`.
-  - For unrecoverable/fatal errors: please use `await Alerts.fatal_error(&"Short user message")`.
+### 1. Developer Errors: Fail Fast in Development
+- **Never swallow developer mistakes.** If a bundled scene fails to instantiate, a required node is missing, or a required export is unassigned, this is a build-time bug.
+- **Do not write defensive boilerplate.** Avoid wrapping internal node references or `preload().instantiate()` in `if x != null`, returning `null`, or falling back to default dummy values (e.g., returning `false` or `Vector2.ZERO`).
+- **Let the engine crash loudly.** An immediate engine error or null dereference in development points directly to the broken scene or line so it can be fixed before shipping.
+
+### 2. External Failures: Graceful Termination (`Alerts.fatal_error`)
+- **App termination:** All intentional app termination must go through the `Alerts` autoload. Never call `get_tree().quit()` directly.
+  - For user exits (e.g. Exit button): `await Alerts.quit_game()`.
+  - For unrecoverable external failures: `await Alerts.fatal_error(&"Short user message")`.
 - `Alerts` handles the entire termination experience, including audio fading and the error dialog, while delegating the visual fade to `Transition`. Because it waits for these animations to finish, these methods act as coroutines. Please remember to use the `await` keyword to prevent `MISSING_AWAIT` linter warnings!
-- **Fatal errors** should be reserved for truly unrecoverable conditions, such as missing data that makes continuing impossible.
-- **Fatal error call pattern:**
+- **Reserve fatal errors for external I/O:** Use `fatal_error` exclusively for conditions that can legitimately fail in production outside our control (e.g. corrupted save data on disk, missing filesystem resources).
+- **Pattern:**
   ```gdscript
   if not file:
       printerr(&"Could not open config file: " + config_path + &"!")
@@ -74,13 +80,8 @@ Welcome to the project! This document outlines the coding conventions and philos
   - Provide a short, player-friendly message to `fatal_error`.
   - Include a trailing `return` to safely unwind the function.
 
-### Null checks & guards
-
-Rule of thumb: *"If this is null, is the game broken, or is this an expected state?"*
-
-- **Avoid silent skips.** Try not to hide broken states with `if x == null: return`. If a missing value means the build is broken (like a missing bundled asset or unwired `@export`), it's better to let it fail loudly or call `Alerts.fatal_error(...)`.
-- **Guard at boundaries.** Validate data once—in `_ready`, setup, or load functions—and then trust it in per-frame code.
-- **Handle real variability.** It's perfectly fine to branch or return early for optional fields, missing save files, or platform-specific logic.
+### 3. Gameplay State Variability: Normal Branching
+- Only branch or return early (`if target == null: return`) when null is a valid, expected state in the game loop (e.g. lost line of sight, entity died, no active leader).
 
 ## 9. Autoloads & Global UI
 
