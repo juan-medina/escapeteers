@@ -38,8 +38,7 @@ func _ready() -> void:
 	super._ready()
 	collision_layer = 8
 	collision_mask = 1
-	if _animated_sprite != null:
-		_animated_sprite.animation_finished.connect(_on_animation_finished)
+	_animated_sprite.animation_finished.connect(_on_animation_finished)
 
 
 func _physics_process(delta: float) -> void:
@@ -78,8 +77,7 @@ func set_target_candidate(hero_candidate: Hero) -> void:
 
 
 func spawn_projectile(projectile: Projectile) -> void:
-	if projectile != null:
-		projectile_spawn_requested.emit(projectile)
+	projectile_spawn_requested.emit(projectile)
 
 
 func apply_melee_damage(attack_target: Hero, damage_amount: float) -> void:
@@ -182,7 +180,7 @@ func _start_attack() -> void:
 	_is_attacking = true
 	_attack_cooldown_timer = attack_cooldown
 	var anim_name: StringName = _get_attack_animation_name()
-	if _get_sprite() != null and _get_sprite().sprite_frames != null and _get_sprite().sprite_frames.has_animation(anim_name):
+	if sprite_frames.has_animation(anim_name):
 		play(anim_name)
 	else:
 		_perform_attack()
@@ -210,10 +208,6 @@ func _pick_new_patrol_destination() -> void:
 	_patrol_timer = PATROL_TIMEOUT
 	_navigator.reset()
 
-	if map == null:
-		_patrol_destination = global_position
-		return
-
 	var candidate_rooms: Array[Rect2i] = map.companion_rooms
 	if candidate_rooms.is_empty():
 		_patrol_destination = global_position
@@ -227,12 +221,8 @@ func _pick_new_patrol_destination() -> void:
 	var offset: Vector2i = Vector2i(randi_range(-half_size.x, half_size.x), randi_range(-half_size.y, half_size.y))
 	target_cell += offset
 
-	var floor_layer: TileMapLayer = map.get_node_or_null(^"Floor") as TileMapLayer
-	if floor_layer != null:
-		var target_world: Vector2 = floor_layer.map_to_local(target_cell)
-		_patrol_destination = map.clamp_to_walkable(target_world)
-	else:
-		_patrol_destination = global_position
+	var target_world: Vector2 = map.map_to_local(target_cell)
+	_patrol_destination = map.clamp_to_walkable(target_world)
 
 
 func _on_animation_finished() -> void:

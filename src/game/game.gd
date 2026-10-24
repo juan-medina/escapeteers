@@ -104,12 +104,8 @@ func _spawn_enemies() -> void:
 	for i: int in range(count):
 		var room: Rect2i = rooms[i]
 		var slime: Enemy = LAVA_SLIME_SCENE.instantiate() as Enemy
-		if slime == null:
-			continue
-
 		var cell: Vector2i = room.get_center()
-		var floor_layer: TileMapLayer = _map.get_node(^"Floor") as TileMapLayer
-		slime.position = floor_layer.map_to_local(cell)
+		slime.position = _map.map_to_local(cell)
 		slime.map = _map
 		slime.y_sort_enabled = true
 		slime.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
@@ -118,8 +114,7 @@ func _spawn_enemies() -> void:
 
 
 func _on_projectile_spawn_requested(projectile: Projectile) -> void:
-	if _projectiles != null and projectile != null:
-		_projectiles.add_child(projectile)
+	_projectiles.add_child(projectile)
 
 
 func _update_followers(delta: float) -> void:

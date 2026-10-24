@@ -10,7 +10,7 @@ enum AttackType {
 	RANGED_SPIKE,
 }
 
-const SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_slime.tscn")
+const LAVA_SPIKE_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_spike.tscn")
 const HORIZONTAL_ALIGNMENT_TOLERANCE: float = 16.0
 const _ANIM_ATTACK_MELEE: StringName = &"attack_melee"
 const _ANIM_ATTACK_SPIKE: StringName = &"attack_spike"
@@ -19,14 +19,6 @@ const _ANIM_ATTACK_SPIKE: StringName = &"attack_spike"
 @export var melee_damage: float = 8.0
 
 var _selected_attack: AttackType = AttackType.NONE
-
-
-static func instantiate() -> LavaSlime:
-	var slime: LavaSlime = SCENE.instantiate() as LavaSlime
-	if slime == null:
-		printerr(&"LavaSlime: Failed to instantiate LavaSlime scene!")
-		return null
-	return slime
 
 
 func _ready() -> void:
@@ -80,11 +72,10 @@ func _perform_attack() -> void:
 		if dist <= melee_range * 1.5:
 			apply_melee_damage(target, melee_damage)
 	elif _selected_attack == AttackType.RANGED_SPIKE:
-		var spike: LavaSpike = LavaSpike.instantiate()
-		if spike != null:
-			spike.global_position = global_position + Vector2(dir_x * 8.0, 0.0)
-			spike.direction = Vector2(dir_x, 0.0)
-			spike.damage = damage
-			spawn_projectile(spike)
+		var spike: LavaSpike = LAVA_SPIKE_SCENE.instantiate() as LavaSpike
+		spike.global_position = global_position + Vector2(dir_x * 8.0, 0.0)
+		spike.direction = Vector2(dir_x, 0.0)
+		spike.damage = damage
+		spawn_projectile(spike)
 
 	_selected_attack = AttackType.NONE

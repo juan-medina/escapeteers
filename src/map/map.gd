@@ -79,6 +79,10 @@ func get_hero_spawn_position() -> Vector2:
 	return _floor.map_to_local(hero_room.get_center())
 
 
+func map_to_local(cell: Vector2i) -> Vector2:
+	return _floor.map_to_local(cell)
+
+
 func get_companion_spawn_positions() -> Array[Vector2]:
 	var positions: Array[Vector2] = []
 	for room: Rect2i in companion_rooms:
