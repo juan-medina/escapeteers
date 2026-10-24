@@ -129,6 +129,9 @@ back={
 2d_physics/layer_1="World"
 2d_physics/layer_2="Player"
 2d_physics/layer_3="Companions"
+2d_physics/layer_4="Enemies"
+2d_physics/layer_5="HeroProjectiles"
+2d_physics/layer_6="EnemyProjectiles"
 
 [physics]
 

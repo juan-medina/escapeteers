@@ -2,4 +2,4 @@
 # SPDX-License-Identifier: MIT
 
 class_name Swordsman
-extends Character
+extends Hero

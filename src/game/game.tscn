@@ -18,4 +18,9 @@ y_sort_enabled = true
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=520830183]
 
+[node name="Projectiles" type="Node2D" parent="." unique_id=1928374615]
+z_index = 1
+y_sort_enabled = true
+
 [node name="Fog" parent="." instance=ExtResource("4_fog")]
+

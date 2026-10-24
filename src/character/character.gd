@@ -4,33 +4,19 @@
 class_name Character
 extends CharacterBody2D
 
-const SCENE: PackedScene = preload("res://character/character.tscn")
+signal damaged(amount: float, current_health: float)
+signal died
+
 const FLIP_THRESHOLD_X: float = 0.35
 const MIN_MOVEMENT_THRESHOLD_SQUARED: float = 0.04
-const RECRUIT_DISTANCE: float = 20.0
-const MAX_HISTORY_DURATION: float = 2.5
-const CRESCENT_BLEND_SPEED: float = 5.0
 
 const _ANIM_IDLE: StringName = &"idle"
 const _ANIM_RUN: StringName = &"run"
-const PLAYER_LIGHT_TEXTURE: Texture2D = preload("res://map/light_texture.tres")
 
-@export var is_player: bool = false:
-	set(value):
-		is_player = value
-		_update_collision_mode()
-		_update_player_light()
-		_update_ground_indicator()
+@export var max_health: float = 100.0
 @export var speed: float = 100.0
 
-var leader: Character = null
-var squad_member: SquadMember = null:
-	set(value):
-		squad_member = value
-		_update_ground_indicator()
-var is_moving: bool = false
-var move_direction: Vector2 = Vector2.RIGHT
-var crescent_blend: float = 0.0
+var health: float = 100.0
 
 var flip_h: bool:
 	get:
@@ -73,23 +59,13 @@ var sprite_frames: SpriteFrames:
 		if sprite != null:
 			sprite.sprite_frames = value
 
-var _elapsed_time: float = 0.0
-var _pos_history: Array[Vector2] = []
-var _time_history: Array[float] = []
-var _player_light: PointLight2D = null
-
 @onready var _animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var _collision_shape: CollisionShape2D = $CollisionShape2D
-@onready var _ground_indicator: GroundIndicator = $GroundIndicator
 
 
-static func instantiate() -> Character:
-	var ch: Character = SCENE.instantiate() as Character
-	if ch == null:
-		printerr(&"Character: Failed to instantiate Character scene!")
-		await Alerts.fatal_error(&"Could not spawn characters")
-		return null
-	return ch
+func _ready() -> void:
+	health = max_health
+	play(_ANIM_IDLE)
 
 
 func play(anim_name: StringName = _ANIM_IDLE) -> void:
@@ -97,38 +73,6 @@ func play(anim_name: StringName = _ANIM_IDLE) -> void:
 	if sprite != null and sprite.sprite_frames != null:
 		if sprite.sprite_frames.has_animation(anim_name):
 			sprite.play(anim_name)
-
-
-func record_step(delta: float) -> void:
-	_elapsed_time += delta
-	_pos_history.push_front(position)
-	_time_history.push_front(_elapsed_time)
-
-	var cutoff_time: float = _elapsed_time - MAX_HISTORY_DURATION
-	while _time_history.size() > 2 and _time_history.back() < cutoff_time:
-		_time_history.pop_back()
-		_pos_history.pop_back()
-
-
-func get_delayed_position(delay: float) -> Vector2:
-	if _pos_history.is_empty() or delay <= 0.001:
-		return position
-
-	var target_time: float = _elapsed_time - delay
-	for i: int in range(_time_history.size() - 1):
-		var t1: float = _time_history[i]
-		var t2: float = _time_history[i + 1]
-		if t1 >= target_time and target_time >= t2:
-			var span: float = t1 - t2
-			if span <= 0.0001:
-				return _pos_history[i]
-			return _pos_history[i].lerp(_pos_history[i + 1], (t1 - target_time) / span)
-
-	return _pos_history.back()
-
-
-func is_touching(other: Character) -> bool:
-	return position.distance_squared_to(other.position) <= RECRUIT_DISTANCE * RECRUIT_DISTANCE
 
 
 func update_visuals(movement_vector: Vector2) -> void:
@@ -142,86 +86,35 @@ func update_visuals(movement_vector: Vector2) -> void:
 			play(_ANIM_IDLE)
 
 
-func _ready() -> void:
-	play(_ANIM_IDLE)
-	_update_collision_mode()
-	_update_player_light()
-	_update_ground_indicator()
+func get_spawn_position() -> Vector2:
+	var marker: Marker2D = get_node_or_null(^"SpawnPoint") as Marker2D
+	if marker != null:
+		return marker.global_position
+	return global_position + Vector2(0.0, 2.0)
 
 
-func _process(delta: float) -> void:
-	if not is_player:
-		return
-
-	if _player_light != null:
-		_player_light.energy = 0.65 + sin(_elapsed_time * 3.0) * 0.02
-
-	var input_vector: Vector2 = Input.get_vector(&"left", &"right", &"up", &"down")
-
-	if input_vector != Vector2.ZERO:
-		is_moving = true
-		move_direction = input_vector.normalized()
-		crescent_blend = move_toward(crescent_blend, 1.0, CRESCENT_BLEND_SPEED * delta)
-		velocity = input_vector * speed
-		move_and_slide()
-		if _ground_indicator != null:
-			_ground_indicator.facing_direction = move_direction
-		if input_vector.x > 0.05:
-			flip_h = false
-		elif input_vector.x < -0.05:
-			flip_h = true
-		if animation != _ANIM_RUN:
-			play(_ANIM_RUN)
-	else:
-		is_moving = false
-		crescent_blend = move_toward(crescent_blend, 0.0, CRESCENT_BLEND_SPEED * delta)
-		velocity = Vector2.ZERO
-		move_and_slide()
-		if animation != _ANIM_IDLE:
-			play(_ANIM_IDLE)
+func take_damage(amount: float) -> void:
+	health = maxf(0.0, health - amount)
+	damaged.emit(amount, health)
+	_flash_hurt()
+	if health <= 0.0:
+		died.emit()
+		_on_death()
 
 
-func _update_player_light() -> void:
-	if not is_inside_tree():
-		return
-
-	if is_player:
-		if _player_light == null:
-			_player_light = PointLight2D.new()
-			_player_light.name = &"PlayerLight"
-			_player_light.texture = PLAYER_LIGHT_TEXTURE
-			_player_light.color = Color(1.0, 0.88, 0.70, 1.0)
-			_player_light.energy = 0.65
-			_player_light.texture_scale = 1.0
-			add_child(_player_light)
-	else:
-		if _player_light != null:
-			_player_light.queue_free()
-			_player_light = null
+func _on_death() -> void:
+	pass
 
 
-func _update_collision_mode() -> void:
-	if is_player:
-		collision_layer = 2
-		collision_mask = 1
-		if _collision_shape != null:
-			_collision_shape.disabled = false
-	else:
-		collision_layer = 4
-		collision_mask = 1
-		if _collision_shape != null:
-			_collision_shape.disabled = false
+func _flash_hurt() -> void:
+	var sprite: AnimatedSprite2D = _get_sprite()
+	if sprite != null:
+		sprite.modulate = Color(1.0, 0.35, 0.35, 1.0)
+		var tween: Tween = create_tween()
+		tween.tween_property(sprite, ^"modulate", Color.WHITE, 0.15)
 
 
 func _get_sprite() -> AnimatedSprite2D:
 	if _animated_sprite != null:
 		return _animated_sprite
 	return get_node_or_null(^"AnimatedSprite2D") as AnimatedSprite2D
-
-
-func _update_ground_indicator() -> void:
-	if _ground_indicator == null:
-		return
-	_ground_indicator.is_player = is_player
-	_ground_indicator.is_recruited = (is_player or squad_member != null)
-	_ground_indicator.facing_direction = move_direction

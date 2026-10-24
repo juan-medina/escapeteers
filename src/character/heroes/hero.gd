@@ -1,0 +1,144 @@
+# SPDX-FileCopyrightText: 2026 Juan Medina
+# SPDX-License-Identifier: MIT
+
+class_name Hero
+extends Character
+
+const RECRUIT_DISTANCE: float = 20.0
+const MAX_HISTORY_DURATION: float = 2.5
+const CRESCENT_BLEND_SPEED: float = 5.0
+const PLAYER_LIGHT_TEXTURE: Texture2D = preload("res://map/light_texture.tres")
+
+@export var is_player: bool = false:
+	set(value):
+		is_player = value
+		_update_collision_mode()
+		_update_player_light()
+		_update_ground_indicator()
+
+var leader: Hero = null
+var squad_member: SquadMember = null:
+	set(value):
+		squad_member = value
+		_update_ground_indicator()
+var is_moving: bool = false
+var move_direction: Vector2 = Vector2.RIGHT
+var crescent_blend: float = 0.0
+
+var _elapsed_time: float = 0.0
+var _pos_history: Array[Vector2] = []
+var _time_history: Array[float] = []
+var _player_light: PointLight2D = null
+
+@onready var _ground_indicator: GroundIndicator = get_node_or_null(^"GroundIndicator") as GroundIndicator
+
+
+func _ready() -> void:
+	super._ready()
+	_update_collision_mode()
+	_update_player_light()
+	_update_ground_indicator()
+
+
+func _process(delta: float) -> void:
+	if not is_player:
+		return
+
+	if _player_light != null:
+		_player_light.energy = 0.65 + sin(_elapsed_time * 3.0) * 0.02
+
+	var input_vector: Vector2 = Input.get_vector(&"left", &"right", &"up", &"down")
+
+	if input_vector != Vector2.ZERO:
+		is_moving = true
+		move_direction = input_vector.normalized()
+		crescent_blend = move_toward(crescent_blend, 1.0, CRESCENT_BLEND_SPEED * delta)
+		velocity = input_vector * speed
+		move_and_slide()
+		if _ground_indicator != null:
+			_ground_indicator.facing_direction = move_direction
+		if input_vector.x > 0.05:
+			flip_h = false
+		elif input_vector.x < -0.05:
+			flip_h = true
+		if animation != _ANIM_RUN:
+			play(_ANIM_RUN)
+	else:
+		is_moving = false
+		crescent_blend = move_toward(crescent_blend, 0.0, CRESCENT_BLEND_SPEED * delta)
+		velocity = Vector2.ZERO
+		move_and_slide()
+		if animation != _ANIM_IDLE:
+			play(_ANIM_IDLE)
+
+
+func record_step(delta: float) -> void:
+	_elapsed_time += delta
+	_pos_history.push_front(position)
+	_time_history.push_front(_elapsed_time)
+
+	var cutoff_time: float = _elapsed_time - MAX_HISTORY_DURATION
+	while _time_history.size() > 2 and _time_history.back() < cutoff_time:
+		_time_history.pop_back()
+		_pos_history.pop_back()
+
+
+func get_delayed_position(delay: float) -> Vector2:
+	if _pos_history.is_empty() or delay <= 0.001:
+		return position
+
+	var target_time: float = _elapsed_time - delay
+	for i: int in range(_time_history.size() - 1):
+		var t1: float = _time_history[i]
+		var t2: float = _time_history[i + 1]
+		if t1 >= target_time and target_time >= t2:
+			var span: float = t1 - t2
+			if span <= 0.0001:
+				return _pos_history[i]
+			return _pos_history[i].lerp(_pos_history[i + 1], (t1 - target_time) / span)
+
+	return _pos_history.back()
+
+
+func is_touching(other: Hero) -> bool:
+	return position.distance_squared_to(other.position) <= RECRUIT_DISTANCE * RECRUIT_DISTANCE
+
+
+func _update_player_light() -> void:
+	if not is_inside_tree():
+		return
+
+	if is_player:
+		if _player_light == null:
+			_player_light = PointLight2D.new()
+			_player_light.name = &"PlayerLight"
+			_player_light.texture = PLAYER_LIGHT_TEXTURE
+			_player_light.color = Color(1.0, 0.88, 0.70, 1.0)
+			_player_light.energy = 0.65
+			_player_light.texture_scale = 1.0
+			add_child(_player_light)
+	else:
+		if _player_light != null:
+			_player_light.queue_free()
+			_player_light = null
+
+
+func _update_collision_mode() -> void:
+	if is_player:
+		collision_layer = 2
+		collision_mask = 1
+		if _collision_shape != null:
+			_collision_shape.disabled = false
+	else:
+		collision_layer = 4
+		collision_mask = 1
+		if _collision_shape != null:
+			_collision_shape.disabled = false
+
+
+func _update_ground_indicator() -> void:
+	if _ground_indicator == null:
+		return
+	_ground_indicator.is_player = is_player
+	_ground_indicator.is_recruited = (is_player or squad_member != null)
+	_ground_indicator.facing_direction = move_direction

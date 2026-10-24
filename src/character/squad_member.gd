@@ -50,8 +50,8 @@ func assign_escort_slot(new_slot_index: int, total_slots: int) -> void:
 	reaction_delay = REACTION_DELAY_BASE + (float(ring) * REACTION_DELAY_STEP) + jitter
 
 
-func update(character: Character, delta: float, squad: Array[Character], map: Map) -> void:
-	var leader: Character = character.leader
+func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
+	var leader: Hero = hero.leader
 	if leader == null:
 		return
 
@@ -59,36 +59,36 @@ func update(character: Character, delta: float, squad: Array[Character], map: Ma
 	if map != null:
 		target_pos = map.clamp_to_walkable(target_pos)
 
-	var waypoint: Vector2 = navigator.get_next_waypoint(character, target_pos, map, delta)
-	var to_waypoint: Vector2 = waypoint - character.position
+	var waypoint: Vector2 = navigator.get_next_waypoint(hero, target_pos, map, delta)
+	var to_waypoint: Vector2 = waypoint - hero.position
 	var dist_to_waypoint: float = to_waypoint.length()
-	var dist_to_target: float = character.position.distance_to(target_pos)
+	var dist_to_target: float = hero.position.distance_to(target_pos)
 
 	var desired_velocity: Vector2 = Vector2.ZERO
 	if dist_to_target > FOLLOW_STOP_DISTANCE and dist_to_waypoint > 0.5:
-		var target_speed: float = character.speed
+		var target_speed: float = hero.speed
 		if dist_to_target < FOLLOW_ARRIVAL_RADIUS:
-			target_speed = character.speed * (dist_to_target / FOLLOW_ARRIVAL_RADIUS)
+			target_speed = hero.speed * (dist_to_target / FOLLOW_ARRIVAL_RADIUS)
 		elif dist_to_target > FAR_CATCHUP_DISTANCE:
 			var catchup_factor: float = clampf((dist_to_target - FAR_CATCHUP_DISTANCE) / FAR_CATCHUP_DISTANCE, 0.0, 1.5)
-			target_speed = character.speed * (1.5 + catchup_factor)
+			target_speed = hero.speed * (1.5 + catchup_factor)
 		else:
-			target_speed = minf(character.speed * 1.5, character.speed + (dist_to_target - FOLLOW_ARRIVAL_RADIUS) * 1.5)
+			target_speed = minf(hero.speed * 1.5, hero.speed + (dist_to_target - FOLLOW_ARRIVAL_RADIUS) * 1.5)
 		desired_velocity = (to_waypoint / dist_to_waypoint) * target_speed
 
 	var sep_scale: float = 0.4 if dist_to_target > FAR_CATCHUP_DISTANCE else 1.0
-	desired_velocity += _compute_separation(character, squad) * sep_scale
-	character.velocity = character.velocity.move_toward(desired_velocity, FOLLOW_ACCELERATION * delta)
+	desired_velocity += _compute_separation(hero, squad) * sep_scale
+	hero.velocity = hero.velocity.move_toward(desired_velocity, FOLLOW_ACCELERATION * delta)
 
 	if dist_to_target <= FOLLOW_STOP_DISTANCE and desired_velocity.length_squared() < MIN_MOVEMENT_THRESHOLD_SQUARED:
-		character.velocity = Vector2.ZERO
+		hero.velocity = Vector2.ZERO
 
-	character.move_and_slide()
-	character.is_moving = character.velocity.length_squared() > 4.0
-	character.update_visuals(character.velocity * delta)
+	hero.move_and_slide()
+	hero.is_moving = hero.velocity.length_squared() > 4.0
+	hero.update_visuals(hero.velocity * delta)
 
 
-func _compute_target_position(leader: Character) -> Vector2:
+func _compute_target_position(leader: Hero) -> Vector2:
 	var formation_pos: Vector2 = leader.position + slot_offset
 	if leader.crescent_blend <= 0.001:
 		return formation_pos
@@ -103,15 +103,15 @@ func _compute_target_position(leader: Character) -> Vector2:
 	return formation_pos.lerp(trail_target, leader.crescent_blend)
 
 
-func _compute_separation(character: Character, squad: Array[Character]) -> Vector2:
+func _compute_separation(hero: Hero, squad: Array[Hero]) -> Vector2:
 	var push: Vector2 = Vector2.ZERO
 	var min_dist_sq: float = SEPARATION_RADIUS * SEPARATION_RADIUS
 	var player_dist_sq: float = PLAYER_CLEARANCE_RADIUS * PLAYER_CLEARANCE_RADIUS
 
-	for other: Character in squad:
-		if other == character:
+	for other: Hero in squad:
+		if other == hero:
 			continue
-		var diff: Vector2 = character.position - other.position
+		var diff: Vector2 = hero.position - other.position
 		var dist_sq: float = diff.length_squared()
 
 		if other.is_player:

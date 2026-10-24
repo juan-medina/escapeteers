@@ -2,4 +2,4 @@
 # SPDX-License-Identifier: MIT
 
 class_name Priest
-extends Character
+extends Hero
