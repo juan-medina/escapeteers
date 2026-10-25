@@ -11,8 +11,6 @@ const RECRUIT_DISTANCE: float = 20.0
 const MAX_HISTORY_DURATION: float = 2.5
 const CRESCENT_BLEND_SPEED: float = 5.0
 const PLAYER_LIGHT_TEXTURE: Texture2D = preload("res://map/light_texture.tres")
-const _ANIM_MELEE1: StringName = &"attack_melee1"
-const _ANIM_MELEE2: StringName = &"attack_melee2"
 const _GROUP_ENEMIES: StringName = &"enemies"
 
 @export var is_player: bool = false:
@@ -21,6 +19,8 @@ const _GROUP_ENEMIES: StringName = &"enemies"
 		_update_collision_mode()
 		_update_player_light()
 		_update_ground_indicator()
+@export var can_melee: bool = false
+@export var can_heavy_melee: bool = false
 @export var melee_range: float = 28.0
 @export var melee1_cooldown: float = 0.5
 @export var melee2_cooldown: float = 3.5
@@ -59,9 +59,7 @@ func _ready() -> void:
 	_update_player_light()
 	_update_ground_indicator()
 	_melee2_timer = melee2_cooldown * 0.5
-	if _animated_sprite != null:
-		_animated_sprite.animation_finished.connect(_on_animation_finished)
-		_animated_sprite.frame_changed.connect(_on_frame_changed)
+	_animated_sprite.frame_changed.connect(_on_frame_changed)
 
 
 func _process(delta: float) -> void:
@@ -88,32 +86,21 @@ func _process(delta: float) -> void:
 		move_and_slide()
 		if _ground_indicator != null:
 			_ground_indicator.facing_direction = move_direction
-		if not is_attacking:
-			if input_vector.x > 0.05:
-				flip_h = false
-			elif input_vector.x < -0.05:
-				flip_h = true
-			if animation != &"hit" and animation != _ANIM_RUN:
-				play(_ANIM_RUN)
+		update_visuals(velocity * delta)
 	else:
 		is_moving = false
 		crescent_blend = move_toward(crescent_blend, 0.0, CRESCENT_BLEND_SPEED * delta)
 		velocity = Vector2.ZERO
 		move_and_slide()
-		if not is_attacking:
-			if animation != &"hit" and animation != _ANIM_IDLE:
-				play(_ANIM_IDLE)
+		update_visuals(Vector2.ZERO)
 
 
 func _check_auto_attack() -> void:
+	if not can_melee:
+		return
 	if not is_player and squad_member == null:
 		return
 	if is_attacking:
-		return
-
-	var has_m1: bool = sprite_frames != null and sprite_frames.has_animation(_ANIM_MELEE1)
-	var has_m2: bool = sprite_frames != null and sprite_frames.has_animation(_ANIM_MELEE2)
-	if not has_m1 and not has_m2:
 		return
 
 	var closest_enemy: Enemy = _find_closest_enemy(melee_range)
@@ -124,17 +111,15 @@ func _check_auto_attack() -> void:
 	if _melee1_timer > 0.0:
 		return
 
-	var choose_m2: bool = false
-	if has_m2 and _melee2_timer <= 0.0:
-		if not has_m1:
-			choose_m2 = true
-		elif _fast_attacks_done >= 2 and randf() < melee2_chance:
-			choose_m2 = true
+	var choose_heavy: bool = false
+	if can_heavy_melee and _melee2_timer <= 0.0:
+		if _fast_attacks_done >= 2 and randf() < melee2_chance:
+			choose_heavy = true
 
-	if choose_m2:
-		_start_melee_attack(_ANIM_MELEE2, closest_enemy)
-	elif has_m1:
-		_start_melee_attack(_ANIM_MELEE1, closest_enemy)
+	if choose_heavy:
+		_start_melee_attack(ANIM_ATTACK_MELEE2, closest_enemy)
+	else:
+		_start_melee_attack(ANIM_ATTACK_MELEE1, closest_enemy)
 
 
 func _start_melee_attack(anim_name: StringName, target_enemy: Enemy) -> void:
@@ -143,7 +128,7 @@ func _start_melee_attack(anim_name: StringName, target_enemy: Enemy) -> void:
 	_current_attack_name = anim_name
 	_current_attack_target = target_enemy
 
-	if anim_name == _ANIM_MELEE2:
+	if anim_name == ANIM_ATTACK_MELEE2:
 		_melee2_timer = melee2_cooldown
 		_melee1_timer = melee1_cooldown
 		_fast_attacks_done = 0
@@ -162,7 +147,7 @@ func _start_melee_attack(anim_name: StringName, target_enemy: Enemy) -> void:
 func _apply_melee_hit() -> void:
 	_hit_applied_this_attack = true
 
-	var is_heavy: bool = _current_attack_name == _ANIM_MELEE2
+	var is_heavy: bool = _current_attack_name == ANIM_ATTACK_MELEE2
 	var damage_amount: float = melee2_damage if is_heavy else melee1_damage
 	var knockback_amount: float = melee2_knockback if is_heavy else melee1_knockback
 
@@ -226,21 +211,22 @@ func _on_frame_changed() -> void:
 	if not is_attacking or _hit_applied_this_attack:
 		return
 
-	if animation == _ANIM_MELEE1 or animation == _ANIM_MELEE2:
+	if animation == ANIM_ATTACK_MELEE1 or animation == ANIM_ATTACK_MELEE2:
 		if frame >= 2:
 			_apply_melee_hit()
 
 
 func _on_animation_finished() -> void:
+	super._on_animation_finished()
 	if is_attacking:
 		if not _hit_applied_this_attack:
 			_apply_melee_hit()
 		is_attacking = false
 		_current_attack_target = null
 		if is_moving:
-			play(_ANIM_RUN)
+			play(ANIM_RUN)
 		else:
-			play(_ANIM_IDLE)
+			play(ANIM_IDLE)
 
 
 func record_step(delta: float) -> void:
@@ -298,13 +284,9 @@ func _update_collision_mode() -> void:
 	if is_player:
 		collision_layer = 2
 		collision_mask = 1
-		if _collision_shape != null:
-			_collision_shape.disabled = false
 	else:
 		collision_layer = 4
 		collision_mask = 1
-		if _collision_shape != null:
-			_collision_shape.disabled = false
 
 
 func _update_ground_indicator() -> void:

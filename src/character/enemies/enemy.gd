@@ -13,7 +13,6 @@ enum State {
 	ATTACK,
 }
 
-const _ANIM_ATTACK: StringName = &"attack"
 const _GROUP_ENEMIES: StringName = &"enemies"
 const WAYPOINT_ARRIVE_DIST_SQ: float = 64.0
 const PATROL_TIMEOUT: float = 10.0
@@ -33,7 +32,6 @@ var _patrol_destination: Vector2 = Vector2.ZERO
 var _patrol_timer: float = 0.0
 var _idle_wait_timer: float = 0.0
 var _attack_cooldown_timer: float = 0.0
-var _is_attacking: bool = false
 var _knockback_velocity: Vector2 = Vector2.ZERO
 
 
@@ -42,7 +40,6 @@ func _ready() -> void:
 	add_to_group(_GROUP_ENEMIES)
 	collision_layer = 8
 	collision_mask = 1
-	_animated_sprite.animation_finished.connect(_on_animation_finished)
 
 
 func _physics_process(delta: float) -> void:
@@ -166,7 +163,7 @@ func _process_attack(_delta: float) -> void:
 		move_and_slide()
 
 	if target == null or not is_instance_valid(target):
-		_is_attacking = false
+		is_attacking = false
 		target = null
 		current_state = State.PATROL
 		_pick_new_patrol_destination()
@@ -177,7 +174,7 @@ func _process_attack(_delta: float) -> void:
 	if absf(diff_x) > 2.0:
 		flip_h = diff_x < 0.0
 
-	if not _is_attacking:
+	if not is_attacking:
 		if _attack_cooldown_timer <= 0.0:
 			if _can_attack_target():
 				_start_attack()
@@ -185,8 +182,8 @@ func _process_attack(_delta: float) -> void:
 				current_state = State.CHASE
 				_navigator.reset()
 		else:
-			if animation != _ANIM_IDLE:
-				play(_ANIM_IDLE)
+			if animation != ANIM_IDLE:
+				play(ANIM_IDLE)
 
 
 func _can_attack_target() -> bool:
@@ -194,18 +191,13 @@ func _can_attack_target() -> bool:
 
 
 func _get_attack_animation_name() -> StringName:
-	return _ANIM_ATTACK
+	return ANIM_ATTACK_MELEE1
 
 
 func _start_attack() -> void:
-	_is_attacking = true
+	is_attacking = true
 	_attack_cooldown_timer = attack_cooldown
-	var anim_name: StringName = _get_attack_animation_name()
-	if sprite_frames.has_animation(anim_name):
-		play(anim_name)
-	else:
-		_perform_attack()
-		_finish_attack()
+	play(_get_attack_animation_name())
 
 
 func _perform_attack() -> void:
@@ -213,9 +205,9 @@ func _perform_attack() -> void:
 
 
 func _finish_attack() -> void:
-	_is_attacking = false
-	if animation != _ANIM_IDLE:
-		play(_ANIM_IDLE)
+	is_attacking = false
+	if animation != ANIM_IDLE:
+		play(ANIM_IDLE)
 
 	if target == null or not is_instance_valid(target):
 		current_state = State.PATROL
@@ -252,18 +244,13 @@ func _pick_new_patrol_destination() -> void:
 
 func _on_death() -> void:
 	set_physics_process(false)
-	if _collision_shape != null:
-		_collision_shape.set_deferred(&"disabled", true)
-	if sprite_frames != null and sprite_frames.has_animation(&"death"):
-		play(&"death")
-		_animated_sprite.animation_finished.connect(queue_free, CONNECT_ONE_SHOT)
-	else:
-		var tween: Tween = create_tween()
-		tween.tween_property(self, ^"modulate:a", 0.0, 0.2)
-		tween.tween_callback(queue_free)
+	disable_collisions()
+	play(ANIM_DEATH)
+	_animated_sprite.animation_finished.connect(queue_free, CONNECT_ONE_SHOT)
 
 
 func _on_animation_finished() -> void:
-	if _is_attacking:
+	super._on_animation_finished()
+	if is_attacking:
 		_perform_attack()
 		_finish_attack()

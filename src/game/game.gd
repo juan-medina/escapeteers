@@ -86,13 +86,13 @@ func _spawn_characters() -> void:
 			await Alerts.fatal_error(&"Could not spawn characters")
 			return
 
+		_characters.add_child(ch)
 		ch.is_player = false
 		ch.position = pos
 		ch.y_sort_enabled = true
 		ch.flip_h = randf() > 0.5
 		ch.frame = randi() % 6
 		ch.frame_progress = randf()
-		_characters.add_child(ch)
 		_unrecruited_characters.append(ch)
 
 

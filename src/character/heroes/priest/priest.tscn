@@ -187,4 +187,4 @@ is_player = false
 
 [node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]
 sprite_frames = SubResource("SpriteFrames_sf")
-animation = &"hit"
+animation = &"idle"

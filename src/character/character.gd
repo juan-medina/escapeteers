@@ -10,8 +10,13 @@ signal died
 const FLIP_THRESHOLD_X: float = 0.35
 const MIN_MOVEMENT_THRESHOLD_SQUARED: float = 0.04
 
-const _ANIM_IDLE: StringName = &"idle"
-const _ANIM_RUN: StringName = &"run"
+const ANIM_IDLE: StringName = &"idle"
+const ANIM_RUN: StringName = &"run"
+const ANIM_HIT: StringName = &"hit"
+const ANIM_DEATH: StringName = &"death"
+const ANIM_ATTACK_MELEE1: StringName = &"attack_melee1"
+const ANIM_ATTACK_MELEE2: StringName = &"attack_melee2"
+const ANIM_ATTACK_RANGED1: StringName = &"attack_ranged1"
 
 @export var max_health: float = 100.0
 @export var speed: float = 100.0
@@ -20,81 +25,70 @@ var health: float = 100.0
 
 var flip_h: bool:
 	get:
-		var sprite: AnimatedSprite2D = _get_sprite()
-		return sprite.flip_h if sprite != null else false
+		return _animated_sprite.flip_h
 	set(value):
-		var sprite: AnimatedSprite2D = _get_sprite()
-		if sprite != null:
-			sprite.flip_h = value
+		_animated_sprite.flip_h = value
 
 var frame: int:
 	get:
-		var sprite: AnimatedSprite2D = _get_sprite()
-		return sprite.frame if sprite != null else 0
+		return _animated_sprite.frame
 	set(value):
-		var sprite: AnimatedSprite2D = _get_sprite()
-		if sprite != null:
-			sprite.frame = value
+		_animated_sprite.frame = value
 
 var frame_progress: float:
 	get:
-		var sprite: AnimatedSprite2D = _get_sprite()
-		return sprite.frame_progress if sprite != null else 0.0
+		return _animated_sprite.frame_progress
 	set(value):
-		var sprite: AnimatedSprite2D = _get_sprite()
-		if sprite != null:
-			sprite.frame_progress = value
+		_animated_sprite.frame_progress = value
 
 var animation: StringName:
 	get:
-		var sprite: AnimatedSprite2D = _get_sprite()
-		return sprite.animation if sprite != null else StringName()
+		return _animated_sprite.animation
 
 var is_attacking: bool = false
 
 var sprite_frames: SpriteFrames:
 	get:
-		var sprite: AnimatedSprite2D = _get_sprite()
-		return sprite.sprite_frames if sprite != null else null
+		return _animated_sprite.sprite_frames
 	set(value):
-		var sprite: AnimatedSprite2D = _get_sprite()
-		if sprite != null:
-			sprite.sprite_frames = value
+		_animated_sprite.sprite_frames = value
 
 @onready var _animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
+@onready var _collision_shape: CollisionShape2D = $CollisionShape2D
+@onready var _spawn_point: Marker2D = $SpawnPoint
 
 
 func _ready() -> void:
 	health = max_health
-	var sprite: AnimatedSprite2D = _get_sprite()
-	if sprite != null:
-		sprite.animation_finished.connect(_on_character_animation_finished)
-	play(_ANIM_IDLE)
+	_animated_sprite.animation_finished.connect(_on_animation_finished)
+	play(ANIM_IDLE)
 
 
-func play(anim_name: StringName = _ANIM_IDLE) -> void:
-	var sprite: AnimatedSprite2D = _get_sprite()
-	if sprite != null and sprite.sprite_frames != null:
-		if sprite.sprite_frames.has_animation(anim_name):
-			sprite.play(anim_name)
+func play(anim_name: StringName = ANIM_IDLE) -> void:
+	_animated_sprite.play(anim_name)
+
+
+func disable_collisions() -> void:
+	_collision_shape.set_deferred(&"disabled", true)
+
+
+func enable_collisions() -> void:
+	_collision_shape.set_deferred(&"disabled", false)
 
 
 func update_visuals(movement_vector: Vector2) -> void:
 	if movement_vector.length_squared() > MIN_MOVEMENT_THRESHOLD_SQUARED:
 		if absf(movement_vector.x) > FLIP_THRESHOLD_X:
 			flip_h = movement_vector.x < 0.0
-		if not is_attacking and animation != &"hit" and animation != _ANIM_RUN:
-			play(_ANIM_RUN)
+		if not is_attacking and animation != ANIM_HIT and animation != ANIM_RUN:
+			play(ANIM_RUN)
 	else:
-		if not is_attacking and animation != &"hit" and animation != _ANIM_IDLE:
-			play(_ANIM_IDLE)
+		if not is_attacking and animation != ANIM_HIT and animation != ANIM_IDLE:
+			play(ANIM_IDLE)
 
 
 func get_spawn_position() -> Vector2:
-	var marker: Marker2D = get_node_or_null(^"SpawnPoint") as Marker2D
-	if marker != null:
-		return marker.global_position
-	return global_position + Vector2(0.0, 2.0)
+	return _spawn_point.global_position
 
 
 func take_damage(amount: float) -> void:
@@ -112,15 +106,9 @@ func _on_death() -> void:
 
 func _flash_hurt() -> void:
 	if not is_attacking:
-		play(&"hit")
+		play(ANIM_HIT)
 
 
-func _on_character_animation_finished() -> void:
-	if animation == &"hit":
-		play(_ANIM_IDLE)
-
-
-func _get_sprite() -> AnimatedSprite2D:
-	if _animated_sprite != null:
-		return _animated_sprite
-	return get_node_or_null(^"AnimatedSprite2D") as AnimatedSprite2D
+func _on_animation_finished() -> void:
+	if animation == ANIM_HIT:
+		play(ANIM_IDLE)

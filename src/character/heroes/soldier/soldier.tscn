@@ -278,6 +278,8 @@ animations = [{
 [node name="Soldier" unique_id=706574148 instance=ExtResource("1_base")]
 script = ExtResource("2_script")
 is_player = false
+can_melee = true
+can_heavy_melee = true
 melee_range = 28.0
 melee1_cooldown = 0.5
 melee2_cooldown = 3.5
@@ -289,4 +291,4 @@ melee2_knockback = 260.0
 
 [node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]
 sprite_frames = SubResource("SpriteFrames_sf")
-animation = &"attack_melee2"
+animation = &"idle"
