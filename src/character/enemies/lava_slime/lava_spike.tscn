@@ -3,22 +3,6 @@
 [ext_resource type="Script" uid="uid://dm38awqdf3ogo" path="res://character/enemies/lava_slime/lava_spike.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://buyvxtvprt85x" path="res://character/enemies/lava_slime/lava_slime.png" id="2_tex"]
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_5d6a5"]
-atlas = ExtResource("2_tex")
-region = Rect2(0, 700, 100, 100)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_ywcmp"]
-atlas = ExtResource("2_tex")
-region = Rect2(100, 700, 100, 100)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_bykfo"]
-atlas = ExtResource("2_tex")
-region = Rect2(200, 700, 100, 100)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_fasgm"]
-atlas = ExtResource("2_tex")
-region = Rect2(300, 700, 100, 100)
-
 [sub_resource type="AtlasTexture" id="AtlasTexture_s0"]
 atlas = ExtResource("2_tex")
 region = Rect2(0, 500, 100, 100)
@@ -39,41 +23,8 @@ region = Rect2(300, 500, 100, 100)
 atlas = ExtResource("2_tex")
 region = Rect2(400, 500, 100, 100)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_wkarn"]
-atlas = ExtResource("2_tex")
-region = Rect2(0, 600, 100, 100)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_dpdm0"]
-atlas = ExtResource("2_tex")
-region = Rect2(100, 600, 100, 100)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_jvts3"]
-atlas = ExtResource("2_tex")
-region = Rect2(200, 600, 100, 100)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_bdflu"]
-atlas = ExtResource("2_tex")
-region = Rect2(300, 600, 100, 100)
-
 [sub_resource type="SpriteFrames" id="SpriteFrames_spike"]
 animations = [{
-"frames": [{
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_5d6a5")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_ywcmp")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_bykfo")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_fasgm")
-}],
-"loop": 0,
-"name": &"death",
-"speed": 5.0
-}, {
 "frames": [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_s0")
@@ -93,23 +44,6 @@ animations = [{
 "loop": 1,
 "name": &"default",
 "speed": 8.0
-}, {
-"frames": [{
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_wkarn")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_dpdm0")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_jvts3")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_bdflu")
-}],
-"loop": 1,
-"name": &"hit",
-"speed": 8.0
 }]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_spike"]
@@ -123,9 +57,6 @@ script = ExtResource("1_script")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1251288112]
 sprite_frames = SubResource("SpriteFrames_spike")
-animation = &"death"
-frame = 3
-frame_progress = 1.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=2036113480]
 position = Vector2(0, 4)

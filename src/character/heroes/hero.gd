@@ -11,8 +11,8 @@ const RECRUIT_DISTANCE: float = 20.0
 const MAX_HISTORY_DURATION: float = 2.5
 const CRESCENT_BLEND_SPEED: float = 5.0
 const PLAYER_LIGHT_TEXTURE: Texture2D = preload("res://map/light_texture.tres")
-const _ANIM_MELEE1: StringName = &"melee1"
-const _ANIM_MELEE2: StringName = &"melee2"
+const _ANIM_MELEE1: StringName = &"attack_melee1"
+const _ANIM_MELEE2: StringName = &"attack_melee2"
 const _GROUP_ENEMIES: StringName = &"enemies"
 
 @export var is_player: bool = false:
