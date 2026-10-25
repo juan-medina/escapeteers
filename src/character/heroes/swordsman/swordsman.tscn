@@ -4,6 +4,42 @@
 [ext_resource type="Script" uid="uid://dxgjxihuxyrff" path="res://character/heroes/swordsman/swordsman.gd" id="2_script"]
 [ext_resource type="Texture2D" uid="uid://ck5k561nn1g5t" path="res://character/heroes/swordsman/swordsman.png" id="3_tex"]
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_vq26m"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 600, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_puv4g"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 600, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_c8xrh"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 600, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_fupgj"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 600, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_e6m2q"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 500, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_p6qq3"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 500, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_qijdx"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 500, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6x3el"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 500, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_vrtht"]
+atlas = ExtResource("3_tex")
+region = Rect2(400, 500, 100, 100)
+
 [sub_resource type="AtlasTexture" id="AtlasTexture_i0"]
 atlas = ExtResource("3_tex")
 region = Rect2(0, 0, 100, 100)
@@ -64,6 +100,43 @@ region = Rect2(700, 100, 100, 100)
 animations = [{
 "frames": [{
 "duration": 1.0,
+"texture": SubResource("AtlasTexture_vq26m")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_puv4g")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_c8xrh")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_fupgj")
+}],
+"loop": 0,
+"name": &"death",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_e6m2q")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_p6qq3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_qijdx")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_6x3el")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_vrtht")
+}],
+"loop": 1,
+"name": &"hit",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
 "texture": SubResource("AtlasTexture_i0")
 }, {
 "duration": 1.0,
@@ -117,7 +190,8 @@ animations = [{
 
 [node name="Swordsman" unique_id=89725606 instance=ExtResource("1_base")]
 script = ExtResource("2_script")
+is_player = false
 
-[node name="AnimatedSprite2D" parent="." index="0"]
+[node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]
 sprite_frames = SubResource("SpriteFrames_sf")
-animation = &"idle"
+animation = &"hit"

@@ -4,6 +4,38 @@
 [ext_resource type="Script" uid="uid://7exulbvinnu3" path="res://character/heroes/wizard/wizard.gd" id="2_script"]
 [ext_resource type="Texture2D" uid="uid://dfxivslghvg13" path="res://character/heroes/wizard/wizard.png" id="3_tex"]
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_w25wn"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 900, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_abqb7"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 900, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_yfert"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 900, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_xdu0t"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 900, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_td6ib"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 800, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_5a6wo"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 800, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_b46by"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 800, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_pxl8l"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 800, 100, 100)
+
 [sub_resource type="AtlasTexture" id="AtlasTexture_i0"]
 atlas = ExtResource("3_tex")
 region = Rect2(0, 0, 100, 100)
@@ -64,6 +96,40 @@ region = Rect2(700, 100, 100, 100)
 animations = [{
 "frames": [{
 "duration": 1.0,
+"texture": SubResource("AtlasTexture_w25wn")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_abqb7")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_yfert")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_xdu0t")
+}],
+"loop": 0,
+"name": &"death",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_td6ib")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_5a6wo")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_b46by")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_pxl8l")
+}],
+"loop": 1,
+"name": &"hit",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
 "texture": SubResource("AtlasTexture_i0")
 }, {
 "duration": 1.0,
@@ -117,7 +183,9 @@ animations = [{
 
 [node name="Wizard" unique_id=1787024550 instance=ExtResource("1_base")]
 script = ExtResource("2_script")
+is_player = false
 
-[node name="AnimatedSprite2D" parent="." index="0"]
+[node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]
 sprite_frames = SubResource("SpriteFrames_sf")
-animation = &"idle"
+animation = &"hit"
+frame_progress = 0.11532452

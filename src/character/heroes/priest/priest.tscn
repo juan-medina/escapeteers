@@ -1,8 +1,40 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene format=3 uid="uid://eo60a28lwjx6"]
 
 [ext_resource type="PackedScene" uid="uid://derhacq4fqbxt" path="res://character/character.tscn" id="1_base"]
-[ext_resource type="Script" path="res://character/heroes/priest/priest.gd" id="2_script"]
+[ext_resource type="Script" uid="uid://dn2htm0m6ctby" path="res://character/heroes/priest/priest.gd" id="2_script"]
 [ext_resource type="Texture2D" uid="uid://bc8mbe5i6p0xf" path="res://character/heroes/priest/priest.png" id="3_tex"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_w487a"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 900, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_cm1r8"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 900, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_epgk5"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 900, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_b0tuk"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 900, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_qdqx0"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 800, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0s31k"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 800, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_i7uo4"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 800, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_y8ivv"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 800, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_i0"]
 atlas = ExtResource("3_tex")
@@ -64,6 +96,40 @@ region = Rect2(700, 100, 100, 100)
 animations = [{
 "frames": [{
 "duration": 1.0,
+"texture": SubResource("AtlasTexture_w487a")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_cm1r8")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_epgk5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_b0tuk")
+}],
+"loop": 0,
+"name": &"death",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_qdqx0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_0s31k")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_i7uo4")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_y8ivv")
+}],
+"loop": 1,
+"name": &"hit",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
 "texture": SubResource("AtlasTexture_i0")
 }, {
 "duration": 1.0,
@@ -81,7 +147,7 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_i5")
 }],
-"loop": true,
+"loop": 1,
 "name": &"idle",
 "speed": 8.0
 }, {
@@ -110,14 +176,15 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_r7")
 }],
-"loop": true,
+"loop": 1,
 "name": &"run",
 "speed": 10.0
 }]
 
-[node name="Priest" instance=ExtResource("1_base")]
+[node name="Priest" unique_id=597551981 instance=ExtResource("1_base")]
 script = ExtResource("2_script")
+is_player = false
 
-[node name="AnimatedSprite2D" parent="." index="0"]
+[node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]
 sprite_frames = SubResource("SpriteFrames_sf")
-animation = &"idle"
+animation = &"hit"

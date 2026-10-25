@@ -4,6 +4,38 @@
 [ext_resource type="Script" uid="uid://vq53ohc5u3bw" path="res://character/heroes/archer/archer.gd" id="2_script"]
 [ext_resource type="Texture2D" uid="uid://dj4ko8qfq327i" path="res://character/heroes/archer/archer.png" id="3_tex"]
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_n7d0h"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 500, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ycn3c"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 500, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_rdhrp"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 500, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wewgs"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 500, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_s55ef"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_f8hgv"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_v4yv6"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_45ewa"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 400, 100, 100)
+
 [sub_resource type="AtlasTexture" id="AtlasTexture_i0"]
 atlas = ExtResource("3_tex")
 region = Rect2(0, 0, 100, 100)
@@ -64,6 +96,40 @@ region = Rect2(700, 100, 100, 100)
 animations = [{
 "frames": [{
 "duration": 1.0,
+"texture": SubResource("AtlasTexture_n7d0h")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ycn3c")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_rdhrp")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_wewgs")
+}],
+"loop": 0,
+"name": &"death",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_s55ef")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_f8hgv")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_v4yv6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_45ewa")
+}],
+"loop": 1,
+"name": &"hit",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
 "texture": SubResource("AtlasTexture_i0")
 }, {
 "duration": 1.0,
@@ -117,7 +183,10 @@ animations = [{
 
 [node name="Archer" unique_id=488995017 instance=ExtResource("1_base")]
 script = ExtResource("2_script")
+is_player = false
 
-[node name="AnimatedSprite2D" parent="." index="0"]
+[node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]
 sprite_frames = SubResource("SpriteFrames_sf")
-animation = &"idle"
+animation = &"death"
+frame = 3
+frame_progress = 1.0

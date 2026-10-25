@@ -4,6 +4,38 @@
 [ext_resource type="Script" uid="uid://d083plcr584hf" path="res://character/heroes/knight_templar/knight_templar.gd" id="2_script"]
 [ext_resource type="Texture2D" uid="uid://dijj4thmra238" path="res://character/heroes/knight_templar/knight_templar.png" id="3_tex"]
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_xqhqy"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 800, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kjhu2"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 800, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6f3mv"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 800, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_48ier"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 800, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ss01h"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 700, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_phqtd"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 700, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ol27c"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 700, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_qjn34"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 700, 100, 100)
+
 [sub_resource type="AtlasTexture" id="AtlasTexture_i0"]
 atlas = ExtResource("3_tex")
 region = Rect2(0, 0, 100, 100)
@@ -64,6 +96,40 @@ region = Rect2(700, 100, 100, 100)
 animations = [{
 "frames": [{
 "duration": 1.0,
+"texture": SubResource("AtlasTexture_xqhqy")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kjhu2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_6f3mv")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_48ier")
+}],
+"loop": 0,
+"name": &"death",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ss01h")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_phqtd")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ol27c")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_qjn34")
+}],
+"loop": 1,
+"name": &"hit",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
 "texture": SubResource("AtlasTexture_i0")
 }, {
 "duration": 1.0,
@@ -117,7 +183,9 @@ animations = [{
 
 [node name="KnightTemplar" unique_id=204543114 instance=ExtResource("1_base")]
 script = ExtResource("2_script")
+is_player = false
 
-[node name="AnimatedSprite2D" parent="." index="0"]
+[node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]
 sprite_frames = SubResource("SpriteFrames_sf")
-animation = &"idle"
+animation = &"hit"
+frame_progress = 0.20502505
