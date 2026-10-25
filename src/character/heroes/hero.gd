@@ -93,7 +93,7 @@ func _process(delta: float) -> void:
 				flip_h = false
 			elif input_vector.x < -0.05:
 				flip_h = true
-			if animation != _ANIM_RUN:
+			if animation != &"hit" and animation != _ANIM_RUN:
 				play(_ANIM_RUN)
 	else:
 		is_moving = false
@@ -101,7 +101,7 @@ func _process(delta: float) -> void:
 		velocity = Vector2.ZERO
 		move_and_slide()
 		if not is_attacking:
-			if animation != _ANIM_IDLE:
+			if animation != &"hit" and animation != _ANIM_IDLE:
 				play(_ANIM_IDLE)
 
 

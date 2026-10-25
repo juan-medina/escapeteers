@@ -62,11 +62,13 @@ var sprite_frames: SpriteFrames:
 			sprite.sprite_frames = value
 
 @onready var _animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
-@onready var _collision_shape: CollisionShape2D = $CollisionShape2D
 
 
 func _ready() -> void:
 	health = max_health
+	var sprite: AnimatedSprite2D = _get_sprite()
+	if sprite != null:
+		sprite.animation_finished.connect(_on_character_animation_finished)
 	play(_ANIM_IDLE)
 
 
@@ -78,15 +80,13 @@ func play(anim_name: StringName = _ANIM_IDLE) -> void:
 
 
 func update_visuals(movement_vector: Vector2) -> void:
-	if is_attacking:
-		return
 	if movement_vector.length_squared() > MIN_MOVEMENT_THRESHOLD_SQUARED:
 		if absf(movement_vector.x) > FLIP_THRESHOLD_X:
 			flip_h = movement_vector.x < 0.0
-		if animation != _ANIM_RUN:
+		if not is_attacking and animation != &"hit" and animation != _ANIM_RUN:
 			play(_ANIM_RUN)
 	else:
-		if animation != _ANIM_IDLE:
+		if not is_attacking and animation != &"hit" and animation != _ANIM_IDLE:
 			play(_ANIM_IDLE)
 
 
@@ -111,11 +111,13 @@ func _on_death() -> void:
 
 
 func _flash_hurt() -> void:
-	var sprite: AnimatedSprite2D = _get_sprite()
-	if sprite != null:
-		sprite.modulate = Color(1.0, 0.35, 0.35, 1.0)
-		var tween: Tween = create_tween()
-		tween.tween_property(sprite, ^"modulate", Color.WHITE, 0.15)
+	if not is_attacking:
+		play(&"hit")
+
+
+func _on_character_animation_finished() -> void:
+	if animation == &"hit":
+		play(_ANIM_IDLE)
 
 
 func _get_sprite() -> AnimatedSprite2D:

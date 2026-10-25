@@ -229,6 +229,10 @@ func _pick_new_patrol_destination() -> void:
 	_patrol_timer = PATROL_TIMEOUT
 	_navigator.reset()
 
+	if map == null:
+		_patrol_destination = global_position
+		return
+
 	var candidate_rooms: Array[Rect2i] = map.companion_rooms
 	if candidate_rooms.is_empty():
 		_patrol_destination = global_position
@@ -247,11 +251,16 @@ func _pick_new_patrol_destination() -> void:
 
 
 func _on_death() -> void:
+	set_physics_process(false)
 	if _collision_shape != null:
 		_collision_shape.set_deferred(&"disabled", true)
-	var tween: Tween = create_tween()
-	tween.tween_property(self, ^"modulate:a", 0.0, 0.2)
-	tween.tween_callback(queue_free)
+	if sprite_frames != null and sprite_frames.has_animation(&"death"):
+		play(&"death")
+		_animated_sprite.animation_finished.connect(queue_free, CONNECT_ONE_SHOT)
+	else:
+		var tween: Tween = create_tween()
+		tween.tween_property(self, ^"modulate:a", 0.0, 0.2)
+		tween.tween_callback(queue_free)
 
 
 func _on_animation_finished() -> void:
