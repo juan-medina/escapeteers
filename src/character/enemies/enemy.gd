@@ -14,8 +14,10 @@ enum State {
 }
 
 const _ANIM_ATTACK: StringName = &"attack"
+const _GROUP_ENEMIES: StringName = &"enemies"
 const WAYPOINT_ARRIVE_DIST_SQ: float = 64.0
 const PATROL_TIMEOUT: float = 10.0
+const KNOCKBACK_DECAY: float = 600.0
 
 @export var detection_range: float = 140.0
 @export var attack_range: float = 22.0
@@ -32,10 +34,12 @@ var _patrol_timer: float = 0.0
 var _idle_wait_timer: float = 0.0
 var _attack_cooldown_timer: float = 0.0
 var _is_attacking: bool = false
+var _knockback_velocity: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
 	super._ready()
+	add_to_group(_GROUP_ENEMIES)
 	collision_layer = 8
 	collision_mask = 1
 	_animated_sprite.animation_finished.connect(_on_animation_finished)
@@ -44,6 +48,9 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if _attack_cooldown_timer > 0.0:
 		_attack_cooldown_timer -= delta
+
+	if _knockback_velocity.length_squared() > 1.0:
+		_knockback_velocity = _knockback_velocity.move_toward(Vector2.ZERO, KNOCKBACK_DECAY * delta)
 
 	match current_state:
 		State.PATROL:
@@ -80,6 +87,10 @@ func spawn_projectile(projectile: Projectile) -> void:
 	projectile_spawn_requested.emit(projectile)
 
 
+func apply_knockback(force: Vector2) -> void:
+	_knockback_velocity = force
+
+
 func apply_melee_damage(attack_target: Hero, damage_amount: float) -> void:
 	if attack_target != null and is_instance_valid(attack_target):
 		attack_target.take_damage(damage_amount)
@@ -89,8 +100,11 @@ func apply_melee_damage(attack_target: Hero, damage_amount: float) -> void:
 func _process_patrol(delta: float) -> void:
 	if _idle_wait_timer > 0.0:
 		_idle_wait_timer -= delta
-		velocity = Vector2.ZERO
-		update_visuals(Vector2.ZERO)
+		velocity = _knockback_velocity
+		if _knockback_velocity.length_squared() > 1.0:
+			move_and_slide()
+		else:
+			update_visuals(Vector2.ZERO)
 		return
 
 	_patrol_timer -= delta
@@ -102,13 +116,16 @@ func _process_patrol(delta: float) -> void:
 	if dist_to_patrol_sq <= WAYPOINT_ARRIVE_DIST_SQ:
 		_idle_wait_timer = randf_range(1.5, 3.5)
 		_pick_new_patrol_destination()
-		velocity = Vector2.ZERO
-		update_visuals(Vector2.ZERO)
+		velocity = _knockback_velocity
+		if _knockback_velocity.length_squared() > 1.0:
+			move_and_slide()
+		else:
+			update_visuals(Vector2.ZERO)
 		return
 
 	var waypoint: Vector2 = _navigator.get_next_waypoint(self, _patrol_destination, map, delta)
 	var move_vec: Vector2 = (waypoint - global_position).normalized()
-	velocity = move_vec * speed
+	velocity = (move_vec * speed) + _knockback_velocity
 	move_and_slide()
 	update_visuals(velocity * delta)
 
@@ -129,20 +146,24 @@ func _process_chase(delta: float) -> void:
 		return
 
 	if _can_attack_target():
-		velocity = Vector2.ZERO
+		velocity = _knockback_velocity
+		if _knockback_velocity.length_squared() > 1.0:
+			move_and_slide()
 		current_state = State.ATTACK
 		_start_attack()
 		return
 
 	var waypoint: Vector2 = _navigator.get_next_waypoint(self, target.global_position, map, delta)
 	var move_vec: Vector2 = (waypoint - global_position).normalized()
-	velocity = move_vec * speed
+	velocity = (move_vec * speed) + _knockback_velocity
 	move_and_slide()
 	update_visuals(velocity * delta)
 
 
 func _process_attack(_delta: float) -> void:
-	velocity = Vector2.ZERO
+	velocity = _knockback_velocity
+	if _knockback_velocity.length_squared() > 1.0:
+		move_and_slide()
 
 	if target == null or not is_instance_valid(target):
 		_is_attacking = false
@@ -223,6 +244,14 @@ func _pick_new_patrol_destination() -> void:
 
 	var target_world: Vector2 = map.map_to_local(target_cell)
 	_patrol_destination = map.clamp_to_walkable(target_world)
+
+
+func _on_death() -> void:
+	if _collision_shape != null:
+		_collision_shape.set_deferred(&"disabled", true)
+	var tween: Tween = create_tween()
+	tween.tween_property(self, ^"modulate:a", 0.0, 0.2)
+	tween.tween_callback(queue_free)
 
 
 func _on_animation_finished() -> void:

@@ -50,6 +50,8 @@ var animation: StringName:
 		var sprite: AnimatedSprite2D = _get_sprite()
 		return sprite.animation if sprite != null else StringName()
 
+var is_attacking: bool = false
+
 var sprite_frames: SpriteFrames:
 	get:
 		var sprite: AnimatedSprite2D = _get_sprite()
@@ -76,6 +78,8 @@ func play(anim_name: StringName = _ANIM_IDLE) -> void:
 
 
 func update_visuals(movement_vector: Vector2) -> void:
+	if is_attacking:
+		return
 	if movement_vector.length_squared() > MIN_MOVEMENT_THRESHOLD_SQUARED:
 		if absf(movement_vector.x) > FLIP_THRESHOLD_X:
 			flip_h = movement_vector.x < 0.0

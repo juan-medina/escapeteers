@@ -4,10 +4,16 @@
 class_name Hero
 extends Character
 
+signal melee_attack_started(attack_name: StringName)
+signal enemy_hit(enemy: Enemy, damage: float, is_heavy: bool)
+
 const RECRUIT_DISTANCE: float = 20.0
 const MAX_HISTORY_DURATION: float = 2.5
 const CRESCENT_BLEND_SPEED: float = 5.0
 const PLAYER_LIGHT_TEXTURE: Texture2D = preload("res://map/light_texture.tres")
+const _ANIM_MELEE1: StringName = &"melee1"
+const _ANIM_MELEE2: StringName = &"melee2"
+const _GROUP_ENEMIES: StringName = &"enemies"
 
 @export var is_player: bool = false:
 	set(value):
@@ -15,6 +21,14 @@ const PLAYER_LIGHT_TEXTURE: Texture2D = preload("res://map/light_texture.tres")
 		_update_collision_mode()
 		_update_player_light()
 		_update_ground_indicator()
+@export var melee_range: float = 28.0
+@export var melee1_cooldown: float = 0.5
+@export var melee2_cooldown: float = 3.5
+@export var melee2_chance: float = 0.35
+@export var melee1_damage: float = 10.0
+@export var melee2_damage: float = 25.0
+@export var melee1_knockback: float = 85.0
+@export var melee2_knockback: float = 260.0
 
 var leader: Hero = null
 var squad_member: SquadMember = null:
@@ -29,6 +43,12 @@ var _elapsed_time: float = 0.0
 var _pos_history: Array[Vector2] = []
 var _time_history: Array[float] = []
 var _player_light: PointLight2D = null
+var _melee1_timer: float = 0.0
+var _melee2_timer: float = 0.0
+var _fast_attacks_done: int = 0
+var _hit_applied_this_attack: bool = false
+var _current_attack_name: StringName = StringName()
+var _current_attack_target: Enemy = null
 
 @onready var _ground_indicator: GroundIndicator = get_node_or_null(^"GroundIndicator") as GroundIndicator
 
@@ -38,9 +58,20 @@ func _ready() -> void:
 	_update_collision_mode()
 	_update_player_light()
 	_update_ground_indicator()
+	_melee2_timer = melee2_cooldown * 0.5
+	if _animated_sprite != null:
+		_animated_sprite.animation_finished.connect(_on_animation_finished)
+		_animated_sprite.frame_changed.connect(_on_frame_changed)
 
 
 func _process(delta: float) -> void:
+	if _melee1_timer > 0.0:
+		_melee1_timer -= delta
+	if _melee2_timer > 0.0:
+		_melee2_timer -= delta
+
+	_check_auto_attack()
+
 	if not is_player:
 		return
 
@@ -57,18 +88,158 @@ func _process(delta: float) -> void:
 		move_and_slide()
 		if _ground_indicator != null:
 			_ground_indicator.facing_direction = move_direction
-		if input_vector.x > 0.05:
-			flip_h = false
-		elif input_vector.x < -0.05:
-			flip_h = true
-		if animation != _ANIM_RUN:
-			play(_ANIM_RUN)
+		if not is_attacking:
+			if input_vector.x > 0.05:
+				flip_h = false
+			elif input_vector.x < -0.05:
+				flip_h = true
+			if animation != _ANIM_RUN:
+				play(_ANIM_RUN)
 	else:
 		is_moving = false
 		crescent_blend = move_toward(crescent_blend, 0.0, CRESCENT_BLEND_SPEED * delta)
 		velocity = Vector2.ZERO
 		move_and_slide()
-		if animation != _ANIM_IDLE:
+		if not is_attacking:
+			if animation != _ANIM_IDLE:
+				play(_ANIM_IDLE)
+
+
+func _check_auto_attack() -> void:
+	if not is_player and squad_member == null:
+		return
+	if is_attacking:
+		return
+
+	var has_m1: bool = sprite_frames != null and sprite_frames.has_animation(_ANIM_MELEE1)
+	var has_m2: bool = sprite_frames != null and sprite_frames.has_animation(_ANIM_MELEE2)
+	if not has_m1 and not has_m2:
+		return
+
+	var closest_enemy: Enemy = _find_closest_enemy(melee_range)
+	if closest_enemy == null:
+		_fast_attacks_done = 0
+		return
+
+	if _melee1_timer > 0.0:
+		return
+
+	var choose_m2: bool = false
+	if has_m2 and _melee2_timer <= 0.0:
+		if not has_m1:
+			choose_m2 = true
+		elif _fast_attacks_done >= 2 and randf() < melee2_chance:
+			choose_m2 = true
+
+	if choose_m2:
+		_start_melee_attack(_ANIM_MELEE2, closest_enemy)
+	elif has_m1:
+		_start_melee_attack(_ANIM_MELEE1, closest_enemy)
+
+
+func _start_melee_attack(anim_name: StringName, target_enemy: Enemy) -> void:
+	is_attacking = true
+	_hit_applied_this_attack = false
+	_current_attack_name = anim_name
+	_current_attack_target = target_enemy
+
+	if anim_name == _ANIM_MELEE2:
+		_melee2_timer = melee2_cooldown
+		_melee1_timer = melee1_cooldown
+		_fast_attacks_done = 0
+	else:
+		_melee1_timer = melee1_cooldown
+		_fast_attacks_done += 1
+
+	var diff_x: float = target_enemy.global_position.x - global_position.x
+	if absf(diff_x) > 1.0:
+		flip_h = diff_x < 0.0
+
+	play(anim_name)
+	melee_attack_started.emit(anim_name)
+
+
+func _apply_melee_hit() -> void:
+	_hit_applied_this_attack = true
+
+	var is_heavy: bool = _current_attack_name == _ANIM_MELEE2
+	var damage_amount: float = melee2_damage if is_heavy else melee1_damage
+	var knockback_amount: float = melee2_knockback if is_heavy else melee1_knockback
+
+	var hit_range: float = melee_range * (1.3 if is_heavy else 1.15)
+	var targets: Array[Enemy] = _find_enemies_in_range(hit_range)
+
+	if targets.is_empty() and _current_attack_target != null and is_instance_valid(_current_attack_target):
+		if global_position.distance_to(_current_attack_target.global_position) <= hit_range * 1.3:
+			targets.append(_current_attack_target)
+
+	for enemy: Enemy in targets:
+		if not is_heavy and enemy != _current_attack_target and _current_attack_target != null:
+			if (
+				not is_instance_valid(_current_attack_target)
+				or global_position.distance_squared_to(_current_attack_target.global_position) > hit_range * hit_range
+			):
+				_current_attack_target = enemy
+			else:
+				continue
+
+		var push_dir: Vector2 = (enemy.global_position - global_position).normalized()
+		if push_dir.length_squared() < 0.01:
+			push_dir = Vector2.LEFT if flip_h else Vector2.RIGHT
+
+		enemy.apply_knockback(push_dir * knockback_amount)
+		enemy.take_damage(damage_amount)
+		enemy_hit.emit(enemy, damage_amount, is_heavy)
+
+		if not is_heavy:
+			break
+
+
+func _find_closest_enemy(max_distance: float) -> Enemy:
+	var closest: Enemy = null
+	var min_dist_sq: float = max_distance * max_distance
+	for node: Node in get_tree().get_nodes_in_group(_GROUP_ENEMIES):
+		var enemy: Enemy = node as Enemy
+		if enemy == null or not is_instance_valid(enemy) or enemy.health <= 0.0 or enemy.is_queued_for_deletion():
+			continue
+		var dist_sq: float = global_position.distance_squared_to(enemy.global_position)
+		if dist_sq <= min_dist_sq:
+			min_dist_sq = dist_sq
+			closest = enemy
+	return closest
+
+
+func _find_enemies_in_range(max_distance: float) -> Array[Enemy]:
+	var result: Array[Enemy] = []
+	var max_dist_sq: float = max_distance * max_distance
+	for node: Node in get_tree().get_nodes_in_group(_GROUP_ENEMIES):
+		var enemy: Enemy = node as Enemy
+		if enemy == null or not is_instance_valid(enemy) or enemy.health <= 0.0 or enemy.is_queued_for_deletion():
+			continue
+		var dist_sq: float = global_position.distance_squared_to(enemy.global_position)
+		if dist_sq <= max_dist_sq:
+			result.append(enemy)
+	return result
+
+
+func _on_frame_changed() -> void:
+	if not is_attacking or _hit_applied_this_attack:
+		return
+
+	if animation == _ANIM_MELEE1 or animation == _ANIM_MELEE2:
+		if frame >= 2:
+			_apply_melee_hit()
+
+
+func _on_animation_finished() -> void:
+	if is_attacking:
+		if not _hit_applied_this_attack:
+			_apply_melee_hit()
+		is_attacking = false
+		_current_attack_target = null
+		if is_moving:
+			play(_ANIM_RUN)
+		else:
 			play(_ANIM_IDLE)
 
 
