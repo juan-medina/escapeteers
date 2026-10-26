@@ -26,8 +26,8 @@ func can_execute(user: Character, target: Character, anchor_pos: Vector2) -> boo
 	if target == null or not is_instance_valid(target) or target.health <= 0.0:
 		return false
 
-	# If an anchor is provided, target must be within leash from the anchor
-	if anchor_pos != Vector2.ZERO and target.global_position.distance_to(anchor_pos) > leash_distance:
+	# If an anchor is provided and leash is positive, target must be within leash from the anchor
+	if anchor_pos != Vector2.ZERO and leash_distance > 0.0 and target.global_position.distance_to(anchor_pos) > leash_distance:
 		return false
 
 	# Target must be within attack range of user

@@ -159,6 +159,12 @@ func _process_chase(delta: float) -> void:
 	if absf(diff_x) > 2.0:
 		flip_h = diff_x < 0.0
 
+	if combat_state == CombatState.ATTACKING:
+		velocity = _knockback_velocity
+		if _knockback_velocity.length_squared() > 1.0:
+			move_and_slide()
+		return
+
 	var waypoint: Vector2 = _navigator.get_next_waypoint(self, target.global_position, map, delta)
 	var move_vec: Vector2 = (waypoint - global_position).normalized()
 	velocity = (move_vec * speed) + _knockback_velocity
@@ -171,7 +177,7 @@ func _check_combat_actions() -> void:
 		return
 
 	for action: CombatAction in combat_actions:
-		if action.can_execute(self, target, global_position):
+		if action.can_execute(self, target, Vector2.ZERO):
 			current_action = action
 			combat_state = CombatState.ATTACKING
 			action.execute(self, target)
