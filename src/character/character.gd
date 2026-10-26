@@ -92,12 +92,16 @@ func get_spawn_position() -> Vector2:
 
 
 func take_damage(amount: float) -> void:
+	if health <= 0.0:
+		return
+
 	health = maxf(0.0, health - amount)
 	damaged.emit(amount, health)
-	_flash_hurt()
 	if health <= 0.0:
 		died.emit()
 		_on_death()
+	else:
+		_flash_hurt()
 
 
 func _on_death() -> void:

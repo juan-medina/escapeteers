@@ -154,7 +154,7 @@ func _apply_melee_hit() -> void:
 	var hit_range: float = melee_range * (1.3 if is_heavy else 1.15)
 	var targets: Array[Enemy] = _find_enemies_in_range(hit_range)
 
-	if targets.is_empty() and _current_attack_target != null and is_instance_valid(_current_attack_target):
+	if targets.is_empty() and _current_attack_target != null and is_instance_valid(_current_attack_target) and _current_attack_target.health > 0.0:
 		if global_position.distance_to(_current_attack_target.global_position) <= hit_range * 1.3:
 			targets.append(_current_attack_target)
 

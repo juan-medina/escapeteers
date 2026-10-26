@@ -8,14 +8,14 @@ const MAX_CHARACTERS: int = 80
 const MAX_ENEMIES: int = 15
 
 const HERO_SCENES: Array[PackedScene] = [
-	preload("res://character/heroes/archer/archer.tscn"),
-	preload("res://character/heroes/armored_axeman/armored_axeman.tscn"),
-	preload("res://character/heroes/knight/knight.tscn"),
-	preload("res://character/heroes/knight_templar/knight_templar.tscn"),
-	preload("res://character/heroes/priest/priest.tscn"),
+	#preload("res://character/heroes/archer/archer.tscn"),
+	#preload("res://character/heroes/armored_axeman/armored_axeman.tscn"),
+	#preload("res://character/heroes/knight/knight.tscn"),
+	#preload("res://character/heroes/knight_templar/knight_templar.tscn"),
+	#preload("res://character/heroes/priest/priest.tscn"),
 	preload("res://character/heroes/soldier/soldier.tscn"),
-	preload("res://character/heroes/swordsman/swordsman.tscn"),
-	preload("res://character/heroes/wizard/wizard.tscn"),
+	#preload("res://character/heroes/swordsman/swordsman.tscn"),
+	#preload("res://character/heroes/wizard/wizard.tscn"),
 ]
 const LAVA_SLIME_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_slime.tscn")
 

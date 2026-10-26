@@ -245,8 +245,10 @@ func _pick_new_patrol_destination() -> void:
 func _on_death() -> void:
 	set_physics_process(false)
 	disable_collisions()
+	remove_from_group(_GROUP_ENEMIES)
 	play(ANIM_DEATH)
-	_animated_sprite.animation_finished.connect(queue_free, CONNECT_ONE_SHOT)
+	if not _animated_sprite.animation_finished.is_connected(queue_free):
+		_animated_sprite.animation_finished.connect(queue_free, CONNECT_ONE_SHOT)
 
 
 func _on_animation_finished() -> void:
