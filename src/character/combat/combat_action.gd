@@ -8,6 +8,7 @@ var cooldown: float = 0.5
 var cooldown_timer: float = 0.0
 var damage: float = 10.0
 var range_distance: float = 28.0
+var min_range_distance: float = 0.0
 var leash_distance: float = 48.0
 
 
@@ -30,8 +31,9 @@ func can_execute(user: Character, target: Character, anchor_pos: Vector2) -> boo
 	if anchor_pos != Vector2.ZERO and leash_distance > 0.0 and target.global_position.distance_to(anchor_pos) > leash_distance:
 		return false
 
-	# Target must be within attack range of user
-	return user.global_position.distance_to(target.global_position) <= range_distance
+	# Target must be within attack range of user and outside the dead zone
+	var dist: float = user.global_position.distance_to(target.global_position)
+	return dist >= min_range_distance and dist <= range_distance
 
 
 func execute(_user: Character, _target: Character) -> void:

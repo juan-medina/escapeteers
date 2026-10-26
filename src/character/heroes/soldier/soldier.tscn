@@ -2,6 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://derhacq4fqbxt" path="res://character/character.tscn" id="1_base"]
 [ext_resource type="Script" uid="uid://cirk0st02l6w5" path="res://character/heroes/soldier/soldier.gd" id="2_script"]
+[ext_resource type="PackedScene" uid="uid://df7h2kwl40v5r" path="res://projectile/arrow/arrow.tscn" id="3_fkm7n"]
 [ext_resource type="Texture2D" uid="uid://7hb2s5rulgti" path="res://character/heroes/soldier/soldier.png" id="3_tex"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_pivsy"]
@@ -51,6 +52,42 @@ region = Rect2(400, 300, 100, 100)
 [sub_resource type="AtlasTexture" id="AtlasTexture_htk0t"]
 atlas = ExtResource("3_tex")
 region = Rect2(500, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_er37d"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_oxiyb"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_f8rmh"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3x2jb"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kaqto"]
+atlas = ExtResource("3_tex")
+region = Rect2(400, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_q7vu3"]
+atlas = ExtResource("3_tex")
+region = Rect2(500, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_qisj5"]
+atlas = ExtResource("3_tex")
+region = Rect2(600, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_5ti7e"]
+atlas = ExtResource("3_tex")
+region = Rect2(700, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_e8hps"]
+atlas = ExtResource("3_tex")
+region = Rect2(800, 400, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_nvr78"]
 atlas = ExtResource("3_tex")
@@ -190,6 +227,38 @@ animations = [{
 }, {
 "frames": [{
 "duration": 1.0,
+"texture": SubResource("AtlasTexture_er37d")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_oxiyb")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_f8rmh")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_3x2jb")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kaqto")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_q7vu3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_qisj5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_5ti7e")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_e8hps")
+}],
+"loop": 0,
+"name": &"attack_ranged1",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
 "texture": SubResource("AtlasTexture_nvr78")
 }, {
 "duration": 1.0,
@@ -288,7 +357,18 @@ melee1_damage = 10.0
 melee2_damage = 25.0
 melee1_knockback = 85.0
 melee2_knockback = 260.0
+can_ranged = true
+ranged_min_range = 28.0
+ranged_range = 140.0
+ranged_cooldown = 1.0
+ranged_damage = 10.0
+ranged_frame = 7
+ranged_projectile_scene = ExtResource("3_fkm7n")
 
 [node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]
 sprite_frames = SubResource("SpriteFrames_sf")
-animation = &"idle"
+animation = &"attack_ranged1"
+frame_progress = 0.6707751
+
+[node name="SpawnPoint" parent="." index="3" unique_id=1192837465]
+position = Vector2(28, 1)

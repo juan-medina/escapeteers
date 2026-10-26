@@ -6,6 +6,7 @@ extends CharacterBody2D
 
 signal damaged(amount: float, current_health: float)
 signal died
+signal projectile_spawn_requested(projectile: Projectile)
 
 enum MovementState {
 	IDLE,
@@ -32,6 +33,11 @@ const ANIM_ATTACK_RANGED1: StringName = &"attack_ranged1"
 
 @export var max_health: float = 100.0
 @export var speed: float = 100.0
+@export var can_melee: bool = false
+@export var melee_range: float = 28.0
+@export var can_ranged: bool = false
+@export var ranged_min_range: float = 45.0
+@export var ranged_range: float = 140.0
 
 var health: float = 100.0
 var is_dead: bool = false
@@ -106,6 +112,18 @@ func update_visuals(movement_vector: Vector2) -> void:
 
 func get_spawn_position() -> Vector2:
 	return _spawn_point.global_position
+
+
+func spawn_projectile(projectile: Projectile) -> void:
+	projectile_spawn_requested.emit(projectile)
+
+
+func can_attack_at_distance(dist: float) -> bool:
+	if can_melee and dist <= melee_range:
+		return true
+	if can_ranged and dist >= ranged_min_range and dist <= ranged_range:
+		return true
+	return false
 
 
 func take_damage(amount: float) -> void:

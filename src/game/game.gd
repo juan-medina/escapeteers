@@ -41,6 +41,7 @@ func _ready() -> void:
 	_character.y_sort_enabled = true
 	_character.is_player = true
 	_character.record_step(0.0)
+	_character.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
 	_squad.append(_character)
 
 	await _spawn_characters()
@@ -93,6 +94,7 @@ func _spawn_characters() -> void:
 		ch.flip_h = randf() > 0.5
 		ch.frame = randi() % 6
 		ch.frame_progress = randf()
+		ch.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
 		_unrecruited_characters.append(ch)
 
 

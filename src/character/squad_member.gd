@@ -74,7 +74,7 @@ func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 		else:
 			var target_pos: Vector2 = hero.active_target.global_position
 			var dist_to_enemy: float = hero.position.distance_to(target_pos)
-			if dist_to_enemy <= hero.get_attack_range():
+			if hero.can_attack_at_distance(dist_to_enemy):
 				hero.movement_state = Character.MovementState.IDLE
 				move_dest = hero.position
 			else:

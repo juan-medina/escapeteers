@@ -5,6 +5,7 @@ class_name RangedAction
 extends CombatAction
 
 var projectile_scene: PackedScene = null
+var projectile_frame: int = 0
 var requires_horizontal_alignment: bool = false
 var horizontal_tolerance: float = 16.0
 var check_line_of_sight: bool = false
@@ -41,7 +42,13 @@ func spawn_projectile(user: Character, target: Character) -> Projectile:
 	var dir_x: float = -1.0 if target.global_position.x < user.global_position.x else 1.0
 	var projectile: Projectile = projectile_scene.instantiate() as Projectile
 	if projectile != null:
-		projectile.global_position = user.global_position + Vector2(dir_x * 8.0, 0.0)
-		projectile.direction = Vector2(dir_x, 0.0)
+		var spawn_pos: Vector2 = user.global_position + Vector2(dir_x * 8.0, 0.0)
+		var fire_dir: Vector2 = Vector2(dir_x, 0.0)
+		if not requires_horizontal_alignment:
+			var diff: Vector2 = target.global_position - spawn_pos
+			if diff.length_squared() > 0.001:
+				fire_dir = diff.normalized()
+		projectile.global_position = spawn_pos
+		projectile.direction = fire_dir
 		projectile.damage = damage
 	return projectile

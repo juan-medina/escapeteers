@@ -5,6 +5,7 @@ class_name Hero
 extends Character
 
 signal melee_attack_started(attack_name: StringName)
+signal ranged_attack_started(attack_name: StringName)
 signal enemy_hit(enemy: Enemy, damage: float, is_heavy: bool)
 
 const RECRUIT_DISTANCE: float = 20.0
@@ -19,9 +20,7 @@ const _GROUP_ENEMIES: StringName = &"enemies"
 		_update_collision_mode()
 		_update_player_light()
 		_update_ground_indicator()
-@export var can_melee: bool = false
 @export var can_heavy_melee: bool = false
-@export var melee_range: float = 28.0
 @export var melee1_cooldown: float = 0.5
 @export var melee2_cooldown: float = 3.5
 @export var melee2_chance: float = 0.35
@@ -29,6 +28,10 @@ const _GROUP_ENEMIES: StringName = &"enemies"
 @export var melee2_damage: float = 25.0
 @export var melee1_knockback: float = 85.0
 @export var melee2_knockback: float = 260.0
+@export var ranged_cooldown: float = 1.0
+@export var ranged_damage: float = 10.0
+@export var ranged_frame: int = 7
+@export var ranged_projectile_scene: PackedScene = preload("res://projectile/arrow/arrow.tscn")
 
 var leader: Hero = null
 var squad_member: SquadMember = null:
@@ -115,6 +118,18 @@ func _setup_actions() -> void:
 		melee.leash_distance = 48.0
 		combat_actions.append(melee)
 
+	if can_ranged:
+		var ranged: RangedAction = RangedAction.new()
+		ranged.projectile_scene = ranged_projectile_scene
+		ranged.range_distance = ranged_range
+		ranged.min_range_distance = ranged_min_range if can_melee else 0.0
+		ranged.cooldown = ranged_cooldown
+		ranged.damage = ranged_damage
+		ranged.projectile_frame = ranged_frame
+		ranged.leash_distance = ranged_range
+		ranged.check_line_of_sight = true
+		combat_actions.append(ranged)
+
 
 func get_anchor_position() -> Vector2:
 	if is_player or squad_member == null or leader == null:
@@ -123,15 +138,17 @@ func get_anchor_position() -> Vector2:
 
 
 func get_current_leash() -> float:
-	if not combat_actions.is_empty():
-		return combat_actions[0].leash_distance
-	return 48.0
+	var max_leash: float = 48.0
+	for action: CombatAction in combat_actions:
+		max_leash = maxf(max_leash, action.leash_distance)
+	return max_leash
 
 
 func get_attack_range() -> float:
-	if not combat_actions.is_empty():
-		return combat_actions[0].range_distance
-	return melee_range
+	var max_range: float = 0.0
+	for action: CombatAction in combat_actions:
+		max_range = maxf(max_range, action.range_distance)
+	return max_range if max_range > 0.0 else melee_range
 
 
 func _check_auto_attack() -> void:
@@ -154,7 +171,10 @@ func _check_auto_attack() -> void:
 			combat_state = CombatState.ATTACKING
 			_hit_applied_this_attack = false
 			action.execute(self, closest_enemy)
-			melee_attack_started.emit(animation)
+			if action is MeleeAction:
+				melee_attack_started.emit(animation)
+			elif action is RangedAction:
+				ranged_attack_started.emit(animation)
 			break
 
 
@@ -183,18 +203,30 @@ func _on_frame_changed() -> void:
 	if combat_state != CombatState.ATTACKING or _hit_applied_this_attack:
 		return
 
-	if frame >= 2:
-		_hit_applied_this_attack = true
-		if current_action is MeleeAction and active_target != null:
+	if current_action is MeleeAction and active_target != null:
+		if frame >= 2:
+			_hit_applied_this_attack = true
 			var melee: MeleeAction = current_action as MeleeAction
 			melee.apply_hit(self, active_target)
 			var is_heavy: bool = melee.current_is_heavy
 			var dmg: float = melee.heavy_damage if is_heavy else melee.damage
 			enemy_hit.emit(active_target, dmg, is_heavy)
+	elif current_action is RangedAction and active_target != null:
+		var ranged: RangedAction = current_action as RangedAction
+		if frame >= ranged.projectile_frame:
+			_hit_applied_this_attack = true
+			var proj: Projectile = ranged.spawn_projectile(self, active_target)
+			if proj != null:
+				spawn_projectile(proj)
 
 
 func _on_animation_finished() -> void:
 	super._on_animation_finished()
+	if not _hit_applied_this_attack and current_action is RangedAction and active_target != null:
+		var ranged: RangedAction = current_action as RangedAction
+		var proj: Projectile = ranged.spawn_projectile(self, active_target)
+		if proj != null:
+			spawn_projectile(proj)
 	_hit_applied_this_attack = false
 
 

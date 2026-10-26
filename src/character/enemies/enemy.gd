@@ -5,7 +5,6 @@ class_name Enemy
 extends Character
 
 signal attacked(target: Hero, damage_amount: float)
-signal projectile_spawn_requested(projectile: Projectile)
 
 enum State {
 	PATROL,
@@ -19,7 +18,6 @@ const PATROL_TIMEOUT: float = 10.0
 const KNOCKBACK_DECAY: float = 600.0
 
 @export var detection_range: float = 140.0
-@export var attack_range: float = 22.0
 @export var attack_cooldown: float = 1.2
 @export var damage: float = 10.0
 
@@ -93,10 +91,6 @@ func set_target_candidate(hero_candidate: Hero) -> void:
 			_navigator.reset()
 
 
-func spawn_projectile(projectile: Projectile) -> void:
-	projectile_spawn_requested.emit(projectile)
-
-
 func apply_knockback(force: Vector2) -> void:
 	_knockback_velocity = force
 
@@ -141,7 +135,7 @@ func _process_patrol(delta: float) -> void:
 
 
 func _process_chase(delta: float) -> void:
-	if target == null or not is_instance_valid(target):
+	if target == null or not is_instance_valid(target) or target.health <= 0.0 or target.is_dead:
 		target = null
 		current_state = State.PATROL
 		_pick_new_patrol_destination()
@@ -163,6 +157,14 @@ func _process_chase(delta: float) -> void:
 		velocity = _knockback_velocity
 		if _knockback_velocity.length_squared() > 1.0:
 			move_and_slide()
+		return
+
+	if can_attack_at_distance(dist_to_target):
+		velocity = _knockback_velocity
+		if _knockback_velocity.length_squared() > 1.0:
+			move_and_slide()
+		else:
+			update_visuals(Vector2.ZERO)
 		return
 
 	var waypoint: Vector2 = _navigator.get_next_waypoint(self, target.global_position, map, delta)
