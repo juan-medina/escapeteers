@@ -23,6 +23,8 @@ const KNOCKBACK_DECAY: float = 600.0
 @export var attack_cooldown: float = 1.2
 @export var damage: float = 10.0
 
+var combat_actions: Array[CombatAction] = []
+var current_action: CombatAction = null
 var current_state: State = State.PATROL
 var map: Map = null
 var target: Hero = null
@@ -31,7 +33,6 @@ var _navigator: SquadNavigator = SquadNavigator.new()
 var _patrol_destination: Vector2 = Vector2.ZERO
 var _patrol_timer: float = 0.0
 var _idle_wait_timer: float = 0.0
-var _attack_cooldown_timer: float = 0.0
 var _knockback_velocity: Vector2 = Vector2.ZERO
 
 
@@ -43,19 +44,31 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if _attack_cooldown_timer > 0.0:
-		_attack_cooldown_timer -= delta
+	if is_dead:
+		return
+
+	for action: CombatAction in combat_actions:
+		action.update(delta)
+
+	if combat_state == CombatState.COOLDOWN:
+		var any_ready: bool = false
+		for action: CombatAction in combat_actions:
+			if action.is_ready():
+				any_ready = true
+				break
+		if any_ready:
+			combat_state = CombatState.READY
 
 	if _knockback_velocity.length_squared() > 1.0:
 		_knockback_velocity = _knockback_velocity.move_toward(Vector2.ZERO, KNOCKBACK_DECAY * delta)
 
+	_check_combat_actions()
+
 	match current_state:
 		State.PATROL:
 			_process_patrol(delta)
-		State.CHASE:
+		State.CHASE, State.ATTACK:
 			_process_chase(delta)
-		State.ATTACK:
-			_process_attack(delta)
 
 
 func set_target_candidate(hero_candidate: Hero) -> void:
@@ -142,13 +155,9 @@ func _process_chase(delta: float) -> void:
 		_pick_new_patrol_destination()
 		return
 
-	if _can_attack_target():
-		velocity = _knockback_velocity
-		if _knockback_velocity.length_squared() > 1.0:
-			move_and_slide()
-		current_state = State.ATTACK
-		_start_attack()
-		return
+	var diff_x: float = target.global_position.x - global_position.x
+	if absf(diff_x) > 2.0:
+		flip_h = diff_x < 0.0
 
 	var waypoint: Vector2 = _navigator.get_next_waypoint(self, target.global_position, map, delta)
 	var move_vec: Vector2 = (waypoint - global_position).normalized()
@@ -157,64 +166,16 @@ func _process_chase(delta: float) -> void:
 	update_visuals(velocity * delta)
 
 
-func _process_attack(_delta: float) -> void:
-	velocity = _knockback_velocity
-	if _knockback_velocity.length_squared() > 1.0:
-		move_and_slide()
-
-	if target == null or not is_instance_valid(target):
-		is_attacking = false
-		target = null
-		current_state = State.PATROL
-		_pick_new_patrol_destination()
+func _check_combat_actions() -> void:
+	if combat_state != CombatState.READY or target == null or not is_instance_valid(target) or target.health <= 0.0:
 		return
 
-	# Face towards target while attacking
-	var diff_x: float = target.global_position.x - global_position.x
-	if absf(diff_x) > 2.0:
-		flip_h = diff_x < 0.0
-
-	if not is_attacking:
-		if _attack_cooldown_timer <= 0.0:
-			if _can_attack_target():
-				_start_attack()
-			else:
-				current_state = State.CHASE
-				_navigator.reset()
-		else:
-			if animation != ANIM_IDLE:
-				play(ANIM_IDLE)
-
-
-func _can_attack_target() -> bool:
-	return target != null and global_position.distance_to(target.global_position) <= attack_range
-
-
-func _get_attack_animation_name() -> StringName:
-	return ANIM_ATTACK_MELEE1
-
-
-func _start_attack() -> void:
-	is_attacking = true
-	_attack_cooldown_timer = attack_cooldown
-	play(_get_attack_animation_name())
-
-
-func _perform_attack() -> void:
-	pass
-
-
-func _finish_attack() -> void:
-	is_attacking = false
-	if animation != ANIM_IDLE:
-		play(ANIM_IDLE)
-
-	if target == null or not is_instance_valid(target):
-		current_state = State.PATROL
-		_pick_new_patrol_destination()
-	elif not _can_attack_target():
-		current_state = State.CHASE
-		_navigator.reset()
+	for action: CombatAction in combat_actions:
+		if action.can_execute(self, target, global_position):
+			current_action = action
+			combat_state = CombatState.ATTACKING
+			action.execute(self, target)
+			break
 
 
 func _pick_new_patrol_destination() -> void:
@@ -253,6 +214,12 @@ func _on_death() -> void:
 
 func _on_animation_finished() -> void:
 	super._on_animation_finished()
-	if is_attacking:
-		_perform_attack()
-		_finish_attack()
+	if current_action is MeleeAction and target != null:
+		var melee: MeleeAction = current_action as MeleeAction
+		melee.apply_hit(self, target)
+		attacked.emit(target, melee.damage)
+	elif current_action is RangedAction and target != null:
+		var ranged: RangedAction = current_action as RangedAction
+		var proj: Projectile = ranged.spawn_projectile(self, target)
+		if proj != null:
+			spawn_projectile(proj)

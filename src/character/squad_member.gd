@@ -50,37 +50,67 @@ func assign_escort_slot(new_slot_index: int, total_slots: int) -> void:
 	reaction_delay = REACTION_DELAY_BASE + (float(ring) * REACTION_DELAY_STEP) + jitter
 
 
+func get_formation_position(leader: Hero) -> Vector2:
+	return _compute_target_position(leader)
+
+
 func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 	var leader: Hero = hero.leader
-	if leader == null:
+	if leader == null or hero.is_dead:
 		return
 
-	var target_pos: Vector2 = _compute_target_position(leader)
+	var formation_pos: Vector2 = _compute_target_position(leader)
 	if map != null:
-		target_pos = map.clamp_to_walkable(target_pos)
+		formation_pos = map.clamp_to_walkable(formation_pos)
 
-	var waypoint: Vector2 = navigator.get_next_waypoint(hero, target_pos, map, delta)
+	var move_dest: Vector2 = formation_pos
+	var current_leash: float = hero.get_current_leash()
+	var dist_from_slot: float = hero.position.distance_to(formation_pos)
+
+	if hero.active_target != null and is_instance_valid(hero.active_target) and hero.active_target.health > 0.0:
+		if dist_from_slot > current_leash:
+			hero.movement_state = Character.MovementState.FALL_BACK
+			move_dest = formation_pos
+		else:
+			var target_pos: Vector2 = hero.active_target.global_position
+			var dist_to_enemy: float = hero.position.distance_to(target_pos)
+			if dist_to_enemy <= hero.get_attack_range():
+				hero.movement_state = Character.MovementState.IDLE
+				move_dest = hero.position
+			else:
+				hero.movement_state = Character.MovementState.NAVIGATING
+				move_dest = target_pos
+	else:
+		hero.active_target = null
+		if dist_from_slot > FOLLOW_STOP_DISTANCE:
+			hero.movement_state = Character.MovementState.NAVIGATING
+			move_dest = formation_pos
+		else:
+			hero.movement_state = Character.MovementState.IDLE
+			move_dest = hero.position
+
+	var waypoint: Vector2 = navigator.get_next_waypoint(hero, move_dest, map, delta)
 	var to_waypoint: Vector2 = waypoint - hero.position
 	var dist_to_waypoint: float = to_waypoint.length()
-	var dist_to_target: float = hero.position.distance_to(target_pos)
+	var dist_to_dest: float = hero.position.distance_to(move_dest)
 
 	var desired_velocity: Vector2 = Vector2.ZERO
-	if dist_to_target > FOLLOW_STOP_DISTANCE and dist_to_waypoint > 0.5:
+	if dist_to_dest > FOLLOW_STOP_DISTANCE and dist_to_waypoint > 0.5:
 		var target_speed: float = hero.speed
-		if dist_to_target < FOLLOW_ARRIVAL_RADIUS:
-			target_speed = hero.speed * (dist_to_target / FOLLOW_ARRIVAL_RADIUS)
-		elif dist_to_target > FAR_CATCHUP_DISTANCE:
-			var catchup_factor: float = clampf((dist_to_target - FAR_CATCHUP_DISTANCE) / FAR_CATCHUP_DISTANCE, 0.0, 1.5)
+		if dist_to_dest < FOLLOW_ARRIVAL_RADIUS:
+			target_speed = hero.speed * (dist_to_dest / FOLLOW_ARRIVAL_RADIUS)
+		elif dist_to_dest > FAR_CATCHUP_DISTANCE:
+			var catchup_factor: float = clampf((dist_to_dest - FAR_CATCHUP_DISTANCE) / FAR_CATCHUP_DISTANCE, 0.0, 1.5)
 			target_speed = hero.speed * (1.5 + catchup_factor)
 		else:
-			target_speed = minf(hero.speed * 1.5, hero.speed + (dist_to_target - FOLLOW_ARRIVAL_RADIUS) * 1.5)
+			target_speed = minf(hero.speed * 1.5, hero.speed + (dist_to_dest - FOLLOW_ARRIVAL_RADIUS) * 1.5)
 		desired_velocity = (to_waypoint / dist_to_waypoint) * target_speed
 
-	var sep_scale: float = 0.4 if dist_to_target > FAR_CATCHUP_DISTANCE else 1.0
+	var sep_scale: float = 0.4 if dist_to_dest > FAR_CATCHUP_DISTANCE else 1.0
 	desired_velocity += _compute_separation(hero, squad) * sep_scale
 	hero.velocity = hero.velocity.move_toward(desired_velocity, FOLLOW_ACCELERATION * delta)
 
-	if dist_to_target <= FOLLOW_STOP_DISTANCE and desired_velocity.length_squared() < MIN_MOVEMENT_THRESHOLD_SQUARED:
+	if dist_to_dest <= FOLLOW_STOP_DISTANCE and desired_velocity.length_squared() < MIN_MOVEMENT_THRESHOLD_SQUARED:
 		hero.velocity = Vector2.ZERO
 
 	hero.move_and_slide()

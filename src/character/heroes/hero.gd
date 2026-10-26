@@ -38,17 +38,15 @@ var squad_member: SquadMember = null:
 var is_moving: bool = false
 var move_direction: Vector2 = Vector2.RIGHT
 var crescent_blend: float = 0.0
+var combat_actions: Array[CombatAction] = []
+var active_target: Enemy = null
+var current_action: CombatAction = null
 
 var _elapsed_time: float = 0.0
 var _pos_history: Array[Vector2] = []
 var _time_history: Array[float] = []
 var _player_light: PointLight2D = null
-var _melee1_timer: float = 0.0
-var _melee2_timer: float = 0.0
-var _fast_attacks_done: int = 0
 var _hit_applied_this_attack: bool = false
-var _current_attack_name: StringName = StringName()
-var _current_attack_target: Enemy = null
 
 @onready var _ground_indicator: GroundIndicator = get_node_or_null(^"GroundIndicator") as GroundIndicator
 
@@ -58,15 +56,22 @@ func _ready() -> void:
 	_update_collision_mode()
 	_update_player_light()
 	_update_ground_indicator()
-	_melee2_timer = melee2_cooldown * 0.5
 	_animated_sprite.frame_changed.connect(_on_frame_changed)
+	_setup_actions()
 
 
 func _process(delta: float) -> void:
-	if _melee1_timer > 0.0:
-		_melee1_timer -= delta
-	if _melee2_timer > 0.0:
-		_melee2_timer -= delta
+	for action: CombatAction in combat_actions:
+		action.update(delta)
+
+	if combat_state == CombatState.COOLDOWN:
+		var any_ready: bool = false
+		for action: CombatAction in combat_actions:
+			if action.is_ready():
+				any_ready = true
+				break
+		if any_ready:
+			combat_state = CombatState.READY
 
 	_check_auto_attack()
 
@@ -95,138 +100,102 @@ func _process(delta: float) -> void:
 		update_visuals(Vector2.ZERO)
 
 
+func _setup_actions() -> void:
+	if can_melee:
+		var melee: MeleeAction = MeleeAction.new()
+		melee.range_distance = melee_range
+		melee.cooldown = melee1_cooldown
+		melee.damage = melee1_damage
+		melee.knockback = melee1_knockback
+		melee.can_heavy = can_heavy_melee
+		melee.heavy_cooldown = melee2_cooldown
+		melee.heavy_damage = melee2_damage
+		melee.heavy_chance = melee2_chance
+		melee.heavy_knockback = melee2_knockback
+		melee.leash_distance = 48.0
+		combat_actions.append(melee)
+
+
+func get_anchor_position() -> Vector2:
+	if is_player or squad_member == null or leader == null:
+		return global_position
+	return squad_member.get_formation_position(leader)
+
+
+func get_current_leash() -> float:
+	if not combat_actions.is_empty():
+		return combat_actions[0].leash_distance
+	return 48.0
+
+
+func get_attack_range() -> float:
+	if not combat_actions.is_empty():
+		return combat_actions[0].range_distance
+	return melee_range
+
+
 func _check_auto_attack() -> void:
-	if not can_melee:
+	if combat_actions.is_empty():
 		return
 	if not is_player and squad_member == null:
 		return
-	if is_attacking:
+	if combat_state != CombatState.READY:
 		return
 
-	var closest_enemy: Enemy = _find_closest_enemy(melee_range)
+	var anchor: Vector2 = get_anchor_position()
+	var closest_enemy: Enemy = _find_closest_enemy_in_leash(anchor)
 	if closest_enemy == null:
-		_fast_attacks_done = 0
 		return
 
-	if _melee1_timer > 0.0:
-		return
-
-	var choose_heavy: bool = false
-	if can_heavy_melee and _melee2_timer <= 0.0:
-		if _fast_attacks_done >= 2 and randf() < melee2_chance:
-			choose_heavy = true
-
-	if choose_heavy:
-		_start_melee_attack(ANIM_ATTACK_MELEE2, closest_enemy)
-	else:
-		_start_melee_attack(ANIM_ATTACK_MELEE1, closest_enemy)
-
-
-func _start_melee_attack(anim_name: StringName, target_enemy: Enemy) -> void:
-	is_attacking = true
-	_hit_applied_this_attack = false
-	_current_attack_name = anim_name
-	_current_attack_target = target_enemy
-
-	if anim_name == ANIM_ATTACK_MELEE2:
-		_melee2_timer = melee2_cooldown
-		_melee1_timer = melee1_cooldown
-		_fast_attacks_done = 0
-	else:
-		_melee1_timer = melee1_cooldown
-		_fast_attacks_done += 1
-
-	var diff_x: float = target_enemy.global_position.x - global_position.x
-	if absf(diff_x) > 1.0:
-		flip_h = diff_x < 0.0
-
-	play(anim_name)
-	melee_attack_started.emit(anim_name)
-
-
-func _apply_melee_hit() -> void:
-	_hit_applied_this_attack = true
-
-	var is_heavy: bool = _current_attack_name == ANIM_ATTACK_MELEE2
-	var damage_amount: float = melee2_damage if is_heavy else melee1_damage
-	var knockback_amount: float = melee2_knockback if is_heavy else melee1_knockback
-
-	var hit_range: float = melee_range * (1.3 if is_heavy else 1.15)
-	var targets: Array[Enemy] = _find_enemies_in_range(hit_range)
-
-	if targets.is_empty() and _current_attack_target != null and is_instance_valid(_current_attack_target) and _current_attack_target.health > 0.0:
-		if global_position.distance_to(_current_attack_target.global_position) <= hit_range * 1.3:
-			targets.append(_current_attack_target)
-
-	for enemy: Enemy in targets:
-		if not is_heavy and enemy != _current_attack_target and _current_attack_target != null:
-			if (
-				not is_instance_valid(_current_attack_target)
-				or global_position.distance_squared_to(_current_attack_target.global_position) > hit_range * hit_range
-			):
-				_current_attack_target = enemy
-			else:
-				continue
-
-		var push_dir: Vector2 = (enemy.global_position - global_position).normalized()
-		if push_dir.length_squared() < 0.01:
-			push_dir = Vector2.LEFT if flip_h else Vector2.RIGHT
-
-		enemy.apply_knockback(push_dir * knockback_amount)
-		enemy.take_damage(damage_amount)
-		enemy_hit.emit(enemy, damage_amount, is_heavy)
-
-		if not is_heavy:
+	active_target = closest_enemy
+	for action: CombatAction in combat_actions:
+		if action.can_execute(self, closest_enemy, anchor):
+			current_action = action
+			combat_state = CombatState.ATTACKING
+			_hit_applied_this_attack = false
+			action.execute(self, closest_enemy)
+			melee_attack_started.emit(animation)
 			break
 
 
-func _find_closest_enemy(max_distance: float) -> Enemy:
+func _find_closest_enemy_in_leash(anchor: Vector2) -> Enemy:
 	var closest: Enemy = null
-	var min_dist_sq: float = max_distance * max_distance
+	var min_dist_sq: float = INF
+	var max_leash: float = get_current_leash()
+	var max_leash_sq: float = max_leash * max_leash
+
 	for node: Node in get_tree().get_nodes_in_group(_GROUP_ENEMIES):
 		var enemy: Enemy = node as Enemy
 		if enemy == null or not is_instance_valid(enemy) or enemy.health <= 0.0 or enemy.is_queued_for_deletion():
 			continue
-		var dist_sq: float = global_position.distance_squared_to(enemy.global_position)
-		if dist_sq <= min_dist_sq:
-			min_dist_sq = dist_sq
-			closest = enemy
+
+		var dist_to_anchor_sq: float = anchor.distance_squared_to(enemy.global_position)
+		if dist_to_anchor_sq <= max_leash_sq:
+			var dist_to_self_sq: float = global_position.distance_squared_to(enemy.global_position)
+			if dist_to_self_sq < min_dist_sq:
+				min_dist_sq = dist_to_self_sq
+				closest = enemy
+
 	return closest
 
 
-func _find_enemies_in_range(max_distance: float) -> Array[Enemy]:
-	var result: Array[Enemy] = []
-	var max_dist_sq: float = max_distance * max_distance
-	for node: Node in get_tree().get_nodes_in_group(_GROUP_ENEMIES):
-		var enemy: Enemy = node as Enemy
-		if enemy == null or not is_instance_valid(enemy) or enemy.health <= 0.0 or enemy.is_queued_for_deletion():
-			continue
-		var dist_sq: float = global_position.distance_squared_to(enemy.global_position)
-		if dist_sq <= max_dist_sq:
-			result.append(enemy)
-	return result
-
-
 func _on_frame_changed() -> void:
-	if not is_attacking or _hit_applied_this_attack:
+	if combat_state != CombatState.ATTACKING or _hit_applied_this_attack:
 		return
 
-	if animation == ANIM_ATTACK_MELEE1 or animation == ANIM_ATTACK_MELEE2:
-		if frame >= 2:
-			_apply_melee_hit()
+	if frame >= 2:
+		_hit_applied_this_attack = true
+		if current_action is MeleeAction and active_target != null:
+			var melee: MeleeAction = current_action as MeleeAction
+			melee.apply_hit(self, active_target)
+			var is_heavy: bool = melee.current_is_heavy
+			var dmg: float = melee.heavy_damage if is_heavy else melee.damage
+			enemy_hit.emit(active_target, dmg, is_heavy)
 
 
 func _on_animation_finished() -> void:
 	super._on_animation_finished()
-	if is_attacking:
-		if not _hit_applied_this_attack:
-			_apply_melee_hit()
-		is_attacking = false
-		_current_attack_target = null
-		if is_moving:
-			play(ANIM_RUN)
-		else:
-			play(ANIM_IDLE)
+	_hit_applied_this_attack = false
 
 
 func record_step(delta: float) -> void:

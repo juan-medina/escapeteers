@@ -4,19 +4,11 @@
 class_name LavaSlime
 extends Enemy
 
-enum AttackType {
-	NONE,
-	MELEE,
-	RANGED_SPIKE,
-}
-
 const LAVA_SPIKE_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_spike.tscn")
 const HORIZONTAL_ALIGNMENT_TOLERANCE: float = 16.0
 
 @export var melee_range: float = 45.0
 @export var melee_damage: float = 8.0
-
-var _selected_attack: AttackType = AttackType.NONE
 
 
 func _ready() -> void:
@@ -26,54 +18,26 @@ func _ready() -> void:
 	attack_cooldown = 1.5
 	damage = 5.0
 	super._ready()
+	_setup_actions()
 
 
-func _can_attack_target() -> bool:
-	if target == null or not is_instance_valid(target):
-		_selected_attack = AttackType.NONE
-		return false
+func _setup_actions() -> void:
+	# 1. Close/mid range -> Melee attack
+	var melee: MeleeAction = MeleeAction.new()
+	melee.range_distance = melee_range
+	melee.damage = melee_damage
+	melee.cooldown = attack_cooldown
+	melee.leash_distance = 0.0
+	combat_actions.append(melee)
 
-	var dist: float = global_position.distance_to(target.global_position)
-
-	# 1. Close/mid range -> always Melee attack
-	if dist <= melee_range:
-		_selected_attack = AttackType.MELEE
-		return true
-
-	# 2. Beyond melee range up to max range -> Ranged Spike attack if in line
-	if dist <= attack_range:
-		var y_diff: float = absf(target.global_position.y - global_position.y)
-		if y_diff <= HORIZONTAL_ALIGNMENT_TOLERANCE and SquadNavigator.has_line_of_sight(self, target.global_position):
-			_selected_attack = AttackType.RANGED_SPIKE
-			return true
-
-	_selected_attack = AttackType.NONE
-	return false
-
-
-func _get_attack_animation_name() -> StringName:
-	if _selected_attack == AttackType.MELEE:
-		return ANIM_ATTACK_MELEE1
-	return ANIM_ATTACK_RANGED1
-
-
-func _perform_attack() -> void:
-	if target == null or not is_instance_valid(target):
-		_selected_attack = AttackType.NONE
-		return
-
-	var dir_x: float = -1.0 if target.global_position.x < global_position.x else 1.0
-	flip_h = dir_x < 0.0
-
-	if _selected_attack == AttackType.MELEE:
-		var dist: float = global_position.distance_to(target.global_position)
-		if dist <= melee_range * 1.5:
-			apply_melee_damage(target, melee_damage)
-	elif _selected_attack == AttackType.RANGED_SPIKE:
-		var spike: LavaSpike = LAVA_SPIKE_SCENE.instantiate() as LavaSpike
-		spike.global_position = global_position + Vector2(dir_x * 8.0, 0.0)
-		spike.direction = Vector2(dir_x, 0.0)
-		spike.damage = damage
-		spawn_projectile(spike)
-
-	_selected_attack = AttackType.NONE
+	# 2. Ranged Spike attack if in line-of-sight & aligned
+	var ranged: RangedAction = RangedAction.new()
+	ranged.projectile_scene = LAVA_SPIKE_SCENE
+	ranged.range_distance = attack_range
+	ranged.damage = damage
+	ranged.cooldown = attack_cooldown
+	ranged.requires_horizontal_alignment = true
+	ranged.horizontal_tolerance = HORIZONTAL_ALIGNMENT_TOLERANCE
+	ranged.check_line_of_sight = true
+	ranged.leash_distance = 0.0
+	combat_actions.append(ranged)

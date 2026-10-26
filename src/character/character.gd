@@ -7,6 +7,18 @@ extends CharacterBody2D
 signal damaged(amount: float, current_health: float)
 signal died
 
+enum MovementState {
+	IDLE,
+	NAVIGATING,
+	FALL_BACK,
+}
+
+enum CombatState {
+	READY,
+	ATTACKING,
+	COOLDOWN,
+}
+
 const FLIP_THRESHOLD_X: float = 0.35
 const MIN_MOVEMENT_THRESHOLD_SQUARED: float = 0.04
 
@@ -22,6 +34,9 @@ const ANIM_ATTACK_RANGED1: StringName = &"attack_ranged1"
 @export var speed: float = 100.0
 
 var health: float = 100.0
+var is_dead: bool = false
+var movement_state: MovementState = MovementState.IDLE
+var combat_state: CombatState = CombatState.READY
 
 var flip_h: bool:
 	get:
@@ -45,7 +60,9 @@ var animation: StringName:
 	get:
 		return _animated_sprite.animation
 
-var is_attacking: bool = false
+var is_attacking: bool:
+	get:
+		return combat_state == CombatState.ATTACKING
 
 var sprite_frames: SpriteFrames:
 	get:
@@ -80,10 +97,10 @@ func update_visuals(movement_vector: Vector2) -> void:
 	if movement_vector.length_squared() > MIN_MOVEMENT_THRESHOLD_SQUARED:
 		if absf(movement_vector.x) > FLIP_THRESHOLD_X:
 			flip_h = movement_vector.x < 0.0
-		if not is_attacking and animation != ANIM_HIT and animation != ANIM_RUN:
+		if combat_state != CombatState.ATTACKING and animation != ANIM_RUN:
 			play(ANIM_RUN)
 	else:
-		if not is_attacking and animation != ANIM_HIT and animation != ANIM_IDLE:
+		if combat_state != CombatState.ATTACKING and animation != ANIM_IDLE:
 			play(ANIM_IDLE)
 
 
@@ -92,12 +109,15 @@ func get_spawn_position() -> Vector2:
 
 
 func take_damage(amount: float) -> void:
-	if health <= 0.0:
+	if is_dead:
 		return
 
 	health = maxf(0.0, health - amount)
 	damaged.emit(amount, health)
 	if health <= 0.0:
+		is_dead = true
+		movement_state = MovementState.IDLE
+		combat_state = CombatState.READY
 		died.emit()
 		_on_death()
 	else:
@@ -109,10 +129,15 @@ func _on_death() -> void:
 
 
 func _flash_hurt() -> void:
-	if not is_attacking:
-		play(ANIM_HIT)
+	var tween: Tween = create_tween()
+	_animated_sprite.modulate = Color(2.5, 0.4, 0.4)
+	tween.tween_property(_animated_sprite, "modulate", Color.WHITE, 0.08)
 
 
 func _on_animation_finished() -> void:
-	if animation == ANIM_HIT:
-		play(ANIM_IDLE)
+	if combat_state == CombatState.ATTACKING:
+		combat_state = CombatState.COOLDOWN
+		if velocity.length_squared() > MIN_MOVEMENT_THRESHOLD_SQUARED:
+			play(ANIM_RUN)
+		else:
+			play(ANIM_IDLE)
