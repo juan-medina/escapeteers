@@ -1,0 +1,34 @@
+[gd_scene format=3 uid="uid://df7h2kwl40v5r"]
+
+[ext_resource type="Script" path="res://projectile/arrow/arrow.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://4vtkngn75p5l" path="res://projectile/arrow/arrow.png" id="2_tex"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_arrow"]
+atlas = ExtResource("2_tex")
+region = Rect2(0, 0, 100, 100)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_arrow"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_arrow")
+}],
+"loop": false,
+"name": &"fly",
+"speed": 1.0
+}]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_arrow"]
+size = Vector2(16, 4)
+
+[node name="Arrow" type="Area2D"]
+y_sort_enabled = true
+collision_layer = 16
+collision_mask = 9
+script = ExtResource("1_script")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_arrow")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_arrow")

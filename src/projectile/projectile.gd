@@ -6,7 +6,8 @@ extends Area2D
 
 signal hit_target(target: Node2D, damage_dealt: float)
 
-const _ANIM_FLY: StringName = &"fly"
+const ANIM_FLY: StringName = &"fly"
+const ANIM_IMPACT: StringName = &"impact"
 
 @export var speed: float = 140.0
 @export var damage: float = 5.0
@@ -24,18 +25,24 @@ var _is_dying: bool = false
 
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
+	_animated_sprite.animation_finished.connect(_on_animation_finished)
 	if auto_rotate:
 		rotation = direction.angle()
 	else:
 		rotation = 0.0
-		if _animated_sprite != null and direction.x < 0.0:
+		if direction.x < 0.0:
 			_animated_sprite.flip_h = true
 
-	if _animated_sprite != null and _animated_sprite.sprite_frames != null:
-		if _animated_sprite.sprite_frames.has_animation(_ANIM_FLY):
-			_animated_sprite.play(_ANIM_FLY)
-		elif _animated_sprite.sprite_frames.has_animation(&"default"):
-			_animated_sprite.play(&"default")
+	play(ANIM_FLY)
+
+
+func play(anim_name: StringName = ANIM_FLY) -> void:
+	_animated_sprite.play(anim_name)
+
+
+func disable_collisions() -> void:
+	if _collision_shape != null:
+		_collision_shape.set_deferred(&"disabled", true)
 
 
 func _physics_process(delta: float) -> void:
@@ -53,9 +60,7 @@ func _destroy() -> void:
 		return
 	_is_dying = true
 
-	if _collision_shape != null:
-		_collision_shape.set_deferred(&"disabled", true)
-
+	disable_collisions()
 	queue_free()
 
 
@@ -63,8 +68,16 @@ func _on_body_entered(body: Node2D) -> void:
 	if _is_dying:
 		return
 
-	if body.has_method(&"take_damage"):
-		body.call(&"take_damage", damage)
+	_on_hit(body)
 
-	hit_target.emit(body, damage)
+
+func _on_hit(target: Node2D) -> void:
+	if target.has_method(&"take_damage"):
+		target.call(&"take_damage", damage)
+
+	hit_target.emit(target, damage)
 	_destroy()
+
+
+func _on_animation_finished() -> void:
+	pass

@@ -1,13 +1,13 @@
 # SPDX-FileCopyrightText: 2026 Juan Medina
 # SPDX-License-Identifier: MIT
 
-class_name LavaSpike
+class_name Arrow
 extends Projectile
 
 
 func _ready() -> void:
-	speed = 95.0
-	damage = 6.0
-	lifetime = 2.5
-	auto_rotate = false
+	speed = 220.0
+	damage = 10.0
+	lifetime = 4.0
+	auto_rotate = true
 	super._ready()

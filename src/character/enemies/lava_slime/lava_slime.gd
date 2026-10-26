@@ -4,7 +4,7 @@
 class_name LavaSlime
 extends Enemy
 
-const LAVA_SPIKE_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_spike.tscn")
+const LAVA_SPIKE_SCENE: PackedScene = preload("res://projectile/lava_spike/lava_spike.tscn")
 const HORIZONTAL_ALIGNMENT_TOLERANCE: float = 16.0
 
 @export var melee_range: float = 45.0
