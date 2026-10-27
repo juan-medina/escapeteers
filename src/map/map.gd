@@ -30,6 +30,9 @@ const TORCH_RIGHT_ALT_ID: int = 1
 const TORCH_SPAWN_CHANCE: float = 0.1
 const MIN_TORCH_DISTANCE_SQUARED: int = 36
 
+const CANDLE_POST_TOP: Vector2i = Vector2i(10, 30)
+const CANDLE_POST_BOTTOM: Vector2i = Vector2i(10, 31)
+
 const PROP_BARREL: Vector2i = Vector2i(4, 28)
 const PROP_BOX: Vector2i = Vector2i(4, 29)
 const PROP_SKULLS_AND_BONES: Array[Vector2i] = [
@@ -40,16 +43,27 @@ const PROP_SKULLS_AND_BONES: Array[Vector2i] = [
 ]
 const CORRIDOR_BONE_CHANCE: float = 0.02
 
-const HERO_ROOM_SIZE: Vector2i = Vector2i(20, 20)
+const HERO_ROOM_SIZE: Vector2i = Vector2i(10, 10)
 const COMPANION_ROOM_COUNT: int = 20
-const COMPANION_ROOM_MIN_SIZE: Vector2i = Vector2i(8, 8)
-const COMPANION_ROOM_MAX_SIZE: Vector2i = Vector2i(13, 13)
-const COMPANION_MIN_DISTANCE: float = 24.0
-const COMPANION_MAX_DISTANCE: float = 95.0
-const ROOM_PADDING: int = 5
+const ROOM_PADDING: int = 4
 const CORRIDOR_WIDTH: int = 3
 const EXTRA_CORRIDOR_LOOPS: int = 5
 const MAX_PLACEMENT_ATTEMPTS: int = 1500
+
+const TIER_1_COUNT: int = 7
+const TIER_1_MIN_SIZE: Vector2i = Vector2i(8, 8)
+const TIER_1_MAX_SIZE: Vector2i = Vector2i(11, 11)
+const TIER_1_DISTANCE_RANGE: Vector2 = Vector2(18.0, 38.0)
+
+const TIER_2_COUNT: int = 7
+const TIER_2_MIN_SIZE: Vector2i = Vector2i(12, 12)
+const TIER_2_MAX_SIZE: Vector2i = Vector2i(16, 16)
+const TIER_2_DISTANCE_RANGE: Vector2 = Vector2(40.0, 68.0)
+
+const TIER_3_COUNT: int = 6
+const TIER_3_MIN_SIZE: Vector2i = Vector2i(20, 20)
+const TIER_3_MAX_SIZE: Vector2i = Vector2i(26, 26)
+const TIER_3_DISTANCE_RANGE: Vector2 = Vector2(70.0, 105.0)
 
 var hero_room: Rect2i = Rect2i()
 var companion_rooms: Array[Rect2i] = []
@@ -83,15 +97,69 @@ func map_to_local(cell: Vector2i) -> Vector2:
 	return _floor.map_to_local(cell)
 
 
+func get_room_tier(room: Rect2i) -> int:
+	var center_dist: float = Vector2(room.get_center()).length()
+	if center_dist < 40.0 or mini(room.size.x, room.size.y) < 12:
+		return 1
+	if center_dist < 70.0 or mini(room.size.x, room.size.y) < 19:
+		return 2
+	return 3
+
+
 func get_companion_spawn_positions() -> Array[Vector2]:
 	var positions: Array[Vector2] = []
+
+	# Guaranteed starter recruits in the starting hero room
+	var hero_center: Vector2i = hero_room.get_center()
+	for offset_x: int in [-2, 2]:
+		var recruit_cell: Vector2i = hero_center + Vector2i(offset_x, 0)
+		if is_cell_walkable(recruit_cell):
+			positions.append(_floor.map_to_local(recruit_cell))
+
+	# Recruits in companion rooms scaled by tier
 	for room: Rect2i in companion_rooms:
 		var center_cell: Vector2i = room.get_center()
-		positions.append(_floor.map_to_local(center_cell))
-		if randf() > 0.4:
-			var offset: Vector2i = Vector2i(randi_range(-1, 1), randi_range(-1, 1))
-			if offset != Vector2i.ZERO:
-				positions.append(_floor.map_to_local(center_cell + offset))
+		var tier: int = get_room_tier(room)
+
+		if tier == 1:
+			positions.append(_floor.map_to_local(center_cell))
+			if randf() > 0.6:
+				var offset: Vector2i = Vector2i(randi_range(-1, 1), randi_range(-1, 1))
+				if offset != Vector2i.ZERO and is_cell_walkable(center_cell + offset):
+					positions.append(_floor.map_to_local(center_cell + offset))
+		elif tier == 2:
+			positions.append(_floor.map_to_local(center_cell))
+			for _k: int in range(2):
+				var offset: Vector2i = Vector2i(randi_range(-2, 2), randi_range(-2, 2))
+				if offset != Vector2i.ZERO and is_cell_walkable(center_cell + offset):
+					positions.append(_floor.map_to_local(center_cell + offset))
+		else:
+			positions.append(_floor.map_to_local(center_cell))
+			for _k: int in range(4):
+				var offset: Vector2i = Vector2i(randi_range(-3, 3), randi_range(-3, 3))
+				if offset != Vector2i.ZERO and is_cell_walkable(center_cell + offset):
+					positions.append(_floor.map_to_local(center_cell + offset))
+
+	return positions
+
+
+func get_enemy_spawn_positions_for_room(room: Rect2i, count: int) -> Array[Vector2]:
+	var positions: Array[Vector2] = []
+	var center: Vector2i = room.get_center()
+	var attempts: int = 0
+	var max_attempts: int = count * 6
+
+	while positions.size() < count and attempts < max_attempts:
+		attempts += 1
+		var cell: Vector2i = Vector2i(
+			randi_range(room.position.x + 1, room.position.x + room.size.x - 2), randi_range(room.position.y + 1, room.position.y + room.size.y - 2)
+		)
+		if is_cell_walkable(cell) and cell.distance_squared_to(center) >= 2:
+			positions.append(_floor.map_to_local(cell))
+
+	if positions.is_empty() and is_cell_walkable(center):
+		positions.append(_floor.map_to_local(center))
+
 	return positions
 
 
@@ -222,23 +290,34 @@ func _create_hero_room(cells: Dictionary[Vector2i, bool]) -> void:
 
 
 func _create_companion_rooms(cells: Dictionary[Vector2i, bool]) -> void:
+	var tier_counts: Array[int] = [TIER_1_COUNT, TIER_2_COUNT, TIER_3_COUNT]
+	var tier_distances: Array[Vector2] = [TIER_1_DISTANCE_RANGE, TIER_2_DISTANCE_RANGE, TIER_3_DISTANCE_RANGE]
+	var tier_min_sizes: Array[Vector2i] = [TIER_1_MIN_SIZE, TIER_2_MIN_SIZE, TIER_3_MIN_SIZE]
+	var tier_max_sizes: Array[Vector2i] = [TIER_1_MAX_SIZE, TIER_2_MAX_SIZE, TIER_3_MAX_SIZE]
+
 	var attempts: int = 0
-	while companion_rooms.size() < COMPANION_ROOM_COUNT and attempts < MAX_PLACEMENT_ATTEMPTS:
-		attempts += 1
-		var angle: float = randf_range(0.0, TAU)
-		var distance: float = randf_range(COMPANION_MIN_DISTANCE, COMPANION_MAX_DISTANCE)
-		var size: Vector2i = Vector2i(
-			randi_range(COMPANION_ROOM_MIN_SIZE.x, COMPANION_ROOM_MAX_SIZE.x), randi_range(COMPANION_ROOM_MIN_SIZE.y, COMPANION_ROOM_MAX_SIZE.y)
-		)
-		var center_pos: Vector2 = Vector2.from_angle(angle) * distance
-		var top_left: Vector2i = Vector2i(center_pos.round()) - Vector2i(Vector2(size) * 0.5)
-		var candidate_room: Rect2i = Rect2i(top_left, size)
+	for tier_idx: int in range(tier_counts.size()):
+		var target_count: int = tier_counts[tier_idx]
+		var dist_range: Vector2 = tier_distances[tier_idx]
+		var min_s: Vector2i = tier_min_sizes[tier_idx]
+		var max_s: Vector2i = tier_max_sizes[tier_idx]
+		var placed_in_tier: int = 0
 
-		if _overlaps_any_room(candidate_room):
-			continue
+		while placed_in_tier < target_count and attempts < MAX_PLACEMENT_ATTEMPTS:
+			attempts += 1
+			var angle: float = randf_range(0.0, TAU)
+			var distance: float = randf_range(dist_range.x, dist_range.y)
+			var size: Vector2i = Vector2i(randi_range(min_s.x, max_s.x), randi_range(min_s.y, max_s.y))
+			var center_pos: Vector2 = Vector2.from_angle(angle) * distance
+			var top_left: Vector2i = Vector2i(center_pos.round()) - Vector2i(Vector2(size) * 0.5)
+			var candidate_room: Rect2i = Rect2i(top_left, size)
 
-		companion_rooms.append(candidate_room)
-		_carve_room(candidate_room, cells)
+			if _overlaps_any_room(candidate_room):
+				continue
+
+			companion_rooms.append(candidate_room)
+			_carve_room(candidate_room, cells)
+			placed_in_tier += 1
 
 
 func _overlaps_any_room(candidate: Rect2i) -> bool:
@@ -478,6 +557,7 @@ func _create_decorations(cells: Dictionary[Vector2i, bool]) -> void:
 	var placed_torches: Array[Vector2i] = []
 	_place_wall_torches(placed_torches)
 	_ensure_room_torches(placed_torches)
+	_place_candle_posts(cells, placed_torches)
 	_place_room_props(cells)
 	_place_corridor_bones(cells)
 	_spawn_torch_lights(placed_torches)
@@ -576,6 +656,56 @@ func _ensure_room_torches(placed_torches: Array[Vector2i]) -> void:
 							_decorations.set_cell(alt_candidate, TILE_SET_SOURCE_ID, TORCH_TOP)
 							placed_torches.append(alt_candidate)
 							break
+
+
+func _place_candle_posts(cells: Dictionary[Vector2i, bool], placed_torches: Array[Vector2i]) -> void:
+	var all_rooms: Array[Rect2i] = [hero_room]
+	all_rooms.append_array(companion_rooms)
+
+	for room: Rect2i in all_rooms:
+		var center: Vector2i = room.get_center()
+		var candidate_points: Array[Vector2i] = []
+
+		if room.size.x >= 14 and room.size.y >= 14:
+			var half_w: int = int(float(room.size.x) * 0.25)
+			var half_h: int = int(float(room.size.y) * 0.25)
+			candidate_points.append(center + Vector2i(-half_w, -half_h))
+			candidate_points.append(center + Vector2i(half_w, -half_h))
+			candidate_points.append(center + Vector2i(-half_w, half_h))
+			candidate_points.append(center + Vector2i(half_w, half_h))
+		elif room.size.x >= 10 and room.size.y >= 10:
+			var half_w: int = int(float(room.size.x) * 0.25)
+			candidate_points.append(center + Vector2i(-half_w, 0))
+			candidate_points.append(center + Vector2i(half_w, 0))
+		else:
+			if randf() <= 0.4:
+				candidate_points.append(center + Vector2i(randi_range(-2, 2), randi_range(-2, 2)))
+
+		for base_candidate: Vector2i in candidate_points:
+			var placed: bool = false
+			for dx: int in range(-1, 2):
+				if placed:
+					break
+				for dy: int in range(-1, 2):
+					var base_cell: Vector2i = base_candidate + Vector2i(dx, dy)
+					var top_cell: Vector2i = base_cell + Vector2i(0, -1)
+
+					if not cells.has(base_cell) or not cells.has(top_cell):
+						continue
+					if _walls.get_cell_source_id(base_cell) != -1 or _walls.get_cell_source_id(top_cell) != -1:
+						continue
+					if _decorations.get_cell_source_id(base_cell) != -1 or _decorations.get_cell_source_id(top_cell) != -1:
+						continue
+					if base_cell.distance_squared_to(center) < 4:
+						continue
+					if not _is_far_from_torches(top_cell, placed_torches):
+						continue
+
+					_decorations.set_cell(top_cell, TILE_SET_SOURCE_ID, CANDLE_POST_TOP)
+					_decorations.set_cell(base_cell, TILE_SET_SOURCE_ID, CANDLE_POST_BOTTOM)
+					placed_torches.append(top_cell)
+					placed = true
+					break
 
 
 func _spawn_torch_lights(placed_torches: Array[Vector2i]) -> void:

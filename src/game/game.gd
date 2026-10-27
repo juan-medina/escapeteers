@@ -5,7 +5,7 @@ class_name Game
 extends Node2D
 
 const MAX_CHARACTERS: int = 80
-const MAX_ENEMIES: int = 15
+const MAX_ENEMIES: int = 120
 
 const HERO_SPAWN_WEIGHTS: Dictionary[PackedScene, int] = {
 	preload("res://character/heroes/armored_axeman/armored_axeman.tscn"): 5,
@@ -114,19 +114,40 @@ func _build_hero_deck() -> Array[PackedScene]:
 
 func _spawn_enemies() -> void:
 	var rooms: Array[Rect2i] = _map.companion_rooms.duplicate()
-	rooms.shuffle()
+	var hero_center: Vector2 = Vector2(_map.hero_room.get_center())
+	rooms.sort_custom(
+		func(a: Rect2i, b: Rect2i) -> bool:
+			return hero_center.distance_squared_to(Vector2(a.get_center())) < hero_center.distance_squared_to(Vector2(b.get_center()))
+	)
 
-	var count: int = mini(MAX_ENEMIES, rooms.size())
-	for i: int in range(count):
-		var room: Rect2i = rooms[i]
-		var slime: Enemy = LAVA_SLIME_SCENE.instantiate() as Enemy
-		var cell: Vector2i = room.get_center()
-		slime.position = _map.map_to_local(cell)
-		slime.map = _map
-		slime.y_sort_enabled = true
-		slime.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
-		_characters.add_child(slime)
-		_enemies.append(slime)
+	for room: Rect2i in rooms:
+		if _enemies.size() >= MAX_ENEMIES:
+			break
+
+		var tier: int = _map.get_room_tier(room)
+		var mob_count: int = 0
+		match tier:
+			1:
+				mob_count = randi_range(5, 8)
+			2:
+				mob_count = randi_range(12, 18)
+			3:
+				mob_count = randi_range(25, 35)
+
+		var remaining_capacity: int = MAX_ENEMIES - _enemies.size()
+		mob_count = mini(mob_count, remaining_capacity)
+
+		var spawn_positions: Array[Vector2] = _map.get_enemy_spawn_positions_for_room(room, mob_count)
+		for pos: Vector2 in spawn_positions:
+			var slime: Enemy = LAVA_SLIME_SCENE.instantiate() as Enemy
+			if slime == null:
+				continue
+			slime.position = pos
+			slime.map = _map
+			slime.y_sort_enabled = true
+			slime.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
+			_characters.add_child(slime)
+			_enemies.append(slime)
 
 
 func _on_projectile_spawn_requested(projectile: Projectile) -> void:
