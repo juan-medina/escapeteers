@@ -26,12 +26,15 @@ var current_action: CombatAction = null
 var current_state: State = State.PATROL
 var map: Map = null
 var target: Hero = null
+var home_room: Rect2i = Rect2i()
+var is_on_screen: bool = false
 
 var _navigator: SquadNavigator = SquadNavigator.new()
 var _patrol_destination: Vector2 = Vector2.ZERO
 var _patrol_timer: float = 0.0
 var _idle_wait_timer: float = 0.0
 var _knockback_velocity: Vector2 = Vector2.ZERO
+var _notifier: VisibleOnScreenNotifier2D = null
 
 
 func _ready() -> void:
@@ -41,6 +44,16 @@ func _ready() -> void:
 	add_to_group(_GROUP_ENEMIES)
 	collision_layer = 8
 	collision_mask = 1
+
+	_notifier = VisibleOnScreenNotifier2D.new()
+	_notifier.rect = Rect2(-64.0, -64.0, 128.0, 128.0)
+	_notifier.screen_entered.connect(_on_screen_entered)
+	_notifier.screen_exited.connect(_on_screen_exited)
+	add_child(_notifier)
+	is_on_screen = _notifier.is_on_screen()
+	if not is_on_screen:
+		set_physics_process(false)
+		set_process(false)
 
 
 func _physics_process(delta: float) -> void:
@@ -71,6 +84,19 @@ func _physics_process(delta: float) -> void:
 			_process_chase(delta)
 
 
+func _on_screen_entered() -> void:
+	is_on_screen = true
+	set_physics_process(true)
+	set_process(true)
+
+
+func _on_screen_exited() -> void:
+	is_on_screen = false
+	if current_state == State.PATROL:
+		set_physics_process(false)
+		set_process(false)
+
+
 func set_target_candidate(hero_candidate: Hero) -> void:
 	if hero_candidate == null or not is_instance_valid(hero_candidate) or hero_candidate.is_dead:
 		return
@@ -81,6 +107,9 @@ func set_target_candidate(hero_candidate: Hero) -> void:
 
 	if not SquadNavigator.has_line_of_sight(self, hero_candidate.global_position):
 		return
+
+	set_physics_process(true)
+	set_process(true)
 
 	if target == null:
 		target = hero_candidate
@@ -94,7 +123,15 @@ func set_target_candidate(hero_candidate: Hero) -> void:
 
 
 func apply_knockback(force: Vector2) -> void:
+	set_physics_process(true)
+	set_process(true)
 	_knockback_velocity = force
+
+
+func take_damage(amount: float) -> void:
+	set_physics_process(true)
+	set_process(true)
+	super.take_damage(amount)
 
 
 func apply_melee_damage(attack_target: Hero, damage_amount: float) -> void:
@@ -141,6 +178,9 @@ func _process_chase(delta: float) -> void:
 		target = null
 		current_state = State.PATROL
 		_pick_new_patrol_destination()
+		if not is_on_screen:
+			set_physics_process(false)
+			set_process(false)
 		return
 
 	var dist_to_target: float = global_position.distance_to(target.global_position)
@@ -149,6 +189,9 @@ func _process_chase(delta: float) -> void:
 		target = null
 		current_state = State.PATROL
 		_pick_new_patrol_destination()
+		if not is_on_screen:
+			set_physics_process(false)
+			set_process(false)
 		return
 
 	var diff_x: float = target.global_position.x - global_position.x
@@ -196,21 +239,20 @@ func _pick_new_patrol_destination() -> void:
 		_patrol_destination = global_position
 		return
 
-	var candidate_rooms: Array[Rect2i] = map.companion_rooms
-	if candidate_rooms.is_empty():
-		_patrol_destination = global_position
-		return
+	if home_room != Rect2i():
+		var min_x: int = home_room.position.x + 2
+		var max_x: int = home_room.position.x + home_room.size.x - 3
+		var min_y: int = home_room.position.y + 2
+		var max_y: int = home_room.position.y + home_room.size.y - 3
+		if max_x >= min_x and max_y >= min_y:
+			var rx: int = randi_range(min_x, max_x)
+			var ry: int = randi_range(min_y, max_y)
+			var target_cell: Vector2i = Vector2i(rx, ry)
+			_patrol_destination = map.clamp_to_walkable(map.map_to_local(target_cell))
+			return
 
-	var random_room: Rect2i = candidate_rooms[randi() % candidate_rooms.size()]
-	var target_cell: Vector2i = random_room.get_center()
-
-	# Add slight jitter inside the room
-	var half_size: Vector2i = Vector2i(int(float(random_room.size.x) / 3.0), int(float(random_room.size.y) / 3.0))
-	var offset: Vector2i = Vector2i(randi_range(-half_size.x, half_size.x), randi_range(-half_size.y, half_size.y))
-	target_cell += offset
-
-	var target_world: Vector2 = map.map_to_local(target_cell)
-	_patrol_destination = map.clamp_to_walkable(target_world)
+	var local_offset: Vector2 = Vector2(randf_range(-60.0, 60.0), randf_range(-60.0, 60.0))
+	_patrol_destination = map.clamp_to_walkable(global_position + local_offset)
 
 
 func _on_death() -> void:

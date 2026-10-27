@@ -142,6 +142,7 @@ func _spawn_enemies() -> void:
 			var slime: Enemy = LAVA_SLIME_SCENE.instantiate() as Enemy
 			if slime == null:
 				continue
+			slime.home_room = room
 			slime.position = pos
 			slime.map = _map
 			slime.y_sort_enabled = true
@@ -162,6 +163,9 @@ func _update_followers(delta: float) -> void:
 
 
 func _update_enemies() -> void:
+	var camera_pos: Vector2 = _camera.global_position
+	const ACTIVE_DIST_SQ: float = 480.0 * 480.0
+
 	var i: int = _enemies.size() - 1
 	while i >= 0:
 		var enemy: Enemy = _enemies[i]
@@ -169,6 +173,11 @@ func _update_enemies() -> void:
 			_enemies.remove_at(i)
 			i -= 1
 			continue
+
+		if enemy.global_position.distance_squared_to(camera_pos) > ACTIVE_DIST_SQ:
+			i -= 1
+			continue
+
 		var closest: Hero = _get_closest_squad_member(enemy.global_position)
 		if closest != null:
 			enemy.set_target_candidate(closest)

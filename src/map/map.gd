@@ -43,27 +43,27 @@ const PROP_SKULLS_AND_BONES: Array[Vector2i] = [
 ]
 const CORRIDOR_BONE_CHANCE: float = 0.02
 
-const HERO_ROOM_SIZE: Vector2i = Vector2i(10, 10)
+const HERO_ROOM_SIZE: Vector2i = Vector2i(30, 30)
 const COMPANION_ROOM_COUNT: int = 20
-const ROOM_PADDING: int = 4
-const CORRIDOR_WIDTH: int = 3
-const EXTRA_CORRIDOR_LOOPS: int = 5
-const MAX_PLACEMENT_ATTEMPTS: int = 1500
+const ROOM_PADDING: int = 8
+const CORRIDOR_WIDTH: int = 4
+const EXTRA_CORRIDOR_LOOPS: int = 6
+const MAX_PLACEMENT_ATTEMPTS: int = 2500
 
 const TIER_1_COUNT: int = 7
-const TIER_1_MIN_SIZE: Vector2i = Vector2i(8, 8)
-const TIER_1_MAX_SIZE: Vector2i = Vector2i(11, 11)
-const TIER_1_DISTANCE_RANGE: Vector2 = Vector2(18.0, 38.0)
+const TIER_1_MIN_SIZE: Vector2i = Vector2i(24, 24)
+const TIER_1_MAX_SIZE: Vector2i = Vector2i(33, 33)
+const TIER_1_DISTANCE_RANGE: Vector2 = Vector2(45.0, 95.0)
 
 const TIER_2_COUNT: int = 7
-const TIER_2_MIN_SIZE: Vector2i = Vector2i(12, 12)
-const TIER_2_MAX_SIZE: Vector2i = Vector2i(16, 16)
-const TIER_2_DISTANCE_RANGE: Vector2 = Vector2(40.0, 68.0)
+const TIER_2_MIN_SIZE: Vector2i = Vector2i(36, 36)
+const TIER_2_MAX_SIZE: Vector2i = Vector2i(48, 48)
+const TIER_2_DISTANCE_RANGE: Vector2 = Vector2(105.0, 185.0)
 
 const TIER_3_COUNT: int = 6
-const TIER_3_MIN_SIZE: Vector2i = Vector2i(20, 20)
-const TIER_3_MAX_SIZE: Vector2i = Vector2i(26, 26)
-const TIER_3_DISTANCE_RANGE: Vector2 = Vector2(70.0, 105.0)
+const TIER_3_MIN_SIZE: Vector2i = Vector2i(60, 60)
+const TIER_3_MAX_SIZE: Vector2i = Vector2i(78, 78)
+const TIER_3_DISTANCE_RANGE: Vector2 = Vector2(195.0, 290.0)
 
 var hero_room: Rect2i = Rect2i()
 var companion_rooms: Array[Rect2i] = []
@@ -99,9 +99,9 @@ func map_to_local(cell: Vector2i) -> Vector2:
 
 func get_room_tier(room: Rect2i) -> int:
 	var center_dist: float = Vector2(room.get_center()).length()
-	if center_dist < 40.0 or mini(room.size.x, room.size.y) < 12:
+	if center_dist < 100.0 or mini(room.size.x, room.size.y) < 35:
 		return 1
-	if center_dist < 70.0 or mini(room.size.x, room.size.y) < 19:
+	if center_dist < 190.0 or mini(room.size.x, room.size.y) < 55:
 		return 2
 	return 3
 
@@ -666,20 +666,28 @@ func _place_candle_posts(cells: Dictionary[Vector2i, bool], placed_torches: Arra
 		var center: Vector2i = room.get_center()
 		var candidate_points: Array[Vector2i] = []
 
-		if room.size.x >= 14 and room.size.y >= 14:
+		if room.size.x >= 50 and room.size.y >= 50:
+			var qw: int = int(float(room.size.x) * 0.28)
+			var qh: int = int(float(room.size.y) * 0.28)
+			candidate_points.append(center + Vector2i(-qw, -qh))
+			candidate_points.append(center + Vector2i(qw, -qh))
+			candidate_points.append(center + Vector2i(-qw, qh))
+			candidate_points.append(center + Vector2i(qw, qh))
+			candidate_points.append(center + Vector2i(0, -qh))
+			candidate_points.append(center + Vector2i(0, qh))
+			candidate_points.append(center + Vector2i(-qw, 0))
+			candidate_points.append(center + Vector2i(qw, 0))
+		elif room.size.x >= 20 and room.size.y >= 20:
 			var half_w: int = int(float(room.size.x) * 0.25)
 			var half_h: int = int(float(room.size.y) * 0.25)
 			candidate_points.append(center + Vector2i(-half_w, -half_h))
 			candidate_points.append(center + Vector2i(half_w, -half_h))
 			candidate_points.append(center + Vector2i(-half_w, half_h))
 			candidate_points.append(center + Vector2i(half_w, half_h))
-		elif room.size.x >= 10 and room.size.y >= 10:
+		else:
 			var half_w: int = int(float(room.size.x) * 0.25)
 			candidate_points.append(center + Vector2i(-half_w, 0))
 			candidate_points.append(center + Vector2i(half_w, 0))
-		else:
-			if randf() <= 0.4:
-				candidate_points.append(center + Vector2i(randi_range(-2, 2), randi_range(-2, 2)))
 
 		for base_candidate: Vector2i in candidate_points:
 			var placed: bool = false
