@@ -56,7 +56,9 @@ func get_formation_position(leader: Hero) -> Vector2:
 
 func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 	var leader: Hero = hero.leader
-	if leader == null or hero.is_dead:
+	if leader == null or leader.is_dead or hero.is_dead:
+		hero.velocity = Vector2.ZERO
+		hero.update_visuals(Vector2.ZERO)
 		return
 
 	var formation_pos: Vector2 = _compute_target_position(leader)

@@ -72,7 +72,7 @@ func _physics_process(delta: float) -> void:
 
 
 func set_target_candidate(hero_candidate: Hero) -> void:
-	if hero_candidate == null or not is_instance_valid(hero_candidate):
+	if hero_candidate == null or not is_instance_valid(hero_candidate) or hero_candidate.is_dead:
 		return
 
 	var dist_sq: float = global_position.distance_squared_to(hero_candidate.global_position)
@@ -215,15 +215,16 @@ func _pick_new_patrol_destination() -> void:
 
 func _on_death() -> void:
 	set_physics_process(false)
-	disable_collisions()
 	remove_from_group(_GROUP_ENEMIES)
-	play(ANIM_DEATH)
+	super._on_death()
 	if not _animated_sprite.animation_finished.is_connected(queue_free):
 		_animated_sprite.animation_finished.connect(queue_free, CONNECT_ONE_SHOT)
 
 
 func _on_animation_finished() -> void:
 	super._on_animation_finished()
+	if is_dead:
+		return
 	if current_action is MeleeAction and target != null:
 		var melee: MeleeAction = current_action as MeleeAction
 		melee.apply_hit(self, target)

@@ -69,6 +69,9 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if is_dead:
+		return
+
 	for action: CombatAction in combat_actions:
 		action.update(delta)
 
@@ -204,7 +207,7 @@ func _find_closest_enemy() -> Enemy:
 
 
 func _on_frame_changed() -> void:
-	if combat_state != CombatState.ATTACKING:
+	if is_dead or combat_state != CombatState.ATTACKING:
 		return
 
 	if current_action is MeleeAction and active_target != null:
@@ -230,8 +233,21 @@ func _on_frame_changed() -> void:
 				spawn_projectile(proj)
 
 
+func _on_death() -> void:
+	super._on_death()
+	if _player_light != null:
+		_player_light.visible = false
+	if _ground_indicator != null:
+		_ground_indicator.visible = false
+	if not is_player:
+		if not _animated_sprite.animation_finished.is_connected(queue_free):
+			_animated_sprite.animation_finished.connect(queue_free, CONNECT_ONE_SHOT)
+
+
 func _on_animation_finished() -> void:
 	super._on_animation_finished()
+	if is_dead:
+		return
 	if not _hit_applied_this_attack and current_action is RangedAction and active_target != null:
 		var ranged: RangedAction = current_action as RangedAction
 		var proj: Projectile = ranged.spawn_projectile(self, active_target)

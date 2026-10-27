@@ -18,6 +18,7 @@ const HERO_SPAWN_WEIGHTS: Dictionary[PackedScene, int] = {
 	#preload("res://character/heroes/wizard/wizard.tscn"): 1,
 }
 const LAVA_SLIME_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_slime.tscn")
+const GAME_OVER_DIALOG_SCENE: PackedScene = preload("res://game_over_dialog/game_over_dialog.tscn")
 
 var _squad: Array[Hero] = []
 var _unrecruited_characters: Array[Hero] = []
@@ -42,6 +43,7 @@ func _ready() -> void:
 	_character.is_player = true
 	_character.record_step(0.0)
 	_character.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
+	_character.death_completed.connect(_on_player_death_completed)
 	_squad.append(_character)
 
 	await _spawn_characters()
@@ -49,8 +51,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	_camera.position = _character.position
-	_character.record_step(delta)
+	if is_instance_valid(_character):
+		_camera.position = _character.position
+		if not _character.is_dead:
+			_character.record_step(delta)
 
 	_update_followers(delta)
 	_check_recruitment()
@@ -95,6 +99,7 @@ func _spawn_characters() -> void:
 		ch.frame = randi() % 6
 		ch.frame_progress = randf()
 		ch.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
+		ch.died.connect(_on_hero_died.bind(ch))
 		_unrecruited_characters.append(ch)
 
 
@@ -136,25 +141,51 @@ func _update_followers(delta: float) -> void:
 
 
 func _update_enemies() -> void:
-	for enemy: Enemy in _enemies:
-		if not is_instance_valid(enemy):
+	var i: int = _enemies.size() - 1
+	while i >= 0:
+		var enemy: Enemy = _enemies[i]
+		if not is_instance_valid(enemy) or enemy.is_dead:
+			_enemies.remove_at(i)
+			i -= 1
 			continue
 		var closest: Hero = _get_closest_squad_member(enemy.global_position)
 		if closest != null:
 			enemy.set_target_candidate(closest)
+		i -= 1
 
 
 func _get_closest_squad_member(pos: Vector2) -> Hero:
 	var closest: Hero = null
 	var min_dist_sq: float = INF
 	for member: Hero in _squad:
-		if not is_instance_valid(member):
+		if not is_instance_valid(member) or member.is_dead:
 			continue
 		var dist_sq: float = pos.distance_squared_to(member.global_position)
 		if dist_sq < min_dist_sq:
 			min_dist_sq = dist_sq
 			closest = member
 	return closest
+
+
+func _on_hero_died(hero: Hero) -> void:
+	if hero == _character:
+		return
+
+	var squad_idx: int = _squad.find(hero)
+	if squad_idx != -1:
+		_squad.remove_at(squad_idx)
+		_rebalance_escort_slots()
+		return
+
+	var unrecruited_idx: int = _unrecruited_characters.find(hero)
+	if unrecruited_idx != -1:
+		_unrecruited_characters.remove_at(unrecruited_idx)
+
+
+func _on_player_death_completed() -> void:
+	var dialog: GameOverDialog = GAME_OVER_DIALOG_SCENE.instantiate() as GameOverDialog
+	add_child(dialog)
+	get_tree().paused = true
 
 
 func _check_recruitment() -> void:

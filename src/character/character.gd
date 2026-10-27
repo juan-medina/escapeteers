@@ -6,6 +6,7 @@ extends CharacterBody2D
 
 signal damaged(amount: float, current_health: float)
 signal died
+signal death_completed
 signal projectile_spawn_requested(projectile: Projectile)
 
 enum MovementState {
@@ -103,6 +104,8 @@ func enable_collisions() -> void:
 
 
 func update_visuals(movement_vector: Vector2) -> void:
+	if is_dead:
+		return
 	if movement_vector.length_squared() > MIN_MOVEMENT_THRESHOLD_SQUARED:
 		if absf(movement_vector.x) > FLIP_THRESHOLD_X:
 			flip_h = movement_vector.x < 0.0
@@ -148,7 +151,11 @@ func take_damage(amount: float) -> void:
 
 
 func _on_death() -> void:
-	pass
+	disable_collisions()
+	velocity = Vector2.ZERO
+	if _health_bar != null:
+		_health_bar.visible = false
+	play(ANIM_DEATH)
 
 
 func _flash_hurt() -> void:
@@ -158,6 +165,10 @@ func _flash_hurt() -> void:
 
 
 func _on_animation_finished() -> void:
+	if is_dead:
+		death_completed.emit()
+		return
+
 	if combat_state == CombatState.ATTACKING:
 		combat_state = CombatState.COOLDOWN
 		if velocity.length_squared() > MIN_MOVEMENT_THRESHOLD_SQUARED:
