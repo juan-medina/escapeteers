@@ -28,8 +28,10 @@ const _GROUP_ENEMIES: StringName = &"enemies"
 @export var melee2_damage: float = 25.0
 @export var melee1_knockback: float = 85.0
 @export var melee2_knockback: float = 260.0
+@export var melee2_hit_frames: Array[int] = []
 @export var ranged_cooldown: float = 1.0
 @export var ranged_damage: float = 10.0
+@export var ranged_knockback: float = 0.0
 @export var ranged_frame: int = 7
 @export var ranged_projectile_scene: PackedScene = preload("res://projectile/arrow/arrow.tscn")
 
@@ -50,6 +52,7 @@ var _pos_history: Array[Vector2] = []
 var _time_history: Array[float] = []
 var _player_light: PointLight2D = null
 var _hit_applied_this_attack: bool = false
+var _hits_applied_frames: Array[int] = []
 
 @onready var _ground_indicator: GroundIndicator = get_node_or_null(^"GroundIndicator") as GroundIndicator
 
@@ -127,6 +130,7 @@ func _setup_actions() -> void:
 		ranged.min_range_distance = ranged_min_range if can_melee else 0.0
 		ranged.cooldown = ranged_cooldown
 		ranged.damage = ranged_damage
+		ranged.knockback = ranged_knockback
 		ranged.projectile_frame = ranged_frame
 		ranged.leash_distance = ranged_range
 		ranged.check_line_of_sight = true
@@ -161,17 +165,17 @@ func _check_auto_attack() -> void:
 	if combat_state != CombatState.READY:
 		return
 
-	var anchor: Vector2 = get_anchor_position()
-	var closest_enemy: Enemy = _find_closest_enemy_in_leash(anchor)
+	var closest_enemy: Enemy = _find_closest_enemy()
+	active_target = closest_enemy
 	if closest_enemy == null:
 		return
 
-	active_target = closest_enemy
 	for action: CombatAction in combat_actions:
-		if action.can_execute(self, closest_enemy, anchor):
+		if action.can_execute(self, closest_enemy):
 			current_action = action
 			combat_state = CombatState.ATTACKING
 			_hit_applied_this_attack = false
+			_hits_applied_frames.clear()
 			action.execute(self, closest_enemy)
 			if action is MeleeAction:
 				melee_attack_started.emit(animation)
@@ -180,40 +184,44 @@ func _check_auto_attack() -> void:
 			break
 
 
-func _find_closest_enemy_in_leash(anchor: Vector2) -> Enemy:
+func _find_closest_enemy() -> Enemy:
 	var closest: Enemy = null
 	var min_dist_sq: float = INF
-	var max_leash: float = get_current_leash()
-	var max_leash_sq: float = max_leash * max_leash
+	var max_detection: float = get_current_leash()
+	var max_detection_sq: float = max_detection * max_detection
 
 	for node: Node in get_tree().get_nodes_in_group(_GROUP_ENEMIES):
 		var enemy: Enemy = node as Enemy
 		if enemy == null or not is_instance_valid(enemy) or enemy.health <= 0.0 or enemy.is_queued_for_deletion():
 			continue
 
-		var dist_to_anchor_sq: float = anchor.distance_squared_to(enemy.global_position)
-		if dist_to_anchor_sq <= max_leash_sq:
-			var dist_to_self_sq: float = global_position.distance_squared_to(enemy.global_position)
-			if dist_to_self_sq < min_dist_sq:
-				min_dist_sq = dist_to_self_sq
-				closest = enemy
+		var dist_to_self_sq: float = global_position.distance_squared_to(enemy.global_position)
+		if dist_to_self_sq <= max_detection_sq and dist_to_self_sq < min_dist_sq:
+			min_dist_sq = dist_to_self_sq
+			closest = enemy
 
 	return closest
 
 
 func _on_frame_changed() -> void:
-	if combat_state != CombatState.ATTACKING or _hit_applied_this_attack:
+	if combat_state != CombatState.ATTACKING:
 		return
 
 	if current_action is MeleeAction and active_target != null:
-		if frame >= 2:
+		var melee: MeleeAction = current_action as MeleeAction
+		var is_heavy: bool = melee.current_is_heavy
+		if is_heavy and not melee2_hit_frames.is_empty():
+			for hit_frame: int in melee2_hit_frames:
+				if frame >= hit_frame and not _hits_applied_frames.has(hit_frame):
+					_hits_applied_frames.append(hit_frame)
+					melee.apply_hit(self, active_target)
+					enemy_hit.emit(active_target, melee.heavy_damage, true)
+		elif not _hit_applied_this_attack and frame >= 2:
 			_hit_applied_this_attack = true
-			var melee: MeleeAction = current_action as MeleeAction
 			melee.apply_hit(self, active_target)
-			var is_heavy: bool = melee.current_is_heavy
 			var dmg: float = melee.heavy_damage if is_heavy else melee.damage
 			enemy_hit.emit(active_target, dmg, is_heavy)
-	elif current_action is RangedAction and active_target != null:
+	elif current_action is RangedAction and active_target != null and not _hit_applied_this_attack:
 		var ranged: RangedAction = current_action as RangedAction
 		if frame >= ranged.projectile_frame:
 			_hit_applied_this_attack = true
@@ -230,6 +238,7 @@ func _on_animation_finished() -> void:
 		if proj != null:
 			spawn_projectile(proj)
 	_hit_applied_this_attack = false
+	_hits_applied_frames.clear()
 
 
 func record_step(delta: float) -> void:

@@ -2,7 +2,84 @@
 
 [ext_resource type="PackedScene" uid="uid://derhacq4fqbxt" path="res://character/character.tscn" id="1_base"]
 [ext_resource type="Script" uid="uid://dxgjxihuxyrff" path="res://character/heroes/swordsman/swordsman.gd" id="2_script"]
+[ext_resource type="PackedScene" uid="uid://df7h2kwl40v5r" path="res://projectile/arrow/arrow.tscn" id="3_puv4g"]
 [ext_resource type="Texture2D" uid="uid://ck5k561nn1g5t" path="res://character/heroes/swordsman/swordsman.png" id="3_tex"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_5m7pj"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 200, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_fhktf"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 200, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_c1etr"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 200, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_vbn30"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 200, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_amw4a"]
+atlas = ExtResource("3_tex")
+region = Rect2(400, 200, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_tbxe6"]
+atlas = ExtResource("3_tex")
+region = Rect2(500, 200, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_y4vgd"]
+atlas = ExtResource("3_tex")
+region = Rect2(600, 200, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_nxy87"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_x68py"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_bmgev"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_7lt25"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_csm6j"]
+atlas = ExtResource("3_tex")
+region = Rect2(400, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4l4mo"]
+atlas = ExtResource("3_tex")
+region = Rect2(500, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_t62sq"]
+atlas = ExtResource("3_tex")
+region = Rect2(600, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_taeoo"]
+atlas = ExtResource("3_tex")
+region = Rect2(700, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_2d01p"]
+atlas = ExtResource("3_tex")
+region = Rect2(800, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_a0jmf"]
+atlas = ExtResource("3_tex")
+region = Rect2(900, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kb1y5"]
+atlas = ExtResource("3_tex")
+region = Rect2(1000, 400, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_u2xd5"]
+atlas = ExtResource("3_tex")
+region = Rect2(1100, 400, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_vq26m"]
 atlas = ExtResource("3_tex")
@@ -100,6 +177,73 @@ region = Rect2(700, 100, 100, 100)
 animations = [{
 "frames": [{
 "duration": 1.0,
+"texture": SubResource("AtlasTexture_5m7pj")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_fhktf")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_c1etr")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_vbn30")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_amw4a")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_tbxe6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_y4vgd")
+}],
+"loop": 0,
+"name": &"attack_melee1",
+"speed": 12.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_nxy87")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_x68py")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_bmgev")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_7lt25")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_csm6j")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_4l4mo")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_t62sq")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_taeoo")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_2d01p")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_a0jmf")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kb1y5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_u2xd5")
+}],
+"loop": 0,
+"name": &"attack_melee2",
+"speed": 9.0
+}, {
+"frames": [{
+"duration": 1.0,
 "texture": SubResource("AtlasTexture_vq26m")
 }, {
 "duration": 1.0,
@@ -191,6 +335,21 @@ animations = [{
 [node name="Swordsman" unique_id=89725606 instance=ExtResource("1_base")]
 script = ExtResource("2_script")
 is_player = false
+can_heavy_melee = true
+melee1_cooldown = 0.5
+melee2_cooldown = 3.5
+melee2_chance = 0.35
+melee1_damage = 10.0
+melee2_damage = 8.0
+melee1_knockback = 0.0
+melee2_knockback = 0.0
+melee2_hit_frames = Array[int]([2, 5, 8])
+ranged_cooldown = 1.0
+ranged_damage = 10.0
+ranged_knockback = 0.0
+ranged_frame = 7
+ranged_projectile_scene = ExtResource("3_puv4g")
+can_melee = true
 
 [node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]
 sprite_frames = SubResource("SpriteFrames_sf")

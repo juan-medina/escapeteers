@@ -4,6 +4,74 @@
 [ext_resource type="Script" uid="uid://duktdr3lvbfcg" path="res://character/heroes/knight/knight.gd" id="2_script"]
 [ext_resource type="Texture2D" uid="uid://b63i47qhki5tr" path="res://character/heroes/knight/knight.png" id="3_tex"]
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_hyux6"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 200, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_gik2h"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 200, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_im1wp"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 200, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_fhy10"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 200, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_2s4s3"]
+atlas = ExtResource("3_tex")
+region = Rect2(400, 200, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_11cb2"]
+atlas = ExtResource("3_tex")
+region = Rect2(500, 200, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_n20ve"]
+atlas = ExtResource("3_tex")
+region = Rect2(600, 200, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_05rll"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_30at0"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1kgnu"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_7oq4v"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_unlnu"]
+atlas = ExtResource("3_tex")
+region = Rect2(400, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_athi8"]
+atlas = ExtResource("3_tex")
+region = Rect2(500, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_oy5pm"]
+atlas = ExtResource("3_tex")
+region = Rect2(600, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_erg1o"]
+atlas = ExtResource("3_tex")
+region = Rect2(700, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_o21cf"]
+atlas = ExtResource("3_tex")
+region = Rect2(800, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ro7gm"]
+atlas = ExtResource("3_tex")
+region = Rect2(900, 300, 100, 100)
+
 [sub_resource type="AtlasTexture" id="AtlasTexture_r4im3"]
 atlas = ExtResource("3_tex")
 region = Rect2(0, 700, 100, 100)
@@ -96,6 +164,67 @@ region = Rect2(700, 100, 100, 100)
 animations = [{
 "frames": [{
 "duration": 1.0,
+"texture": SubResource("AtlasTexture_hyux6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_gik2h")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_im1wp")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_fhy10")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_2s4s3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_11cb2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_n20ve")
+}],
+"loop": 0,
+"name": &"attack_melee1",
+"speed": 12.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_05rll")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_30at0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_1kgnu")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_7oq4v")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_unlnu")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_athi8")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_oy5pm")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_erg1o")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_o21cf")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ro7gm")
+}],
+"loop": 0,
+"name": &"attack_melee2",
+"speed": 9.0
+}, {
+"frames": [{
+"duration": 1.0,
 "texture": SubResource("AtlasTexture_r4im3")
 }, {
 "duration": 1.0,
@@ -184,6 +313,16 @@ animations = [{
 [node name="Knight" unique_id=1913640077 instance=ExtResource("1_base")]
 script = ExtResource("2_script")
 is_player = false
+can_melee = true
+can_heavy_melee = true
+melee_range = 28.0
+melee1_cooldown = 0.5
+melee2_cooldown = 3.5
+melee2_chance = 0.35
+melee1_damage = 10.0
+melee2_damage = 25.0
+melee1_knockback = 0.0
+melee2_knockback = 260.0
 
 [node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]
 sprite_frames = SubResource("SpriteFrames_sf")

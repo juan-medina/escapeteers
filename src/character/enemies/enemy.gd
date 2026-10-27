@@ -181,7 +181,7 @@ func _check_combat_actions() -> void:
 		return
 
 	for action: CombatAction in combat_actions:
-		if action.can_execute(self, target, Vector2.ZERO):
+		if action.can_execute(self, target):
 			current_action = action
 			combat_state = CombatState.ATTACKING
 			action.execute(self, target)

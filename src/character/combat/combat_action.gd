@@ -21,17 +21,12 @@ func is_ready() -> bool:
 	return cooldown_timer <= 0.0
 
 
-func can_execute(user: Character, target: Character, anchor_pos: Vector2) -> bool:
+func can_execute(user: Character, target: Character) -> bool:
 	if not is_ready():
 		return false
 	if target == null or not is_instance_valid(target) or target.health <= 0.0:
 		return false
 
-	# If an anchor is provided and leash is positive, target must be within leash from the anchor
-	if anchor_pos != Vector2.ZERO and leash_distance > 0.0 and target.global_position.distance_to(anchor_pos) > leash_distance:
-		return false
-
-	# Target must be within attack range of user and outside the dead zone
 	var dist: float = user.global_position.distance_to(target.global_position)
 	return dist >= min_range_distance and dist <= range_distance
 

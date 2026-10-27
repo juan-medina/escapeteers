@@ -11,6 +11,7 @@ const ANIM_IMPACT: StringName = &"impact"
 
 @export var speed: float = 140.0
 @export var damage: float = 5.0
+@export var knockback: float = 0.0
 @export var lifetime: float = 3.0
 @export var auto_rotate: bool = true
 
@@ -74,6 +75,9 @@ func _on_body_entered(body: Node2D) -> void:
 func _on_hit(target: Node2D) -> void:
 	if target.has_method(&"take_damage"):
 		target.call(&"take_damage", damage)
+
+	if knockback > 0.0 and target.has_method(&"apply_knockback"):
+		target.call(&"apply_knockback", direction * knockback)
 
 	hit_target.emit(target, damage)
 	_destroy()

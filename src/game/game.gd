@@ -7,16 +7,16 @@ extends Node2D
 const MAX_CHARACTERS: int = 80
 const MAX_ENEMIES: int = 15
 
-const HERO_SCENES: Array[PackedScene] = [
-	#preload("res://character/heroes/archer/archer.tscn"),
-	#preload("res://character/heroes/armored_axeman/armored_axeman.tscn"),
-	#preload("res://character/heroes/knight/knight.tscn"),
-	#preload("res://character/heroes/knight_templar/knight_templar.tscn"),
-	#preload("res://character/heroes/priest/priest.tscn"),
-	preload("res://character/heroes/soldier/soldier.tscn"),
-	#preload("res://character/heroes/swordsman/swordsman.tscn"),
-	#preload("res://character/heroes/wizard/wizard.tscn"),
-]
+const HERO_SPAWN_WEIGHTS: Dictionary[PackedScene, int] = {
+	preload("res://character/heroes/armored_axeman/armored_axeman.tscn"): 5,
+	preload("res://character/heroes/archer/archer.tscn"): 1,
+	preload("res://character/heroes/soldier/soldier.tscn"): 1,
+	preload("res://character/heroes/knight/knight.tscn"): 3,
+	preload("res://character/heroes/knight_templar/knight_templar.tscn"): 2,
+	preload("res://character/heroes/swordsman/swordsman.tscn"): 3,
+	#preload("res://character/heroes/priest/priest.tscn"): 2,
+	#preload("res://character/heroes/wizard/wizard.tscn"): 1,
+}
 const LAVA_SLIME_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_slime.tscn")
 
 var _squad: Array[Hero] = []
@@ -77,7 +77,7 @@ func _spawn_characters() -> void:
 
 	for pos: Vector2 in spawn_points:
 		if hero_deck.is_empty():
-			hero_deck.assign(HERO_SCENES)
+			hero_deck = _build_hero_deck()
 			hero_deck.shuffle()
 
 		var scene: PackedScene = hero_deck.pop_back()
@@ -96,6 +96,15 @@ func _spawn_characters() -> void:
 		ch.frame_progress = randf()
 		ch.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
 		_unrecruited_characters.append(ch)
+
+
+func _build_hero_deck() -> Array[PackedScene]:
+	var deck: Array[PackedScene] = []
+	for scene: PackedScene in HERO_SPAWN_WEIGHTS:
+		var weight: int = HERO_SPAWN_WEIGHTS[scene]
+		for _i: int in range(weight):
+			deck.append(scene)
+	return deck
 
 
 func _spawn_enemies() -> void:

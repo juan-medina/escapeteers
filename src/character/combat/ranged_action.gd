@@ -6,13 +6,14 @@ extends CombatAction
 
 var projectile_scene: PackedScene = null
 var projectile_frame: int = 0
+var knockback: float = 0.0
 var requires_horizontal_alignment: bool = false
 var horizontal_tolerance: float = 16.0
 var check_line_of_sight: bool = false
 
 
-func can_execute(user: Character, target: Character, anchor_pos: Vector2) -> bool:
-	if not super.can_execute(user, target, anchor_pos):
+func can_execute(user: Character, target: Character) -> bool:
+	if not super.can_execute(user, target):
 		return false
 
 	if requires_horizontal_alignment:
@@ -51,4 +52,5 @@ func spawn_projectile(user: Character, target: Character) -> Projectile:
 		projectile.global_position = spawn_pos
 		projectile.direction = fire_dir
 		projectile.damage = damage
+		projectile.knockback = knockback
 	return projectile

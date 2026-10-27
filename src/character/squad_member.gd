@@ -145,6 +145,8 @@ func _compute_separation(hero: Hero, squad: Array[Hero]) -> Vector2:
 		var dist_sq: float = diff.length_squared()
 
 		if other.is_player:
+			if hero.active_target != null and is_instance_valid(hero.active_target) and hero.active_target.health > 0.0:
+				continue
 			if dist_sq > 0.0001 and dist_sq < player_dist_sq:
 				var dist: float = sqrt(dist_sq)
 				var strength: float = (PLAYER_CLEARANCE_RADIUS - dist) / PLAYER_CLEARANCE_RADIUS
