@@ -79,10 +79,13 @@ var sprite_frames: SpriteFrames:
 @onready var _animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var _collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var _spawn_point: Marker2D = $SpawnPoint
+@onready var _health_bar: HealthBar = get_node_or_null(^"HealthBar") as HealthBar
 
 
 func _ready() -> void:
 	health = max_health
+	if _health_bar != null:
+		_health_bar.update_health(health, max_health)
 	_animated_sprite.animation_finished.connect(_on_animation_finished)
 	play(ANIM_IDLE)
 
@@ -132,6 +135,8 @@ func take_damage(amount: float) -> void:
 
 	health = maxf(0.0, health - amount)
 	damaged.emit(amount, health)
+	if _health_bar != null:
+		_health_bar.update_health(health, max_health)
 	if health <= 0.0:
 		is_dead = true
 		movement_state = MovementState.IDLE

@@ -56,6 +56,8 @@ var _hit_applied_this_attack: bool = false
 
 func _ready() -> void:
 	super._ready()
+	if _health_bar != null:
+		_health_bar.set_fill_color(HealthBar.DEFAULT_HERO_COLOR)
 	_update_collision_mode()
 	_update_player_light()
 	_update_ground_indicator()

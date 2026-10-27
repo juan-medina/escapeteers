@@ -36,6 +36,8 @@ var _knockback_velocity: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
 	super._ready()
+	if _health_bar != null:
+		_health_bar.set_fill_color(HealthBar.DEFAULT_ENEMY_COLOR)
 	add_to_group(_GROUP_ENEMIES)
 	collision_layer = 8
 	collision_mask = 1
