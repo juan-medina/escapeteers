@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://projectile/heal/heal_effect.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://danml8rm431im" path="res://projectile/heal/heal_effect.png" id="2_tex"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_h0"]
+atlas = ExtResource("2_tex")
+region = Rect2(0, 0, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_h1"]
+atlas = ExtResource("2_tex")
+region = Rect2(100, 0, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_h2"]
+atlas = ExtResource("2_tex")
+region = Rect2(200, 0, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_h3"]
+atlas = ExtResource("2_tex")
+region = Rect2(300, 0, 100, 100)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_heal"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_h0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_h1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_h2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_h3")
+}],
+"loop": false,
+"name": &"default",
+"speed": 8.0
+}]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_heal"]
+radius = 16.0
+
+[node name="HealEffect" type="Area2D"]
+y_sort_enabled = true
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("1_script")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_heal")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_heal")
+disabled = true

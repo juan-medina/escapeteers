@@ -111,7 +111,7 @@ func get_companion_spawn_positions() -> Array[Vector2]:
 
 	# Guaranteed starter recruits in the starting hero room
 	var hero_center: Vector2i = hero_room.get_center()
-	for offset_x: int in [-2, 2]:
+	for offset_x: int in [-1, 1]:
 		var recruit_cell: Vector2i = hero_center + Vector2i(offset_x, 0)
 		if is_cell_walkable(recruit_cell):
 			positions.append(_floor.map_to_local(recruit_cell))

@@ -6,13 +6,16 @@ extends Character
 
 signal melee_attack_started(attack_name: StringName)
 signal ranged_attack_started(attack_name: StringName)
+signal heal_cast_started(anim_name: StringName)
 signal enemy_hit(enemy: Enemy, damage: float, is_heavy: bool)
+signal ally_healed(ally: Character, amount: float)
 
 const RECRUIT_DISTANCE: float = 20.0
 const MAX_HISTORY_DURATION: float = 2.5
 const CRESCENT_BLEND_SPEED: float = 5.0
 const PLAYER_LIGHT_TEXTURE: Texture2D = preload("res://map/light_texture.tres")
 const _GROUP_ENEMIES: StringName = &"enemies"
+const _GROUP_HEROES: StringName = &"heroes"
 
 @export var is_player: bool = false:
 	set(value):
@@ -34,6 +37,10 @@ const _GROUP_ENEMIES: StringName = &"enemies"
 @export var ranged_knockback: float = 0.0
 @export var ranged_frame: int = 7
 @export var ranged_projectile_scene: PackedScene = preload("res://projectile/arrow/arrow.tscn")
+@export var heal_cooldown: float = 2.4
+@export var heal_amount: float = 20.0
+@export var heal_frame: int = 3
+@export var heal_effect_scene: PackedScene = preload("res://projectile/heal/heal_effect.tscn")
 
 var leader: Hero = null
 var squad_member: SquadMember = null:
@@ -44,7 +51,7 @@ var is_moving: bool = false
 var move_direction: Vector2 = Vector2.RIGHT
 var crescent_blend: float = 0.0
 var combat_actions: Array[CombatAction] = []
-var active_target: Enemy = null
+var active_target: Character = null
 var current_action: CombatAction = null
 
 var _elapsed_time: float = 0.0
@@ -59,6 +66,7 @@ var _hits_applied_frames: Array[int] = []
 
 func _ready() -> void:
 	super._ready()
+	add_to_group(_GROUP_HEROES)
 	if _health_bar != null:
 		_health_bar.set_fill_color(HealthBar.DEFAULT_HERO_COLOR)
 	_update_collision_mode()
@@ -139,6 +147,17 @@ func _setup_actions() -> void:
 		ranged.check_line_of_sight = true
 		combat_actions.append(ranged)
 
+	if can_heal:
+		var heal_act: HealAction = HealAction.new()
+		heal_act.heal_effect_scene = heal_effect_scene
+		heal_act.range_distance = heal_range
+		heal_act.cooldown = heal_cooldown
+		heal_act.heal_amount = heal_amount
+		heal_act.cast_frame = heal_frame
+		heal_act.leash_distance = heal_range
+		heal_act.check_line_of_sight = true
+		combat_actions.append(heal_act)
+
 
 func get_anchor_position() -> Vector2:
 	if is_player or squad_member == null or leader == null:
@@ -168,23 +187,44 @@ func _check_auto_attack() -> void:
 	if combat_state != CombatState.READY:
 		return
 
-	var closest_enemy: Enemy = _find_closest_enemy()
-	active_target = closest_enemy
-	if closest_enemy == null:
+	var target_char: Character = null
+	var selected_action: CombatAction = null
+
+	if can_heal:
+		var injured_ally: Hero = _find_injured_ally()
+		if injured_ally != null:
+			for action: CombatAction in combat_actions:
+				if action is HealAction:
+					target_char = injured_ally
+					if action.can_execute(self, injured_ally):
+						selected_action = action
+					break
+
+	if target_char == null:
+		var closest_enemy: Enemy = _find_closest_enemy()
+		if closest_enemy != null:
+			target_char = closest_enemy
+			for action: CombatAction in combat_actions:
+				if not (action is HealAction) and action.can_execute(self, closest_enemy):
+					selected_action = action
+					break
+
+	active_target = target_char
+	if active_target == null:
 		return
 
-	for action: CombatAction in combat_actions:
-		if action.can_execute(self, closest_enemy):
-			current_action = action
-			combat_state = CombatState.ATTACKING
-			_hit_applied_this_attack = false
-			_hits_applied_frames.clear()
-			action.execute(self, closest_enemy)
-			if action is MeleeAction:
-				melee_attack_started.emit(animation)
-			elif action is RangedAction:
-				ranged_attack_started.emit(animation)
-			break
+	if selected_action != null:
+		current_action = selected_action
+		combat_state = CombatState.ATTACKING
+		_hit_applied_this_attack = false
+		_hits_applied_frames.clear()
+		selected_action.execute(self, active_target)
+		if selected_action is MeleeAction:
+			melee_attack_started.emit(animation)
+		elif selected_action is RangedAction:
+			ranged_attack_started.emit(animation)
+		elif selected_action is HealAction:
+			heal_cast_started.emit(animation)
 
 
 func _find_closest_enemy() -> Enemy:
@@ -206,6 +246,35 @@ func _find_closest_enemy() -> Enemy:
 	return closest
 
 
+func _find_injured_ally() -> Hero:
+	var best_target: Hero = null
+	var lowest_health_ratio: float = 1.0
+	var closest_dist_sq: float = INF
+	var max_detection: float = get_current_leash()
+	var max_detection_sq: float = max_detection * max_detection
+
+	for node: Node in get_tree().get_nodes_in_group(_GROUP_HEROES):
+		var ally: Hero = node as Hero
+		if ally == null or not is_instance_valid(ally) or ally.is_dead or ally.health <= 0.0 or ally.is_queued_for_deletion():
+			continue
+		if not ally.is_player and ally.squad_member == null:
+			continue
+		if ally.health >= ally.max_health:
+			continue
+
+		var dist_sq: float = global_position.distance_squared_to(ally.global_position)
+		if dist_sq > max_detection_sq:
+			continue
+
+		var ratio: float = ally.health / ally.max_health
+		if ratio < lowest_health_ratio - 0.001 or (absf(ratio - lowest_health_ratio) <= 0.001 and dist_sq < closest_dist_sq):
+			lowest_health_ratio = ratio
+			closest_dist_sq = dist_sq
+			best_target = ally
+
+	return best_target
+
+
 func _on_frame_changed() -> void:
 	if is_dead or combat_state != CombatState.ATTACKING:
 		return
@@ -218,12 +287,14 @@ func _on_frame_changed() -> void:
 				if frame >= hit_frame and not _hits_applied_frames.has(hit_frame):
 					_hits_applied_frames.append(hit_frame)
 					melee.apply_hit(self, active_target)
-					enemy_hit.emit(active_target, melee.heavy_damage, true)
+					if active_target is Enemy:
+						enemy_hit.emit(active_target as Enemy, melee.heavy_damage, true)
 		elif not _hit_applied_this_attack and frame >= 2:
 			_hit_applied_this_attack = true
 			melee.apply_hit(self, active_target)
 			var dmg: float = melee.heavy_damage if is_heavy else melee.damage
-			enemy_hit.emit(active_target, dmg, is_heavy)
+			if active_target is Enemy:
+				enemy_hit.emit(active_target as Enemy, dmg, is_heavy)
 	elif current_action is RangedAction and active_target != null and not _hit_applied_this_attack:
 		var ranged: RangedAction = current_action as RangedAction
 		if frame >= ranged.projectile_frame:
@@ -231,6 +302,15 @@ func _on_frame_changed() -> void:
 			var proj: Projectile = ranged.spawn_projectile(self, active_target)
 			if proj != null:
 				spawn_projectile(proj)
+	elif current_action is HealAction and active_target != null and not _hit_applied_this_attack:
+		var heal_act: HealAction = current_action as HealAction
+		if frame >= heal_act.cast_frame:
+			_hit_applied_this_attack = true
+			heal_act.apply_heal(self, active_target)
+			var effect: Projectile = heal_act.spawn_heal_effect(self, active_target)
+			if effect != null:
+				spawn_projectile(effect)
+			ally_healed.emit(active_target, heal_act.heal_amount)
 
 
 func _on_death() -> void:
@@ -253,6 +333,13 @@ func _on_animation_finished() -> void:
 		var proj: Projectile = ranged.spawn_projectile(self, active_target)
 		if proj != null:
 			spawn_projectile(proj)
+	elif not _hit_applied_this_attack and current_action is HealAction and active_target != null:
+		var heal_act: HealAction = current_action as HealAction
+		heal_act.apply_heal(self, active_target)
+		var effect: Projectile = heal_act.spawn_heal_effect(self, active_target)
+		if effect != null:
+			spawn_projectile(effect)
+		ally_healed.emit(active_target, heal_act.heal_amount)
 	_hit_applied_this_attack = false
 	_hits_applied_frames.clear()
 

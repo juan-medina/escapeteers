@@ -2,6 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://derhacq4fqbxt" path="res://character/character.tscn" id="1_base"]
 [ext_resource type="Script" uid="uid://dn2htm0m6ctby" path="res://character/heroes/priest/priest.gd" id="2_script"]
+[ext_resource type="PackedScene" path="res://projectile/heal/heal_effect.tscn" id="3_heal"]
 [ext_resource type="Texture2D" uid="uid://bc8mbe5i6p0xf" path="res://character/heroes/priest/priest.png" id="3_tex"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_w487a"]
@@ -19,6 +20,30 @@ region = Rect2(200, 900, 100, 100)
 [sub_resource type="AtlasTexture" id="AtlasTexture_b0tuk"]
 atlas = ExtResource("3_tex")
 region = Rect2(300, 900, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_8wp03"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 600, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_phns5"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 600, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_s4aqp"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 600, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_outdk"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 600, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_f5b3u"]
+atlas = ExtResource("3_tex")
+region = Rect2(400, 600, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_u8nha"]
+atlas = ExtResource("3_tex")
+region = Rect2(500, 600, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_qdqx0"]
 atlas = ExtResource("3_tex")
@@ -113,6 +138,29 @@ animations = [{
 }, {
 "frames": [{
 "duration": 1.0,
+"texture": SubResource("AtlasTexture_8wp03")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_phns5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_s4aqp")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_outdk")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_f5b3u")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_u8nha")
+}],
+"loop": 0,
+"name": &"heal",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
 "texture": SubResource("AtlasTexture_qdqx0")
 }, {
 "duration": 1.0,
@@ -184,7 +232,13 @@ animations = [{
 [node name="Priest" unique_id=597551981 instance=ExtResource("1_base")]
 script = ExtResource("2_script")
 is_player = false
+can_heal = true
+heal_range = 140.0
+heal_cooldown = 2.4
+heal_amount = 20.0
+heal_frame = 3
+heal_effect_scene = ExtResource("3_heal")
 
 [node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]
 sprite_frames = SubResource("SpriteFrames_sf")
-animation = &"idle"
+animation = &"heal"

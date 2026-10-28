@@ -5,6 +5,7 @@ class_name Character
 extends CharacterBody2D
 
 signal damaged(amount: float, current_health: float)
+signal healed(amount: float, current_health: float)
 signal died
 signal death_completed
 signal projectile_spawn_requested(projectile: Projectile)
@@ -31,6 +32,7 @@ const ANIM_DEATH: StringName = &"death"
 const ANIM_ATTACK_MELEE1: StringName = &"attack_melee1"
 const ANIM_ATTACK_MELEE2: StringName = &"attack_melee2"
 const ANIM_ATTACK_RANGED1: StringName = &"attack_ranged1"
+const ANIM_HEAL: StringName = &"heal"
 
 @export var max_health: float = 100.0
 @export var speed: float = 100.0
@@ -39,6 +41,8 @@ const ANIM_ATTACK_RANGED1: StringName = &"attack_ranged1"
 @export var can_ranged: bool = false
 @export var ranged_min_range: float = 45.0
 @export var ranged_range: float = 140.0
+@export var can_heal: bool = false
+@export var heal_range: float = 140.0
 
 var health: float = 100.0
 var is_dead: bool = false
@@ -129,7 +133,19 @@ func can_attack_at_distance(dist: float) -> bool:
 		return true
 	if can_ranged and dist >= ranged_min_range and dist <= ranged_range:
 		return true
+	if can_heal and dist <= heal_range:
+		return true
 	return false
+
+
+func heal(amount: float) -> void:
+	if is_dead:
+		return
+
+	health = minf(max_health, health + amount)
+	healed.emit(amount, health)
+	if _health_bar != null:
+		_health_bar.update_health(health, max_health)
 
 
 func take_damage(amount: float) -> void:

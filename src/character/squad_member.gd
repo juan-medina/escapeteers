@@ -69,7 +69,11 @@ func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 	var current_leash: float = hero.get_current_leash()
 	var dist_from_slot: float = hero.position.distance_to(formation_pos)
 
-	if hero.active_target != null and is_instance_valid(hero.active_target) and hero.active_target.health > 0.0:
+	var target_valid: bool = hero.active_target != null and is_instance_valid(hero.active_target) and hero.active_target.health > 0.0
+	if target_valid and not (hero.active_target is Enemy) and hero.active_target.health >= hero.active_target.max_health:
+		target_valid = false
+
+	if target_valid:
 		if dist_from_slot > current_leash:
 			hero.movement_state = Character.MovementState.FALL_BACK
 			move_dest = formation_pos

@@ -7,18 +7,27 @@ extends Node2D
 const MAX_CHARACTERS: int = 80
 const MAX_ENEMIES: int = 120
 
-const HERO_SPAWN_WEIGHTS: Dictionary[PackedScene, int] = {
-	preload("res://character/heroes/armored_axeman/armored_axeman.tscn"): 5,
-	preload("res://character/heroes/archer/archer.tscn"): 1,
-	preload("res://character/heroes/soldier/soldier.tscn"): 1,
-	preload("res://character/heroes/knight/knight.tscn"): 3,
-	preload("res://character/heroes/knight_templar/knight_templar.tscn"): 2,
-	preload("res://character/heroes/swordsman/swordsman.tscn"): 3,
-	#preload("res://character/heroes/priest/priest.tscn"): 2,
-	#preload("res://character/heroes/wizard/wizard.tscn"): 1,
-}
+const ARCHER_SCENE: PackedScene = preload("res://character/heroes/archer/archer.tscn")
+const ARMORED_AXEMAN_SCENE: PackedScene = preload("res://character/heroes/armored_axeman/armored_axeman.tscn")
+const KNIGHT_SCENE: PackedScene = preload("res://character/heroes/knight/knight.tscn")
+const KNIGHT_TEMPLAR_SCENE: PackedScene = preload("res://character/heroes/knight_templar/knight_templar.tscn")
+const PRIEST_SCENE: PackedScene = preload("res://character/heroes/priest/priest.tscn")
+const SOLDIER_SCENE: PackedScene = preload("res://character/heroes/soldier/soldier.tscn")
+const SWORDSMAN_SCENE: PackedScene = preload("res://character/heroes/swordsman/swordsman.tscn")
+const WIZARD_SCENE: PackedScene = preload("res://character/heroes/wizard/wizard.tscn")
 const LAVA_SLIME_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_slime.tscn")
 const GAME_OVER_DIALOG_SCENE: PackedScene = preload("res://game_over_dialog/game_over_dialog.tscn")
+
+const HERO_SPAWN_WEIGHTS: Dictionary[PackedScene, int] = {
+	ARMORED_AXEMAN_SCENE: 5,
+	KNIGHT_SCENE: 3,
+	KNIGHT_TEMPLAR_SCENE: 2,
+	SWORDSMAN_SCENE: 2,
+	WIZARD_SCENE: 0,
+	ARCHER_SCENE: 1,
+	SOLDIER_SCENE: 1,
+	PRIEST_SCENE: 1,
+}
 
 var _squad: Array[Hero] = []
 var _unrecruited_characters: Array[Hero] = []
@@ -47,6 +56,7 @@ func _ready() -> void:
 	_squad.append(_character)
 
 	await _spawn_characters()
+	_check_recruitment()
 	_spawn_enemies()
 
 
@@ -78,13 +88,19 @@ func _spawn_characters() -> void:
 		spawn_points.resize(MAX_CHARACTERS)
 
 	var hero_deck: Array[PackedScene] = []
+	var starter_heroes: Array[PackedScene] = [PRIEST_SCENE, ARMORED_AXEMAN_SCENE]
 
-	for pos: Vector2 in spawn_points:
-		if hero_deck.is_empty():
-			hero_deck = _build_hero_deck()
-			hero_deck.shuffle()
+	for i: int in range(spawn_points.size()):
+		var pos: Vector2 = spawn_points[i]
+		var scene: PackedScene = null
+		if i < starter_heroes.size():
+			scene = starter_heroes[i]
+		else:
+			if hero_deck.is_empty():
+				hero_deck = _build_hero_deck()
+				hero_deck.shuffle()
+			scene = hero_deck.pop_back()
 
-		var scene: PackedScene = hero_deck.pop_back()
 		var ch: Hero = scene.instantiate() as Hero
 		if ch == null:
 			printerr(&"Game: Failed to instantiate hero scene!")
