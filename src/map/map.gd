@@ -4,6 +4,8 @@
 class_name Map
 extends Node2D
 
+signal generation_progress_updated(progress: float, stage_name: StringName)
+
 const TILE_SET_SOURCE_ID: int = 4
 
 const FLOOR_ATLAS_START: Vector2i = Vector2i(10, 14)
@@ -86,7 +88,6 @@ func _ready() -> void:
 		_walls.tile_set = _floor.tile_set
 	if _decorations.tile_set == null:
 		_decorations.tile_set = _floor.tile_set
-	generate_map()
 
 
 func get_hero_spawn_position() -> Vector2:
@@ -209,6 +210,9 @@ func get_navigation_path(from_pos: Vector2, to_pos: Vector2) -> PackedVector2Arr
 
 
 func generate_map() -> void:
+	generation_progress_updated.emit(0.12, &"Surveying ancient catacombs...")
+	await get_tree().process_frame
+
 	_floor.clear()
 	_walls.clear()
 	_decorations.clear()
@@ -219,14 +223,35 @@ func generate_map() -> void:
 
 	_create_hero_room(cells)
 	_create_companion_rooms(cells)
-	_create_corridors(cells)
-	_eliminate_narrow_gaps(cells)
 
+	generation_progress_updated.emit(0.20, &"Carving winding corridors...")
+	await get_tree().process_frame
+
+	await _create_corridors(cells)
+	await _eliminate_narrow_gaps(cells)
+
+	generation_progress_updated.emit(0.55, &"Laying dungeon stone floors...")
+	await get_tree().process_frame
+
+	var total_cells: float = float(cells.size())
+	var processed_cells: int = 0
 	for cell: Vector2i in cells:
 		var atlas_coords: Vector2i = _get_random_floor_atlas_coords()
 		_floor.set_cell(cell, TILE_SET_SOURCE_ID, atlas_coords)
+		processed_cells += 1
+		if processed_cells % 1000 == 0:
+			var floor_ratio: float = float(processed_cells) / total_cells
+			generation_progress_updated.emit(lerpf(0.55, 0.70, floor_ratio), &"Laying dungeon stone floors...")
+			await get_tree().process_frame
+
+	generation_progress_updated.emit(0.72, &"Raising fortified walls...")
+	await get_tree().process_frame
 
 	_create_all_walls(cells)
+
+	generation_progress_updated.emit(0.85, &"Lighting torches & setting traps...")
+	await get_tree().process_frame
+
 	_create_decorations(cells)
 	_setup_navigation(cells)
 
@@ -340,6 +365,7 @@ func _carve_room(room: Rect2i, cells: Dictionary[Vector2i, bool]) -> void:
 func _create_corridors(cells: Dictionary[Vector2i, bool]) -> void:
 	var connected: Array[Rect2i] = [hero_room]
 	var unconnected: Array[Rect2i] = companion_rooms.duplicate()
+	var total_unconnected: float = float(unconnected.size())
 
 	while not unconnected.is_empty():
 		var best_dist: float = INF
@@ -363,6 +389,10 @@ func _create_corridors(cells: Dictionary[Vector2i, bool]) -> void:
 		connected.append(unconnected[best_unconnected_index])
 		unconnected.remove_at(best_unconnected_index)
 
+		var progress_ratio: float = 1.0 - float(unconnected.size()) / total_unconnected
+		generation_progress_updated.emit(lerpf(0.20, 0.42, progress_ratio), &"Carving winding corridors...")
+		await get_tree().process_frame
+
 	# Add extra loops between nearby rooms for non-linear exploration
 	for _i: int in range(EXTRA_CORRIDOR_LOOPS):
 		if companion_rooms.size() < 2:
@@ -371,6 +401,10 @@ func _create_corridors(cells: Dictionary[Vector2i, bool]) -> void:
 		var room_b: Rect2i = companion_rooms[randi() % companion_rooms.size()]
 		if room_a != room_b:
 			_carve_corridor(room_a.get_center(), room_b.get_center(), cells)
+			await get_tree().process_frame
+
+	generation_progress_updated.emit(0.44, &"Excavating dungeon pathways...")
+	await get_tree().process_frame
 
 
 func _carve_corridor(from: Vector2i, to: Vector2i, cells: Dictionary[Vector2i, bool]) -> void:
@@ -422,6 +456,9 @@ func _eliminate_narrow_gaps(cells: Dictionary[Vector2i, bool]) -> void:
 
 		for p: Vector2i in to_add:
 			cells[p] = true
+
+		generation_progress_updated.emit(lerpf(0.44, 0.54, float(pass_count) / 10.0), &"Reinforcing passages...")
+		await get_tree().process_frame
 
 
 func _count_narrow_gaps(cells: Dictionary[Vector2i, bool]) -> int:

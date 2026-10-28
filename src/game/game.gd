@@ -45,6 +45,10 @@ func _ready() -> void:
 	get_tree().root.size_changed.connect(_on_window_resized)
 	process_priority = 1
 	y_sort_enabled = true
+	set_process(false)
+
+	_map.generation_progress_updated.connect(_on_map_generation_progress)
+	await _map.generate_map()
 
 	_character.position = _map.get_hero_spawn_position()
 	_camera.position = _character.position
@@ -55,9 +59,20 @@ func _ready() -> void:
 	_character.death_completed.connect(_on_player_death_completed)
 	_squad.append(_character)
 
+	Transition.set_loading_progress(0.92, &"Assembling the fellowship...")
+	await get_tree().process_frame
 	await _spawn_characters()
 	_check_recruitment()
 	_spawn_enemies()
+
+	Transition.set_loading_progress(1.0, &"Ready to escape!")
+	await get_tree().process_frame
+	set_process(true)
+	await Transition.hide_loading()
+
+
+func _on_map_generation_progress(progress: float, stage_name: StringName) -> void:
+	Transition.set_loading_progress(progress, stage_name)
 
 
 func _process(delta: float) -> void:

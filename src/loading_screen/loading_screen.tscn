@@ -1,0 +1,75 @@
+[gd_scene format=3 uid="uid://c7k0y3w6x1v4q"]
+
+[ext_resource type="Script" uid="uid://bn7ve1fthbi2w" path="res://loading_screen/loading_screen.gd" id="1_load"]
+
+[node name="LoadingScreen" type="Control" unique_id=837140813]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_load")
+
+[node name="Squad" type="Node2D" parent="." unique_id=421352798]
+position = Vector2(320, 195)
+
+[node name="UI" type="Control" parent="." unique_id=1296565826]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="UI" unique_id=432540666]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 52.0
+offset_bottom = 92.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.964706, 0.847059, 0.607843, 1)
+theme_override_colors/font_shadow_color = Color(0.101961, 0.0627451, 0.0705882, 1)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 36
+text = "ESCAPETEERS"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="UI" unique_id=834258624]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 88.0
+offset_bottom = 112.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.560784, 0.537255, 0.619608, 1)
+theme_override_font_sizes/font_size = 16
+text = "DELVING INTO THE DUNGEON"
+horizontal_alignment = 1
+
+[node name="Status" type="Label" parent="UI" unique_id=417714763]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 250.0
+offset_bottom = 274.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.870588, 0.85098, 0.909804, 1)
+theme_override_font_sizes/font_size = 16
+text = "Carving ancient chambers..."
+horizontal_alignment = 1
+
+[node name="Percentage" type="Label" parent="UI" unique_id=706824036]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 294.0
+offset_bottom = 314.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.898039, 0.627451, 0.203922, 1)
+theme_override_font_sizes/font_size = 14
+text = "0%"
+horizontal_alignment = 1

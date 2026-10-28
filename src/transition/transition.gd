@@ -8,8 +8,11 @@ const FADE_PHASE: float = FADE_DURATION / 3
 const SILENT_DB: float = -80.0
 
 const GAME_SCENE: PackedScene = preload("res://game/game.tscn")
+const LOADING_SCREEN_SCENE: PackedScene = preload("res://loading_screen/loading_screen.tscn")
+
 var in_transition: bool = false
 var filler: ColorRect = null
+var _loading_screen: LoadingScreen = null
 
 
 func _ready() -> void:
@@ -21,7 +24,35 @@ func _ready() -> void:
 	filler = ColorRect.new()
 	filler.color = Color(0, 0, 0, 0)
 	filler.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	filler.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(filler)
+
+	_loading_screen = LOADING_SCREEN_SCENE.instantiate() as LoadingScreen
+	add_child(_loading_screen)
+
+	# Start with loading screen visible instantly on game boot
+	visible = true
+	in_transition = true
+	_loading_screen.show_instant(&"Delving into the dungeon...")
+
+
+func set_loading_progress(progress: float, message: StringName = &"") -> void:
+	if _loading_screen != null:
+		_loading_screen.set_progress(progress, message)
+
+
+func hide_loading() -> void:
+	if not visible or _loading_screen == null or not _loading_screen.visible:
+		visible = false
+		in_transition = false
+		return
+
+	if Alerts.is_terminating():
+		return
+
+	await _loading_screen.fade_out(0.35)
+	visible = false
+	in_transition = false
 
 
 func reload_game() -> void:
@@ -42,21 +73,13 @@ func _go_to_scene(scene: PackedScene) -> void:
 	visible = true
 	in_transition = true
 
-	await filler.create_tween().tween_property(filler, ^"color:a", 1.0, FADE_PHASE).finished
+	await _loading_screen.fade_in(&"Re-entering the dungeon...", 0.25)
 
 	# change is deferred, so yield a frame for the new scene to exist
 	tree.change_scene_to_packed.call_deferred(scene)
 	tree.paused = false
 	await tree.process_frame
 
-	# let it settle behind black so it does not jump on fade in
-	await tree.create_timer(FADE_PHASE, true, false, false).timeout
-
-	# A fatal error in the new scene's _ready leaves us black; let Alerts finish.
+	# A fatal error in the new scene's _ready leaves us; let Alerts finish.
 	if Alerts.is_terminating():
 		return
-
-	await filler.create_tween().tween_property(filler, ^"color:a", 0.0, FADE_PHASE).finished
-
-	visible = false
-	in_transition = false
