@@ -14,6 +14,8 @@ const RECRUIT_DISTANCE: float = 20.0
 const MAX_HISTORY_DURATION: float = 2.5
 const CRESCENT_BLEND_SPEED: float = 5.0
 const PLAYER_LIGHT_TEXTURE: Texture2D = preload("res://map/light_texture.tres")
+const PLAYER_LIGHT_BASE_ENERGY: float = 0.25
+const PLAYER_LIGHT_SCALE: float = 1.6
 const _GROUP_ENEMIES: StringName = &"enemies"
 const _GROUP_HEROES: StringName = &"heroes"
 
@@ -98,7 +100,7 @@ func _process(delta: float) -> void:
 		return
 
 	if _player_light != null:
-		_player_light.energy = 0.65 + sin(_elapsed_time * 3.0) * 0.02
+		_player_light.energy = PLAYER_LIGHT_BASE_ENERGY + sin(_elapsed_time * 3.0) * 0.02
 
 	var input_vector: Vector2 = Input.get_vector(&"left", &"right", &"up", &"down")
 
@@ -386,8 +388,8 @@ func _update_player_light() -> void:
 			_player_light.name = &"PlayerLight"
 			_player_light.texture = PLAYER_LIGHT_TEXTURE
 			_player_light.color = Color(1.0, 0.88, 0.70, 1.0)
-			_player_light.energy = 0.65
-			_player_light.texture_scale = 1.0
+			_player_light.energy = PLAYER_LIGHT_BASE_ENERGY
+			_player_light.texture_scale = PLAYER_LIGHT_SCALE
 			add_child(_player_light)
 	else:
 		if _player_light != null:
