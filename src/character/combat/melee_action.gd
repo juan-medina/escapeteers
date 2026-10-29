@@ -11,6 +11,7 @@ var heavy_chance: float = 0.35
 var heavy_damage: float = 25.0
 var knockback: float = 85.0
 var heavy_knockback: float = 260.0
+var vertical_tolerance: float = 18.0
 
 var fast_attacks_done: int = 0
 var current_is_heavy: bool = false
@@ -20,6 +21,26 @@ func update(delta: float) -> void:
 	super.update(delta)
 	if heavy_cooldown_timer > 0.0:
 		heavy_cooldown_timer -= delta
+
+
+func can_reach(user: Character, target: Character) -> bool:
+	if target == null or not is_instance_valid(target) or target.health <= 0.0:
+		return false
+
+	var user_pos: Vector2 = user.get_hurtbox_position()
+	var target_pos: Vector2 = target.get_hurtbox_position()
+	var target_radius: float = target.get_hurtbox_radius()
+
+	var dx: float = maxf(0.0, absf(target_pos.x - user_pos.x) - target_radius)
+	var dy: float = maxf(0.0, absf(target_pos.y - user_pos.y) - target_radius)
+
+	if dy > vertical_tolerance:
+		return false
+	if dx > range_distance:
+		return false
+
+	var edge_dist: float = maxf(0.0, user_pos.distance_to(target_pos) - target_radius)
+	return edge_dist >= min_range_distance and edge_dist <= range_distance
 
 
 func execute(user: Character, target: Character) -> void:
@@ -43,9 +64,12 @@ func execute(user: Character, target: Character) -> void:
 		user.flip_h = diff_x < 0.0
 
 
-func apply_hit(user: Character, target: Character) -> void:
+func apply_hit(user: Character, target: Character) -> bool:
 	if target == null or not is_instance_valid(target) or target.health <= 0.0:
-		return
+		return false
+
+	if not can_reach(user, target):
+		return false
 
 	var applied_damage: float = heavy_damage if current_is_heavy else damage
 	var applied_knockback: float = heavy_knockback if current_is_heavy else knockback
@@ -58,3 +82,4 @@ func apply_hit(user: Character, target: Character) -> void:
 		(target as Enemy).apply_knockback(push_dir * applied_knockback)
 
 	target.take_damage(applied_damage)
+	return true

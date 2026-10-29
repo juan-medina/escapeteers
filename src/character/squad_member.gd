@@ -69,9 +69,14 @@ func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 	var current_leash: float = hero.get_current_leash()
 	var dist_from_slot: float = hero.position.distance_to(formation_pos)
 
-	var target_valid: bool = hero.active_target != null and is_instance_valid(hero.active_target) and hero.active_target.health > 0.0
-	if target_valid and not (hero.active_target is Enemy) and hero.active_target.health >= hero.active_target.max_health:
-		target_valid = false
+	var target_valid: bool = (
+		hero.can_melee
+		and current_leash > 0.0
+		and hero.active_target is Enemy
+		and is_instance_valid(hero.active_target)
+		and hero.active_target.health > 0.0
+		and formation_pos.distance_to(hero.active_target.global_position) <= current_leash
+	)
 
 	if target_valid:
 		if dist_from_slot > current_leash:
@@ -79,15 +84,15 @@ func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 			move_dest = formation_pos
 		else:
 			var target_pos: Vector2 = hero.active_target.global_position
-			var dist_to_enemy: float = hero.position.distance_to(target_pos)
-			if hero.can_attack_at_distance(dist_to_enemy):
+			if hero.can_reach_target(hero.active_target):
 				hero.movement_state = Character.MovementState.IDLE
 				move_dest = hero.position
 			else:
 				hero.movement_state = Character.MovementState.NAVIGATING
 				move_dest = target_pos
 	else:
-		hero.active_target = null
+		if hero.active_target != null and (not is_instance_valid(hero.active_target) or hero.active_target.health <= 0.0):
+			hero.active_target = null
 		if dist_from_slot > FOLLOW_STOP_DISTANCE:
 			hero.movement_state = Character.MovementState.NAVIGATING
 			move_dest = formation_pos

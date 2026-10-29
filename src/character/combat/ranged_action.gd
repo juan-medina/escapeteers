@@ -12,8 +12,8 @@ var horizontal_tolerance: float = 16.0
 var check_line_of_sight: bool = false
 
 
-func can_execute(user: Character, target: Character) -> bool:
-	if not super.can_execute(user, target):
+func can_reach(user: Character, target: Character) -> bool:
+	if not super.can_reach(user, target):
 		return false
 
 	if requires_horizontal_alignment:

@@ -17,6 +17,7 @@ const WAYPOINT_ARRIVE_DIST_SQ: float = 64.0
 const PATROL_TIMEOUT: float = 10.0
 const KNOCKBACK_DECAY: float = 600.0
 const SLOW_MODULATE: Color = Color(0.45, 0.75, 1.35, 1.0)
+const ENEMY_HURTBOX_RADIUS: float = 10.0
 
 @export var detection_range: float = 140.0
 @export var attack_cooldown: float = 1.2
@@ -46,7 +47,12 @@ func _ready() -> void:
 		_health_bar.set_fill_color(HealthBar.DEFAULT_ENEMY_COLOR)
 	add_to_group(_GROUP_ENEMIES)
 	collision_layer = 8
-	collision_mask = 1
+	collision_mask = 1 | 2 | 4 | 8
+
+	hurtbox = Hurtbox.new(self, ENEMY_HURTBOX_RADIUS, Vector2(0.0, 0.0))
+	hurtbox.collision_layer = 128
+	hurtbox.collision_mask = 0
+	add_child(hurtbox)
 
 	_notifier = VisibleOnScreenNotifier2D.new()
 	_notifier.rect = Rect2(-64.0, -64.0, 128.0, 128.0)
@@ -55,8 +61,20 @@ func _ready() -> void:
 	add_child(_notifier)
 	is_on_screen = _notifier.is_on_screen()
 	if not is_on_screen:
-		set_physics_process(false)
-		set_process(false)
+		_set_sleeping(true)
+
+
+func _set_sleeping(sleeping: bool) -> void:
+	set_physics_process(not sleeping)
+	set_process(not sleeping)
+	if sleeping:
+		_animated_sprite.pause()
+		disable_collisions()
+	else:
+		if not _animated_sprite.is_playing():
+			_animated_sprite.play()
+		if not is_dead:
+			enable_collisions()
 
 
 func _physics_process(delta: float) -> void:
@@ -97,15 +115,13 @@ func _physics_process(delta: float) -> void:
 
 func _on_screen_entered() -> void:
 	is_on_screen = true
-	set_physics_process(true)
-	set_process(true)
+	_set_sleeping(false)
 
 
 func _on_screen_exited() -> void:
 	is_on_screen = false
 	if current_state == State.PATROL:
-		set_physics_process(false)
-		set_process(false)
+		_set_sleeping(true)
 
 
 func set_target_candidate(hero_candidate: Hero) -> void:
@@ -119,8 +135,7 @@ func set_target_candidate(hero_candidate: Hero) -> void:
 	if not SquadNavigator.has_line_of_sight(self, hero_candidate.global_position):
 		return
 
-	set_physics_process(true)
-	set_process(true)
+	_set_sleeping(false)
 
 	if target == null:
 		target = hero_candidate
@@ -128,22 +143,20 @@ func set_target_candidate(hero_candidate: Hero) -> void:
 		_navigator.reset()
 	elif target != hero_candidate and is_instance_valid(target):
 		var current_dist_sq: float = global_position.distance_squared_to(target.global_position)
-		if dist_sq < current_dist_sq * 0.5:
+		if dist_sq < current_dist_sq * 0.85:
 			target = hero_candidate
 			_navigator.reset()
 
 
 func apply_knockback(force: Vector2) -> void:
-	set_physics_process(true)
-	set_process(true)
+	_set_sleeping(false)
 	_knockback_velocity = force
 
 
 func apply_slow(factor: float, duration: float) -> void:
 	if is_dead or duration <= 0.0:
 		return
-	set_physics_process(true)
-	set_process(true)
+	_set_sleeping(false)
 	_slow_multiplier = clampf(factor, 0.1, 1.0)
 	_slow_timer = maxf(_slow_timer, duration)
 	_base_modulate = SLOW_MODULATE
@@ -151,8 +164,7 @@ func apply_slow(factor: float, duration: float) -> void:
 
 
 func take_damage(amount: float) -> void:
-	set_physics_process(true)
-	set_process(true)
+	_set_sleeping(false)
 	super.take_damage(amount)
 
 
@@ -201,8 +213,7 @@ func _process_chase(delta: float) -> void:
 		current_state = State.PATROL
 		_pick_new_patrol_destination()
 		if not is_on_screen:
-			set_physics_process(false)
-			set_process(false)
+			_set_sleeping(true)
 		return
 
 	var dist_to_target: float = global_position.distance_to(target.global_position)
@@ -212,8 +223,7 @@ func _process_chase(delta: float) -> void:
 		current_state = State.PATROL
 		_pick_new_patrol_destination()
 		if not is_on_screen:
-			set_physics_process(false)
-			set_process(false)
+			_set_sleeping(true)
 		return
 
 	var diff_x: float = target.global_position.x - global_position.x
@@ -226,7 +236,7 @@ func _process_chase(delta: float) -> void:
 			move_and_slide()
 		return
 
-	if can_attack_at_distance(dist_to_target):
+	if _can_reach_target():
 		velocity = _knockback_velocity
 		if _knockback_velocity.length_squared() > 1.0:
 			move_and_slide()
@@ -239,6 +249,15 @@ func _process_chase(delta: float) -> void:
 	velocity = (move_vec * speed * _slow_multiplier) + _knockback_velocity
 	move_and_slide()
 	update_visuals(velocity * delta)
+
+
+func _can_reach_target() -> bool:
+	if target == null or not is_instance_valid(target) or target.health <= 0.0 or target.is_dead:
+		return false
+	for action: CombatAction in combat_actions:
+		if action.can_reach(self, target):
+			return true
+	return false
 
 
 func _check_combat_actions() -> void:
@@ -295,8 +314,8 @@ func _on_animation_finished() -> void:
 		return
 	if current_action is MeleeAction and target != null:
 		var melee: MeleeAction = current_action as MeleeAction
-		melee.apply_hit(self, target)
-		attacked.emit(target, melee.damage)
+		if melee.apply_hit(self, target):
+			attacked.emit(target, melee.damage)
 	elif current_action is RangedAction and target != null:
 		var ranged: RangedAction = current_action as RangedAction
 		var proj: Projectile = ranged.spawn_projectile(self, target)

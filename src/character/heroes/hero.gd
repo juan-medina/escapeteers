@@ -16,6 +16,9 @@ const CRESCENT_BLEND_SPEED: float = 5.0
 const PLAYER_LIGHT_TEXTURE: Texture2D = preload("res://map/light_texture.tres")
 const PLAYER_LIGHT_BASE_ENERGY: float = 0.25
 const PLAYER_LIGHT_SCALE: float = 1.6
+const PLAYER_HURTBOX_RADIUS: float = 3.5
+const COMPANION_HURTBOX_RADIUS: float = 4.5
+const HERO_MELEE_VERTICAL_TOLERANCE: float = 20.0
 const _GROUP_ENEMIES: StringName = &"enemies"
 const _GROUP_HEROES: StringName = &"heroes"
 
@@ -25,6 +28,7 @@ const _GROUP_HEROES: StringName = &"heroes"
 		_update_collision_mode()
 		_update_player_light()
 		_update_ground_indicator()
+		_update_active_mode()
 @export var can_heavy_melee: bool = false
 @export var melee1_cooldown: float = 0.5
 @export var melee2_cooldown: float = 3.5
@@ -49,6 +53,7 @@ var squad_member: SquadMember = null:
 	set(value):
 		squad_member = value
 		_update_ground_indicator()
+		_update_active_mode()
 var is_moving: bool = false
 var move_direction: Vector2 = Vector2.RIGHT
 var crescent_blend: float = 0.0
@@ -62,6 +67,8 @@ var _time_history: Array[float] = []
 var _player_light: PointLight2D = null
 var _hit_applied_this_attack: bool = false
 var _hits_applied_frames: Array[int] = []
+var _notifier: VisibleOnScreenNotifier2D = null
+var _is_on_screen: bool = false
 
 @onready var _ground_indicator: GroundIndicator = get_node_or_null(^"GroundIndicator") as GroundIndicator
 
@@ -71,9 +78,23 @@ func _ready() -> void:
 	add_to_group(_GROUP_HEROES)
 	if _health_bar != null:
 		_health_bar.set_fill_color(HealthBar.DEFAULT_HERO_COLOR)
+
+	hurtbox = Hurtbox.new(self, PLAYER_HURTBOX_RADIUS if is_player else COMPANION_HURTBOX_RADIUS, Vector2(0.0, 2.0))
+	hurtbox.collision_layer = 64
+	hurtbox.collision_mask = 0
+	add_child(hurtbox)
+
+	_notifier = VisibleOnScreenNotifier2D.new()
+	_notifier.rect = Rect2(-64.0, -64.0, 128.0, 128.0)
+	_notifier.screen_entered.connect(_on_screen_entered)
+	_notifier.screen_exited.connect(_on_screen_exited)
+	add_child(_notifier)
+	_is_on_screen = _notifier.is_on_screen()
+
 	_update_collision_mode()
 	_update_player_light()
 	_update_ground_indicator()
+	_update_active_mode()
 	_animated_sprite.frame_changed.connect(_on_frame_changed)
 	_setup_actions()
 
@@ -125,6 +146,7 @@ func _setup_actions() -> void:
 	if can_melee:
 		var melee: MeleeAction = MeleeAction.new()
 		melee.range_distance = melee_range
+		melee.vertical_tolerance = HERO_MELEE_VERTICAL_TOLERANCE
 		melee.cooldown = melee1_cooldown
 		melee.damage = melee1_damage
 		melee.knockback = melee1_knockback
@@ -145,7 +167,7 @@ func _setup_actions() -> void:
 		ranged.damage = ranged_damage
 		ranged.knockback = ranged_knockback
 		ranged.projectile_frame = ranged_frame
-		ranged.leash_distance = ranged_range
+		ranged.leash_distance = 0.0
 		ranged.check_line_of_sight = true
 		combat_actions.append(ranged)
 
@@ -156,7 +178,7 @@ func _setup_actions() -> void:
 		heal_act.cooldown = heal_cooldown
 		heal_act.heal_amount = heal_amount
 		heal_act.cast_frame = heal_frame
-		heal_act.leash_distance = heal_range
+		heal_act.leash_distance = 0.0
 		heal_act.check_line_of_sight = true
 		combat_actions.append(heal_act)
 
@@ -168,10 +190,17 @@ func get_anchor_position() -> Vector2:
 
 
 func get_current_leash() -> float:
-	var max_leash: float = 48.0
+	var max_leash: float = 0.0
 	for action: CombatAction in combat_actions:
 		max_leash = maxf(max_leash, action.leash_distance)
 	return max_leash
+
+
+func get_detection_range() -> float:
+	var max_detect: float = 0.0
+	for action: CombatAction in combat_actions:
+		max_detect = maxf(max_detect, maxf(action.range_distance, action.leash_distance))
+	return max_detect if max_detect > 0.0 else melee_range
 
 
 func get_attack_range() -> float:
@@ -179,6 +208,19 @@ func get_attack_range() -> float:
 	for action: CombatAction in combat_actions:
 		max_range = maxf(max_range, action.range_distance)
 	return max_range if max_range > 0.0 else melee_range
+
+
+func can_reach_target(target_char: Character) -> bool:
+	if target_char == null or not is_instance_valid(target_char) or target_char.health <= 0.0 or target_char.is_dead:
+		return false
+	for action: CombatAction in combat_actions:
+		if target_char is Enemy and action is HealAction:
+			continue
+		if not (target_char is Enemy) and not (action is HealAction):
+			continue
+		if action.can_reach(self, target_char):
+			return true
+	return false
 
 
 func _check_auto_attack() -> void:
@@ -202,7 +244,7 @@ func _check_auto_attack() -> void:
 						selected_action = action
 					break
 
-	if target_char == null:
+	if target_char == null and (can_melee or can_ranged):
 		var closest_enemy: Enemy = _find_closest_enemy()
 		if closest_enemy != null:
 			target_char = closest_enemy
@@ -232,7 +274,7 @@ func _check_auto_attack() -> void:
 func _find_closest_enemy() -> Enemy:
 	var closest: Enemy = null
 	var min_dist_sq: float = INF
-	var max_detection: float = get_current_leash()
+	var max_detection: float = get_detection_range()
 	var max_detection_sq: float = max_detection * max_detection
 
 	for node: Node in get_tree().get_nodes_in_group(_GROUP_ENEMIES):
@@ -252,7 +294,7 @@ func _find_injured_ally() -> Hero:
 	var best_target: Hero = null
 	var lowest_health_ratio: float = 1.0
 	var closest_dist_sq: float = INF
-	var max_detection: float = get_current_leash()
+	var max_detection: float = heal_range
 	var max_detection_sq: float = max_detection * max_detection
 
 	for node: Node in get_tree().get_nodes_in_group(_GROUP_HEROES):
@@ -288,14 +330,12 @@ func _on_frame_changed() -> void:
 			for hit_frame: int in melee2_hit_frames:
 				if frame >= hit_frame and not _hits_applied_frames.has(hit_frame):
 					_hits_applied_frames.append(hit_frame)
-					melee.apply_hit(self, active_target)
-					if active_target is Enemy:
+					if melee.apply_hit(self, active_target) and active_target is Enemy:
 						enemy_hit.emit(active_target as Enemy, melee.heavy_damage, true)
 		elif not _hit_applied_this_attack and frame >= 2:
 			_hit_applied_this_attack = true
-			melee.apply_hit(self, active_target)
 			var dmg: float = melee.heavy_damage if is_heavy else melee.damage
-			if active_target is Enemy:
+			if melee.apply_hit(self, active_target) and active_target is Enemy:
 				enemy_hit.emit(active_target as Enemy, dmg, is_heavy)
 	elif current_action is RangedAction and active_target != null and not _hit_applied_this_attack:
 		var ranged: RangedAction = current_action as RangedAction
@@ -400,10 +440,12 @@ func _update_player_light() -> void:
 func _update_collision_mode() -> void:
 	if is_player:
 		collision_layer = 2
-		collision_mask = 1
+		collision_mask = 1 | 8
 	else:
 		collision_layer = 4
-		collision_mask = 1
+		collision_mask = 1 | 8
+	if hurtbox != null:
+		hurtbox.radius = PLAYER_HURTBOX_RADIUS if is_player else COMPANION_HURTBOX_RADIUS
 
 
 func _update_ground_indicator() -> void:
@@ -412,3 +454,35 @@ func _update_ground_indicator() -> void:
 	_ground_indicator.is_player = is_player
 	_ground_indicator.is_recruited = (is_player or squad_member != null)
 	_ground_indicator.facing_direction = move_direction
+
+
+func _on_screen_entered() -> void:
+	_is_on_screen = true
+	_update_active_mode()
+
+
+func _on_screen_exited() -> void:
+	_is_on_screen = false
+	_update_active_mode()
+
+
+func _update_active_mode() -> void:
+	if not is_inside_tree():
+		return
+	var is_recruited: bool = is_player or squad_member != null
+	if is_recruited:
+		set_process(true)
+		set_physics_process(true)
+		if not _animated_sprite.is_playing() and not is_dead:
+			_animated_sprite.play()
+		if not is_dead:
+			enable_collisions()
+	else:
+		set_process(false)
+		set_physics_process(false)
+		disable_collisions()
+		if _is_on_screen:
+			if not _animated_sprite.is_playing() and not is_dead:
+				_animated_sprite.play()
+		else:
+			_animated_sprite.pause()

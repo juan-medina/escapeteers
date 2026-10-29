@@ -26,6 +26,7 @@ var _is_dying: bool = false
 
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
+	area_entered.connect(_on_area_entered)
 	_animated_sprite.animation_finished.connect(_on_animation_finished)
 	if auto_rotate:
 		rotation = direction.angle()
@@ -70,6 +71,16 @@ func _on_body_entered(body: Node2D) -> void:
 		return
 
 	_on_hit(body)
+
+
+func _on_area_entered(area: Area2D) -> void:
+	if _is_dying:
+		return
+
+	if area is Hurtbox:
+		var hurtbox: Hurtbox = area as Hurtbox
+		if hurtbox.owner_character != null and is_instance_valid(hurtbox.owner_character) and not hurtbox.owner_character.is_dead:
+			_on_hit(hurtbox.owner_character)
 
 
 func _on_hit(target: Node2D) -> void:

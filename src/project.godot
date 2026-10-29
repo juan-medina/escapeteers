@@ -132,6 +132,8 @@ back={
 2d_physics/layer_4="Enemies"
 2d_physics/layer_5="HeroProjectiles"
 2d_physics/layer_6="EnemyProjectiles"
+2d_physics/layer_7="HeroHurtboxes"
+2d_physics/layer_8="EnemyHurtboxes"
 
 [physics]
 

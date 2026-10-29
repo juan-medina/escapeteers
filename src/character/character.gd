@@ -48,6 +48,7 @@ var health: float = 100.0
 var is_dead: bool = false
 var movement_state: MovementState = MovementState.IDLE
 var combat_state: CombatState = CombatState.READY
+var hurtbox: Hurtbox = null
 
 var flip_h: bool:
 	get:
@@ -90,6 +91,7 @@ var _base_modulate: Color = Color.WHITE
 
 
 func _ready() -> void:
+	motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
 	health = max_health
 	if _health_bar != null:
 		_health_bar.update_health(health, max_health)
@@ -103,10 +105,26 @@ func play(anim_name: StringName = ANIM_IDLE) -> void:
 
 func disable_collisions() -> void:
 	_collision_shape.set_deferred(&"disabled", true)
+	if hurtbox != null:
+		hurtbox.set_disabled(true)
 
 
 func enable_collisions() -> void:
 	_collision_shape.set_deferred(&"disabled", false)
+	if hurtbox != null:
+		hurtbox.set_disabled(false)
+
+
+func get_hurtbox_position() -> Vector2:
+	if hurtbox != null:
+		return hurtbox.get_center_global_position()
+	return global_position
+
+
+func get_hurtbox_radius() -> float:
+	if hurtbox != null:
+		return hurtbox.radius
+	return 5.0
 
 
 func update_visuals(movement_vector: Vector2) -> void:

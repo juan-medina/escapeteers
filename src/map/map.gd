@@ -46,32 +46,37 @@ const PROP_SKULLS_AND_BONES: Array[Vector2i] = [
 const CORRIDOR_BONE_CHANCE: float = 0.02
 
 const HERO_ROOM_SIZE: Vector2i = Vector2i(30, 30)
-const COMPANION_ROOM_COUNT: int = 20
+const INITIAL_ROOM_COUNT: int = 5
 const ROOM_PADDING: int = 8
 const CORRIDOR_WIDTH: int = 4
-const EXTRA_CORRIDOR_LOOPS: int = 6
-const MAX_PLACEMENT_ATTEMPTS: int = 2500
+const MAX_PLACEMENT_ATTEMPTS: int = 120
+const EXPAND_TRIGGER_DISTANCE_TILES: float = 75.0
+const LOOP_CONNECT_MAX_DISTANCE: float = 95.0
+const LOOP_CONNECT_CHANCE: float = 0.45
 
-const TIER_1_COUNT: int = 7
 const TIER_1_MIN_SIZE: Vector2i = Vector2i(24, 24)
 const TIER_1_MAX_SIZE: Vector2i = Vector2i(33, 33)
-const TIER_1_DISTANCE_RANGE: Vector2 = Vector2(45.0, 95.0)
+const TIER_1_DISTANCE_RANGE: Vector2 = Vector2(45.0, 80.0)
 
-const TIER_2_COUNT: int = 7
 const TIER_2_MIN_SIZE: Vector2i = Vector2i(36, 36)
 const TIER_2_MAX_SIZE: Vector2i = Vector2i(48, 48)
-const TIER_2_DISTANCE_RANGE: Vector2 = Vector2(105.0, 185.0)
+const TIER_2_DISTANCE_RANGE: Vector2 = Vector2(58.0, 95.0)
 
-const TIER_3_COUNT: int = 6
-const TIER_3_MIN_SIZE: Vector2i = Vector2i(60, 60)
-const TIER_3_MAX_SIZE: Vector2i = Vector2i(78, 78)
-const TIER_3_DISTANCE_RANGE: Vector2 = Vector2(195.0, 290.0)
+const TIER_3_MIN_SIZE: Vector2i = Vector2i(56, 56)
+const TIER_3_MAX_SIZE: Vector2i = Vector2i(76, 76)
+const TIER_3_DISTANCE_RANGE: Vector2 = Vector2(75.0, 115.0)
 
 var hero_room: Rect2i = Rect2i()
 var companion_rooms: Array[Rect2i] = []
 
 var _astar: AStarGrid2D = AStarGrid2D.new()
+var _cells: Dictionary[Vector2i, bool] = {}
 var _walkable_cells: Dictionary[Vector2i, bool] = {}
+var _placed_torches: Array[Vector2i] = []
+var _torch_nodes: Dictionary[Vector2i, TorchLight] = {}
+var _room_depths: Dictionary[Rect2i, int] = {}
+var _expanded_rooms: Dictionary[Rect2i, bool] = {}
+var _decorated_rooms: Dictionary[Rect2i, bool] = {}
 
 @onready var _floor: TileMapLayer = $Floor
 @onready var _walls: TileMapLayer = $Walls
@@ -98,50 +103,79 @@ func map_to_local(cell: Vector2i) -> Vector2:
 	return _floor.map_to_local(cell)
 
 
-func get_room_tier(room: Rect2i) -> int:
+func local_to_map(world_pos: Vector2) -> Vector2i:
+	return _floor.local_to_map(world_pos)
+
+
+func get_room_depth(room: Rect2i) -> int:
+	if _room_depths.has(room):
+		return _room_depths[room]
 	var center_dist: float = Vector2(room.get_center()).length()
-	if center_dist < 100.0 or mini(room.size.x, room.size.y) < 35:
+	return maxi(1, int(center_dist / 65.0))
+
+
+func get_room_tier(room: Rect2i) -> int:
+	var depth: int = get_room_depth(room)
+	if depth <= 1:
 		return 1
-	if center_dist < 190.0 or mini(room.size.x, room.size.y) < 55:
+	if depth <= 3:
 		return 2
 	return 3
 
 
-func get_companion_spawn_positions() -> Array[Vector2]:
+func get_starter_companion_spawn_positions() -> Array[Vector2]:
 	var positions: Array[Vector2] = []
-
-	# Guaranteed starter recruits in the starting hero room
 	var hero_center: Vector2i = hero_room.get_center()
 	for offset_x: int in [-1, 1]:
 		var recruit_cell: Vector2i = hero_center + Vector2i(offset_x, 0)
 		if is_cell_walkable(recruit_cell):
 			positions.append(_floor.map_to_local(recruit_cell))
+	return positions
 
-	# Recruits in companion rooms scaled by tier
-	for room: Rect2i in companion_rooms:
-		var center_cell: Vector2i = room.get_center()
-		var tier: int = get_room_tier(room)
 
-		if tier == 1:
-			positions.append(_floor.map_to_local(center_cell))
-			if randf() > 0.6:
-				var offset: Vector2i = Vector2i(randi_range(-1, 1), randi_range(-1, 1))
-				if offset != Vector2i.ZERO and is_cell_walkable(center_cell + offset):
-					positions.append(_floor.map_to_local(center_cell + offset))
-		elif tier == 2:
-			positions.append(_floor.map_to_local(center_cell))
-			for _k: int in range(2):
-				var offset: Vector2i = Vector2i(randi_range(-2, 2), randi_range(-2, 2))
-				if offset != Vector2i.ZERO and is_cell_walkable(center_cell + offset):
-					positions.append(_floor.map_to_local(center_cell + offset))
-		else:
-			positions.append(_floor.map_to_local(center_cell))
-			for _k: int in range(4):
-				var offset: Vector2i = Vector2i(randi_range(-3, 3), randi_range(-3, 3))
-				if offset != Vector2i.ZERO and is_cell_walkable(center_cell + offset):
-					positions.append(_floor.map_to_local(center_cell + offset))
+func get_companion_spawn_positions_for_room(room: Rect2i) -> Array[Vector2]:
+	var positions: Array[Vector2] = []
+	var center_cell: Vector2i = room.get_center()
+	var tier: int = get_room_tier(room)
+
+	if tier == 1:
+		positions.append(_floor.map_to_local(center_cell))
+		if randf() > 0.6:
+			var offset: Vector2i = Vector2i(randi_range(-1, 1), randi_range(-1, 1))
+			if offset != Vector2i.ZERO and is_cell_walkable(center_cell + offset):
+				positions.append(_floor.map_to_local(center_cell + offset))
+	elif tier == 2:
+		positions.append(_floor.map_to_local(center_cell))
+		for _k: int in range(2):
+			var offset: Vector2i = Vector2i(randi_range(-2, 2), randi_range(-2, 2))
+			if offset != Vector2i.ZERO and is_cell_walkable(center_cell + offset):
+				positions.append(_floor.map_to_local(center_cell + offset))
+	else:
+		positions.append(_floor.map_to_local(center_cell))
+		var extra_recruits: int = clampi(1 + get_room_depth(room) / 2, 2, 4)
+		for _k: int in range(extra_recruits):
+			var offset: Vector2i = Vector2i(randi_range(-3, 3), randi_range(-3, 3))
+			if offset != Vector2i.ZERO and is_cell_walkable(center_cell + offset):
+				positions.append(_floor.map_to_local(center_cell + offset))
 
 	return positions
+
+
+func get_companion_spawn_positions() -> Array[Vector2]:
+	var positions: Array[Vector2] = get_starter_companion_spawn_positions()
+	for room: Rect2i in companion_rooms:
+		positions.append_array(get_companion_spawn_positions_for_room(room))
+	return positions
+
+
+func get_room_enemy_quota(room: Rect2i) -> int:
+	var depth: int = get_room_depth(room)
+	var area_factor: float = float(room.size.x * room.size.y) / (28.0 * 28.0)
+	var base_min: int = 5 + (depth - 1) * 6
+	var base_max: int = 8 + (depth - 1) * 9
+	var scaled_min: int = int(roundf(float(base_min) * clampf(area_factor * 0.65, 0.8, 2.6)))
+	var scaled_max: int = int(roundf(float(base_max) * clampf(area_factor * 0.65, 0.8, 2.6)))
+	return clampi(randi_range(scaled_min, maxi(scaled_min, scaled_max)), 5, 65)
 
 
 func get_enemy_spawn_positions_for_room(room: Rect2i, count: int) -> Array[Vector2]:
@@ -210,7 +244,7 @@ func get_navigation_path(from_pos: Vector2, to_pos: Vector2) -> PackedVector2Arr
 
 
 func generate_map() -> void:
-	generation_progress_updated.emit(0.12, &"Surveying ancient catacombs...")
+	generation_progress_updated.emit(0.15, &"Surveying primal chamber...")
 	await get_tree().process_frame
 
 	_floor.clear()
@@ -218,42 +252,254 @@ func generate_map() -> void:
 	_decorations.clear()
 	_clear_lights()
 	companion_rooms.clear()
+	_cells.clear()
+	_walkable_cells.clear()
+	_placed_torches.clear()
+	_torch_nodes.clear()
+	_room_depths.clear()
+	_expanded_rooms.clear()
+	_decorated_rooms.clear()
 
-	var cells: Dictionary[Vector2i, bool] = {}
+	_create_hero_room()
+	_create_initial_rooms()
 
-	_create_hero_room(cells)
-	_create_companion_rooms(cells)
-
-	generation_progress_updated.emit(0.20, &"Carving winding corridors...")
+	generation_progress_updated.emit(0.45, &"Carving starting passages...")
 	await get_tree().process_frame
 
-	await _create_corridors(cells)
-	await _eliminate_narrow_gaps(cells)
+	_eliminate_narrow_gaps_in_rect(_get_cells_bounds(_cells).grow(4))
 
-	generation_progress_updated.emit(0.55, &"Laying dungeon stone floors...")
+	generation_progress_updated.emit(0.70, &"Raising fortified walls...")
 	await get_tree().process_frame
 
-	var total_cells: float = float(cells.size())
-	var processed_cells: int = 0
-	for cell: Vector2i in cells:
-		var atlas_coords: Vector2i = _get_random_floor_atlas_coords()
-		_floor.set_cell(cell, TILE_SET_SOURCE_ID, atlas_coords)
-		processed_cells += 1
-		if processed_cells % 1000 == 0:
-			var floor_ratio: float = float(processed_cells) / total_cells
-			generation_progress_updated.emit(lerpf(0.55, 0.70, floor_ratio), &"Laying dungeon stone floors...")
-			await get_tree().process_frame
+	var initial_rooms: Array[Rect2i] = [hero_room]
+	initial_rooms.append_array(companion_rooms)
+	_rebuild_region(_get_cells_bounds(_cells).grow(4), initial_rooms)
 
-	generation_progress_updated.emit(0.72, &"Raising fortified walls...")
+	generation_progress_updated.emit(0.90, &"Lighting dungeon torches...")
 	await get_tree().process_frame
 
-	_create_all_walls(cells)
 
-	generation_progress_updated.emit(0.85, &"Lighting torches & setting traps...")
-	await get_tree().process_frame
+func expand_frontier_near(player_world_pos: Vector2) -> Array[Rect2i]:
+	var player_cell: Vector2i = _floor.local_to_map(player_world_pos)
+	var trigger_dist_sq: float = EXPAND_TRIGGER_DISTANCE_TILES * EXPAND_TRIGGER_DISTANCE_TILES
 
-	_create_decorations(cells)
-	_setup_navigation(cells)
+	var best_room: Rect2i = Rect2i()
+	var best_dist_sq: float = INF
+	var found: bool = false
+
+	for room: Rect2i in companion_rooms:
+		if _expanded_rooms.has(room):
+			continue
+		var dist_sq: float = Vector2(player_cell).distance_squared_to(Vector2(room.get_center()))
+		if dist_sq <= trigger_dist_sq and dist_sq < best_dist_sq:
+			best_dist_sq = dist_sq
+			best_room = room
+			found = true
+
+	if not found:
+		return []
+
+	_expanded_rooms[best_room] = true
+	return _expand_from_room(best_room)
+
+
+func _create_hero_room() -> void:
+	var top_left: Vector2i = Vector2i(Vector2(-HERO_ROOM_SIZE) * 0.5)
+	hero_room = Rect2i(top_left, HERO_ROOM_SIZE)
+	_room_depths[hero_room] = 0
+	_expanded_rooms[hero_room] = true
+	_carve_room(hero_room, _cells)
+
+
+func _create_initial_rooms() -> void:
+	var placed: int = 0
+	var attempts: int = 0
+	var base_angle_step: float = TAU / float(INITIAL_ROOM_COUNT)
+
+	while placed < INITIAL_ROOM_COUNT and attempts < MAX_PLACEMENT_ATTEMPTS * 4:
+		attempts += 1
+		var slot_angle: float = float(placed) * base_angle_step + randf_range(-0.45, 0.45)
+		var distance: float = randf_range(TIER_1_DISTANCE_RANGE.x, TIER_1_DISTANCE_RANGE.y)
+		var size: Vector2i = Vector2i(randi_range(TIER_1_MIN_SIZE.x, TIER_1_MAX_SIZE.x), randi_range(TIER_1_MIN_SIZE.y, TIER_1_MAX_SIZE.y))
+		var center_pos: Vector2 = Vector2.from_angle(slot_angle) * distance
+		var top_left: Vector2i = Vector2i(center_pos.round()) - Vector2i(Vector2(size) * 0.5)
+		var candidate_room: Rect2i = Rect2i(top_left, size)
+
+		if _overlaps_any_room(candidate_room):
+			continue
+
+		companion_rooms.append(candidate_room)
+		_room_depths[candidate_room] = 1
+		_carve_room(candidate_room, _cells)
+		_carve_corridor(hero_room.get_center(), candidate_room.get_center(), _cells)
+		placed += 1
+
+	for i: int in range(companion_rooms.size()):
+		var next_idx: int = (i + 1) % companion_rooms.size()
+		if i != next_idx and randf() <= 0.5:
+			var center_a: Vector2i = companion_rooms[i].get_center()
+			var center_b: Vector2i = companion_rooms[next_idx].get_center()
+			if Vector2(center_a).distance_to(Vector2(center_b)) <= LOOP_CONNECT_MAX_DISTANCE:
+				_carve_corridor(center_a, center_b, _cells)
+
+
+func _expand_from_room(source_room: Rect2i) -> Array[Rect2i]:
+	var parent_depth: int = get_room_depth(source_room)
+	var child_depth: int = parent_depth + 1
+	var target_branches: int = randi_range(1, 2)
+	var new_rooms: Array[Rect2i] = []
+
+	var source_center: Vector2 = Vector2(source_room.get_center())
+	var outward_angle: float = source_center.angle()
+	var dirty_rect: Rect2i = source_room
+
+	var min_size: Vector2i = _get_min_size_for_depth(child_depth)
+	var max_size: Vector2i = _get_max_size_for_depth(child_depth)
+	var dist_range: Vector2 = _get_step_distance_for_depth(child_depth)
+
+	var attempts: int = 0
+	while new_rooms.size() < target_branches and attempts < MAX_PLACEMENT_ATTEMPTS:
+		attempts += 1
+		var branch_spread: float = randf_range(-1.15, 1.15)
+		var angle: float = outward_angle + branch_spread
+		var step_dist: float = randf_range(dist_range.x, dist_range.y)
+		var size: Vector2i = Vector2i(randi_range(min_size.x, max_size.x), randi_range(min_size.y, max_size.y))
+		var center_pos: Vector2 = source_center + Vector2.from_angle(angle) * step_dist
+		var top_left: Vector2i = Vector2i(center_pos.round()) - Vector2i(Vector2(size) * 0.5)
+		var candidate: Rect2i = Rect2i(top_left, size)
+
+		if _overlaps_any_room(candidate):
+			continue
+
+		companion_rooms.append(candidate)
+		_room_depths[candidate] = child_depth
+		new_rooms.append(candidate)
+
+		_carve_room(candidate, _cells)
+		_carve_corridor(source_room.get_center(), candidate.get_center(), _cells)
+		dirty_rect = dirty_rect.merge(candidate)
+
+		# Optionally create a loop corridor to an existing nearby room
+		for other_room: Rect2i in companion_rooms:
+			if other_room == candidate or other_room == source_room:
+				continue
+			var d: float = Vector2(candidate.get_center()).distance_to(Vector2(other_room.get_center()))
+			if d <= LOOP_CONNECT_MAX_DISTANCE and randf() <= LOOP_CONNECT_CHANCE:
+				_carve_corridor(candidate.get_center(), other_room.get_center(), _cells)
+				dirty_rect = dirty_rect.merge(other_room)
+				break
+
+	if not new_rooms.is_empty():
+		var padded_dirty: Rect2i = dirty_rect.grow(8)
+		_eliminate_narrow_gaps_in_rect(padded_dirty)
+		_rebuild_region(padded_dirty, new_rooms)
+
+	return new_rooms
+
+
+func _get_min_size_for_depth(depth: int) -> Vector2i:
+	if depth <= 1:
+		return TIER_1_MIN_SIZE
+	if depth <= 3:
+		return TIER_2_MIN_SIZE
+	var bonus: int = mini((depth - 4) * 4, 20)
+	return TIER_3_MIN_SIZE + Vector2i(bonus, bonus)
+
+
+func _get_max_size_for_depth(depth: int) -> Vector2i:
+	if depth <= 1:
+		return TIER_1_MAX_SIZE
+	if depth <= 3:
+		return TIER_2_MAX_SIZE
+	var bonus: int = mini((depth - 4) * 5, 24)
+	return TIER_3_MAX_SIZE + Vector2i(bonus, bonus)
+
+
+func _get_step_distance_for_depth(depth: int) -> Vector2:
+	if depth <= 1:
+		return TIER_1_DISTANCE_RANGE
+	if depth <= 3:
+		return TIER_2_DISTANCE_RANGE
+	var bonus: float = minf(float(depth - 4) * 6.0, 30.0)
+	return TIER_3_DISTANCE_RANGE + Vector2(bonus, bonus)
+
+
+func _get_cells_bounds(cells: Dictionary[Vector2i, bool]) -> Rect2i:
+	if cells.is_empty():
+		return Rect2i()
+	var min_c: Vector2i = Vector2i(2147483647, 2147483647)
+	var max_c: Vector2i = Vector2i(-2147483648, -2147483648)
+	for c: Vector2i in cells:
+		min_c.x = mini(min_c.x, c.x)
+		min_c.y = mini(min_c.y, c.y)
+		max_c.x = maxi(max_c.x, c.x)
+		max_c.y = maxi(max_c.y, c.y)
+	return Rect2i(min_c, (max_c - min_c) + Vector2i.ONE)
+
+
+func _rebuild_region(region: Rect2i, rooms_to_decorate: Array[Rect2i]) -> void:
+	var work_rect: Rect2i = region.grow(2)
+
+	# 1. Clear walls and wall torches inside work_rect; place floors for new floor cells
+	for x: int in range(work_rect.position.x, work_rect.end.x):
+		for y: int in range(work_rect.position.y, work_rect.end.y):
+			var cell: Vector2i = Vector2i(x, y)
+			_walls.erase_cell(cell)
+
+			var existing_decor: Vector2i = _decorations.get_cell_atlas_coords(cell)
+			if existing_decor == TORCH_TOP or existing_decor == TORCH_SIDE:
+				_decorations.erase_cell(cell)
+				_remove_torch_at(cell)
+
+			if _cells.has(cell):
+				if _floor.get_cell_source_id(cell) == -1:
+					_floor.set_cell(cell, TILE_SET_SOURCE_ID, _get_random_floor_atlas_coords())
+				# If a corridor carved through an existing prop/candle, clear it
+				if not _is_inside_any_room(cell):
+					if existing_decor == PROP_BARREL or existing_decor == PROP_BOX:
+						_decorations.erase_cell(cell)
+
+	# 2. Rebuild walls in work_rect
+	var walls_placed: Dictionary[Vector2i, bool] = {}
+	_create_top_walls_in_rect(work_rect, walls_placed)
+	_create_bottom_walls_in_rect(work_rect, walls_placed)
+	_create_vertical_walls_in_rect(work_rect, walls_placed)
+
+	# 3. Clear any floor decoration that is now covered by a wall
+	for x: int in range(work_rect.position.x, work_rect.end.x):
+		for y: int in range(work_rect.position.y, work_rect.end.y):
+			var cell: Vector2i = Vector2i(x, y)
+			if _walls.get_cell_source_id(cell) != -1:
+				var decor: Vector2i = _decorations.get_cell_atlas_coords(cell)
+				if decor != TORCH_TOP:
+					_decorations.erase_cell(cell)
+					_remove_torch_at(cell)
+
+	# 4. Place torches & decorations for newly added rooms and region
+	var new_torches: Array[Vector2i] = []
+	_place_wall_torches_in_rect(work_rect, new_torches)
+	_ensure_room_torches_for_rooms(rooms_to_decorate, new_torches)
+	_place_candle_posts_for_rooms(rooms_to_decorate, new_torches)
+	_place_room_props_for_rooms(rooms_to_decorate)
+	_place_corridor_bones_in_rect(work_rect)
+	_spawn_torch_lights(new_torches)
+
+	for room: Rect2i in rooms_to_decorate:
+		_decorated_rooms[room] = true
+
+	# 5. Refresh navigation
+	_setup_navigation(_cells)
+
+
+func _remove_torch_at(cell: Vector2i) -> void:
+	var idx: int = _placed_torches.find(cell)
+	if idx != -1:
+		_placed_torches.remove_at(idx)
+	if _torch_nodes.has(cell):
+		var node: TorchLight = _torch_nodes[cell]
+		if is_instance_valid(node):
+			node.queue_free()
+		_torch_nodes.erase(cell)
 
 
 func _find_closest_walkable_cell(target_cell: Vector2i) -> Vector2i:
@@ -308,43 +554,6 @@ func _setup_navigation(cells: Dictionary[Vector2i, bool]) -> void:
 		_astar.set_point_solid(c, false)
 
 
-func _create_hero_room(cells: Dictionary[Vector2i, bool]) -> void:
-	var top_left: Vector2i = Vector2i(Vector2(-HERO_ROOM_SIZE) * 0.5)
-	hero_room = Rect2i(top_left, HERO_ROOM_SIZE)
-	_carve_room(hero_room, cells)
-
-
-func _create_companion_rooms(cells: Dictionary[Vector2i, bool]) -> void:
-	var tier_counts: Array[int] = [TIER_1_COUNT, TIER_2_COUNT, TIER_3_COUNT]
-	var tier_distances: Array[Vector2] = [TIER_1_DISTANCE_RANGE, TIER_2_DISTANCE_RANGE, TIER_3_DISTANCE_RANGE]
-	var tier_min_sizes: Array[Vector2i] = [TIER_1_MIN_SIZE, TIER_2_MIN_SIZE, TIER_3_MIN_SIZE]
-	var tier_max_sizes: Array[Vector2i] = [TIER_1_MAX_SIZE, TIER_2_MAX_SIZE, TIER_3_MAX_SIZE]
-
-	var attempts: int = 0
-	for tier_idx: int in range(tier_counts.size()):
-		var target_count: int = tier_counts[tier_idx]
-		var dist_range: Vector2 = tier_distances[tier_idx]
-		var min_s: Vector2i = tier_min_sizes[tier_idx]
-		var max_s: Vector2i = tier_max_sizes[tier_idx]
-		var placed_in_tier: int = 0
-
-		while placed_in_tier < target_count and attempts < MAX_PLACEMENT_ATTEMPTS:
-			attempts += 1
-			var angle: float = randf_range(0.0, TAU)
-			var distance: float = randf_range(dist_range.x, dist_range.y)
-			var size: Vector2i = Vector2i(randi_range(min_s.x, max_s.x), randi_range(min_s.y, max_s.y))
-			var center_pos: Vector2 = Vector2.from_angle(angle) * distance
-			var top_left: Vector2i = Vector2i(center_pos.round()) - Vector2i(Vector2(size) * 0.5)
-			var candidate_room: Rect2i = Rect2i(top_left, size)
-
-			if _overlaps_any_room(candidate_room):
-				continue
-
-			companion_rooms.append(candidate_room)
-			_carve_room(candidate_room, cells)
-			placed_in_tier += 1
-
-
 func _overlaps_any_room(candidate: Rect2i) -> bool:
 	if hero_room.grow(ROOM_PADDING).intersects(candidate):
 		return true
@@ -362,125 +571,52 @@ func _carve_room(room: Rect2i, cells: Dictionary[Vector2i, bool]) -> void:
 			cells[Vector2i(x, y)] = true
 
 
-func _create_corridors(cells: Dictionary[Vector2i, bool]) -> void:
-	var connected: Array[Rect2i] = [hero_room]
-	var unconnected: Array[Rect2i] = companion_rooms.duplicate()
-	var total_unconnected: float = float(unconnected.size())
-
-	while not unconnected.is_empty():
-		var best_dist: float = INF
-		var best_connected_index: int = 0
-		var best_unconnected_index: int = 0
-
-		for connected_index: int in range(connected.size()):
-			var connected_center: Vector2 = Vector2(connected[connected_index].get_center())
-			for unconnected_index: int in range(unconnected.size()):
-				var unconnected_center: Vector2 = Vector2(unconnected[unconnected_index].get_center())
-				var dist_sq: float = connected_center.distance_squared_to(unconnected_center)
-				if dist_sq < best_dist:
-					best_dist = dist_sq
-					best_connected_index = connected_index
-					best_unconnected_index = unconnected_index
-
-		var from_pos: Vector2i = connected[best_connected_index].get_center()
-		var to_pos: Vector2i = unconnected[best_unconnected_index].get_center()
-		_carve_corridor(from_pos, to_pos, cells)
-
-		connected.append(unconnected[best_unconnected_index])
-		unconnected.remove_at(best_unconnected_index)
-
-		var progress_ratio: float = 1.0 - float(unconnected.size()) / total_unconnected
-		generation_progress_updated.emit(lerpf(0.20, 0.42, progress_ratio), &"Carving winding corridors...")
-		await get_tree().process_frame
-
-	# Add extra loops between nearby rooms for non-linear exploration
-	for _i: int in range(EXTRA_CORRIDOR_LOOPS):
-		if companion_rooms.size() < 2:
-			break
-		var room_a: Rect2i = companion_rooms[randi() % companion_rooms.size()]
-		var room_b: Rect2i = companion_rooms[randi() % companion_rooms.size()]
-		if room_a != room_b:
-			_carve_corridor(room_a.get_center(), room_b.get_center(), cells)
-			await get_tree().process_frame
-
-	generation_progress_updated.emit(0.44, &"Excavating dungeon pathways...")
-	await get_tree().process_frame
-
-
 func _carve_corridor(from: Vector2i, to: Vector2i, cells: Dictionary[Vector2i, bool]) -> void:
 	var half_width: int = int(float(CORRIDOR_WIDTH) * 0.5)
-
-	var h_cells: Dictionary[Vector2i, bool] = cells.duplicate()
-	_carve_horizontal_line(from.x, to.x, from.y, half_width, h_cells)
-	_carve_vertical_line(from.y, to.y, to.x, half_width, h_cells)
-
-	var v_cells: Dictionary[Vector2i, bool] = cells.duplicate()
-	_carve_vertical_line(from.y, to.y, from.x, half_width, v_cells)
-	_carve_horizontal_line(from.x, to.x, to.y, half_width, v_cells)
-
-	if _count_narrow_gaps(h_cells) <= _count_narrow_gaps(v_cells):
-		cells.assign(h_cells)
+	if randf() <= 0.5:
+		_carve_horizontal_line(from.x, to.x, from.y, half_width, cells)
+		_carve_vertical_line(from.y, to.y, to.x, half_width, cells)
 	else:
-		cells.assign(v_cells)
+		_carve_vertical_line(from.y, to.y, from.x, half_width, cells)
+		_carve_horizontal_line(from.x, to.x, to.y, half_width, cells)
 
 
-func _eliminate_narrow_gaps(cells: Dictionary[Vector2i, bool]) -> void:
+func _eliminate_narrow_gaps_in_rect(region: Rect2i) -> void:
 	var changed: bool = true
 	var pass_count: int = 0
 
-	while changed and pass_count < 10:
+	while changed and pass_count < 6:
 		pass_count += 1
 		changed = false
 		var candidates: Dictionary[Vector2i, bool] = {}
 
-		for f: Vector2i in cells:
-			for dx: int in range(-2, 3):
-				for dy: int in range(-2, 3):
-					var p: Vector2i = f + Vector2i(dx, dy)
-					if not cells.has(p):
-						candidates[p] = true
+		for x: int in range(region.position.x, region.end.x):
+			for y: int in range(region.position.y, region.end.y):
+				var f: Vector2i = Vector2i(x, y)
+				if not _cells.has(f):
+					continue
+				for dx: int in range(-2, 3):
+					for dy: int in range(-2, 3):
+						var p: Vector2i = f + Vector2i(dx, dy)
+						if not _cells.has(p) and region.has_point(p):
+							candidates[p] = true
 
 		var to_add: Array[Vector2i] = []
 		for p: Vector2i in candidates:
 			var h_gap: bool = (
-				(cells.has(p + Vector2i(-1, 0)) or cells.has(p + Vector2i(-2, 0)))
-				and (cells.has(p + Vector2i(1, 0)) or cells.has(p + Vector2i(2, 0)))
+				(_cells.has(p + Vector2i(-1, 0)) or _cells.has(p + Vector2i(-2, 0)))
+				and (_cells.has(p + Vector2i(1, 0)) or _cells.has(p + Vector2i(2, 0)))
 			)
 			var v_gap: bool = (
-				(cells.has(p + Vector2i(0, -1)) or cells.has(p + Vector2i(0, -2)))
-				and (cells.has(p + Vector2i(0, 1)) or cells.has(p + Vector2i(0, 2)))
+				(_cells.has(p + Vector2i(0, -1)) or _cells.has(p + Vector2i(0, -2)))
+				and (_cells.has(p + Vector2i(0, 1)) or _cells.has(p + Vector2i(0, 2)))
 			)
 			if h_gap or v_gap:
 				to_add.append(p)
 				changed = true
 
 		for p: Vector2i in to_add:
-			cells[p] = true
-
-		generation_progress_updated.emit(lerpf(0.44, 0.54, float(pass_count) / 10.0), &"Reinforcing passages...")
-		await get_tree().process_frame
-
-
-func _count_narrow_gaps(cells: Dictionary[Vector2i, bool]) -> int:
-	var candidates: Dictionary[Vector2i, bool] = {}
-	for f: Vector2i in cells:
-		for dx: int in range(-2, 3):
-			for dy: int in range(-2, 3):
-				var p: Vector2i = f + Vector2i(dx, dy)
-				if not cells.has(p):
-					candidates[p] = true
-
-	var count: int = 0
-	for p: Vector2i in candidates:
-		var h_gap: bool = (
-			(cells.has(p + Vector2i(-1, 0)) or cells.has(p + Vector2i(-2, 0))) and (cells.has(p + Vector2i(1, 0)) or cells.has(p + Vector2i(2, 0)))
-		)
-		var v_gap: bool = (
-			(cells.has(p + Vector2i(0, -1)) or cells.has(p + Vector2i(0, -2))) and (cells.has(p + Vector2i(0, 1)) or cells.has(p + Vector2i(0, 2)))
-		)
-		if h_gap or v_gap:
-			count += 1
-	return count
+			_cells[p] = true
 
 
 func _carve_horizontal_line(x_start: int, x_end: int, y: int, half_width: int, cells: Dictionary[Vector2i, bool]) -> void:
@@ -501,83 +637,84 @@ func _carve_vertical_line(y_start: int, y_end: int, x: int, half_width: int, cel
 			cells[Vector2i(x + offset, y)] = true
 
 
-func _create_all_walls(cells: Dictionary[Vector2i, bool]) -> void:
-	var walls_placed: Dictionary[Vector2i, bool] = {}
+func _create_top_walls_in_rect(region: Rect2i, walls_placed: Dictionary[Vector2i, bool]) -> void:
+	for x: int in range(region.position.x, region.end.x):
+		for y: int in range(region.position.y, region.end.y):
+			var f: Vector2i = Vector2i(x, y)
+			if not _cells.has(f) or _cells.has(f + Vector2i(0, -1)):
+				continue
 
-	_create_top_walls(cells, walls_placed)
-	_create_bottom_walls(cells, walls_placed)
-	_create_vertical_walls(cells, walls_placed)
+			var has_ne: bool = _cells.has(f + Vector2i(1, -1))
+			var has_nw: bool = _cells.has(f + Vector2i(-1, -1))
+			var has_w: bool = _cells.has(f + Vector2i(-1, 0))
+			var has_e: bool = _cells.has(f + Vector2i(1, 0))
 
-
-func _create_top_walls(cells: Dictionary[Vector2i, bool], walls_placed: Dictionary[Vector2i, bool]) -> void:
-	for f: Vector2i in cells:
-		if cells.has(f + Vector2i(0, -1)):
-			continue
-
-		var has_ne: bool = cells.has(f + Vector2i(1, -1))
-		var has_nw: bool = cells.has(f + Vector2i(-1, -1))
-		var has_w: bool = cells.has(f + Vector2i(-1, 0))
-		var has_e: bool = cells.has(f + Vector2i(1, 0))
-
-		if has_ne and not has_w:
-			_walls.set_cell(f, TILE_SET_SOURCE_ID, WALL_TOP_LEFT_INNER)
-		elif has_nw and not has_e:
-			_walls.set_cell(f, TILE_SET_SOURCE_ID, WALL_TOP_RIGHT_INNER)
-		else:
-			_walls.set_cell(f, TILE_SET_SOURCE_ID, _pick_random_tile(WALL_TOP_VARIANTS))
-
-		var left_cell: Vector2i = f + Vector2i(-1, 0)
-		if not cells.has(left_cell) and not walls_placed.has(left_cell):
-			_walls.set_cell(left_cell, TILE_SET_SOURCE_ID, WALL_TOP_LEFT_OUTER)
-			walls_placed[left_cell] = true
-
-		var right_cell: Vector2i = f + Vector2i(1, 0)
-		if not cells.has(right_cell) and not walls_placed.has(right_cell):
-			_walls.set_cell(right_cell, TILE_SET_SOURCE_ID, WALL_TOP_RIGHT_OUTER)
-			walls_placed[right_cell] = true
-
-
-func _create_bottom_walls(cells: Dictionary[Vector2i, bool], walls_placed: Dictionary[Vector2i, bool]) -> void:
-	for f: Vector2i in cells:
-		if cells.has(f + Vector2i(0, 1)):
-			continue
-
-		var bottom_cell: Vector2i = f + Vector2i(0, 1)
-		if not walls_placed.has(bottom_cell) and not cells.has(bottom_cell):
-			var has_e: bool = cells.has(bottom_cell + Vector2i(1, 0))
-			var has_w: bool = cells.has(bottom_cell + Vector2i(-1, 0))
-
-			if has_e and not has_w:
-				_walls.set_cell(bottom_cell, TILE_SET_SOURCE_ID, WALL_BOTTOM_LEFT_INNER)
-			elif has_w and not has_e:
-				_walls.set_cell(bottom_cell, TILE_SET_SOURCE_ID, WALL_BOTTOM_RIGHT_INNER)
+			if has_ne and not has_w:
+				_walls.set_cell(f, TILE_SET_SOURCE_ID, WALL_TOP_LEFT_INNER)
+			elif has_nw and not has_e:
+				_walls.set_cell(f, TILE_SET_SOURCE_ID, WALL_TOP_RIGHT_INNER)
 			else:
-				_walls.set_cell(bottom_cell, TILE_SET_SOURCE_ID, _pick_random_tile(WALL_BOTTOM_VARIANTS))
+				_walls.set_cell(f, TILE_SET_SOURCE_ID, _pick_random_tile(WALL_TOP_VARIANTS))
 
-			walls_placed[bottom_cell] = true
+			var left_cell: Vector2i = f + Vector2i(-1, 0)
+			if not _cells.has(left_cell) and not walls_placed.has(left_cell):
+				_walls.set_cell(left_cell, TILE_SET_SOURCE_ID, WALL_TOP_LEFT_OUTER)
+				walls_placed[left_cell] = true
 
-		var bl_cell: Vector2i = f + Vector2i(-1, 1)
-		if not cells.has(bl_cell) and not cells.has(f + Vector2i(-1, 0)) and not walls_placed.has(bl_cell):
-			_walls.set_cell(bl_cell, TILE_SET_SOURCE_ID, WALL_BOTTOM_LEFT_OUTER)
-			walls_placed[bl_cell] = true
-
-		var br_cell: Vector2i = f + Vector2i(1, 1)
-		if not cells.has(br_cell) and not cells.has(f + Vector2i(1, 0)) and not walls_placed.has(br_cell):
-			_walls.set_cell(br_cell, TILE_SET_SOURCE_ID, WALL_BOTTOM_RIGHT_OUTER)
-			walls_placed[br_cell] = true
+			var right_cell: Vector2i = f + Vector2i(1, 0)
+			if not _cells.has(right_cell) and not walls_placed.has(right_cell):
+				_walls.set_cell(right_cell, TILE_SET_SOURCE_ID, WALL_TOP_RIGHT_OUTER)
+				walls_placed[right_cell] = true
 
 
-func _create_vertical_walls(cells: Dictionary[Vector2i, bool], walls_placed: Dictionary[Vector2i, bool]) -> void:
-	for f: Vector2i in cells:
-		var left_cell: Vector2i = f + Vector2i(-1, 0)
-		if not cells.has(left_cell) and not walls_placed.has(left_cell):
-			_walls.set_cell(left_cell, TILE_SET_SOURCE_ID, _pick_random_tile(WALL_LEFT_VARIANTS))
-			walls_placed[left_cell] = true
+func _create_bottom_walls_in_rect(region: Rect2i, walls_placed: Dictionary[Vector2i, bool]) -> void:
+	for x: int in range(region.position.x, region.end.x):
+		for y: int in range(region.position.y, region.end.y):
+			var f: Vector2i = Vector2i(x, y)
+			if not _cells.has(f) or _cells.has(f + Vector2i(0, 1)):
+				continue
 
-		var right_cell: Vector2i = f + Vector2i(1, 0)
-		if not cells.has(right_cell) and not walls_placed.has(right_cell):
-			_walls.set_cell(right_cell, TILE_SET_SOURCE_ID, _pick_random_tile(WALL_RIGHT_VARIANTS))
-			walls_placed[right_cell] = true
+			var bottom_cell: Vector2i = f + Vector2i(0, 1)
+			if not walls_placed.has(bottom_cell) and not _cells.has(bottom_cell):
+				var has_e: bool = _cells.has(bottom_cell + Vector2i(1, 0))
+				var has_w: bool = _cells.has(bottom_cell + Vector2i(-1, 0))
+
+				if has_e and not has_w:
+					_walls.set_cell(bottom_cell, TILE_SET_SOURCE_ID, WALL_BOTTOM_LEFT_INNER)
+				elif has_w and not has_e:
+					_walls.set_cell(bottom_cell, TILE_SET_SOURCE_ID, WALL_BOTTOM_RIGHT_INNER)
+				else:
+					_walls.set_cell(bottom_cell, TILE_SET_SOURCE_ID, _pick_random_tile(WALL_BOTTOM_VARIANTS))
+
+				walls_placed[bottom_cell] = true
+
+			var bl_cell: Vector2i = f + Vector2i(-1, 1)
+			if not _cells.has(bl_cell) and not _cells.has(f + Vector2i(-1, 0)) and not walls_placed.has(bl_cell):
+				_walls.set_cell(bl_cell, TILE_SET_SOURCE_ID, WALL_BOTTOM_LEFT_OUTER)
+				walls_placed[bl_cell] = true
+
+			var br_cell: Vector2i = f + Vector2i(1, 1)
+			if not _cells.has(br_cell) and not _cells.has(f + Vector2i(1, 0)) and not walls_placed.has(br_cell):
+				_walls.set_cell(br_cell, TILE_SET_SOURCE_ID, WALL_BOTTOM_RIGHT_OUTER)
+				walls_placed[br_cell] = true
+
+
+func _create_vertical_walls_in_rect(region: Rect2i, walls_placed: Dictionary[Vector2i, bool]) -> void:
+	for x: int in range(region.position.x, region.end.x):
+		for y: int in range(region.position.y, region.end.y):
+			var f: Vector2i = Vector2i(x, y)
+			if not _cells.has(f):
+				continue
+
+			var left_cell: Vector2i = f + Vector2i(-1, 0)
+			if not _cells.has(left_cell) and not walls_placed.has(left_cell):
+				_walls.set_cell(left_cell, TILE_SET_SOURCE_ID, _pick_random_tile(WALL_LEFT_VARIANTS))
+				walls_placed[left_cell] = true
+
+			var right_cell: Vector2i = f + Vector2i(1, 0)
+			if not _cells.has(right_cell) and not walls_placed.has(right_cell):
+				_walls.set_cell(right_cell, TILE_SET_SOURCE_ID, _pick_random_tile(WALL_RIGHT_VARIANTS))
+				walls_placed[right_cell] = true
 
 
 func _pick_random_tile(tiles: Array[Vector2i]) -> Vector2i:
@@ -590,16 +727,6 @@ func _get_random_floor_atlas_coords() -> Vector2i:
 	return Vector2i(atlas_x, atlas_y)
 
 
-func _create_decorations(cells: Dictionary[Vector2i, bool]) -> void:
-	var placed_torches: Array[Vector2i] = []
-	_place_wall_torches(placed_torches)
-	_ensure_room_torches(placed_torches)
-	_place_candle_posts(cells, placed_torches)
-	_place_room_props(cells)
-	_place_corridor_bones(cells)
-	_spawn_torch_lights(placed_torches)
-
-
 func _clear_lights() -> void:
 	if _lights == null:
 		return
@@ -607,40 +734,46 @@ func _clear_lights() -> void:
 		child.queue_free()
 
 
-func _place_wall_torches(placed_torches: Array[Vector2i]) -> void:
-	var wall_cells: Array[Vector2i] = _walls.get_used_cells()
-	for w: Vector2i in wall_cells:
-		var atlas: Vector2i = _walls.get_cell_atlas_coords(w)
-		if atlas in WALL_TOP_VARIANTS:
-			if randf() <= TORCH_SPAWN_CHANCE and _is_far_from_torches(w, placed_torches):
-				_decorations.set_cell(w, TILE_SET_SOURCE_ID, TORCH_TOP)
-				placed_torches.append(w)
-		elif atlas in WALL_LEFT_VARIANTS:
-			var target_cell: Vector2i = w + Vector2i(1, 0)
-			var above: Vector2i = _walls.get_cell_atlas_coords(w + Vector2i(0, -1))
-			var below: Vector2i = _walls.get_cell_atlas_coords(w + Vector2i(0, 1))
-			if (
-				(above in WALL_LEFT_VARIANTS or below in WALL_LEFT_VARIANTS)
-				and _walls.get_cell_source_id(target_cell) == -1
-				and _decorations.get_cell_source_id(target_cell) == -1
-				and randf() <= TORCH_SPAWN_CHANCE
-				and _is_far_from_torches(target_cell, placed_torches)
-			):
-				_decorations.set_cell(target_cell, TILE_SET_SOURCE_ID, TORCH_SIDE, 0)
-				placed_torches.append(target_cell)
-		elif atlas in WALL_RIGHT_VARIANTS:
-			var target_cell: Vector2i = w + Vector2i(-1, 0)
-			var above: Vector2i = _walls.get_cell_atlas_coords(w + Vector2i(0, -1))
-			var below: Vector2i = _walls.get_cell_atlas_coords(w + Vector2i(0, 1))
-			if (
-				(above in WALL_RIGHT_VARIANTS or below in WALL_RIGHT_VARIANTS)
-				and _walls.get_cell_source_id(target_cell) == -1
-				and _decorations.get_cell_source_id(target_cell) == -1
-				and randf() <= TORCH_SPAWN_CHANCE
-				and _is_far_from_torches(target_cell, placed_torches)
-			):
-				_decorations.set_cell(target_cell, TILE_SET_SOURCE_ID, TORCH_SIDE, TORCH_RIGHT_ALT_ID)
-				placed_torches.append(target_cell)
+func _place_wall_torches_in_rect(region: Rect2i, new_torches: Array[Vector2i]) -> void:
+	for x: int in range(region.position.x, region.end.x):
+		for y: int in range(region.position.y, region.end.y):
+			var w: Vector2i = Vector2i(x, y)
+			if _walls.get_cell_source_id(w) == -1:
+				continue
+			var atlas: Vector2i = _walls.get_cell_atlas_coords(w)
+			if atlas in WALL_TOP_VARIANTS:
+				if randf() <= TORCH_SPAWN_CHANCE and _is_far_from_torches(w, _placed_torches):
+					_decorations.set_cell(w, TILE_SET_SOURCE_ID, TORCH_TOP)
+					_placed_torches.append(w)
+					new_torches.append(w)
+			elif atlas in WALL_LEFT_VARIANTS:
+				var target_cell: Vector2i = w + Vector2i(1, 0)
+				var above: Vector2i = _walls.get_cell_atlas_coords(w + Vector2i(0, -1))
+				var below: Vector2i = _walls.get_cell_atlas_coords(w + Vector2i(0, 1))
+				if (
+					(above in WALL_LEFT_VARIANTS or below in WALL_LEFT_VARIANTS)
+					and _walls.get_cell_source_id(target_cell) == -1
+					and _decorations.get_cell_source_id(target_cell) == -1
+					and randf() <= TORCH_SPAWN_CHANCE
+					and _is_far_from_torches(target_cell, _placed_torches)
+				):
+					_decorations.set_cell(target_cell, TILE_SET_SOURCE_ID, TORCH_SIDE, 0)
+					_placed_torches.append(target_cell)
+					new_torches.append(target_cell)
+			elif atlas in WALL_RIGHT_VARIANTS:
+				var target_cell: Vector2i = w + Vector2i(-1, 0)
+				var above: Vector2i = _walls.get_cell_atlas_coords(w + Vector2i(0, -1))
+				var below: Vector2i = _walls.get_cell_atlas_coords(w + Vector2i(0, 1))
+				if (
+					(above in WALL_RIGHT_VARIANTS or below in WALL_RIGHT_VARIANTS)
+					and _walls.get_cell_source_id(target_cell) == -1
+					and _decorations.get_cell_source_id(target_cell) == -1
+					and randf() <= TORCH_SPAWN_CHANCE
+					and _is_far_from_torches(target_cell, _placed_torches)
+				):
+					_decorations.set_cell(target_cell, TILE_SET_SOURCE_ID, TORCH_SIDE, TORCH_RIGHT_ALT_ID)
+					_placed_torches.append(target_cell)
+					new_torches.append(target_cell)
 
 
 func _is_far_from_torches(candidate: Vector2i, placed_torches: Array[Vector2i]) -> bool:
@@ -651,15 +784,14 @@ func _is_far_from_torches(candidate: Vector2i, placed_torches: Array[Vector2i]) 
 	return true
 
 
-func _ensure_room_torches(placed_torches: Array[Vector2i]) -> void:
-	var all_rooms: Array[Rect2i] = [hero_room]
-	all_rooms.append_array(companion_rooms)
-
-	for room: Rect2i in all_rooms:
+func _ensure_room_torches_for_rooms(rooms: Array[Rect2i], new_torches: Array[Vector2i]) -> void:
+	for room: Rect2i in rooms:
+		if _decorated_rooms.has(room):
+			continue
 		var top_y: int = room.position.y - 1
 		var north_torch_count: int = 0
 		for x: int in range(room.position.x, room.position.x + room.size.x):
-			if placed_torches.has(Vector2i(x, top_y)):
+			if _placed_torches.has(Vector2i(x, top_y)):
 				north_torch_count += 1
 
 		var target_count: int = 2 if room.size.x >= 14 else 1
@@ -675,11 +807,12 @@ func _ensure_room_torches(placed_torches: Array[Vector2i]) -> void:
 				var candidate: Vector2i = Vector2i(target_x, top_y)
 				if (
 					_walls.get_cell_atlas_coords(candidate) in WALL_TOP_VARIANTS
-					and not placed_torches.has(candidate)
-					and _is_far_from_torches(candidate, placed_torches)
+					and not _placed_torches.has(candidate)
+					and _is_far_from_torches(candidate, _placed_torches)
 				):
 					_decorations.set_cell(candidate, TILE_SET_SOURCE_ID, TORCH_TOP)
-					placed_torches.append(candidate)
+					_placed_torches.append(candidate)
+					new_torches.append(candidate)
 				else:
 					for dx: int in range(-2, 3):
 						var alt_candidate: Vector2i = Vector2i(target_x + dx, top_y)
@@ -687,19 +820,19 @@ func _ensure_room_torches(placed_torches: Array[Vector2i]) -> void:
 							alt_candidate.x >= room.position.x
 							and alt_candidate.x < room.position.x + room.size.x
 							and _walls.get_cell_atlas_coords(alt_candidate) in WALL_TOP_VARIANTS
-							and not placed_torches.has(alt_candidate)
-							and _is_far_from_torches(alt_candidate, placed_torches)
+							and not _placed_torches.has(alt_candidate)
+							and _is_far_from_torches(alt_candidate, _placed_torches)
 						):
 							_decorations.set_cell(alt_candidate, TILE_SET_SOURCE_ID, TORCH_TOP)
-							placed_torches.append(alt_candidate)
+							_placed_torches.append(alt_candidate)
+							new_torches.append(alt_candidate)
 							break
 
 
-func _place_candle_posts(cells: Dictionary[Vector2i, bool], placed_torches: Array[Vector2i]) -> void:
-	var all_rooms: Array[Rect2i] = [hero_room]
-	all_rooms.append_array(companion_rooms)
-
-	for room: Rect2i in all_rooms:
+func _place_candle_posts_for_rooms(rooms: Array[Rect2i], new_torches: Array[Vector2i]) -> void:
+	for room: Rect2i in rooms:
+		if _decorated_rooms.has(room):
+			continue
 		var center: Vector2i = room.get_center()
 		var candidate_points: Array[Vector2i] = []
 
@@ -735,7 +868,7 @@ func _place_candle_posts(cells: Dictionary[Vector2i, bool], placed_torches: Arra
 					var base_cell: Vector2i = base_candidate + Vector2i(dx, dy)
 					var top_cell: Vector2i = base_cell + Vector2i(0, -1)
 
-					if not cells.has(base_cell) or not cells.has(top_cell):
+					if not _cells.has(base_cell) or not _cells.has(top_cell):
 						continue
 					if _walls.get_cell_source_id(base_cell) != -1 or _walls.get_cell_source_id(top_cell) != -1:
 						continue
@@ -743,23 +876,27 @@ func _place_candle_posts(cells: Dictionary[Vector2i, bool], placed_torches: Arra
 						continue
 					if base_cell.distance_squared_to(center) < 4:
 						continue
-					if not _is_far_from_torches(top_cell, placed_torches):
+					if not _is_far_from_torches(top_cell, _placed_torches):
 						continue
 
 					_decorations.set_cell(top_cell, TILE_SET_SOURCE_ID, CANDLE_POST_TOP)
 					_decorations.set_cell(base_cell, TILE_SET_SOURCE_ID, CANDLE_POST_BOTTOM)
-					placed_torches.append(top_cell)
+					_placed_torches.append(top_cell)
+					new_torches.append(top_cell)
 					placed = true
 					break
 
 
-func _spawn_torch_lights(placed_torches: Array[Vector2i]) -> void:
+func _spawn_torch_lights(torches_to_spawn: Array[Vector2i]) -> void:
 	if _lights == null:
 		return
-	for cell: Vector2i in placed_torches:
+	for cell: Vector2i in torches_to_spawn:
+		if _torch_nodes.has(cell) and is_instance_valid(_torch_nodes[cell]):
+			continue
 		var torch_light: TorchLight = TorchLight.new()
 		torch_light.position = _decorations.map_to_local(cell)
 		_lights.add_child(torch_light)
+		_torch_nodes[cell] = torch_light
 
 
 func _is_corner_cell(cell: Vector2i) -> bool:
@@ -772,11 +909,10 @@ func _is_corner_cell(cell: Vector2i) -> bool:
 	return (wall_n and wall_w) or (wall_n and wall_e) or (wall_s and wall_w) or (wall_s and wall_e)
 
 
-func _place_room_props(cells: Dictionary[Vector2i, bool]) -> void:
-	var all_rooms: Array[Rect2i] = [hero_room]
-	all_rooms.append_array(companion_rooms)
-
-	for room: Rect2i in all_rooms:
+func _place_room_props_for_rooms(rooms: Array[Rect2i]) -> void:
+	for room: Rect2i in rooms:
+		if _decorated_rooms.has(room):
+			continue
 		var center: Vector2i = room.get_center()
 		var corner_cells: Array[Vector2i] = []
 		var floor_cells: Array[Vector2i] = []
@@ -784,7 +920,7 @@ func _place_room_props(cells: Dictionary[Vector2i, bool]) -> void:
 		for x: int in range(room.position.x, room.position.x + room.size.x):
 			for y: int in range(room.position.y, room.position.y + room.size.y):
 				var cell: Vector2i = Vector2i(x, y)
-				if not cells.has(cell) or _walls.get_cell_source_id(cell) != -1:
+				if not _cells.has(cell) or _walls.get_cell_source_id(cell) != -1:
 					continue
 				if cell.distance_squared_to(center) <= 4:
 					continue
@@ -817,15 +953,19 @@ func _place_room_props(cells: Dictionary[Vector2i, bool]) -> void:
 			bones_placed += 1
 
 
-func _place_corridor_bones(cells: Dictionary[Vector2i, bool]) -> void:
-	for cell: Vector2i in cells:
-		if _walls.get_cell_source_id(cell) != -1 or _decorations.get_cell_source_id(cell) != -1:
-			continue
-		if _is_inside_any_room(cell):
-			continue
-		if randf() <= CORRIDOR_BONE_CHANCE:
-			var bone_tile: Vector2i = _pick_random_tile(PROP_SKULLS_AND_BONES)
-			_decorations.set_cell(cell, TILE_SET_SOURCE_ID, bone_tile)
+func _place_corridor_bones_in_rect(region: Rect2i) -> void:
+	for x: int in range(region.position.x, region.end.x):
+		for y: int in range(region.position.y, region.end.y):
+			var cell: Vector2i = Vector2i(x, y)
+			if not _cells.has(cell):
+				continue
+			if _walls.get_cell_source_id(cell) != -1 or _decorations.get_cell_source_id(cell) != -1:
+				continue
+			if _is_inside_any_room(cell):
+				continue
+			if randf() <= CORRIDOR_BONE_CHANCE:
+				var bone_tile: Vector2i = _pick_random_tile(PROP_SKULLS_AND_BONES)
+				_decorations.set_cell(cell, TILE_SET_SOURCE_ID, bone_tile)
 
 
 func _is_inside_any_room(cell: Vector2i) -> bool:

@@ -21,14 +21,16 @@ func is_ready() -> bool:
 	return cooldown_timer <= 0.0
 
 
-func can_execute(user: Character, target: Character) -> bool:
-	if not is_ready():
-		return false
+func can_reach(user: Character, target: Character) -> bool:
 	if target == null or not is_instance_valid(target) or target.health <= 0.0:
 		return false
 
 	var dist: float = user.global_position.distance_to(target.global_position)
 	return dist >= min_range_distance and dist <= range_distance
+
+
+func can_execute(user: Character, target: Character) -> bool:
+	return is_ready() and can_reach(user, target)
 
 
 func execute(_user: Character, _target: Character) -> void:

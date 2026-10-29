@@ -6,6 +6,7 @@ extends Enemy
 
 const LAVA_SPIKE_SCENE: PackedScene = preload("res://projectile/lava_spike/lava_spike.tscn")
 const HORIZONTAL_ALIGNMENT_TOLERANCE: float = 16.0
+const MELEE_VERTICAL_TOLERANCE: float = 10.0
 
 @export var melee_damage: float = 8.0
 
@@ -14,7 +15,7 @@ func _ready() -> void:
 	speed = 35.0
 	detection_range = 135.0
 	can_melee = true
-	melee_range = 45.0
+	melee_range = 20.0
 	can_ranged = true
 	ranged_min_range = 65.0
 	ranged_range = 135.0
@@ -29,6 +30,7 @@ func _setup_actions() -> void:
 	if can_melee:
 		var melee: MeleeAction = MeleeAction.new()
 		melee.range_distance = melee_range
+		melee.vertical_tolerance = MELEE_VERTICAL_TOLERANCE
 		melee.damage = melee_damage
 		melee.cooldown = attack_cooldown
 		melee.leash_distance = 0.0

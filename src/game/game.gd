@@ -5,7 +5,11 @@ class_name Game
 extends Node2D
 
 const MAX_CHARACTERS: int = 80
-const MAX_ENEMIES: int = 120
+const MAX_ENEMIES: int = 160
+const ENEMY_ACTIVE_DIST_SQ: float = 480.0 * 480.0
+const ENEMY_DESPAWN_DIST_SQ: float = 1650.0 * 1650.0
+const ROOM_RESPAWN_DIST_SQ: float = 1350.0 * 1350.0
+const STREAM_CHECK_INTERVAL: float = 0.25
 
 const ARCHER_SCENE: PackedScene = preload("res://character/heroes/archer/archer.tscn")
 const ARMORED_AXEMAN_SCENE: PackedScene = preload("res://character/heroes/armored_axeman/armored_axeman.tscn")
@@ -32,6 +36,10 @@ const HERO_SPAWN_WEIGHTS: Dictionary[PackedScene, int] = {
 var _squad: Array[Hero] = []
 var _unrecruited_characters: Array[Hero] = []
 var _enemies: Array[Enemy] = []
+var _hero_deck: Array[PackedScene] = []
+var _room_remaining_enemies: Dictionary[Rect2i, int] = {}
+var _room_spawned_enemies: Dictionary[Rect2i, int] = {}
+var _stream_timer: float = 0.0
 
 @onready var _camera: Camera2D = $Camera2D
 @onready var _characters: Node2D = $Characters
@@ -61,9 +69,9 @@ func _ready() -> void:
 
 	Transition.set_loading_progress(0.92, &"Assembling the fellowship...")
 	await get_tree().process_frame
-	await _spawn_characters()
+	_spawn_initial_characters()
 	_check_recruitment()
-	_spawn_enemies()
+	_register_and_populate_rooms(_map.companion_rooms)
 
 	Transition.set_loading_progress(1.0, &"Ready to escape!")
 	await get_tree().process_frame
@@ -80,6 +88,10 @@ func _process(delta: float) -> void:
 		_camera.position = _character.position
 		if not _character.is_dead:
 			_character.record_step(delta)
+			_stream_timer -= delta
+			if _stream_timer <= 0.0:
+				_stream_timer = STREAM_CHECK_INTERVAL
+				_update_map_streaming()
 
 	_update_followers(delta)
 	_check_recruitment()
@@ -96,42 +108,58 @@ func remove_member(hero: Hero) -> void:
 	_rebalance_escort_slots()
 
 
-func _spawn_characters() -> void:
-	var spawn_points: Array[Vector2] = _map.get_companion_spawn_positions()
+func _update_map_streaming() -> void:
+	var new_rooms: Array[Rect2i] = _map.expand_frontier_near(_character.global_position)
+	if not new_rooms.is_empty():
+		for room: Rect2i in new_rooms:
+			_spawn_companions_for_room(room)
+		_register_and_populate_rooms(new_rooms)
 
-	if MAX_CHARACTERS > 0 and spawn_points.size() > MAX_CHARACTERS:
-		spawn_points.resize(MAX_CHARACTERS)
+	_respawn_nearby_hibernating_rooms()
 
-	var hero_deck: Array[PackedScene] = []
+
+func _spawn_initial_characters() -> void:
+	var starter_positions: Array[Vector2] = _map.get_starter_companion_spawn_positions()
 	var starter_heroes: Array[PackedScene] = [PRIEST_SCENE, ARMORED_AXEMAN_SCENE]
 
-	for i: int in range(spawn_points.size()):
-		var pos: Vector2 = spawn_points[i]
-		var scene: PackedScene = null
-		if i < starter_heroes.size():
-			scene = starter_heroes[i]
-		else:
-			if hero_deck.is_empty():
-				hero_deck = _build_hero_deck()
-				hero_deck.shuffle()
-			scene = hero_deck.pop_back()
+	for i: int in range(starter_positions.size()):
+		var scene: PackedScene = starter_heroes[i] if i < starter_heroes.size() else _draw_next_hero_scene()
+		_spawn_recruit_at(starter_positions[i], scene)
 
-		var ch: Hero = scene.instantiate() as Hero
-		if ch == null:
-			printerr(&"Game: Failed to instantiate hero scene!")
-			await Alerts.fatal_error(&"Could not spawn characters")
-			return
+	for room: Rect2i in _map.companion_rooms:
+		_spawn_companions_for_room(room)
 
-		_characters.add_child(ch)
-		ch.is_player = false
-		ch.position = pos
-		ch.y_sort_enabled = true
-		ch.flip_h = randf() > 0.5
-		ch.frame = randi() % 6
-		ch.frame_progress = randf()
-		ch.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
-		ch.died.connect(_on_hero_died.bind(ch))
-		_unrecruited_characters.append(ch)
+
+func _spawn_companions_for_room(room: Rect2i) -> void:
+	if MAX_CHARACTERS > 0 and (_squad.size() + _unrecruited_characters.size()) >= MAX_CHARACTERS:
+		return
+
+	var positions: Array[Vector2] = _map.get_companion_spawn_positions_for_room(room)
+	for pos: Vector2 in positions:
+		if MAX_CHARACTERS > 0 and (_squad.size() + _unrecruited_characters.size()) >= MAX_CHARACTERS:
+			break
+		_spawn_recruit_at(pos, _draw_next_hero_scene())
+
+
+func _draw_next_hero_scene() -> PackedScene:
+	if _hero_deck.is_empty():
+		_hero_deck = _build_hero_deck()
+		_hero_deck.shuffle()
+	return _hero_deck.pop_back()
+
+
+func _spawn_recruit_at(pos: Vector2, scene: PackedScene) -> void:
+	var ch: Hero = scene.instantiate() as Hero
+	_characters.add_child(ch)
+	ch.is_player = false
+	ch.position = pos
+	ch.y_sort_enabled = true
+	ch.flip_h = randf() > 0.5
+	ch.frame = randi() % 6
+	ch.frame_progress = randf()
+	ch.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
+	ch.died.connect(_on_hero_died.bind(ch))
+	_unrecruited_characters.append(ch)
 
 
 func _build_hero_deck() -> Array[PackedScene]:
@@ -143,43 +171,62 @@ func _build_hero_deck() -> Array[PackedScene]:
 	return deck
 
 
-func _spawn_enemies() -> void:
-	var rooms: Array[Rect2i] = _map.companion_rooms.duplicate()
-	var hero_center: Vector2 = Vector2(_map.hero_room.get_center())
-	rooms.sort_custom(
-		func(a: Rect2i, b: Rect2i) -> bool:
-			return hero_center.distance_squared_to(Vector2(a.get_center())) < hero_center.distance_squared_to(Vector2(b.get_center()))
-	)
-
+func _register_and_populate_rooms(rooms: Array[Rect2i]) -> void:
 	for room: Rect2i in rooms:
-		if _enemies.size() >= MAX_ENEMIES:
-			break
+		if not _room_remaining_enemies.has(room):
+			var quota: int = _map.get_room_enemy_quota(room)
+			_room_remaining_enemies[room] = quota
+			_room_spawned_enemies[room] = 0
+		_populate_room_enemies(room)
 
-		var tier: int = _map.get_room_tier(room)
-		var mob_count: int = 0
-		match tier:
-			1:
-				mob_count = randi_range(5, 8)
-			2:
-				mob_count = randi_range(12, 18)
-			3:
-				mob_count = randi_range(25, 35)
 
-		var remaining_capacity: int = MAX_ENEMIES - _enemies.size()
-		mob_count = mini(mob_count, remaining_capacity)
+func _populate_room_enemies(room: Rect2i) -> void:
+	var remaining: int = _room_remaining_enemies.get(room, 0)
+	var alive_in_room: int = _room_spawned_enemies.get(room, 0)
+	var needed: int = remaining - alive_in_room
+	if needed <= 0 or _enemies.size() >= MAX_ENEMIES:
+		return
 
-		var spawn_positions: Array[Vector2] = _map.get_enemy_spawn_positions_for_room(room, mob_count)
-		for pos: Vector2 in spawn_positions:
-			var slime: Enemy = LAVA_SLIME_SCENE.instantiate() as Enemy
-			if slime == null:
-				continue
-			slime.home_room = room
-			slime.position = pos
-			slime.map = _map
-			slime.y_sort_enabled = true
-			slime.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
-			_characters.add_child(slime)
-			_enemies.append(slime)
+	var capacity: int = MAX_ENEMIES - _enemies.size()
+	var to_spawn: int = mini(needed, capacity)
+	var spawn_positions: Array[Vector2] = _map.get_enemy_spawn_positions_for_room(room, to_spawn)
+
+	for pos: Vector2 in spawn_positions:
+		var slime: Enemy = LAVA_SLIME_SCENE.instantiate() as Enemy
+		slime.home_room = room
+		slime.position = pos
+		slime.map = _map
+		slime.y_sort_enabled = true
+		slime.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
+		slime.died.connect(_on_enemy_died.bind(room))
+		_characters.add_child(slime)
+		_enemies.append(slime)
+		_room_spawned_enemies[room] = _room_spawned_enemies.get(room, 0) + 1
+
+
+func _respawn_nearby_hibernating_rooms() -> void:
+	if _enemies.size() >= MAX_ENEMIES:
+		return
+
+	var player_pos: Vector2 = _character.global_position
+	for room: Rect2i in _map.companion_rooms:
+		var remaining: int = _room_remaining_enemies.get(room, 0)
+		var spawned: int = _room_spawned_enemies.get(room, 0)
+		if remaining <= spawned:
+			continue
+
+		var room_world_center: Vector2 = _map.map_to_local(room.get_center())
+		if player_pos.distance_squared_to(room_world_center) <= ROOM_RESPAWN_DIST_SQ:
+			_populate_room_enemies(room)
+			if _enemies.size() >= MAX_ENEMIES:
+				break
+
+
+func _on_enemy_died(room: Rect2i) -> void:
+	if _room_remaining_enemies.has(room):
+		_room_remaining_enemies[room] = maxi(0, _room_remaining_enemies[room] - 1)
+	if _room_spawned_enemies.has(room):
+		_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
 
 
 func _on_projectile_spawn_requested(projectile: Projectile) -> void:
@@ -195,7 +242,6 @@ func _update_followers(delta: float) -> void:
 
 func _update_enemies() -> void:
 	var camera_pos: Vector2 = _camera.global_position
-	const ACTIVE_DIST_SQ: float = 480.0 * 480.0
 
 	var i: int = _enemies.size() - 1
 	while i >= 0:
@@ -205,7 +251,17 @@ func _update_enemies() -> void:
 			i -= 1
 			continue
 
-		if enemy.global_position.distance_squared_to(camera_pos) > ACTIVE_DIST_SQ:
+		var dist_sq: float = enemy.global_position.distance_squared_to(camera_pos)
+		if dist_sq > ENEMY_DESPAWN_DIST_SQ:
+			var room: Rect2i = enemy.home_room
+			if _room_spawned_enemies.has(room):
+				_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
+			enemy.queue_free()
+			_enemies.remove_at(i)
+			i -= 1
+			continue
+
+		if dist_sq > ENEMY_ACTIVE_DIST_SQ:
 			i -= 1
 			continue
 

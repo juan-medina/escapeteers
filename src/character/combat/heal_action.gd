@@ -10,16 +10,12 @@ var heal_effect_scene: PackedScene = preload("res://projectile/heal/heal_effect.
 var check_line_of_sight: bool = false
 
 
-func can_execute(user: Character, target: Character) -> bool:
-	if not is_ready():
-		return false
+func can_reach(user: Character, target: Character) -> bool:
 	if target == null or not is_instance_valid(target) or target.is_dead or target.health <= 0.0:
 		return false
 	if target.health >= target.max_health:
 		return false
-
-	var dist: float = user.global_position.distance_to(target.global_position)
-	if dist < min_range_distance or dist > range_distance:
+	if not super.can_reach(user, target):
 		return false
 
 	if check_line_of_sight:

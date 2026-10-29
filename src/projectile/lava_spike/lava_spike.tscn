@@ -52,7 +52,7 @@ size = Vector2(16, 2)
 [node name="LavaSpike" type="Area2D"]
 y_sort_enabled = true
 collision_layer = 32
-collision_mask = 7
+collision_mask = 65
 script = ExtResource("1_script")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
