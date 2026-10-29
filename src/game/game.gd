@@ -103,7 +103,7 @@ func _spawn_characters() -> void:
 		spawn_points.resize(MAX_CHARACTERS)
 
 	var hero_deck: Array[PackedScene] = []
-	var starter_heroes: Array[PackedScene] = [WIZARD_SCENE, PRIEST_SCENE, ARMORED_AXEMAN_SCENE]
+	var starter_heroes: Array[PackedScene] = [PRIEST_SCENE, ARMORED_AXEMAN_SCENE]
 
 	for i: int in range(spawn_points.size()):
 		var pos: Vector2 = spawn_points[i]
