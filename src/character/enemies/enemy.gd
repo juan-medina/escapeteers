@@ -16,6 +16,7 @@ const _GROUP_ENEMIES: StringName = &"enemies"
 const WAYPOINT_ARRIVE_DIST_SQ: float = 64.0
 const PATROL_TIMEOUT: float = 10.0
 const KNOCKBACK_DECAY: float = 600.0
+const SLOW_MODULATE: Color = Color(0.45, 0.75, 1.35, 1.0)
 
 @export var detection_range: float = 140.0
 @export var attack_cooldown: float = 1.2
@@ -35,6 +36,8 @@ var _patrol_timer: float = 0.0
 var _idle_wait_timer: float = 0.0
 var _knockback_velocity: Vector2 = Vector2.ZERO
 var _notifier: VisibleOnScreenNotifier2D = null
+var _slow_timer: float = 0.0
+var _slow_multiplier: float = 1.0
 
 
 func _ready() -> void:
@@ -74,6 +77,14 @@ func _physics_process(delta: float) -> void:
 
 	if _knockback_velocity.length_squared() > 1.0:
 		_knockback_velocity = _knockback_velocity.move_toward(Vector2.ZERO, KNOCKBACK_DECAY * delta)
+
+	if _slow_timer > 0.0:
+		_slow_timer -= delta
+		if _slow_timer <= 0.0:
+			_slow_timer = 0.0
+			_slow_multiplier = 1.0
+			_base_modulate = Color.WHITE
+			_animated_sprite.modulate = Color.WHITE
 
 	_check_combat_actions()
 
@@ -128,6 +139,17 @@ func apply_knockback(force: Vector2) -> void:
 	_knockback_velocity = force
 
 
+func apply_slow(factor: float, duration: float) -> void:
+	if is_dead or duration <= 0.0:
+		return
+	set_physics_process(true)
+	set_process(true)
+	_slow_multiplier = clampf(factor, 0.1, 1.0)
+	_slow_timer = maxf(_slow_timer, duration)
+	_base_modulate = SLOW_MODULATE
+	_animated_sprite.modulate = SLOW_MODULATE
+
+
 func take_damage(amount: float) -> void:
 	set_physics_process(true)
 	set_process(true)
@@ -168,7 +190,7 @@ func _process_patrol(delta: float) -> void:
 
 	var waypoint: Vector2 = _navigator.get_next_waypoint(self, _patrol_destination, map, delta)
 	var move_vec: Vector2 = (waypoint - global_position).normalized()
-	velocity = (move_vec * speed) + _knockback_velocity
+	velocity = (move_vec * speed * _slow_multiplier) + _knockback_velocity
 	move_and_slide()
 	update_visuals(velocity * delta)
 
@@ -214,7 +236,7 @@ func _process_chase(delta: float) -> void:
 
 	var waypoint: Vector2 = _navigator.get_next_waypoint(self, target.global_position, map, delta)
 	var move_vec: Vector2 = (waypoint - global_position).normalized()
-	velocity = (move_vec * speed) + _knockback_velocity
+	velocity = (move_vec * speed * _slow_multiplier) + _knockback_velocity
 	move_and_slide()
 	update_visuals(velocity * delta)
 
@@ -258,6 +280,10 @@ func _pick_new_patrol_destination() -> void:
 func _on_death() -> void:
 	set_physics_process(false)
 	remove_from_group(_GROUP_ENEMIES)
+	_slow_timer = 0.0
+	_slow_multiplier = 1.0
+	_base_modulate = Color.WHITE
+	_animated_sprite.modulate = Color.WHITE
 	super._on_death()
 	if not _animated_sprite.animation_finished.is_connected(queue_free):
 		_animated_sprite.animation_finished.connect(queue_free, CONNECT_ONE_SHOT)

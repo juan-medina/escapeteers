@@ -3,6 +3,32 @@
 [ext_resource type="PackedScene" uid="uid://derhacq4fqbxt" path="res://character/character.tscn" id="1_base"]
 [ext_resource type="Script" uid="uid://7exulbvinnu3" path="res://character/heroes/wizard/wizard.gd" id="2_script"]
 [ext_resource type="Texture2D" uid="uid://dfxivslghvg13" path="res://character/heroes/wizard/wizard.png" id="3_tex"]
+[ext_resource type="PackedScene" uid="uid://df7h2kwl40v5r" path="res://projectile/arrow/arrow.tscn" id="3_yfert"]
+[ext_resource type="PackedScene" path="res://projectile/heal/heal_effect.tscn" id="4_xdu0t"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_c2b6x"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mddxa"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_g8ixr"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_41k30"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_y0hll"]
+atlas = ExtResource("3_tex")
+region = Rect2(400, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_lmvj5"]
+atlas = ExtResource("3_tex")
+region = Rect2(500, 300, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_w25wn"]
 atlas = ExtResource("3_tex")
@@ -96,6 +122,29 @@ region = Rect2(700, 100, 100, 100)
 animations = [{
 "frames": [{
 "duration": 1.0,
+"texture": SubResource("AtlasTexture_c2b6x")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_mddxa")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_g8ixr")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_41k30")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_y0hll")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_lmvj5")
+}],
+"loop": 0,
+"name": &"attack_ranged1",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
 "texture": SubResource("AtlasTexture_w25wn")
 }, {
 "duration": 1.0,
@@ -184,7 +233,27 @@ animations = [{
 [node name="Wizard" unique_id=1787024550 instance=ExtResource("1_base")]
 script = ExtResource("2_script")
 is_player = false
+can_heavy_melee = false
+melee1_cooldown = 0.5
+melee2_cooldown = 3.5
+melee2_chance = 0.35
+melee1_damage = 10.0
+melee2_damage = 25.0
+melee1_knockback = 85.0
+melee2_knockback = 260.0
+melee2_hit_frames = Array[int]([])
+ranged_cooldown = 1.0
+ranged_damage = 10.0
+ranged_knockback = 0.0
+ranged_frame = 7
+ranged_projectile_scene = ExtResource("3_yfert")
+heal_cooldown = 2.4
+heal_amount = 20.0
+heal_frame = 3
+heal_effect_scene = ExtResource("4_xdu0t")
 
 [node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]
 sprite_frames = SubResource("SpriteFrames_sf")
-animation = &"idle"
+animation = &"attack_ranged1"
+frame = 5
+frame_progress = 1.0

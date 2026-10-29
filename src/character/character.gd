@@ -81,6 +81,8 @@ var sprite_frames: SpriteFrames:
 	set(value):
 		_animated_sprite.sprite_frames = value
 
+var _base_modulate: Color = Color.WHITE
+
 @onready var _animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var _collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var _spawn_point: Marker2D = $SpawnPoint
@@ -177,7 +179,7 @@ func _on_death() -> void:
 func _flash_hurt() -> void:
 	var tween: Tween = create_tween()
 	_animated_sprite.modulate = Color(2.5, 0.4, 0.4)
-	tween.tween_property(_animated_sprite, "modulate", Color.WHITE, 0.08)
+	tween.tween_property(_animated_sprite, "modulate", _base_modulate, 0.08)
 
 
 func _on_animation_finished() -> void:
