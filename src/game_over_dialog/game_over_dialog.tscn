@@ -38,10 +38,22 @@ autowrap_mode = 2
 [node name="HSeparator" type="HSeparator" parent="Center/Panel/VBox"]
 layout_mode = 2
 
-[node name="Retry" type="Button" parent="Center/Panel/VBox"]
+[node name="Buttons" type="HBoxContainer" parent="Center/Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Retry" type="Button" parent="Center/Panel/VBox/Buttons"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Retry"
 
-[connection signal="pressed" from="Center/Panel/VBox/Retry" to="." method="_on_retry_pressed"]
+[node name="BackToMenu" type="Button" parent="Center/Panel/VBox/Buttons"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Main Menu"
+
+[connection signal="pressed" from="Center/Panel/VBox/Buttons/Retry" to="." method="_on_retry_pressed"]
+[connection signal="pressed" from="Center/Panel/VBox/Buttons/BackToMenu" to="." method="_on_back_to_menu_pressed"]

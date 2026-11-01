@@ -3,15 +3,20 @@
 
 extends CanvasLayer
 
+enum MenuTarget { MAIN_MENU }
+
 const FADE_DURATION: float = 1.5
 const FADE_PHASE: float = FADE_DURATION / 3
 const SILENT_DB: float = -80.0
 
 const GAME_SCENE: PackedScene = preload("res://game/game.tscn")
 const LOADING_SCREEN_SCENE: PackedScene = preload("res://loading_screen/loading_screen.tscn")
+const MENU_SCENE: PackedScene = preload("res://menu/menu.tscn")
 
 var in_transition: bool = false
 var filler: ColorRect = null
+var pending_menu_target: MenuTarget = MenuTarget.MAIN_MENU
+
 var _loading_screen: LoadingScreen = null
 
 
@@ -28,12 +33,8 @@ func _ready() -> void:
 	add_child(filler)
 
 	_loading_screen = LOADING_SCREEN_SCENE.instantiate() as LoadingScreen
+	_loading_screen.visible = false
 	add_child(_loading_screen)
-
-	# Start with loading screen visible instantly on game boot
-	visible = true
-	in_transition = true
-	_loading_screen.show_instant(&"Delving into the dungeon...")
 
 
 func set_loading_progress(progress: float, message: StringName = &"") -> void:
@@ -56,10 +57,41 @@ func hide_loading() -> void:
 
 
 func reload_game() -> void:
-	await _go_to_scene(GAME_SCENE)
+	await _go_to_game_scene()
 
 
-func _go_to_scene(scene: PackedScene) -> void:
+func go_to_menu(target: MenuTarget = MenuTarget.MAIN_MENU) -> void:
+	if in_transition:
+		return
+
+	pending_menu_target = target
+	get_viewport().gui_release_focus()
+
+	var tree: SceneTree = get_tree()
+	tree.paused = true
+	visible = true
+	in_transition = true
+
+	await filler.create_tween().tween_property(filler, ^"color:a", 1.0, 0.25).finished
+
+	tree.change_scene_to_packed.call_deferred(MENU_SCENE)
+	tree.paused = false
+	await tree.process_frame
+
+	await tree.create_timer(0.1, true, false, false).timeout
+	if Alerts.is_terminating():
+		return
+
+	await filler.create_tween().tween_property(filler, ^"color:a", 0.0, 0.25).finished
+	visible = false
+	in_transition = false
+
+
+func go_to_menu_instant() -> void:
+	get_tree().change_scene_to_packed.call_deferred(MENU_SCENE)
+
+
+func _go_to_game_scene() -> void:
 	if in_transition:
 		return
 
@@ -73,10 +105,10 @@ func _go_to_scene(scene: PackedScene) -> void:
 	visible = true
 	in_transition = true
 
-	await _loading_screen.fade_in(&"Re-entering the dungeon...", 0.25)
+	await _loading_screen.fade_in(&"Delving into the dungeon...", 0.25)
 
 	# change is deferred, so yield a frame for the new scene to exist
-	tree.change_scene_to_packed.call_deferred(scene)
+	tree.change_scene_to_packed.call_deferred(GAME_SCENE)
 	tree.paused = false
 	await tree.process_frame
 

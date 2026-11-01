@@ -1,0 +1,38 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://pause_overlay/pause_overlay.gd" id="1_eh0lt"]
+[ext_resource type="PackedScene" path="res://pause_panel/pause_panel.tscn" id="2_2626e"]
+[ext_resource type="PackedScene" path="res://settings_panel/settings_panel.tscn" id="3_5xdq4"]
+
+[node name="PauseOverlay" type="CanvasLayer"]
+process_mode = 3
+layer = 64
+visible = false
+script = ExtResource("1_eh0lt")
+
+[node name="ColorRect" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Center" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PausePanel" parent="Center" instance=ExtResource("2_2626e")]
+visible = false
+layout_mode = 2
+
+[node name="SettingsPanel" parent="Center" instance=ExtResource("3_5xdq4")]
+visible = false
+layout_mode = 2
+
+[connection signal="resume_requested" from="Center/PausePanel" to="." method="_on_resume_requested"]
+[connection signal="settings_requested" from="Center/PausePanel" to="." method="_on_pause_panel_settings_requested"]
+[connection signal="back_requested" from="Center/SettingsPanel" to="." method="_on_settings_panel_back_requested"]

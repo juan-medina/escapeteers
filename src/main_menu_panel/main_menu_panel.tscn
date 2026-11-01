@@ -1,0 +1,73 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://main_menu_panel/main_menu_panel.gd" id="1_main"]
+
+[sub_resource type="InputEventAction" id="InputEventAction_pause"]
+device = -1
+action = &"pause"
+
+[sub_resource type="InputEventAction" id="InputEventAction_back"]
+device = -1
+action = &"back"
+
+[sub_resource type="Shortcut" id="Shortcut_back"]
+events = [SubResource("InputEventAction_pause"), SubResource("InputEventAction_back")]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_root"]
+
+[node name="MainMenuPanel" type="PanelContainer"]
+theme_override_styles/panel = SubResource("StyleBoxEmpty_root")
+script = ExtResource("1_main")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Escapeteers"
+horizontal_alignment = 1
+
+[node name="MenuBox" type="PanelContainer" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="ButtonsVBox" type="VBoxContainer" parent="VBox/MenuBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Play" type="Button" parent="VBox/MenuBox/ButtonsVBox"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Play"
+
+[node name="Settings" type="Button" parent="VBox/MenuBox/ButtonsVBox"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Settings"
+
+[node name="About" type="Button" parent="VBox/MenuBox/ButtonsVBox"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "About"
+
+[node name="HSeparator" type="HSeparator" parent="VBox/MenuBox/ButtonsVBox"]
+layout_mode = 2
+
+[node name="Exit" type="Button" parent="VBox/MenuBox/ButtonsVBox"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+shortcut = SubResource("Shortcut_back")
+text = "Exit"
+
+[connection signal="pressed" from="VBox/MenuBox/ButtonsVBox/Play" to="." method="_on_play_pressed"]
+[connection signal="pressed" from="VBox/MenuBox/ButtonsVBox/Settings" to="." method="_on_settings_pressed"]
+[connection signal="pressed" from="VBox/MenuBox/ButtonsVBox/About" to="." method="_on_about_pressed"]
+[connection signal="pressed" from="VBox/MenuBox/ButtonsVBox/Exit" to="." method="_on_exit_pressed"]

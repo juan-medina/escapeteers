@@ -1,0 +1,61 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://eula_screen/eula_screen.gd" id="1_eula"]
+[ext_resource type="Script" path="res://big_text_panel/big_text_panel.gd" id="2_bigtext"]
+
+[node name="EulaScreen" type="CanvasLayer"]
+script = ExtResource("1_eula")
+
+[node name="ColorRect" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.05, 0.05, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="EulaPanel" type="PanelContainer" parent="Center"]
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center/EulaPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Title" type="Label" parent="Center/EulaPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "End-User License Agreement"
+horizontal_alignment = 1
+
+[node name="EulaText" type="RichTextLabel" parent="Center/EulaPanel/VBox"]
+custom_minimum_size = Vector2(550, 250)
+layout_mode = 2
+bbcode_enabled = true
+script = ExtResource("2_bigtext")
+
+[node name="Buttons" type="HBoxContainer" parent="Center/EulaPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Decline" type="Button" parent="Center/EulaPanel/VBox/Buttons" groups=["ui_return"]]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Decline"
+
+[node name="Accept" type="Button" parent="Center/EulaPanel/VBox/Buttons"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Accept"
+
+[connection signal="meta_clicked" from="Center/EulaPanel/VBox/EulaText" to="Center/EulaPanel/VBox/EulaText" method="_on_meta_clicked"]
+[connection signal="pressed" from="Center/EulaPanel/VBox/Buttons/Accept" to="." method="_on_accept_pressed"]
+[connection signal="pressed" from="Center/EulaPanel/VBox/Buttons/Decline" to="." method="_on_decline_pressed"]

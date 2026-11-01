@@ -1,0 +1,35 @@
+[center][color=#ffffff][b]Escapeteers[/b][/color]
+{build}[/center]
+
+Escapeteers is a top-down squad bullet heaven & horde survival game. Lead a fellowship of survivors through an endless, dynamically generated dungeon.
+{download}
+[color=#ffffff][b]GAME DESIGN & PROGRAMMING[/b][/color]
+[url=https://github.com/juan-medina/escapeteers]Juan Medina[/url]
+
+[color=#ffffff][b]ENGINE[/b][/color]
+[url=https://godotengine.org/]Godot Engine 4[/url]
+License: MIT License.
+
+[color=#ffffff][b]GRAPHICS[/b][/color]
+
+[color=#ffffff][b]Pixel UI Theme for Godot[/b][/color]
+Author: [url=https://thowsenmedia.itch.io/]Pelatho[/url]
+Source: [url=https://thowsenmedia.itch.io/pixel-ui-theme-for-godot]Itch.io[/url]
+License: Paid. Personal & commercial use allowed; redistribution and resale prohibited.
+
+[color=#ffffff][b]Godot CRT Shader[/b][/color]
+Author: [url=https://perons.itch.io/]Henrique Alves (perons)[/url]
+Source: [url=https://perons.itch.io/godot-crt-shader]Itch.io[/url]
+License: Free for personal & commercial use. Purchased to support the author.
+
+[color=#ffffff][b]Kenney Game Assets[/b][/color]
+Author: [url=https://kenney.nl/]Kenney[/url]
+Source: [url=https://kenney.itch.io/kenney-game-assets]Itch.io[/url]
+License: Creative Commons Zero (CC0), public domain.
+
+[color=#ffffff][b]SOUND EFFECTS[/b][/color]
+
+[color=#ffffff][b]Modern UI SFX[/b][/color]
+Author: [url=https://leohpaz.itch.io/]Leohpaz[/url]
+Source: [url=https://leohpaz.itch.io/modern-ui-sfx]Itch.io[/url]
+License: Paid. Personal & commercial use allowed; the pack may not be resold or redistributed.
