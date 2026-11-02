@@ -163,6 +163,10 @@ func apply_slow(factor: float, duration: float) -> void:
 	_animated_sprite.modulate = SLOW_MODULATE
 
 
+func is_slowed() -> bool:
+	return _slow_timer > 0.0
+
+
 func take_damage(amount: float) -> void:
 	_set_sleeping(false)
 	super.take_damage(amount)

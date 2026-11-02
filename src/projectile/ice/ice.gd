@@ -6,10 +6,12 @@ extends Projectile
 
 const ANIM_FORM: StringName = &"form"
 
-@export var slow_factor: float = 0.5
-@export var slow_duration: float = 3.0
+@export var slow_factor: float = 0.4
+@export var slow_duration: float = 4.0
+@export var max_pierce_count: int = 0
 
 var _is_forming: bool = true
+var _hit_targets: Array[Node2D] = []
 
 
 func _ready() -> void:
@@ -30,12 +32,6 @@ func _physics_process(delta: float) -> void:
 	super._physics_process(delta)
 
 
-func _on_hit(target: Node2D) -> void:
-	if target.has_method(&"apply_slow"):
-		target.call(&"apply_slow", slow_factor, slow_duration)
-	super._on_hit(target)
-
-
 func _destroy() -> void:
 	if _is_dying:
 		return
@@ -43,6 +39,34 @@ func _destroy() -> void:
 	_is_forming = false
 	disable_collisions()
 	play(ANIM_IMPACT)
+
+
+func _on_body_entered(_body: Node2D) -> void:
+	if _is_dying or _is_forming:
+		return
+	_destroy()
+
+
+func _on_area_entered(area: Area2D) -> void:
+	if _is_dying or _is_forming:
+		return
+
+	if area is Hurtbox:
+		var hurtbox: Hurtbox = area as Hurtbox
+		var target: Character = hurtbox.owner_character
+		if target != null and is_instance_valid(target) and not target.is_dead:
+			if _hit_targets.has(target):
+				return
+			_hit_targets.append(target)
+			if target.has_method(&"apply_slow"):
+				target.call(&"apply_slow", slow_factor, slow_duration)
+			if target.has_method(&"take_damage"):
+				target.call(&"take_damage", damage)
+			if knockback > 0.0 and target.has_method(&"apply_knockback"):
+				target.call(&"apply_knockback", direction * knockback)
+			hit_target.emit(target, damage)
+			if max_pierce_count > 0 and _hit_targets.size() >= max_pierce_count:
+				_destroy()
 
 
 func _on_animation_finished() -> void:
@@ -53,4 +77,3 @@ func _on_animation_finished() -> void:
 		play(ANIM_FLY)
 	elif _animated_sprite.animation == ANIM_IMPACT:
 		queue_free()
-
