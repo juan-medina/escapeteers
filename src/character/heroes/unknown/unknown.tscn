@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://derhacq4fqbxt" path="res://character/character.tscn" id="1_base"]
 [ext_resource type="Script" path="res://character/heroes/unknown/unknown.gd" id="2_script"]
-[ext_resource type="Texture2D" path="res://character/heroes/unknown/unknown.png" id="3_tex"]
+[ext_resource type="Texture2D" path="res://data/assets/character/heroes/unknown/unknown.png" id="3_tex"]
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_unknown"]
 animations = [{
