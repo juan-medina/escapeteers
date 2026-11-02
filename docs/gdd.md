@@ -1,142 +1,150 @@
 # GAME DESIGN DOCUMENT: ESCAPETEERS
 
 **Working Title:** Escapeteers  
-**Genre:** Top-Down Squad Bullet Heaven / Horde Survival  
+**Genre:** Top-Down Squad Dungeon Crawler / Horde Survival  
 **Target Platform:** PC  
-**Inspiration:** Cannon Fodder (Squad movement & attrition), Gauntlet (Monster nests & dungeon crawls), Vampire Survivors (Zero-button auto-fire & minion swarms), The Lord of the Rings (Fellowship escort dynamic)  
+**Inspiration:** Cannon Fodder (Squad movement & attrition), Gauntlet (Dungeon rooms & key-door progression), Vampire Survivors (Zero-button auto-combat)  
 
 ---
 
 ## 1. High Concept
-Lead a frantic, auto-firing fellowship of survivors through an endless, dynamically generated dungeon. Act as the focal point of your party, steering your surrounding companions past deadly dungeon hazards, smashing relentless monster threats, and rallying recruits discovered across dungeon rooms to replace fallen allies and expand your squad's firepower.
+Lead an auto-battling fellowship of survivors through a room-based dungeon. Steer your growing party through corridors and chambers, recruit new heroes with distinct skills to expand your squad's firepower, navigate past localized spike hazards, eliminate diverse enemy threats including persistent summoners, and hunt down color-coded keys in distant rooms to unlock matching doors and advance.
 
 ---
 
 ## 2. Core Design Pillars
-- **The Fellowship Formation:** Your squad surrounds you in layered rings rather than a single-file tail. When you stand still, companions form a protective circle around you; when you walk, allies ahead part out of your way and the group flows around your flanks and rear in a trailing crescent.
-- **Stick-Only Spatial Control:** No stance or formation buttons. All shooting, melee strikes, and healing happen automatically. Gameplay revolves entirely around where you stand and when you move: stepping close enough for melee units to reach targets, and moving early enough to pull your delayed party out of danger.
-- **Attrition, Healers & Recruitment:** Because followers react slightly after you move, stragglers on the trailing edge can clip hazards, enemy projectiles, or ambushes. Healers mend injured allies between fights, and rescued companions replace allies who fall.
-- **Gauntlet Swarm Density:** Enemies patrol dungeon rooms, swarm intruders, and project ranged hazards that deny space.
+- **The Fellowship Formation:** Your squad surrounds you in layered rings. Standing still forms a protective circle around you; walking parts the allies ahead and causes the group to flow around your flanks and rear in a trailing crescent.
+- **Stick-Only Spatial Control:** No manual combat or stance buttons. All shooting, melee strikes, and healing trigger automatically based on proximity and cooldowns. Gameplay focuses on spatial navigation: closing distance for melee units, keeping ranged units in line of sight, and steering trailing companions away from hazards.
+- **Squad Growth & Attrition:** Rescue unrecruited heroes discovered waiting in dungeon rooms to grow party size and firepower. Healers sustain damaged allies between skirmishes, and new recruits replace fallen companions.
+- **Color-Coded Key & Door Progression:** Advancement requires exploring rooms to find color-coded keys that unlock matching doors blocking corridors to new dungeon sections.
+- **Mindful Hazard Navigation:** Localized spike trap patches punish careless steering, requiring the leader to take wide turns so trailing followers do not drag across hazard zones.
 
 ---
 
-## 3. World & Map Generation
-The game world is an endless, chunk-based procedural dungeon:
+## 3. World & Level Design
+The dungeon consists of interconnected rooms and corridors structured around exploration and lock-and-key progression:
 
-- **Corridors & Chokepoints:** Narrow passages that restrict how wide the fellowship can spread, forcing the party to bunch together to push through waves before expanding again in open rooms.
-- **Open Chambers & Arenas:** Larger rooms housing enemy packs, torch light fixtures, breakable terrain, and waiting companions ready to join the squad.
-- **Infinite Dynamic Streaming:** Dungeon rooms generate ahead of the party and despawn far behind them, creating a continuous, seamless run with no loading screens.
+- **Rooms & Corridors:** Corridors funnel the party into tight formations, while chambers provide space for tactical repositioning, companion recruitment, and skirmishes.
+- **Color-Coded Doors & Keys:** Locked doors (e.g. Red, Blue, Yellow) block passage to subsequent dungeon sectors. Matching keys are hidden in different rooms, requiring purposeful exploration and route planning.
+- **Localized Spike Trap Areas:** Floor spikes placed in select areas (corridor chokepoints, room corners, or guarding key locations). Passing over active spikes deals damage to any squad member who steps on them. Spikes are placed sparingly rather than everywhere.
 
 ---
 
 ## 4. The Squad (The Escapeteers)
-The squad consists of distinct hero archetypes surrounding the player's lead character. The run begins with the player accompanied by a starter vanguard, and additional survivors wait throughout dungeon rooms, joining the fellowship immediately upon contact.
+The player guides the lead character as the focal point of the fellowship. Companions are discovered waiting in dungeon rooms and join the party upon physical contact to increase group size.
 
 ### Formation & Engagement Behaviors
-- **Circle-to-Crescent Movement:** Companions keep personal space from one another and the leader. Moving parts the front of the crowd so the player is always visible, while the party trails behind in an organic crescent.
-- **Melee Leashing:** Melee fighters monitor a short leash radius around their formation slot. When a target enters range, they step out of formation to engage and strike, returning to formation once the enemy falls or the leader pulls away.
-- **Fixed Formation Discipline:** Ranged casters, archers, and healers remain anchored to their escort positions, never leaving formation to chase enemies.
-- **Risk/Reward Positioning:** Hugging enemies pulls the entire squad into melee contact—maximizing damage at the cost of tighter dodge windows and hazard exposure.
-- **Follower Navigation & Collisions:** Companions steer along navmesh paths around dungeon walls and obstacles, maintaining line-of-sight checks for ranged projectiles and healing spells.
+- **Circle-to-Crescent Flow:** Companions give personal space to the leader and each other. When moving, the party trails behind in an organic crescent.
+- **Melee Leashing:** Melee fighters watch a short leash range around their formation slot. When an enemy is detected, they step forward to strike, returning to formation when the target dies or the leader pulls away.
+- **Formation Anchors:** Ranged attackers and healers stay strictly locked to their formation positions, never breaking ranks to chase.
+- **Navmesh Steering:** Companions steer along navmesh paths around walls and obstacles, maintaining line of sight to targets.
 
-### Hero Archetypes & Abilities
+### Hero Archetypes & Skills
 
 #### 1. Archer (Ranged Physical)
 - **Role:** Long-range single-target sniper.
 - **Abilities:**
   - *Snipe Arrow:* Fires swift arrows at distant targets across long range on a moderate cooldown.
-  - *Impact Force:* Inflicts heavy knockback on hit, repelling advancing threats away from the formation.
-- **Positioning:** Stays strictly in formation slot; requires clear line of sight.
+  - *Impact Force:* Inflicts heavy knockback on hit to push advancing enemies away from the squad.
+- **Positioning:** Stays strictly anchored in formation; requires clear line of sight.
 
 #### 2. Armored Axeman (Melee Brawler)
-- **Role:** Sturdy frontline bruiser and crowd disruptor.
+- **Role:** Frontline brawler and crowd disruptor.
 - **Abilities:**
   - *Axe Chop:* Rapid melee slashes on a short cooldown with moderate knockback.
-  - *Crushing Cleave (Heavy Strike):* Has a chance after successive swings to unleash a devastating heavy chop on a long cooldown, delivering massive burst damage and massive knockback that tosses enemies backward.
-- **Positioning:** Steps out on a melee leash to intercept nearby enemies.
+  - *Crushing Cleave (Heavy Strike):* Has a chance after successive swings to unleash a heavy chop on a long cooldown, delivering high burst damage and massive knockback.
+- **Positioning:** Steps out on a melee leash to intercept nearby threats.
 
 #### 3. Knight (Melee Vanguard)
-- **Role:** Frontline line-holder and target pin.
+- **Role:** Frontline anchor and crowd control pin.
 - **Abilities:**
-  - *Sword Strike:* Fast melee slashes on a short cooldown with zero regular knockback, allowing the Knight to pin enemies in place for squad focus fire.
-  - *Shield Slam (Heavy Strike):* Has a chance after successive swings to deliver a heavy strike on a long cooldown, dealing heavy burst damage and sending foes flying with strong knockback.
+  - *Sword Strike:* Fast melee slashes on a short cooldown with zero knockback, pinning enemies in place for squad focus fire.
+  - *Shield Slam (Heavy Strike):* Has a chance after successive swings to deliver a heavy blow on a long cooldown, dealing heavy damage and strong knockback.
 - **Positioning:** Steps out on a melee leash to lock down advancing targets.
 
 #### 4. Knight Templar (Melee Shock Infantry)
 - **Role:** Aggressive frontline defender with high-impact displacement.
 - **Abilities:**
-  - *Heavy Blade:* Powerful melee slashes on a short cooldown with elevated standard knockback, consistently pushing swarms away from the fellowship.
-  - *Smite (Heavy Strike):* Has a chance after successive swings to unleash an empowered strike on a long cooldown, dealing heavy damage with massive knockback.
-- **Positioning:** Steps out on a melee leash to create breathing room for ranged companions.
+  - *Heavy Blade:* Powerful melee slashes on a short cooldown with elevated standard knockback, consistently shoving enemies away.
+  - *Smite (Heavy Strike):* Has a chance after successive swings to unleash an empowered strike on a long cooldown with massive knockback.
+- **Positioning:** Steps out on a melee leash to create space for backline allies.
 
 #### 5. Priest (Support Healer)
-- **Role:** Dedicated squad sustain and triage.
+- **Role:** Dedicated squad triage and sustain.
 - **Abilities:**
-  - *Divine Heal:* Automatically identifies the most wounded ally within long range and channels healing magic on a moderate cooldown, restoring a large chunk of lost health.
-  - *Protective Focus:* Pure support hero; abstains from direct offensive attacks to dedicate attention entirely to party preservation.
-- **Positioning:** Stays strictly anchored inside the protective core of the formation.
+  - *Divine Heal:* Targets the most injured ally within long range and channels healing magic on a moderate cooldown, restoring substantial health.
+  - *Protective Focus:* Pure support hero; does not attack, dedicating full attention to sustaining the party.
+- **Positioning:** Stays protected within the core of the formation.
 
 #### 6. Soldier (Hybrid Melee / Ranged)
-- **Role:** Versatile combatant adapting to combat distance.
+- **Role:** Adaptive combatant adjusting to target distance.
 - **Abilities:**
-  - *Ranged Salvo:* While enemies remain at a distance, stays in formation and fires arrows on a short cooldown.
-  - *Melee Engagement:* When enemies enter close proximity, draws a sword and steps out on a melee leash, executing fast slashes on a short cooldown and occasional heavy strikes on a long cooldown with massive knockback.
-- **Positioning:** Dynamically transitions between formation archery and leash-based melee brawling.
+  - *Ranged Salvo:* Fires arrows on a short cooldown while enemies remain at distance.
+  - *Melee Engagement:* Draws a blade and steps out on a melee leash when enemies get close, delivering fast slashes on a short cooldown and occasional heavy strikes on a long cooldown.
+- **Positioning:** Dynamically transitions between formation archery and leash-based melee combat.
 
 #### 7. Swordsman (Melee Skirmisher)
 - **Role:** Rapid-strike duelist specializing in multi-hit damage.
 - **Abilities:**
-  - *Quick Slash:* Fast sword slices on a short cooldown with zero knockback, maintaining constant pressure on target health.
-  - *Flurry Combo (Heavy Strike):* Has a chance after successive strikes to trigger a multi-hit flurry on a long cooldown, striking the target three times in rapid succession for heavy compound damage without scattering the target.
-- **Positioning:** Steps out on a melee leash to shred high-priority targets up close.
+  - *Quick Slash:* Fast sword slices on a short cooldown with zero knockback to maintain pressure.
+  - *Flurry Combo (Heavy Strike):* Has a chance after successive strikes to trigger a multi-hit flurry on a long cooldown, striking three times in rapid succession for heavy compound damage.
+- **Positioning:** Steps out on a melee leash to shred high-priority targets.
 
 #### 8. Wizard (Ranged Crowd Control)
-- **Role:** Area-of-influence spellcaster and crowd decelerator.
+- **Role:** Area spellcaster and crowd decelerator.
 - **Abilities:**
-  - *Ice Bolt:* Casts glacial ice missiles at long range on a moderate-to-long cooldown.
-  - *Chill Status Effect:* Enemies struck by ice magic are afflicted with a chilling slow effect, drastically lowering their movement speed for a sustained duration and giving the fellowship time to reposition.
+  - *Ice Bolt:* Launches piercing ice missiles at long range on a moderate-to-long cooldown.
+  - *Chill Status Effect:* Afflicts struck targets with a chilling slow, heavily reducing their movement speed for a sustained duration.
 - **Positioning:** Stays strictly in formation slot.
-
-### Hero Recruitment & Rarity
-- **Recruitment Mechanic:** Unrecruited companions wait in discovered dungeon rooms. Walking any squad member into contact instantly recruits them into the fellowship.
-- **Starter Fellowship:** The player begins each expedition supported by a starter vanguard (Priest and Armored Axeman).
-- **Encounter Weighting:** Frontline defenders (Armored Axeman, Knight) appear most frequently; specialized fighters (Knight Templar, Swordsman) are uncommon; distinct tactical anchors (Wizard, Archer, Soldier, Priest) are rare discoveries.
 
 ---
 
 ## 5. Enemies & Hazards
 
-Survival is dictated by spatial awareness, threat prioritization, and dodge timing.
+### Enemies
 
-### Current Enemies
+#### 1. Lava Slime (Implemented)
+- **Role:** Hybrid skirmisher mob.
+- **Behavior:** Patrols room bounds with idle pauses; hibernates off-screen; chases closest squad member upon gaining direct line of sight.
+- **Attacks:**
+  - *Slime Strike:* Close-range melee attack on a moderate cooldown.
+  - *Lava Spike:* Spits a lava projectile across long distances on a moderate cooldown when horizontally aligned with line of sight.
+- **Vulnerabilities:** Susceptible to knockback pushback and frost slow effects.
 
-#### Lava Slime
-- **Classification:** Hybrid Skirmisher / Slime Mob.
-- **Behavior:**
-  - *Patrol & Hibernation:* Wanders walkable bounds within its home room, pausing intermittently. Hibernates off-screen to save performance until approached.
-  - *Chase:* Pursues the closest squad member upon establishing direct line of sight within its detection radius.
-- **Combat Abilities:**
-  - *Slime Strike:* Executes a close-range melee lunge on a moderate cooldown.
-  - *Lava Spike:* Spits a high-velocity lava projectile across long distances on a moderate cooldown whenever aligned horizontally with a squad member with clear line of sight.
-- **Vulnerabilities & Reactions:**
-  - *Knockback Susceptibility:* Melee and heavy attacks shove the slime backward, decaying over distance.
-  - *Frost Vulnerability:* Susceptible to chilling magic (e.g. Wizard ice bolts), visually turning cold blue and crawling at heavily reduced speed.
+#### 2. Melee Enemies (Planned)
+- **Role:** Close-combat rushers.
+- **Behavior:** Charge directly toward squad members to breach the fellowship's perimeter and force melee companions to engage.
+- **Threat:** Put pressure on frontline defenders and can slip past to reach fragile ranged allies if not blocked.
 
-### Planned Enemies & Dungeon Threats
-- **Monster Nests:** Stationary organic or cursed structures (bone piles, spider nests, demon portals) that continuously spawn mob waves until focused down and shattered by squad fire.
-- **Swarm Mobs:** Fast, low-HP melee runners that rush the party from multiple angles to overwhelm frontline melee screens.
-- **Elite Wardens & Bosses:** High-durability enemies deploying telegraphed ground hazards (lava pools, cleaves, shockwaves), testing the player's ability to steer trailing companions clear of area denial effects.
+#### 3. Ranged Enemies (Planned)
+- **Role:** Distance artillery.
+- **Behavior:** Keep their distance and fire projectiles at squad members from afar.
+- **Threat:** Harass backline units and force the player to steer the squad forward into attack range.
+
+#### 4. Summoner Enemies (Planned)
+- **Role:** Priority spawner.
+- **Behavior:** Hangs back and continuously summons minion waves without stopping until destroyed.
+- **Threat:** Overwhelms the squad through sheer numbers if left alive, making them a high-priority target to rush down and eliminate.
+
+### Environmental Hazards
+
+#### Localized Spike Trap Areas
+- **Behavior:** Floor spike patches placed in select rooms and corridor sections.
+- **Threat:** Dealing damage to any party member walking over them.
+- **Gameplay Impact:** Demands cautious steering from the player, as trailing followers swinging around corners can drag across spikes if the leader turns too tightly.
 
 ---
 
 ## 6. Core Game Loop
-1. **Steer the Fellowship:** Move with the stick or keys to guide your surrounding party through the procedural dungeon.
-2. **Position for Maximum Damage:** Close distance to allow melee brawlers on leashes to engage while ranged companions fire from within formation.
-3. **Dodge Area Hazards & Projectiles:** Evade enemy ranged spikes and telegraphed strikes early so trailing companions clear hazards in time.
-4. **Sustain & Rebuild:** Protect healers to recover from chip damage and seek out stranded heroes in dungeon rooms to replace fallen comrades.
-5. **Survive & Score:** Clear rooms, defeat swarms, and push deeper through infinite dungeon corridors until the leader falls.
+1. **Explore the Dungeon:** Guide the fellowship through corridors and open rooms using stick or directional keys.
+2. **Grow the Squad:** Locate stranded heroes in dungeon rooms and walk into contact to recruit them, adding new skills and firepower to your party.
+3. **Engage Diverse Foes:** Auto-battle melee rushers, return fire against ranged enemies, and focus down persistent summoners before they overwhelm the party.
+4. **Mind Hazard Zones:** Steer carefully around localized floor spike traps so trailing squad members stay out of harm's way.
+5. **Collect Color-Coded Keys:** Search rooms to locate keys (e.g. Red, Blue, Yellow) needed for locked doors.
+6. **Unlock Doors & Advance:** Bring the matching key to locked color-coded doors to open access to new dungeon sectors.
 
 ---
 
-## 7. Lose Condition
-- Individual followers can perish and be replaced by finding recruits throughout the dungeon, but the run ends immediately if the player's lead character loses all health.
+## 7. Win & Lose Conditions
+- **Advancement Goal:** Locate color-coded keys, open matching doors, and clear dungeon sectors.
+- **Lose Condition:** The run ends immediately if the player's lead character loses all health. Fallen companions can be replaced by recruiting new heroes found in dungeon rooms.
