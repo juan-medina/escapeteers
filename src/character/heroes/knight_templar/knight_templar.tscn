@@ -2,7 +2,9 @@
 
 [ext_resource type="PackedScene" uid="uid://derhacq4fqbxt" path="res://character/character.tscn" id="1_base"]
 [ext_resource type="Script" uid="uid://d083plcr584hf" path="res://character/heroes/knight_templar/knight_templar.gd" id="2_script"]
+[ext_resource type="PackedScene" uid="uid://df7h2kwl40v5r" path="res://projectile/arrow/arrow.tscn" id="3_6f3mv"]
 [ext_resource type="Texture2D" uid="uid://t0aiu7rmhlbn" path="res://data/assets/character/heroes/knight_templar/knight_templar.png" id="3_tex"]
+[ext_resource type="PackedScene" path="res://projectile/heal/heal_effect.tscn" id="4_48ier"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_71hbk"]
 atlas = ExtResource("3_tex")
@@ -299,9 +301,8 @@ animations = [{
 [node name="KnightTemplar" unique_id=204543114 instance=ExtResource("1_base")]
 script = ExtResource("2_script")
 is_player = false
-can_melee = true
 can_heavy_melee = true
-melee_range = 28.0
+melee_leash_distance = 72.0
 melee1_cooldown = 0.5
 melee2_cooldown = 3.5
 melee2_chance = 0.35
@@ -309,6 +310,17 @@ melee1_damage = 10.0
 melee2_damage = 25.0
 melee1_knockback = 120.0
 melee2_knockback = 260.0
+melee2_hit_frames = Array[int]([])
+ranged_cooldown = 1.0
+ranged_damage = 10.0
+ranged_knockback = 0.0
+ranged_frame = 7
+ranged_projectile_scene = ExtResource("3_6f3mv")
+heal_cooldown = 2.4
+heal_amount = 20.0
+heal_frame = 3
+heal_effect_scene = ExtResource("4_48ier")
+can_melee = true
 
 [node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]
 sprite_frames = SubResource("SpriteFrames_sf")
