@@ -87,14 +87,11 @@ def normalise(entry, tiers, peak_ceiling):
 
 
 def main():
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    os.chdir(repo_root)
-
     parser = argparse.ArgumentParser(
         description="Normalise each sound (WAV, OGG, etc.) and output as 16-bit PCM WAV."
     )
-    parser.add_argument("--manifest", default=os.path.join("raw", "sounds.json"),
-                        help="Sound manifest (default: raw/sounds.json)")
+    parser.add_argument("--manifest", default=os.path.join("scripts", "config", "sounds.json"),
+                        help="Sound manifest (default: scripts/config/sounds.json)")
     args = parser.parse_args()
 
     if shutil.which("ffmpeg") is None:

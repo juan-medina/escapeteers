@@ -1,0 +1,15 @@
+windows-64
+Escapeteers - Windows (64-bit)
+windows-32
+Escapeteers - Windows (32-bit / Legacy)
+
+linux-64
+Escapeteers - Linux (64-bit)
+linux-32
+Escapeteers - Linux (32-bit / Legacy)
+
+mac
+Escapeteers - macOS (Universal)
+
+web
+Escapeteers - Web

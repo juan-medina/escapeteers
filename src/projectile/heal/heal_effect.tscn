@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://projectile/heal/heal_effect.gd" id="1_script"]
-[ext_resource type="Texture2D" uid="uid://danml8rm431im" path="res://projectile/heal/heal_effect.png" id="2_tex"]
+[ext_resource type="Texture2D" uid="uid://cfbf56xjx2mjm" path="res://data/assets/projectile/heal/heal_effect.png" id="2_tex"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_h0"]
 atlas = ExtResource("2_tex")

@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://bthn14yvu0m66"]
 
 [ext_resource type="Script" path="res://projectile/lava_spike/lava_spike.gd" id="1_script"]
-[ext_resource type="Texture2D" uid="uid://demj22ks4gy0x" path="res://projectile/lava_spike/lava_spike.png" id="2_tex"]
+[ext_resource type="Texture2D" uid="uid://bdc3uv5qwnw62" path="res://data/assets/projectile/lava_spike/lava_spike.png" id="2_tex"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_s0"]
 atlas = ExtResource("2_tex")

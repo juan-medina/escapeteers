@@ -12,6 +12,21 @@ License: MIT License.
 
 [color=#ffffff][b]GRAPHICS[/b][/color]
 
+[color=#ffffff][b]Tiny RPG Character Asset Pack (Heroes)[/b][/color]
+Author: [url=https://zerie.itch.io/]Zerie[/url]
+Source: [url=https://zerie.itch.io/tiny-rpg-character-asset-pack]Itch.io[/url]
+License: Paid. Personal & commercial use allowed; redistribution and resale prohibited.
+
+[color=#ffffff][b]Tiny RPG Character Asset Pack 02 (Enemies)[/b][/color]
+Author: [url=https://zerie.itch.io/]Zerie[/url]
+Source: [url=https://zerie.itch.io/tiny-rpg-character-asset-pack-02]Itch.io[/url]
+License: Paid. Personal & commercial use allowed; redistribution and resale prohibited.
+
+[color=#ffffff][b]Pixel Top Down Dungeon[/b][/color]
+Author: [url=https://mrdakerchan.itch.io/]MrDakerChan[/url]
+Source: [url=https://mrdakerchan.itch.io/pixel-top-down-dungeon]Itch.io[/url]
+License: Paid. Personal & commercial use allowed; redistribution and resale prohibited.
+
 [color=#ffffff][b]Pixel UI Theme for Godot[/b][/color]
 Author: [url=https://thowsenmedia.itch.io/]Pelatho[/url]
 Source: [url=https://thowsenmedia.itch.io/pixel-ui-theme-for-godot]Itch.io[/url]
@@ -33,3 +48,23 @@ License: Creative Commons Zero (CC0), public domain.
 Author: [url=https://leohpaz.itch.io/]Leohpaz[/url]
 Source: [url=https://leohpaz.itch.io/modern-ui-sfx]Itch.io[/url]
 License: Paid. Personal & commercial use allowed; the pack may not be resold or redistributed.
+
+[color=#ffffff][b]FONT[/b][/color]
+
+[color=#ffffff][b]m5x7[/b][/color]
+Author: [url=https://managore.itch.io/]Daniel Linssen[/url]
+Source: [url=https://managore.itch.io/m5x7]Itch.io[/url]
+License: Free for personal and commercial use.
+
+-----------------------------------------------
+
+Copyright 2026 Juan Medina. All rights reserved.
+
+The source code is open-source and available under the MIT License.
+The name "Escapeteers", its branding, and the compiled game distribution are protected by the EULA.
+
+[url=https://github.com/juan-medina/escapeteers]Full source-code on GitHub[/url]
+
+-----------------------------------------------
+
+Thank you for playing!

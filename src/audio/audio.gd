@@ -14,11 +14,11 @@ var _pause: AudioStreamPlayer
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	_hover = _create_player(preload("res://audio/sounds/Hover.wav"), "Hover")
-	_click = _create_player(preload("res://audio/sounds/Click.wav"), "Click")
-	_return = _create_player(preload("res://audio/sounds/Return.wav"), "Return")
-	_start = _create_player(preload("res://audio/sounds/Start.wav"), "Start")
-	_pause = _create_player(preload("res://audio/sounds/Pause.wav"), "Pause")
+	_hover = _create_player(preload("res://data/assets/sounds/Hover.wav"), "Hover")
+	_click = _create_player(preload("res://data/assets/sounds/Click.wav"), "Click")
+	_return = _create_player(preload("res://data/assets/sounds/Return.wav"), "Return")
+	_start = _create_player(preload("res://data/assets/sounds/Start.wav"), "Start")
+	_pause = _create_player(preload("res://data/assets/sounds/Pause.wav"), "Pause")
 
 
 func _create_player(stream: AudioStream, node_name: String) -> AudioStreamPlayer:

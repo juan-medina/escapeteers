@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://derhacq4fqbxt" path="res://character/character.tscn" id="1_base"]
 [ext_resource type="Script" uid="uid://d083plcr584hf" path="res://character/heroes/knight_templar/knight_templar.gd" id="2_script"]
-[ext_resource type="Texture2D" uid="uid://dijj4thmra238" path="res://character/heroes/knight_templar/knight_templar.png" id="3_tex"]
+[ext_resource type="Texture2D" uid="uid://t0aiu7rmhlbn" path="res://data/assets/character/heroes/knight_templar/knight_templar.png" id="3_tex"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_71hbk"]
 atlas = ExtResource("3_tex")

@@ -1,8 +1,8 @@
 [gd_resource type="Theme" format=4 uid="uid://w6db1ygb6gel"]
 
-[ext_resource type="Texture2D" uid="uid://bap8dnalffjv4" path="res://pixel_ui_theme/8x8_ui_elements_rose.png" id="1_8dbnn"]
-[ext_resource type="FontFile" uid="uid://boaqbesuwm3jm" path="res://pixel_ui_theme/m5x7.ttf" id="2_k4f8d"]
-[ext_resource type="Texture2D" uid="uid://cxyml1owhi6de" path="res://pixel_ui_theme/8x8_ui_icons.png" id="3_dp4l6"]
+[ext_resource type="Texture2D" uid="uid://cx3pugbaqi3gu" path="res://data/assets/pixel_ui_theme/8x8_ui_elements_rose.png" id="1_8dbnn"]
+[ext_resource type="FontFile" uid="uid://coftxjtdkqsnn" path="res://data/assets/pixel_ui_theme/m5x7.ttf" id="2_k4f8d"]
+[ext_resource type="Texture2D" uid="uid://bqoos4b8q0d07" path="res://data/assets/pixel_ui_theme/8x8_ui_icons.png" id="3_dp4l6"]
 
 [sub_resource type="StyleBoxTexture" id="361"]
 content_margin_left = 6.0

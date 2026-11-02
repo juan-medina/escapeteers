@@ -1,0 +1,41 @@
+{
+  "peak_ceiling": -1.0,
+  "tiers": {
+    "soft": {
+      "target_level": -30
+    },
+    "normal": {
+      "target_level": -22
+    },
+    "important": {
+      "target_level": -18
+    }
+  },
+  "sounds": [
+    {
+      "input": "src/data/raw/sounds/Hover.wav",
+      "output": "src/data/assets/sounds/Hover.wav",
+      "tier": "soft"
+    },
+    {
+      "input": "src/data/raw/sounds/Click.wav",
+      "output": "src/data/assets/sounds/Click.wav",
+      "tier": "normal"
+    },
+    {
+      "input": "src/data/raw/sounds/Return.wav",
+      "output": "src/data/assets/sounds/Return.wav",
+      "tier": "normal"
+    },
+    {
+      "input": "src/data/raw/sounds/Start.wav",
+      "output": "src/data/assets/sounds/Start.wav",
+      "tier": "important"
+    },
+    {
+      "input": "src/data/raw/sounds/Pause.wav",
+      "output": "src/data/assets/sounds/Pause.wav",
+      "tier": "important"
+    }
+  ]
+}
