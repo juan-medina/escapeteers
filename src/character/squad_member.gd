@@ -24,8 +24,20 @@ const MIN_MOVEMENT_THRESHOLD_SQUARED: float = 0.04
 
 var slot_index: int = 0
 var slot_offset: Vector2 = Vector2.ZERO
+var slot_radius: float = RING_BASE_RADIUS
+var slot_angle_offset: float = 0.0
 var reaction_delay: float = REACTION_DELAY_BASE
 var navigator: SquadNavigator = SquadNavigator.new()
+
+
+func assign_formation_slot(ring: int, angle_offset: float, new_slot_index: int, _is_frontline: bool) -> void:
+	slot_index = new_slot_index
+	slot_angle_offset = angle_offset
+	slot_radius = RING_BASE_RADIUS + (float(ring) * RING_LAYER_SPACING)
+	slot_offset = Vector2(cos(slot_angle_offset), sin(slot_angle_offset)) * slot_radius
+
+	var jitter: float = fmod(float(slot_index) * 0.6180339, 1.0) * REACTION_JITTER
+	reaction_delay = REACTION_DELAY_BASE + (float(ring) * REACTION_DELAY_STEP) + jitter
 
 
 func assign_escort_slot(new_slot_index: int, total_slots: int) -> void:
@@ -42,12 +54,16 @@ func assign_escort_slot(new_slot_index: int, total_slots: int) -> void:
 		ring_capacity = RING_BASE_CAPACITY * (ring + 1)
 
 	var count_in_ring: int = mini(remaining_total, ring_capacity)
-	var angle: float = (float(ring) * 0.55) + (TAU * float(remaining_index) / float(maxi(count_in_ring, 1)))
-	var radius: float = RING_BASE_RADIUS + (float(ring) * RING_LAYER_SPACING)
-	slot_offset = Vector2(cos(angle), sin(angle)) * radius
+	var angle_step: float = TAU / float(maxi(count_in_ring, 1))
+	var ring_stagger: float = float(ring) * 0.55
 
-	var jitter: float = fmod(float(slot_index) * 0.6180339, 1.0) * REACTION_JITTER
-	reaction_delay = REACTION_DELAY_BASE + (float(ring) * REACTION_DELAY_STEP) + jitter
+	var angle_offset: float = ring_stagger
+	if remaining_index > 0:
+		var pair: int = int(float(remaining_index + 1) / 2.0)
+		var sign_val: float = 1.0 if (remaining_index % 2 == 1) else -1.0
+		angle_offset = ring_stagger + (sign_val * float(pair) * angle_step)
+
+	assign_formation_slot(ring, angle_offset, slot_index, false)
 
 
 func get_formation_position(leader: Hero) -> Vector2:
@@ -130,7 +146,11 @@ func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 
 
 func _compute_target_position(leader: Hero) -> Vector2:
-	var formation_pos: Vector2 = leader.position + slot_offset
+	var forward_dir: Vector2 = leader.move_direction if leader.move_direction != Vector2.ZERO else Vector2.RIGHT
+	var forward_angle: float = forward_dir.angle()
+	var current_angle: float = forward_angle + slot_angle_offset
+	var formation_pos: Vector2 = leader.position + Vector2(cos(current_angle), sin(current_angle)) * slot_radius
+
 	if leader.crescent_blend <= 0.001:
 		return formation_pos
 
@@ -141,7 +161,12 @@ func _compute_target_position(leader: Hero) -> Vector2:
 	var lane: float = float((slot_index % 3) - 1)
 	var trail_target: Vector2 = trail_pos + perp * (lane * TRAIL_LANE_SPACING)
 
-	return formation_pos.lerp(trail_target, leader.crescent_blend)
+	var blend_factor: float = leader.crescent_blend
+	var normalized_angle: float = absf(wrapf(slot_angle_offset, -PI, PI))
+	if normalized_angle < (PI * 0.5):
+		blend_factor *= 0.35
+
+	return formation_pos.lerp(trail_target, blend_factor)
 
 
 func _compute_separation(hero: Hero, squad: Array[Hero]) -> Vector2:

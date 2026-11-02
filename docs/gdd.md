@@ -34,7 +34,7 @@ The dungeon consists of interconnected rooms and corridors structured around exp
 The player guides the lead character as the focal point of the fellowship. Companions are discovered waiting in dungeon rooms and join the party upon physical contact to increase group size.
 
 ### Formation & Engagement Behaviors
-- **Circle-to-Crescent Flow:** Companions give personal space to the leader and each other. When moving, the party trails behind in an organic crescent.
+- **Multi-Ring Inner Support & Auto-Rotate Frontline:** Companions distribute across concentric formation rings based on role and squad size. Fragile healers and ranged heroes prioritize the innermost rings closest to the leader and anchor in the rear arc. Melee brawlers take outer rings and the forward arc, forming an outward-facing perimeter shield that rotates with the leader's facing and movement direction. During movement, frontline units maintain their forward screen while backline companions flow into a trailing crescent.
 - **Melee Leashing:** Melee fighters watch a short leash range around their formation slot. When an enemy is detected, they step forward to strike, returning to formation when the target dies or the leader pulls away.
 - **Formation Anchors:** Ranged attackers and healers stay strictly locked to their formation positions, never breaking ranks to chase.
 - **Navmesh Steering:** Companions steer along navmesh paths around walls and obstacles, maintaining line of sight to targets.
