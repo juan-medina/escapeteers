@@ -29,6 +29,7 @@ const _GROUP_HEROES: StringName = &"heroes"
 		_update_ground_indicator()
 		_update_active_mode()
 @export var can_heavy_melee: bool = false
+@export var melee_leash_distance: float = 72.0
 @export var melee1_cooldown: float = 0.5
 @export var melee2_cooldown: float = 3.5
 @export var melee2_chance: float = 0.35
@@ -154,7 +155,7 @@ func _setup_actions() -> void:
 		melee.heavy_damage = melee2_damage
 		melee.heavy_chance = melee2_chance
 		melee.heavy_knockback = melee2_knockback
-		melee.leash_distance = 48.0
+		melee.leash_distance = melee_leash_distance
 		combat_actions.append(melee)
 
 	if can_ranged:
@@ -325,17 +326,26 @@ func _on_frame_changed() -> void:
 	if current_action is MeleeAction and active_target != null:
 		var melee: MeleeAction = current_action as MeleeAction
 		var is_heavy: bool = melee.current_is_heavy
+		var should_hit: bool = false
+		var hit_damage: float = melee.heavy_damage if is_heavy else melee.damage
+
 		if is_heavy and not melee2_hit_frames.is_empty():
 			for hit_frame: int in melee2_hit_frames:
 				if frame >= hit_frame and not _hits_applied_frames.has(hit_frame):
 					_hits_applied_frames.append(hit_frame)
-					if melee.apply_hit(self, active_target) and active_target is Enemy:
-						enemy_hit.emit(active_target as Enemy, melee.heavy_damage, true)
+					should_hit = true
+					break
 		elif not _hit_applied_this_attack and frame >= 2:
 			_hit_applied_this_attack = true
-			var dmg: float = melee.heavy_damage if is_heavy else melee.damage
-			if melee.apply_hit(self, active_target) and active_target is Enemy:
-				enemy_hit.emit(active_target as Enemy, dmg, is_heavy)
+			should_hit = true
+
+		if should_hit:
+			for node: Node in get_tree().get_nodes_in_group(_GROUP_ENEMIES):
+				var enemy: Enemy = node as Enemy
+				if enemy == null or not is_instance_valid(enemy) or enemy.health <= 0.0 or enemy.is_queued_for_deletion():
+					continue
+				if melee.apply_hit(self, enemy):
+					enemy_hit.emit(enemy, hit_damage, is_heavy)
 	elif current_action is RangedAction and active_target != null and not _hit_applied_this_attack:
 		var ranged: RangedAction = current_action as RangedAction
 		if frame >= ranged.projectile_frame:

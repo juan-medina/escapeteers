@@ -31,11 +31,11 @@ The dungeon consists of interconnected rooms and corridors structured around exp
 ---
 
 ## 4. The Squad (The Escapeteers)
-The player guides the lead character as the focal point of the fellowship. Companions are discovered as gray mystery survivors waiting in dungeon rooms and reveal a random hero to join the party upon physical contact. The starting chamber presents two unrecruited gray units ahead of the player (to the left and right) to initiate the squad's growth.
+The player guides the lead character as the focal point of the fellowship. Companions are discovered as gray mystery survivors waiting in dungeon rooms and reveal a random hero to join the party upon physical contact. The starting chamber presents unrecruited gray units ahead of the player to initiate the squad's growth.
 
 ### Formation & Engagement Behaviors
 - **Multi-Ring Inner Support & Auto-Rotate Frontline:** Companions distribute across concentric formation rings based on role and squad size. Fragile healers and ranged heroes prioritize the innermost rings closest to the leader and anchor in the rear arc. Melee brawlers take outer rings and the forward arc, forming an outward-facing perimeter shield that rotates with the leader's facing and movement direction. During movement, frontline units maintain their forward screen while backline companions flow into a trailing crescent.
-- **Melee Leashing:** Melee fighters watch a short leash range around their formation slot. When an enemy is detected, they step forward to strike, returning to formation when the target dies or the leader pulls away.
+- **Melee Leashing & Arc Strikes:** Melee fighters watch a leash range around their formation slot. When enemies are detected, they step forward to strike all targets within their forward attack arc, returning to formation when targets die or the leader pulls away.
 - **Formation Anchors:** Ranged attackers and healers stay strictly locked to their formation positions, never breaking ranks to chase.
 - **Navmesh Steering:** Companions steer along navmesh paths around walls and obstacles, maintaining line of sight to targets.
 
@@ -87,7 +87,7 @@ The player guides the lead character as the focal point of the fellowship. Compa
 - **Role:** Rapid-strike duelist specializing in multi-hit damage.
 - **Abilities:**
   - *Quick Slash:* Fast sword slices on a short cooldown with zero knockback to maintain pressure.
-  - *Flurry Combo (Heavy Strike):* Has a chance after successive strikes to trigger a multi-hit flurry on a long cooldown, striking three times in rapid succession for heavy compound damage.
+  - *Flurry Combo (Heavy Strike):* Has a chance after successive strikes to trigger a multi-hit flurry on a long cooldown, striking in rapid succession for heavy compound damage.
 - **Positioning:** Steps out on a melee leash to shred high-priority targets.
 
 #### 8. Wizard (Ranged Crowd Control)

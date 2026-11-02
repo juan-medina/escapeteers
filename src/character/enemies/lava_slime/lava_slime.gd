@@ -12,6 +12,7 @@ const MELEE_VERTICAL_TOLERANCE: float = 10.0
 
 
 func _ready() -> void:
+	max_health = 160.0
 	speed = 35.0
 	detection_range = 135.0
 	can_melee = true
