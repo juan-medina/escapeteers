@@ -31,7 +31,7 @@ The dungeon consists of interconnected rooms and corridors structured around exp
 ---
 
 ## 4. The Squad (The Escapeteers)
-The player guides the lead character as the focal point of the fellowship. Companions are discovered waiting in dungeon rooms and join the party upon physical contact to increase group size.
+The player guides the lead character as the focal point of the fellowship. Companions are discovered as gray mystery survivors waiting in dungeon rooms and reveal a random hero to join the party upon physical contact. The starting chamber presents two unrecruited gray units ahead of the player (to the left and right) to initiate the squad's growth.
 
 ### Formation & Engagement Behaviors
 - **Multi-Ring Inner Support & Auto-Rotate Frontline:** Companions distribute across concentric formation rings based on role and squad size. Fragile healers and ranged heroes prioritize the innermost rings closest to the leader and anchor in the rear arc. Melee brawlers take outer rings and the forward arc, forming an outward-facing perimeter shield that rotates with the leader's facing and movement direction. During movement, frontline units maintain their forward screen while backline companions flow into a trailing crescent.

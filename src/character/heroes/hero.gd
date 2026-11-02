@@ -10,7 +10,6 @@ signal heal_cast_started(anim_name: StringName)
 signal enemy_hit(enemy: Enemy, damage: float, is_heavy: bool)
 signal ally_healed(ally: Character, amount: float)
 
-const RECRUIT_DISTANCE: float = 20.0
 const MAX_HISTORY_DURATION: float = 2.5
 const CRESCENT_BLEND_SPEED: float = 5.0
 const PLAYER_LIGHT_TEXTURE: Texture2D = preload("res://map/light_texture.tres")
@@ -414,10 +413,6 @@ func get_delayed_position(delay: float) -> Vector2:
 	return _pos_history.back()
 
 
-func is_touching(other: Hero) -> bool:
-	return position.distance_squared_to(other.position) <= RECRUIT_DISTANCE * RECRUIT_DISTANCE
-
-
 func _update_player_light() -> void:
 	if not is_inside_tree():
 		return
@@ -470,6 +465,8 @@ func _update_active_mode() -> void:
 	if not is_inside_tree():
 		return
 	var is_recruited: bool = is_player or squad_member != null
+	if _health_bar != null:
+		_health_bar.visible = is_recruited
 	if is_recruited:
 		set_process(true)
 		set_physics_process(true)

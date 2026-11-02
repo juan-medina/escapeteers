@@ -83,7 +83,7 @@ func get_active_light_count() -> int:
 
 
 func get_hero_spawn_position() -> Vector2:
-	return _floor.map_to_local(hero_room.get_center())
+	return _floor.map_to_local(hero_room.get_center() + Vector2i(0, 1))
 
 
 func map_to_local(cell: Vector2i) -> Vector2:
@@ -105,8 +105,8 @@ func get_room_tier(room: Rect2i) -> int:
 func get_starter_companion_spawn_positions() -> Array[Vector2]:
 	var positions: Array[Vector2] = []
 	var hero_center: Vector2i = hero_room.get_center()
-	for offset_x: int in [-1, 1]:
-		var recruit_cell: Vector2i = hero_center + Vector2i(offset_x, 0)
+	for offset_x: int in [-2, 2]:
+		var recruit_cell: Vector2i = hero_center + Vector2i(offset_x, -1)
 		positions.append(_floor.map_to_local(recruit_cell))
 	return positions
 

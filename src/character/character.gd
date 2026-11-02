@@ -24,6 +24,7 @@ enum CombatState {
 
 const FLIP_THRESHOLD_X: float = 0.35
 const MIN_MOVEMENT_THRESHOLD_SQUARED: float = 0.04
+const RECRUIT_DISTANCE: float = 20.0
 
 const ANIM_IDLE: StringName = &"idle"
 const ANIM_RUN: StringName = &"run"
@@ -127,6 +128,10 @@ func get_hurtbox_radius() -> float:
 	if hurtbox != null:
 		return hurtbox.radius
 	return 5.0
+
+
+func is_touching(other: Character) -> bool:
+	return position.distance_squared_to(other.position) <= RECRUIT_DISTANCE * RECRUIT_DISTANCE
 
 
 func update_visuals(movement_vector: Vector2) -> void:

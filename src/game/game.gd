@@ -20,6 +20,7 @@ const PRIEST_SCENE: PackedScene = preload("res://character/heroes/priest/priest.
 const SOLDIER_SCENE: PackedScene = preload("res://character/heroes/soldier/soldier.tscn")
 const SWORDSMAN_SCENE: PackedScene = preload("res://character/heroes/swordsman/swordsman.tscn")
 const WIZARD_SCENE: PackedScene = preload("res://character/heroes/wizard/wizard.tscn")
+const UNKNOWN_SCENE: PackedScene = preload("res://character/heroes/unknown/unknown.tscn")
 const LAVA_SLIME_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_slime.tscn")
 const GAME_OVER_DIALOG_SCENE: PackedScene = preload("res://game_over_dialog/game_over_dialog.tscn")
 
@@ -35,7 +36,7 @@ const HERO_SPAWN_WEIGHTS: Dictionary[PackedScene, int] = {
 }
 
 var _squad: Array[Hero] = []
-var _unrecruited_characters: Array[Hero] = []
+var _unrecruited_characters: Array[Character] = []
 var _enemies: Array[Enemy] = []
 var _hero_deck: Array[PackedScene] = []
 var _room_remaining_enemies: Dictionary[Rect2i, int] = {}
@@ -65,6 +66,7 @@ func _ready() -> void:
 	_camera.position = _character.position
 	_character.y_sort_enabled = true
 	_character.is_player = true
+	_character.move_direction = Vector2.UP
 	_character.record_step(0.0)
 	_character.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
 	_character.death_completed.connect(_on_player_death_completed)
@@ -135,11 +137,8 @@ func _update_map_streaming() -> void:
 
 func _spawn_initial_characters() -> void:
 	var starter_positions: Array[Vector2] = _map.get_starter_companion_spawn_positions()
-	var starter_heroes: Array[PackedScene] = [PRIEST_SCENE, ARMORED_AXEMAN_SCENE]
-
-	for i: int in range(starter_positions.size()):
-		var scene: PackedScene = starter_heroes[i] if i < starter_heroes.size() else _draw_next_hero_scene()
-		_spawn_recruit_at(starter_positions[i], scene)
+	for pos: Vector2 in starter_positions:
+		_spawn_recruit_at(pos)
 
 	for room: Rect2i in _map.companion_rooms:
 		_spawn_companions_for_room(room)
@@ -153,7 +152,7 @@ func _spawn_companions_for_room(room: Rect2i) -> void:
 	for pos: Vector2 in positions:
 		if MAX_CHARACTERS > 0 and (_squad.size() + _unrecruited_characters.size()) >= MAX_CHARACTERS:
 			break
-		_spawn_recruit_at(pos, _draw_next_hero_scene())
+		_spawn_recruit_at(pos)
 
 
 func _draw_next_hero_scene() -> PackedScene:
@@ -163,17 +162,11 @@ func _draw_next_hero_scene() -> PackedScene:
 	return _hero_deck.pop_back()
 
 
-func _spawn_recruit_at(pos: Vector2, scene: PackedScene) -> void:
-	var ch: Hero = scene.instantiate() as Hero
+func _spawn_recruit_at(pos: Vector2) -> void:
+	var ch: Unknown = UNKNOWN_SCENE.instantiate() as Unknown
 	_characters.add_child(ch)
-	ch.is_player = false
 	ch.position = pos
 	ch.y_sort_enabled = true
-	ch.flip_h = randf() > 0.5
-	ch.frame = randi() % 6
-	ch.frame_progress = randf()
-	ch.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
-	ch.died.connect(_on_hero_died.bind(ch))
 	_unrecruited_characters.append(ch)
 
 
@@ -344,13 +337,24 @@ func _check_recruitment() -> void:
 	var recruited_any: bool = false
 
 	while i >= 0:
-		var candidate: Hero = _unrecruited_characters[i]
+		var candidate: Character = _unrecruited_characters[i]
 		for member: Hero in _squad:
 			if candidate.is_touching(member):
 				_unrecruited_characters.remove_at(i)
-				candidate.leader = _character
-				candidate.squad_member = SquadMember.new()
-				_squad.append(candidate)
+				var recruit_pos: Vector2 = candidate.position
+				candidate.queue_free()
+
+				var hero_scene: PackedScene = _draw_next_hero_scene()
+				var new_hero: Hero = hero_scene.instantiate() as Hero
+				_characters.add_child(new_hero)
+				new_hero.is_player = false
+				new_hero.position = recruit_pos
+				new_hero.y_sort_enabled = true
+				new_hero.leader = _character
+				new_hero.squad_member = SquadMember.new()
+				new_hero.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
+				new_hero.died.connect(_on_hero_died.bind(new_hero))
+				_squad.append(new_hero)
 				recruited_any = true
 				break
 
