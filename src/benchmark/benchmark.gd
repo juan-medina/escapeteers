@@ -71,10 +71,9 @@ func _finish_benchmark() -> void:
 	var p95: float = _frame_times[int(float(n) * 0.95)] if n > 0 else 0.0
 	var p99: float = _frame_times[int(float(n) * 0.99)] if n > 0 else 0.0
 
-	@warning_ignore("unsafe_call_argument")
-	var active_enemies: int = int(Performance.get_custom_monitor(&"streaming/active_enemies"))
-	@warning_ignore("unsafe_call_argument")
-	var active_lights: int = int(Performance.get_custom_monitor(&"streaming/active_lights"))
+	var active_enemies: int = _game.get_active_enemy_count() if is_instance_valid(_game) else 0
+	var map: Map = _game.get_node_or_null(^"Map") as Map if is_instance_valid(_game) else null
+	var active_lights: int = map.get_active_light_count() if is_instance_valid(map) else 0
 
 	print(&"\n================ BENCHMARK BASELINE REPORT ================")
 	print(&"Total Frames Sampled: %d" % n)

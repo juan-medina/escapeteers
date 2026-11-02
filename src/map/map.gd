@@ -494,9 +494,3 @@ func _is_inside_any_room(cell: Vector2i) -> bool:
 		if room.has_point(cell):
 			return true
 	return false
-
-
-static func _log_perf(stage: StringName, start_usec: int, extra: String = "") -> void:
-	var elapsed_ms: float = float(Time.get_ticks_usec() - start_usec) / 1000.0
-	if elapsed_ms >= 2.0:
-		print(&"[Perf] %s took %.2f ms%s" % [stage, elapsed_ms, extra])

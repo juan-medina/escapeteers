@@ -43,7 +43,6 @@ var _room_spawned_enemies: Dictionary[Rect2i, int] = {}
 var _stream_timer: float = 0.0
 var _entity_pool: EntityPool = EntityPool.new()
 var _pending_spawns: Array[Dictionary] = []
-var _frame_spike_count: int = 0
 
 @onready var _camera: Camera2D = $Camera2D
 @onready var _characters: Node2D = $Characters
@@ -88,33 +87,9 @@ func _ready() -> void:
 	set_process(true)
 	await Transition.hide_loading()
 
-	if not Performance.has_custom_monitor(&"streaming/frame_spikes"):
-		Performance.add_custom_monitor(&"streaming/frame_spikes", _get_monitor_frame_spikes)
-	if not Performance.has_custom_monitor(&"streaming/active_enemies"):
-		Performance.add_custom_monitor(&"streaming/active_enemies", _get_monitor_active_enemies)
-	if not Performance.has_custom_monitor(&"streaming/active_lights"):
-		Performance.add_custom_monitor(&"streaming/active_lights", _get_monitor_active_lights)
 
-
-func _exit_tree() -> void:
-	if Performance.has_custom_monitor(&"streaming/frame_spikes"):
-		Performance.remove_custom_monitor(&"streaming/frame_spikes")
-	if Performance.has_custom_monitor(&"streaming/active_enemies"):
-		Performance.remove_custom_monitor(&"streaming/active_enemies")
-	if Performance.has_custom_monitor(&"streaming/active_lights"):
-		Performance.remove_custom_monitor(&"streaming/active_lights")
-
-
-func _get_monitor_frame_spikes() -> int:
-	return _frame_spike_count
-
-
-func _get_monitor_active_enemies() -> int:
+func get_active_enemy_count() -> int:
 	return _enemies.size()
-
-
-func _get_monitor_active_lights() -> int:
-	return _map.get_active_light_count()
 
 
 func _on_map_generation_progress(progress: float, stage_name: StringName) -> void:
@@ -122,11 +97,6 @@ func _on_map_generation_progress(progress: float, stage_name: StringName) -> voi
 
 
 func _process(delta: float) -> void:
-	if delta > 0.0167:
-		_frame_spike_count += 1
-		if delta > 0.0333:
-			print(&"[Perf] Frame spike: %.2f ms" % [delta * 1000.0])
-
 	if is_instance_valid(_character):
 		_camera.position = _character.position
 		if not _character.is_dead:
@@ -154,7 +124,6 @@ func remove_member(hero: Hero) -> void:
 
 
 func _update_map_streaming() -> void:
-	var start_usec: int = Time.get_ticks_usec()
 	var new_rooms: Array[Rect2i] = _map.expand_frontier_near(_character.global_position)
 	if not new_rooms.is_empty():
 		for room: Rect2i in new_rooms:
@@ -162,9 +131,6 @@ func _update_map_streaming() -> void:
 		_register_and_populate_rooms(new_rooms)
 
 	_respawn_nearby_hibernating_rooms()
-	var elapsed_ms: float = float(Time.get_ticks_usec() - start_usec) / 1000.0
-	if elapsed_ms >= 2.0:
-		print(&"[Perf] _update_map_streaming took %.2f ms (new_rooms: %d)" % [elapsed_ms, new_rooms.size()])
 
 
 func _spawn_initial_characters() -> void:
@@ -221,17 +187,12 @@ func _build_hero_deck() -> Array[PackedScene]:
 
 
 func _register_and_populate_rooms(rooms: Array[Rect2i]) -> void:
-	var start_usec: int = Time.get_ticks_usec()
 	for room: Rect2i in rooms:
 		if not _room_remaining_enemies.has(room):
 			var quota: int = _map.get_room_enemy_quota(room)
 			_room_remaining_enemies[room] = quota
 			_room_spawned_enemies[room] = 0
 		_populate_room_enemies(room)
-
-	var elapsed_ms: float = float(Time.get_ticks_usec() - start_usec) / 1000.0
-	if elapsed_ms >= 2.0:
-		print(&"[Perf] _register_and_populate_rooms took %.2f ms (rooms: %d)" % [elapsed_ms, rooms.size()])
 
 
 func _populate_room_enemies(room: Rect2i) -> void:
