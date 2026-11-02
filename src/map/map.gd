@@ -37,12 +37,7 @@ const CANDLE_POST_BOTTOM: Vector2i = Vector2i(10, 31)
 
 const PROP_BARREL: Vector2i = Vector2i(4, 28)
 const PROP_BOX: Vector2i = Vector2i(4, 29)
-const PROP_SKULLS_AND_BONES: Array[Vector2i] = [
-	Vector2i(5, 29),
-	Vector2i(6, 29),
-	Vector2i(7, 29),
-	Vector2i(8, 29),
-]
+const PROP_SKULLS_AND_BONES: Array[Vector2i] = [Vector2i(5, 29), Vector2i(6, 29), Vector2i(7, 29), Vector2i(8, 29)]
 const CORRIDOR_BONE_CHANCE: float = 0.02
 
 const HERO_ROOM_SIZE: Vector2i = Vector2i(30, 30)
@@ -65,6 +60,8 @@ const TIER_2_DISTANCE_RANGE: Vector2 = Vector2(58.0, 95.0)
 const TIER_3_MIN_SIZE: Vector2i = Vector2i(56, 56)
 const TIER_3_MAX_SIZE: Vector2i = Vector2i(76, 76)
 const TIER_3_DISTANCE_RANGE: Vector2 = Vector2(75.0, 115.0)
+
+@export var debug_seed: int = 0
 
 var hero_room: Rect2i = Rect2i()
 var companion_rooms: Array[Rect2i] = []
@@ -93,6 +90,10 @@ func _ready() -> void:
 		_walls.tile_set = _floor.tile_set
 	if _decorations.tile_set == null:
 		_decorations.tile_set = _floor.tile_set
+
+
+func get_active_light_count() -> int:
+	return _torch_nodes.size()
 
 
 func get_hero_spawn_position() -> Vector2:
@@ -152,7 +153,7 @@ func get_companion_spawn_positions_for_room(room: Rect2i) -> Array[Vector2]:
 				positions.append(_floor.map_to_local(center_cell + offset))
 	else:
 		positions.append(_floor.map_to_local(center_cell))
-		var extra_recruits: int = clampi(1 + get_room_depth(room) / 2, 2, 4)
+		var extra_recruits: int = clampi(1 + int(float(get_room_depth(room)) * 0.5), 2, 4)
 		for _k: int in range(extra_recruits):
 			var offset: Vector2i = Vector2i(randi_range(-3, 3), randi_range(-3, 3))
 			if offset != Vector2i.ZERO and is_cell_walkable(center_cell + offset):
@@ -244,6 +245,10 @@ func get_navigation_path(from_pos: Vector2, to_pos: Vector2) -> PackedVector2Arr
 
 
 func generate_map() -> void:
+	if debug_seed != 0:
+		seed(debug_seed)
+		print(&"[Map] Seed set to debug_seed: %d" % debug_seed)
+
 	generation_progress_updated.emit(0.15, &"Surveying primal chamber...")
 	await get_tree().process_frame
 
@@ -344,6 +349,7 @@ func _create_initial_rooms() -> void:
 
 
 func _expand_from_room(source_room: Rect2i) -> Array[Rect2i]:
+	var start_usec: int = Time.get_ticks_usec()
 	var parent_depth: int = get_room_depth(source_room)
 	var child_depth: int = parent_depth + 1
 	var target_branches: int = randi_range(1, 2)
@@ -394,6 +400,8 @@ func _expand_from_room(source_room: Rect2i) -> Array[Rect2i]:
 		_eliminate_narrow_gaps_in_rect(padded_dirty)
 		_rebuild_region(padded_dirty, new_rooms)
 
+	_log_perf(&"_expand_from_room", start_usec, " (depth: %d, new_rooms: %d)" % [child_depth, new_rooms.size()])
+
 	return new_rooms
 
 
@@ -438,6 +446,7 @@ func _get_cells_bounds(cells: Dictionary[Vector2i, bool]) -> Rect2i:
 
 
 func _rebuild_region(region: Rect2i, rooms_to_decorate: Array[Rect2i]) -> void:
+	var start_usec: int = Time.get_ticks_usec()
 	var work_rect: Rect2i = region.grow(2)
 
 	# 1. Clear walls and wall torches inside work_rect; place floors for new floor cells
@@ -490,6 +499,8 @@ func _rebuild_region(region: Rect2i, rooms_to_decorate: Array[Rect2i]) -> void:
 	# 5. Refresh navigation
 	_setup_navigation(_cells)
 
+	_log_perf(&"_rebuild_region", start_usec, " (region: %s, rooms: %d)" % [str(region), rooms_to_decorate.size()])
+
 
 func _remove_torch_at(cell: Vector2i) -> void:
 	var idx: int = _placed_torches.find(cell)
@@ -519,6 +530,7 @@ func _find_closest_walkable_cell(target_cell: Vector2i) -> Vector2i:
 
 
 func _setup_navigation(cells: Dictionary[Vector2i, bool]) -> void:
+	var start_usec: int = Time.get_ticks_usec()
 	_walkable_cells.clear()
 	for c: Vector2i in cells:
 		if _walls.get_cell_source_id(c) == -1:
@@ -553,6 +565,8 @@ func _setup_navigation(cells: Dictionary[Vector2i, bool]) -> void:
 	for c: Vector2i in _walkable_cells:
 		_astar.set_point_solid(c, false)
 
+	_log_perf(&"_setup_navigation", start_usec, " (walkable: %d, region: %s)" % [_walkable_cells.size(), str(_astar.region)])
+
 
 func _overlaps_any_room(candidate: Rect2i) -> bool:
 	if hero_room.grow(ROOM_PADDING).intersects(candidate):
@@ -582,6 +596,7 @@ func _carve_corridor(from: Vector2i, to: Vector2i, cells: Dictionary[Vector2i, b
 
 
 func _eliminate_narrow_gaps_in_rect(region: Rect2i) -> void:
+	var start_usec: int = Time.get_ticks_usec()
 	var changed: bool = true
 	var pass_count: int = 0
 
@@ -617,6 +632,8 @@ func _eliminate_narrow_gaps_in_rect(region: Rect2i) -> void:
 
 		for p: Vector2i in to_add:
 			_cells[p] = true
+
+	_log_perf(&"_eliminate_narrow_gaps_in_rect", start_usec, " (region: %s, passes: %d)" % [str(region), pass_count])
 
 
 func _carve_horizontal_line(x_start: int, x_end: int, y: int, half_width: int, cells: Dictionary[Vector2i, bool]) -> void:
@@ -975,3 +992,9 @@ func _is_inside_any_room(cell: Vector2i) -> bool:
 		if room.has_point(cell):
 			return true
 	return false
+
+
+static func _log_perf(stage: StringName, start_usec: int, extra: String = "") -> void:
+	var elapsed_ms: float = float(Time.get_ticks_usec() - start_usec) / 1000.0
+	if elapsed_ms >= 2.0:
+		print(&"[Perf] %s took %.2f ms%s" % [stage, elapsed_ms, extra])

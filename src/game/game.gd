@@ -40,6 +40,11 @@ var _hero_deck: Array[PackedScene] = []
 var _room_remaining_enemies: Dictionary[Rect2i, int] = {}
 var _room_spawned_enemies: Dictionary[Rect2i, int] = {}
 var _stream_timer: float = 0.0
+var _frame_spike_count: int = 0
+var _is_benchmarking: bool = false
+var _benchmark_frame_count: int = 0
+var _benchmark_frame_times: Array[float] = []
+var _benchmark_max_spike_ms: float = 0.0
 
 @onready var _camera: Camera2D = $Camera2D
 @onready var _characters: Node2D = $Characters
@@ -78,12 +83,67 @@ func _ready() -> void:
 	set_process(true)
 	await Transition.hide_loading()
 
+	if not Performance.has_custom_monitor(&"streaming/frame_spikes"):
+		Performance.add_custom_monitor(&"streaming/frame_spikes", _get_monitor_frame_spikes)
+	if not Performance.has_custom_monitor(&"streaming/active_enemies"):
+		Performance.add_custom_monitor(&"streaming/active_enemies", _get_monitor_active_enemies)
+	if not Performance.has_custom_monitor(&"streaming/active_lights"):
+		Performance.add_custom_monitor(&"streaming/active_lights", _get_monitor_active_lights)
+
+	if "--benchmark" in OS.get_cmdline_args() or "--benchmark" in OS.get_cmdline_user_args():
+		_is_benchmarking = true
+		_map.debug_seed = 12345
+		process_mode = Node.PROCESS_MODE_ALWAYS
+		if is_instance_valid(_character):
+			_character.max_health = 999999.0
+			_character.health = 999999.0
+		print(&"=== STARTING BENCHMARK MODE (300 frames, Seed 12345) ===")
+
+
+func _exit_tree() -> void:
+	if Performance.has_custom_monitor(&"streaming/frame_spikes"):
+		Performance.remove_custom_monitor(&"streaming/frame_spikes")
+	if Performance.has_custom_monitor(&"streaming/active_enemies"):
+		Performance.remove_custom_monitor(&"streaming/active_enemies")
+	if Performance.has_custom_monitor(&"streaming/active_lights"):
+		Performance.remove_custom_monitor(&"streaming/active_lights")
+
+
+func _get_monitor_frame_spikes() -> int:
+	return _frame_spike_count
+
+
+func _get_monitor_active_enemies() -> int:
+	return _enemies.size()
+
+
+func _get_monitor_active_lights() -> int:
+	return _map.get_active_light_count()
+
 
 func _on_map_generation_progress(progress: float, stage_name: StringName) -> void:
 	Transition.set_loading_progress(progress, stage_name)
 
 
 func _process(delta: float) -> void:
+	if delta > 0.0167:
+		_frame_spike_count += 1
+		if delta > 0.0333:
+			print(&"[Perf] Frame spike: %.2f ms" % [delta * 1000.0])
+
+	if _is_benchmarking:
+		if is_instance_valid(_character):
+			_character.position.x += 180.0 * delta
+		_benchmark_frame_count += 1
+		var delta_ms: float = delta * 1000.0
+		_benchmark_frame_times.append(delta_ms)
+		if delta_ms > _benchmark_max_spike_ms:
+			_benchmark_max_spike_ms = delta_ms
+		if _benchmark_frame_count >= 300:
+			_finish_benchmark()
+			get_tree().quit(0)
+			return
+
 	if is_instance_valid(_character):
 		_camera.position = _character.position
 		if not _character.is_dead:
@@ -109,6 +169,7 @@ func remove_member(hero: Hero) -> void:
 
 
 func _update_map_streaming() -> void:
+	var start_usec: int = Time.get_ticks_usec()
 	var new_rooms: Array[Rect2i] = _map.expand_frontier_near(_character.global_position)
 	if not new_rooms.is_empty():
 		for room: Rect2i in new_rooms:
@@ -116,6 +177,9 @@ func _update_map_streaming() -> void:
 		_register_and_populate_rooms(new_rooms)
 
 	_respawn_nearby_hibernating_rooms()
+	var elapsed_ms: float = float(Time.get_ticks_usec() - start_usec) / 1000.0
+	if elapsed_ms >= 2.0:
+		print(&"[Perf] _update_map_streaming took %.2f ms (new_rooms: %d)" % [elapsed_ms, new_rooms.size()])
 
 
 func _spawn_initial_characters() -> void:
@@ -172,12 +236,17 @@ func _build_hero_deck() -> Array[PackedScene]:
 
 
 func _register_and_populate_rooms(rooms: Array[Rect2i]) -> void:
+	var start_usec: int = Time.get_ticks_usec()
 	for room: Rect2i in rooms:
 		if not _room_remaining_enemies.has(room):
 			var quota: int = _map.get_room_enemy_quota(room)
 			_room_remaining_enemies[room] = quota
 			_room_spawned_enemies[room] = 0
 		_populate_room_enemies(room)
+
+	var elapsed_ms: float = float(Time.get_ticks_usec() - start_usec) / 1000.0
+	if elapsed_ms >= 2.0:
+		print(&"[Perf] _register_and_populate_rooms took %.2f ms (rooms: %d)" % [elapsed_ms, rooms.size()])
 
 
 func _populate_room_enemies(room: Rect2i) -> void:
@@ -339,3 +408,35 @@ func _on_window_resized() -> void:
 	_camera.enabled = false
 	_camera.enabled = true
 	_camera.force_update_scroll()
+
+
+func _finish_benchmark() -> void:
+	_benchmark_frame_times.sort()
+	var n: int = _benchmark_frame_times.size()
+	var sum: float = 0.0
+	var spikes_16ms: int = 0
+	var spikes_33ms: int = 0
+	for t: float in _benchmark_frame_times:
+		sum += t
+		if t > 16.67:
+			spikes_16ms += 1
+		if t > 33.33:
+			spikes_33ms += 1
+	var avg: float = sum / float(n) if n > 0 else 0.0
+	var p50: float = _benchmark_frame_times[int(float(n) * 0.50)] if n > 0 else 0.0
+	var p95: float = _benchmark_frame_times[int(float(n) * 0.95)] if n > 0 else 0.0
+	var p99: float = _benchmark_frame_times[int(float(n) * 0.99)] if n > 0 else 0.0
+
+	print(&"\n================ BENCHMARK BASELINE REPORT ================")
+	print(&"Total Frames Sampled: %d" % n)
+	print(&"Average Frame Time:   %.2f ms (%.1f FPS)" % [avg, 1000.0 / avg if avg > 0.0 else 0.0])
+	print(&"50th Percentile (p50): %.2f ms" % p50)
+	print(&"95th Percentile (p95): %.2f ms" % p95)
+	print(&"99th Percentile (p99): %.2f ms" % p99)
+	print(&"Max Frame Spike:      %.2f ms" % _benchmark_max_spike_ms)
+	print(&"Frames > 16.7ms:       %d (%.1f%%)" % [spikes_16ms, (float(spikes_16ms) / float(n)) * 100.0])
+	print(&"Frames > 33.3ms:       %d (%.1f%%)" % [spikes_33ms, (float(spikes_33ms) / float(n)) * 100.0])
+	print(&"Active Enemies:       %d" % _enemies.size())
+	print(&"Active Lights:        %d" % _map.get_active_light_count())
+	print(&"Static Memory:        %.2f MB" % [float(Performance.get_monitor(Performance.MEMORY_STATIC)) / (1024.0 * 1024.0)])
+	print(&"===========================================================\n")
