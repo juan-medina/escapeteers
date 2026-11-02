@@ -1,0 +1,90 @@
+# SPDX-FileCopyrightText: 2026 Juan Medina
+# SPDX-License-Identifier: MIT
+
+name: Pages
+
+on:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+
+concurrency:
+    group: pages
+    cancel-in-progress: true
+
+jobs:
+    deploy:
+        name: Build and deploy
+        runs-on: ubuntu-latest
+
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+
+        steps:
+            -   name: Checkout game
+                uses: actions/checkout@v4
+                with:
+                    lfs: true
+
+            # Checked out by hand rather than submodules:true because a deploy
+            # key only authenticates SSH URLs and .gitmodules holds the HTTPS one.
+            -   name: Read pinned data revision
+                id: pin
+                run: echo "sha=$(git rev-parse HEAD:src/data)" >> "$GITHUB_OUTPUT"
+
+            -   name: Checkout data
+                uses: actions/checkout@v4
+                with:
+                    repository: juan-medina/escapeteers-data
+                    ssh-key: ${{ secrets.DATA_REPO_KEY }}
+                    ref: ${{ steps.pin.outputs.sha }}
+                    lfs: true
+                    path: src/data
+
+            # An unfetched LFS file imports as a ~130-byte pointer and ships a
+            # silently broken build.
+            -   name: Verify assets
+                run: |
+                    if grep -rl "^version https://git-lfs" src/data/assets/ 2>/dev/null | grep -q .; then
+                        echo "::error::LFS objects were not fetched"
+                        exit 1
+                    fi
+
+            -   name: Stamp build info
+                run: python3 scripts/gen_build_info.py
+
+            -   name: Setup Godot
+                uses: chickensoft-games/setup-godot@v2
+                with:
+                    version: 4.7.1
+                    use-dotnet: false
+                    include-templates: true
+                    cache: true
+
+            -   name: Import project assets
+                working-directory: src
+                env:
+                    GODOT_DISABLE_LEAK_CHECKS: 1
+                run: godot --headless --import
+
+            -   name: Export web
+                working-directory: src
+                run: |
+                    mkdir -p ../bin/web
+                    godot --headless --export-release "Web" ../bin/web/index.html
+
+            -   name: Upload Pages artifact
+                uses: actions/upload-pages-artifact@v3
+                with:
+                    path: bin/web
+
+            -   name: Deploy to Pages
+                id: deployment
+                uses: actions/deploy-pages@v4
