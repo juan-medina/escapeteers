@@ -296,6 +296,31 @@ func _pick_new_patrol_destination() -> void:
 	_patrol_destination = map.clamp_to_walkable(global_position + local_offset)
 
 
+func reset_for_pool() -> void:
+	health = max_health
+	is_dead = false
+	movement_state = MovementState.IDLE
+	combat_state = CombatState.READY
+	current_state = State.PATROL
+	target = null
+	current_action = null
+	_slow_timer = 0.0
+	_slow_multiplier = 1.0
+	_knockback_velocity = Vector2.ZERO
+	_navigator.reset()
+	_base_modulate = Color.WHITE
+	if _animated_sprite != null:
+		_animated_sprite.modulate = Color.WHITE
+		_animated_sprite.play(ANIM_IDLE)
+	if _health_bar != null:
+		_health_bar.update_health(health, max_health)
+	enable_collisions()
+	set_physics_process(true)
+	visible = true
+	if not is_in_group(_GROUP_ENEMIES):
+		add_to_group(_GROUP_ENEMIES)
+
+
 func _on_death() -> void:
 	set_physics_process(false)
 	remove_from_group(_GROUP_ENEMIES)

@@ -104,13 +104,15 @@ func play(anim_name: StringName = ANIM_IDLE) -> void:
 
 
 func disable_collisions() -> void:
-	_collision_shape.set_deferred(&"disabled", true)
+	if _collision_shape != null:
+		_collision_shape.set_deferred(&"disabled", true)
 	if hurtbox != null:
 		hurtbox.set_disabled(true)
 
 
 func enable_collisions() -> void:
-	_collision_shape.set_deferred(&"disabled", false)
+	if _collision_shape != null:
+		_collision_shape.set_deferred(&"disabled", false)
 	if hurtbox != null:
 		hurtbox.set_disabled(false)
 

@@ -14,7 +14,7 @@ Welcome to the project! This document outlines the coding conventions and philos
 
 - **Strict static typing.** We use GDScript 2.0 static typing everywhere.
 - **Explicit typing.** Always use explicit type hints (e.g., `var tween: Tween = create_tween()`); please do not rely solely on type inference (`:=`).
-- **Treat warnings as errors.** Please ensure all Godot warnings are addressed before submitting your code.
+- **Treat warnings as errors.** Please ensure all Godot warnings are addressed before submitting your code. Verify zero warnings using Godot's built-in static analyzer: `godot --headless --path src --check-only -d -s <file>`. Note that `gdlint` only checks style; only Godot with `-d` (`--debug`) checks GDScript static type errors, unsafe method access, unsafe casts, and integer division.
 - **Avoid lambdas:** Implement them as static functions (if they don't require instance data) or normal functions (if they require instance data) to improve readability and maintainability.
 
 ## 3. Formatting & Linting
@@ -26,7 +26,11 @@ Welcome to the project! This document outlines the coding conventions and philos
 - **StringName for constants:** For literal strings that are never modified (like log/UI messages, keys, action, and group names), use `&"..."` instead of `"..."`. Be consistent within a statement.
 - **Line length: 150 characters max.** This is enforced by `.gdlintrc` and `gdformat`. If a line is too long, try extracting a named local variable or splitting it into two statements. Avoid hand-wrapping, as `gdformat` will just rejoin it.
 - **Declaration order:** We follow the `.gdlintrc` `class-definitions-order`: `signals → enums → consts → static vars → exports → public vars → private vars → @onready vars → methods`.
-- **Lint and format (The Boy Scout Rule).** Before finishing your work, please run `gdlint <file>` and `gdformat -l 150 <file>` on every file you've touched to ensure they are clean. Note that `gdlint` automatically reads our 150-character limit from `.gdlintrc`, but the standalone `gdformat` CLI defaults to 100 characters unless you pass `-l 150` (VS Code handles this automatically via the formatter extension). If you notice any pre-existing formatting or linting issues in a file you're editing, please fix those as well while you're there—leave the code better than you found it!
+- **Lint, format & type safety (The Boy Scout Rule).** Before finishing your work, please run:
+  1. `gdformat -l 150 <file>` (code formatting)
+  2. `gdlint <file>` (style linting)
+  3. `godot --headless --path src --check-only -d -s <file>` (static type analysis)
+  Note that `gdlint` automatically reads our 150-character limit from `.gdlintrc`, but the standalone `gdformat` CLI defaults to 100 characters unless you pass `-l 150` (VS Code handles this automatically via the formatter extension). If you notice any pre-existing formatting or linting issues in a file you're editing, please fix those as well while you're there—leave the code better than you found it!
 
 ## 4. Naming
 

@@ -6,6 +6,7 @@ extends Node2D
 
 const MAX_CHARACTERS: int = 80
 const MAX_ENEMIES: int = 160
+const MAX_SPAWNS_PER_FRAME: int = 3
 const ENEMY_ACTIVE_DIST_SQ: float = 480.0 * 480.0
 const ENEMY_DESPAWN_DIST_SQ: float = 1650.0 * 1650.0
 const ROOM_RESPAWN_DIST_SQ: float = 1350.0 * 1350.0
@@ -40,11 +41,9 @@ var _hero_deck: Array[PackedScene] = []
 var _room_remaining_enemies: Dictionary[Rect2i, int] = {}
 var _room_spawned_enemies: Dictionary[Rect2i, int] = {}
 var _stream_timer: float = 0.0
+var _entity_pool: EntityPool = EntityPool.new()
+var _pending_spawns: Array[Dictionary] = []
 var _frame_spike_count: int = 0
-var _is_benchmarking: bool = false
-var _benchmark_frame_count: int = 0
-var _benchmark_frame_times: Array[float] = []
-var _benchmark_max_spike_ms: float = 0.0
 
 @onready var _camera: Camera2D = $Camera2D
 @onready var _characters: Node2D = $Characters
@@ -74,9 +73,15 @@ func _ready() -> void:
 
 	Transition.set_loading_progress(0.92, &"Assembling the fellowship...")
 	await get_tree().process_frame
+	_entity_pool.setup(_characters)
+	_entity_pool.prewarm(LAVA_SLIME_SCENE, 20)
 	_spawn_initial_characters()
 	_check_recruitment()
 	_register_and_populate_rooms(_map.companion_rooms)
+	while not _pending_spawns.is_empty():
+		var req: Dictionary = _pending_spawns.pop_front()
+		@warning_ignore("unsafe_call_argument")
+		_spawn_enemy_at(req[&"pos"], req[&"room"])
 
 	Transition.set_loading_progress(1.0, &"Ready to escape!")
 	await get_tree().process_frame
@@ -89,15 +94,6 @@ func _ready() -> void:
 		Performance.add_custom_monitor(&"streaming/active_enemies", _get_monitor_active_enemies)
 	if not Performance.has_custom_monitor(&"streaming/active_lights"):
 		Performance.add_custom_monitor(&"streaming/active_lights", _get_monitor_active_lights)
-
-	if "--benchmark" in OS.get_cmdline_args() or "--benchmark" in OS.get_cmdline_user_args():
-		_is_benchmarking = true
-		_map.debug_seed = 12345
-		process_mode = Node.PROCESS_MODE_ALWAYS
-		if is_instance_valid(_character):
-			_character.max_health = 999999.0
-			_character.health = 999999.0
-		print(&"=== STARTING BENCHMARK MODE (300 frames, Seed 12345) ===")
 
 
 func _exit_tree() -> void:
@@ -131,19 +127,6 @@ func _process(delta: float) -> void:
 		if delta > 0.0333:
 			print(&"[Perf] Frame spike: %.2f ms" % [delta * 1000.0])
 
-	if _is_benchmarking:
-		if is_instance_valid(_character):
-			_character.position.x += 180.0 * delta
-		_benchmark_frame_count += 1
-		var delta_ms: float = delta * 1000.0
-		_benchmark_frame_times.append(delta_ms)
-		if delta_ms > _benchmark_max_spike_ms:
-			_benchmark_max_spike_ms = delta_ms
-		if _benchmark_frame_count >= 300:
-			_finish_benchmark()
-			get_tree().quit(0)
-			return
-
 	if is_instance_valid(_character):
 		_camera.position = _character.position
 		if not _character.is_dead:
@@ -152,10 +135,12 @@ func _process(delta: float) -> void:
 			if _stream_timer <= 0.0:
 				_stream_timer = STREAM_CHECK_INTERVAL
 				_update_map_streaming()
+			_map.update_streaming(_character.global_position, _character.velocity)
 
 	_update_followers(delta)
 	_check_recruitment()
 	_update_enemies()
+	_process_pending_spawns()
 
 
 func remove_member(hero: Hero) -> void:
@@ -253,24 +238,43 @@ func _populate_room_enemies(room: Rect2i) -> void:
 	var remaining: int = _room_remaining_enemies.get(room, 0)
 	var alive_in_room: int = _room_spawned_enemies.get(room, 0)
 	var needed: int = remaining - alive_in_room
-	if needed <= 0 or _enemies.size() >= MAX_ENEMIES:
+	if needed <= 0 or (_enemies.size() + _pending_spawns.size()) >= MAX_ENEMIES:
 		return
 
-	var capacity: int = MAX_ENEMIES - _enemies.size()
+	var capacity: int = MAX_ENEMIES - (_enemies.size() + _pending_spawns.size())
 	var to_spawn: int = mini(needed, capacity)
 	var spawn_positions: Array[Vector2] = _map.get_enemy_spawn_positions_for_room(room, to_spawn)
 
 	for pos: Vector2 in spawn_positions:
-		var slime: Enemy = LAVA_SLIME_SCENE.instantiate() as Enemy
-		slime.home_room = room
-		slime.position = pos
-		slime.map = _map
-		slime.y_sort_enabled = true
-		slime.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
-		slime.died.connect(_on_enemy_died.bind(room))
-		_characters.add_child(slime)
-		_enemies.append(slime)
+		_pending_spawns.append({&"room": room, &"pos": pos})
 		_room_spawned_enemies[room] = _room_spawned_enemies.get(room, 0) + 1
+
+
+func _process_pending_spawns() -> void:
+	var spawned: int = 0
+	while not _pending_spawns.is_empty() and spawned < MAX_SPAWNS_PER_FRAME:
+		if _enemies.size() >= MAX_ENEMIES:
+			break
+		var req: Dictionary = _pending_spawns.pop_front()
+		var room: Rect2i = req[&"room"]
+		var pos: Vector2 = req[&"pos"]
+		_spawn_enemy_at(pos, room)
+		spawned += 1
+
+
+func _spawn_enemy_at(pos: Vector2, room: Rect2i) -> void:
+	var slime: Enemy = _entity_pool.acquire(LAVA_SLIME_SCENE) as Enemy
+	slime.home_room = room
+	slime.position = pos
+	slime.map = _map
+	slime.y_sort_enabled = true
+	if not slime.projectile_spawn_requested.is_connected(_on_projectile_spawn_requested):
+		slime.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
+	for conn: Dictionary in slime.died.get_connections():
+		@warning_ignore("unsafe_call_argument")
+		slime.died.disconnect(conn.callable)
+	slime.died.connect(_on_enemy_died.bind(room))
+	_enemies.append(slime)
 
 
 func _respawn_nearby_hibernating_rooms() -> void:
@@ -325,7 +329,7 @@ func _update_enemies() -> void:
 			var room: Rect2i = enemy.home_room
 			if _room_spawned_enemies.has(room):
 				_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
-			enemy.queue_free()
+			_entity_pool.release(enemy, LAVA_SLIME_SCENE)
 			_enemies.remove_at(i)
 			i -= 1
 			continue
@@ -408,35 +412,3 @@ func _on_window_resized() -> void:
 	_camera.enabled = false
 	_camera.enabled = true
 	_camera.force_update_scroll()
-
-
-func _finish_benchmark() -> void:
-	_benchmark_frame_times.sort()
-	var n: int = _benchmark_frame_times.size()
-	var sum: float = 0.0
-	var spikes_16ms: int = 0
-	var spikes_33ms: int = 0
-	for t: float in _benchmark_frame_times:
-		sum += t
-		if t > 16.67:
-			spikes_16ms += 1
-		if t > 33.33:
-			spikes_33ms += 1
-	var avg: float = sum / float(n) if n > 0 else 0.0
-	var p50: float = _benchmark_frame_times[int(float(n) * 0.50)] if n > 0 else 0.0
-	var p95: float = _benchmark_frame_times[int(float(n) * 0.95)] if n > 0 else 0.0
-	var p99: float = _benchmark_frame_times[int(float(n) * 0.99)] if n > 0 else 0.0
-
-	print(&"\n================ BENCHMARK BASELINE REPORT ================")
-	print(&"Total Frames Sampled: %d" % n)
-	print(&"Average Frame Time:   %.2f ms (%.1f FPS)" % [avg, 1000.0 / avg if avg > 0.0 else 0.0])
-	print(&"50th Percentile (p50): %.2f ms" % p50)
-	print(&"95th Percentile (p95): %.2f ms" % p95)
-	print(&"99th Percentile (p99): %.2f ms" % p99)
-	print(&"Max Frame Spike:      %.2f ms" % _benchmark_max_spike_ms)
-	print(&"Frames > 16.7ms:       %d (%.1f%%)" % [spikes_16ms, (float(spikes_16ms) / float(n)) * 100.0])
-	print(&"Frames > 33.3ms:       %d (%.1f%%)" % [spikes_33ms, (float(spikes_33ms) / float(n)) * 100.0])
-	print(&"Active Enemies:       %d" % _enemies.size())
-	print(&"Active Lights:        %d" % _map.get_active_light_count())
-	print(&"Static Memory:        %.2f MB" % [float(Performance.get_monitor(Performance.MEMORY_STATIC)) / (1024.0 * 1024.0)])
-	print(&"===========================================================\n")
