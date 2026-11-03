@@ -22,9 +22,11 @@ Lead an auto-battling fellowship of survivors through a room-based dungeon. Stee
 ---
 
 ## 3. World & Level Design
-The dungeon consists of interconnected rooms and corridors structured around exploration and lock-and-key progression:
+The dungeon is procedurally generated as an ascending labyrinth of interconnected rooms and corridors structured around directional progression, exploration, and lock-and-key advancement:
 
+- **Ascending Northward Progression:** The party begins at the southern base of the dungeon in a compact starting chamber scaled to an initial small squad. Pushing northward ascends deeper into the labyrinth where both enemy threat and chamber scale grow to accommodate larger horde battles, while lateral east and west branches offer side routes for recruitment and exploration.
 - **Rooms & Corridors:** Corridors funnel the party into tight formations, while chambers provide space for tactical repositioning, companion recruitment, and skirmishes.
+- **Atmospheric Dungeon Lighting:** Wall-mounted torches along corridors and free-standing candle posts distributed across room interiors carve warm pools of visibility out of the surrounding darkness, balancing moody shadow contrast with clear combat readability.
 - **Color-Coded Doors & Keys:** Locked doors (e.g. Red, Blue, Yellow) block passage to subsequent dungeon sectors. Matching keys are hidden in different rooms, requiring purposeful exploration and route planning.
 - **Localized Spike Trap Areas:** Floor spikes placed in select areas (corridor chokepoints, room corners, or guarding key locations). Passing over active spikes deals damage to any squad member who steps on them. Spikes are placed sparingly rather than everywhere.
 
