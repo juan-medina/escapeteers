@@ -11,6 +11,7 @@ var _target_xp: float = 0.0
 var _display_xp: float = 0.0
 var _display_max_xp: float = 50.0
 
+@onready var damage_meter: DamageMeter = $DamageMeter
 @onready var _level_badge: Label = $Margin/HBox/LevelBadge
 @onready var _xp_bar: ProgressBar = $Margin/HBox/XPBar
 @onready var _xp_text: Label = $Margin/HBox/XPText

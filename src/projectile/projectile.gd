@@ -16,6 +16,7 @@ const ANIM_IMPACT: StringName = &"impact"
 @export var auto_rotate: bool = true
 
 var direction: Vector2 = Vector2.RIGHT
+var source_hero: Hero = null
 
 var _elapsed: float = 0.0
 var _is_dying: bool = false
@@ -91,6 +92,8 @@ func _on_hit(target: Node2D) -> void:
 		target.call(&"apply_knockback", direction * knockback)
 
 	hit_target.emit(target, damage)
+	if source_hero != null and is_instance_valid(source_hero) and target is Enemy:
+		source_hero.enemy_hit.emit(target as Enemy, damage, false)
 	_destroy()
 
 

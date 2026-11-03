@@ -43,6 +43,8 @@ func spawn_projectile(user: Character, target: Character) -> Projectile:
 	var dir_x: float = -1.0 if target.global_position.x < user.global_position.x else 1.0
 	var projectile: Projectile = projectile_scene.instantiate() as Projectile
 	if projectile != null:
+		if user is Hero:
+			projectile.source_hero = user as Hero
 		var spawn_pos: Vector2 = user.global_position + Vector2(dir_x * 8.0, 0.0)
 		var fire_dir: Vector2 = Vector2(dir_x, 0.0)
 		if not requires_horizontal_alignment:

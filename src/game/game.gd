@@ -78,6 +78,7 @@ func _ready() -> void:
 	_character.move_direction = Vector2.UP
 	_character.record_step(0.0)
 	_character.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
+	_character.enemy_hit.connect(_on_hero_enemy_hit.bind(_character))
 	_character.death_completed.connect(_on_player_death_completed)
 	_squad.append(_character)
 
@@ -89,6 +90,8 @@ func _ready() -> void:
 	_hud = HUD_SCENE.instantiate() as Hud
 	add_child(_hud)
 	_hud.update_xp(_current_xp, _xp_required, _squad_level)
+	if _hud.damage_meter != null:
+		_hud.damage_meter.update_squad(_squad)
 
 	var transition_mgr: Node = get_node_or_null(^"/root/Transition")
 	if transition_mgr != null:
@@ -348,6 +351,8 @@ func _on_hero_died(hero: Hero) -> void:
 	if squad_idx != -1:
 		_squad.remove_at(squad_idx)
 		_rebalance_escort_slots()
+		if _hud != null and _hud.damage_meter != null:
+			_hud.damage_meter.update_squad(_squad)
 		return
 
 	var unrecruited_idx: int = _unrecruited_characters.find(hero)
@@ -399,9 +404,17 @@ func _on_hero_recruited(hero_data: HeroData, recruit_pos: Vector2) -> void:
 	new_hero.leader = _character
 	new_hero.squad_member = SquadMember.new()
 	new_hero.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
+	new_hero.enemy_hit.connect(_on_hero_enemy_hit.bind(new_hero))
 	new_hero.died.connect(_on_hero_died.bind(new_hero))
 	_squad.append(new_hero)
 	_rebalance_escort_slots()
+	if _hud != null and _hud.damage_meter != null:
+		_hud.damage_meter.update_squad(_squad)
+
+
+func _on_hero_enemy_hit(_enemy: Enemy, damage: float, _is_heavy: bool, hero: Hero) -> void:
+	if _hud != null and _hud.damage_meter != null and hero != null and hero.hero_data != null:
+		_hud.damage_meter.record_damage(hero.hero_data.id, damage)
 
 
 func get_class_level(class_id: StringName) -> int:

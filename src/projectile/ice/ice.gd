@@ -16,7 +16,8 @@ var _hit_targets: Array[Node2D] = []
 
 func _ready() -> void:
 	speed = 160.0
-	damage = 8.0
+	if damage <= 0.0:
+		damage = 8.0
 	lifetime = 3.5
 	auto_rotate = false
 	super._ready()
@@ -65,6 +66,8 @@ func _on_area_entered(area: Area2D) -> void:
 			if knockback > 0.0 and target.has_method(&"apply_knockback"):
 				target.call(&"apply_knockback", direction * knockback)
 			hit_target.emit(target, damage)
+			if source_hero != null and is_instance_valid(source_hero) and target is Enemy:
+				source_hero.enemy_hit.emit(target as Enemy, damage, false)
 			if max_pierce_count > 0 and _hit_targets.size() >= max_pierce_count:
 				_destroy()
 

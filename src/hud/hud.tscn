@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://c6sfl12l8kd1o"]
 
 [ext_resource type="Script" path="res://hud/hud.gd" id="1_hud"]
+[ext_resource type="PackedScene" path="res://hud/damage_meter/damage_meter.tscn" id="2_meter"]
 
 [node name="Hud" type="CanvasLayer" unique_id=1849182746]
 layer = 10
@@ -38,3 +39,12 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
 text = "0 / 50"
 
+[node name="DamageMeter" parent="." instance=ExtResource("2_meter")]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -176.0
+offset_top = 28.0
+offset_right = -16.0
+offset_bottom = 54.0
+grow_horizontal = 0
