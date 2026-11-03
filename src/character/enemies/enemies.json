@@ -1,0 +1,28 @@
+{
+	"lava_slime": {
+		"id": "lava_slime",
+		"name": "Lava Slime",
+		"scene_path": "res://character/enemies/lava_slime/lava_slime.tscn",
+		"health": { "base": 160.0, "growth": 0.20 },
+		"speed": { "base": 35.0, "growth": 0.05 },
+		"detection_range": { "base": 135.0, "growth": 0.0 },
+		"skills": [
+			{
+				"name": "Slime Melee",
+				"type": "melee",
+				"damage": { "base": 8.0, "growth": 0.20 },
+				"cooldown": { "base": 1.5, "growth": -0.03 },
+				"range": { "base": 20.0, "growth": 0.0 }
+			},
+			{
+				"name": "Lava Spike",
+				"type": "ranged",
+				"damage": { "base": 5.0, "growth": 0.20 },
+				"cooldown": { "base": 1.5, "growth": -0.03 },
+				"range": { "base": 135.0, "growth": 0.0 },
+				"min_range": 65.0
+			}
+		]
+	}
+}
+

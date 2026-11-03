@@ -9,19 +9,13 @@ const HORIZONTAL_ALIGNMENT_TOLERANCE: float = 16.0
 const MELEE_VERTICAL_TOLERANCE: float = 10.0
 
 @export var melee_damage: float = 8.0
+@export var level: int = 1
 
 
 func _ready() -> void:
-	max_health = 160.0
-	speed = 35.0
-	detection_range = 135.0
-	can_melee = true
-	melee_range = 20.0
-	can_ranged = true
-	ranged_min_range = 65.0
-	ranged_range = 135.0
-	attack_cooldown = 1.5
-	damage = 5.0
+	var data: EnemyData = EnemyData.get_enemy(&"lava_slime")
+	if data != null:
+		data.apply_to_enemy(self, level)
 	super._ready()
 	_setup_actions()
 
