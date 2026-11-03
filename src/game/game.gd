@@ -24,6 +24,8 @@ const UNKNOWN_SCENE: PackedScene = preload("res://character/heroes/unknown/unkno
 const LAVA_SLIME_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_slime.tscn")
 const GAME_OVER_DIALOG_SCENE: PackedScene = preload("res://game_over_dialog/game_over_dialog.tscn")
 const RECRUIT_PANEL_SCENE: PackedScene = preload("res://recruit_panel/recruit_panel.tscn")
+const LEVEL_UP_PANEL_SCENE: PackedScene = preload("res://level_up_panel/level_up_panel.tscn")
+const HUD_SCENE: PackedScene = preload("res://hud/hud.tscn")
 
 const HERO_SPAWN_WEIGHTS: Dictionary[PackedScene, int] = {
 	ARMORED_AXEMAN_SCENE: 5,
@@ -38,6 +40,12 @@ const HERO_SPAWN_WEIGHTS: Dictionary[PackedScene, int] = {
 
 var _squad: Array[Hero] = []
 var _unrecruited_characters: Array[Character] = []
+var _class_levels: Dictionary[StringName, int] = {}
+var _hud: Hud = null
+var _squad_level: int = 1
+var _current_xp: float = 0.0
+var _xp_required: float = 50.0
+var _pending_level_ups: int = 0
 var _enemies: Array[Enemy] = []
 var _hero_deck: Array[PackedScene] = []
 var _room_remaining_enemies: Dictionary[Rect2i, int] = {}
@@ -72,6 +80,15 @@ func _ready() -> void:
 	_character.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
 	_character.death_completed.connect(_on_player_death_completed)
 	_squad.append(_character)
+
+	_class_levels[&"soldier"] = 1
+	var soldier_data: HeroData = HeroData.get_hero(&"soldier")
+	if soldier_data != null:
+		soldier_data.apply_to_hero(_character, 1)
+
+	_hud = HUD_SCENE.instantiate() as Hud
+	add_child(_hud)
+	_hud.update_xp(_current_xp, _xp_required, _squad_level)
 
 	Transition.set_loading_progress(0.92, &"Assembling the fellowship...")
 	await get_tree().process_frame
@@ -228,7 +245,7 @@ func _spawn_enemy_at(pos: Vector2, room: Rect2i) -> void:
 	for conn: Dictionary in slime.died.get_connections():
 		@warning_ignore("unsafe_call_argument")
 		slime.died.disconnect(conn.callable)
-	slime.died.connect(_on_enemy_died.bind(room))
+	slime.died.connect(_on_enemy_died.bind(slime, room))
 	_enemies.append(slime)
 
 
@@ -250,11 +267,13 @@ func _respawn_nearby_hibernating_rooms() -> void:
 				break
 
 
-func _on_enemy_died(room: Rect2i) -> void:
+func _on_enemy_died(slime: Enemy, room: Rect2i) -> void:
 	if _room_remaining_enemies.has(room):
 		_room_remaining_enemies[room] = maxi(0, _room_remaining_enemies[room] - 1)
 	if _room_spawned_enemies.has(room):
 		_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
+
+	_add_squad_xp(slime.xp_value)
 
 
 func _on_projectile_spawn_requested(projectile: Projectile) -> void:
@@ -354,11 +373,13 @@ func _open_recruit_panel(recruit_pos: Vector2) -> void:
 	var panel: RecruitPanel = RECRUIT_PANEL_SCENE.instantiate() as RecruitPanel
 	panel.hero_selected.connect(_on_hero_recruited.bind(recruit_pos))
 	add_child(panel)
+	panel.setup_choices(_class_levels)
 
 
 func _on_hero_recruited(hero_data: HeroData, recruit_pos: Vector2) -> void:
 	get_tree().paused = false
-	var new_hero: Hero = hero_data.instantiate_hero()
+	var hero_level: int = get_class_level(hero_data.id)
+	var new_hero: Hero = hero_data.instantiate_hero(hero_level)
 	if new_hero == null:
 		return
 
@@ -372,6 +393,56 @@ func _on_hero_recruited(hero_data: HeroData, recruit_pos: Vector2) -> void:
 	new_hero.died.connect(_on_hero_died.bind(new_hero))
 	_squad.append(new_hero)
 	_rebalance_escort_slots()
+
+
+func get_class_level(class_id: StringName) -> int:
+	return _class_levels.get(class_id, 1)
+
+
+static func _get_xp_required_for_level(lvl: int) -> float:
+	return 50.0 + float(lvl - 1) * 40.0 + float((lvl - 1) * (lvl - 1)) * 10.0
+
+
+func _add_squad_xp(amount: float) -> void:
+	_current_xp += amount
+	while _current_xp >= _xp_required:
+		_current_xp -= _xp_required
+		_squad_level += 1
+		_xp_required = _get_xp_required_for_level(_squad_level)
+		_pending_level_ups += 1
+
+	if _hud != null:
+		_hud.update_xp(_current_xp, _xp_required, _squad_level)
+
+	if _pending_level_ups > 0 and not get_tree().paused:
+		_open_next_level_up()
+
+
+func _open_next_level_up() -> void:
+	if _pending_level_ups <= 0:
+		return
+
+	_pending_level_ups -= 1
+	get_tree().paused = true
+	var panel: LevelUpPanel = LEVEL_UP_PANEL_SCENE.instantiate() as LevelUpPanel
+	panel.class_leveled_up.connect(_on_class_leveled_up)
+	add_child(panel)
+	panel.setup_choices(_squad, _class_levels)
+
+
+func _on_class_leveled_up(hero_data: HeroData) -> void:
+	var new_level: int = get_class_level(hero_data.id) + 1
+	_class_levels[hero_data.id] = new_level
+
+	for member: Hero in _squad:
+		if is_instance_valid(member) and not member.is_dead:
+			if member.hero_data != null and member.hero_data.id == hero_data.id:
+				hero_data.apply_to_hero(member, new_level)
+				member.health = member.max_health
+
+	get_tree().paused = false
+	if _pending_level_ups > 0:
+		_open_next_level_up()
 
 
 static func _is_backline_hero(hero: Hero) -> bool:

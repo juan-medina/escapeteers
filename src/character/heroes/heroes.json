@@ -2,7 +2,6 @@
 	"archer": {
 		"id": "archer",
 		"name": "Archer",
-		"role": "Ranged Sniper",
 		"scene_path": "res://character/heroes/archer/archer.tscn",
 		"health": { "base": 80.0, "growth": 0.20 },
 		"speed": { "base": 100.0, "growth": 0.0 },
@@ -13,15 +12,13 @@
 				"damage": { "base": 15.0, "growth": 0.20 },
 				"cooldown": { "base": 1.4, "growth": -0.05 },
 				"range": { "base": 140.0, "growth": 0.10 },
-				"knockback": { "base": 260.0, "growth": 0.05 },
-				"effect": "Fires long-range arrows with heavy knockback"
+				"knockback": { "base": 260.0, "growth": 0.05 }
 			}
 		]
 	},
 	"armored_axeman": {
 		"id": "armored_axeman",
 		"name": "Armored Axeman",
-		"role": "Melee Brawler",
 		"scene_path": "res://character/heroes/armored_axeman/armored_axeman.tscn",
 		"health": { "base": 120.0, "growth": 0.20 },
 		"speed": { "base": 100.0, "growth": 0.0 },
@@ -32,8 +29,7 @@
 				"damage": { "base": 10.0, "growth": 0.20 },
 				"cooldown": { "base": 0.5, "growth": -0.03 },
 				"range": { "base": 28.0, "growth": 0.05 },
-				"knockback": { "base": 85.0, "growth": 0.05 },
-				"effect": "Rapid axe chop with moderate knockback"
+				"knockback": { "base": 85.0, "growth": 0.05 }
 			},
 			{
 				"name": "Whirlwind Cleave",
@@ -42,15 +38,13 @@
 				"cooldown": { "base": 3.5, "growth": -0.05 },
 				"range": { "base": 28.0, "growth": 0.05 },
 				"knockback": { "base": 260.0, "growth": 0.05 },
-				"chance": 0.35,
-				"effect": "Spinning strike with massive knockback"
+				"chance": 0.35
 			}
 		]
 	},
 	"knight": {
 		"id": "knight",
 		"name": "Knight",
-		"role": "Melee Vanguard",
 		"scene_path": "res://character/heroes/knight/knight.tscn",
 		"health": { "base": 140.0, "growth": 0.20 },
 		"speed": { "base": 100.0, "growth": 0.0 },
@@ -61,8 +55,7 @@
 				"damage": { "base": 10.0, "growth": 0.20 },
 				"cooldown": { "base": 0.5, "growth": -0.03 },
 				"range": { "base": 28.0, "growth": 0.05 },
-				"knockback": { "base": 0.0, "growth": 0.0 },
-				"effect": "Fast slashes that pin enemies with zero knockback"
+				"knockback": { "base": 0.0, "growth": 0.0 }
 			},
 			{
 				"name": "Heavy Swing",
@@ -71,15 +64,13 @@
 				"cooldown": { "base": 3.5, "growth": -0.05 },
 				"range": { "base": 28.0, "growth": 0.05 },
 				"knockback": { "base": 260.0, "growth": 0.05 },
-				"chance": 0.35,
-				"effect": "Swings blade high with massive knockback"
+				"chance": 0.35
 			}
 		]
 	},
 	"knight_templar": {
 		"id": "knight_templar",
 		"name": "Knight Templar",
-		"role": "Shock Infantry",
 		"scene_path": "res://character/heroes/knight_templar/knight_templar.tscn",
 		"health": { "base": 130.0, "growth": 0.20 },
 		"speed": { "base": 100.0, "growth": 0.0 },
@@ -90,8 +81,7 @@
 				"damage": { "base": 10.0, "growth": 0.20 },
 				"cooldown": { "base": 0.5, "growth": -0.03 },
 				"range": { "base": 28.0, "growth": 0.05 },
-				"knockback": { "base": 120.0, "growth": 0.05 },
-				"effect": "Pike thrust that pushes advancing mobs back"
+				"knockback": { "base": 120.0, "growth": 0.05 }
 			},
 			{
 				"name": "Heavy Smite",
@@ -100,15 +90,13 @@
 				"cooldown": { "base": 3.5, "growth": -0.05 },
 				"range": { "base": 28.0, "growth": 0.05 },
 				"knockback": { "base": 260.0, "growth": 0.05 },
-				"chance": 0.35,
-				"effect": "Empowered strike that launches mobs far away"
+				"chance": 0.35
 			}
 		]
 	},
 	"priest": {
 		"id": "priest",
 		"name": "Priest",
-		"role": "Support Healer",
 		"scene_path": "res://character/heroes/priest/priest.tscn",
 		"health": { "base": 80.0, "growth": 0.20 },
 		"speed": { "base": 100.0, "growth": 0.0 },
@@ -118,15 +106,13 @@
 				"type": "heal",
 				"heal_amount": { "base": 20.0, "growth": 0.20 },
 				"cooldown": { "base": 2.4, "growth": -0.05 },
-				"range": { "base": 140.0, "growth": 0.05 },
-				"effect": "Restores health to the most injured ally"
+				"range": { "base": 140.0, "growth": 0.05 }
 			}
 		]
 	},
 	"soldier": {
 		"id": "soldier",
 		"name": "Soldier",
-		"role": "Adaptive Hybrid",
 		"scene_path": "res://character/heroes/soldier/soldier.tscn",
 		"health": { "base": 100.0, "growth": 0.20 },
 		"speed": { "base": 100.0, "growth": 0.0 },
@@ -137,8 +123,7 @@
 				"damage": { "base": 10.0, "growth": 0.15 },
 				"cooldown": { "base": 1.0, "growth": -0.03 },
 				"range": { "base": 140.0, "growth": 0.05 },
-				"knockback": { "base": 0.0, "growth": 0.0 },
-				"effect": "Fires arrows at distant enemies with zero knockback"
+				"knockback": { "base": 0.0, "growth": 0.0 }
 			},
 			{
 				"name": "Sword Slash",
@@ -146,15 +131,13 @@
 				"damage": { "base": 10.0, "growth": 0.20 },
 				"cooldown": { "base": 0.5, "growth": -0.03 },
 				"range": { "base": 28.0, "growth": 0.05 },
-				"knockback": { "base": 0.0, "growth": 0.0 },
-				"effect": "Engages up close with fast slashes and zero knockback"
+				"knockback": { "base": 0.0, "growth": 0.0 }
 			}
 		]
 	},
 	"swordsman": {
 		"id": "swordsman",
 		"name": "Swordsman",
-		"role": "Rapid Skirmisher",
 		"scene_path": "res://character/heroes/swordsman/swordsman.tscn",
 		"health": { "base": 100.0, "growth": 0.20 },
 		"speed": { "base": 100.0, "growth": 0.0 },
@@ -165,8 +148,7 @@
 				"damage": { "base": 10.0, "growth": 0.20 },
 				"cooldown": { "base": 0.5, "growth": -0.03 },
 				"range": { "base": 28.0, "growth": 0.05 },
-				"knockback": { "base": 0.0, "growth": 0.0 },
-				"effect": "Fast sword slices with zero knockback"
+				"knockback": { "base": 0.0, "growth": 0.0 }
 			},
 			{
 				"name": "Blade Flurry",
@@ -176,15 +158,13 @@
 				"cooldown": { "base": 3.5, "growth": -0.05 },
 				"range": { "base": 28.0, "growth": 0.05 },
 				"knockback": { "base": 0.0, "growth": 0.0 },
-				"chance": 0.35,
-				"effect": "Rapid 3-hit flurry dealing damage per hit"
+				"chance": 0.35
 			}
 		]
 	},
 	"wizard": {
 		"id": "wizard",
 		"name": "Wizard",
-		"role": "Ranged Crowd Control",
 		"scene_path": "res://character/heroes/wizard/wizard.tscn",
 		"health": { "base": 70.0, "growth": 0.20 },
 		"speed": { "base": 100.0, "growth": 0.0 },
@@ -195,10 +175,8 @@
 				"damage": { "base": 8.0, "growth": 0.20 },
 				"cooldown": { "base": 1.4, "growth": -0.05 },
 				"range": { "base": 140.0, "growth": 0.08 },
-				"knockback": { "base": 35.0, "growth": 0.05 },
-				"effect": "Piercing ice bolt that slows enemies on hit"
+				"knockback": { "base": 35.0, "growth": 0.05 }
 			}
 		]
 	}
 }
-

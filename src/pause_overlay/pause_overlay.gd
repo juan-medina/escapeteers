@@ -35,8 +35,12 @@ func _on_close_finished() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed(&"pause"):
 		return
+	if get_tree().paused and not visible:
+		return
 	if not visible:
-		Audio.play_pause()
+		var audio_mgr: Node = get_node_or_null(^"/root/Audio")
+		if audio_mgr != null:
+			audio_mgr.call(&"play_pause")
 		_open_pause()
 
 

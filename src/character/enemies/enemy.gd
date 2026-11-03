@@ -22,6 +22,7 @@ const ENEMY_HURTBOX_RADIUS: float = 10.0
 @export var detection_range: float = 140.0
 @export var attack_cooldown: float = 1.2
 @export var damage: float = 10.0
+@export var xp_value: float = 10.0
 
 var combat_actions: Array[CombatAction] = []
 var current_action: CombatAction = null

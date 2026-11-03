@@ -10,6 +10,7 @@ static var _cached_enemies: Dictionary[StringName, EnemyData] = {}
 static var _cached_order: Array[StringName] = []
 
 var detection_range_stat: Dictionary = {}
+var xp_stat: Dictionary = {}
 
 
 static func _ensure_loaded() -> void:
@@ -30,6 +31,7 @@ static func _from_dict(dict: Dictionary) -> EnemyData:
 	var e: EnemyData = EnemyData.new()
 	e.parse_base_fields(dict)
 	e.detection_range_stat = _dict_val(dict, "detection_range")
+	e.xp_stat = _dict_val(dict, "xp")
 	return e
 
 
@@ -50,11 +52,16 @@ func get_detection_range(level: int = 1) -> float:
 	return eval_stat(detection_range_stat, level, 135.0)
 
 
+func get_xp(level: int = 1) -> float:
+	return eval_stat(xp_stat, level, 10.0)
+
+
 func apply_to_enemy(enemy: Enemy, level: int = 1) -> void:
 	enemy.max_health = get_health(level)
 	enemy.health = enemy.max_health
 	enemy.speed = get_speed(level)
 	enemy.detection_range = get_detection_range(level)
+	enemy.xp_value = get_xp(level)
 
 	for skill: Dictionary in skills:
 		var type: String = _str_val(skill, "type")

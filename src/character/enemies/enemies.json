@@ -6,6 +6,7 @@
 		"health": { "base": 160.0, "growth": 0.20 },
 		"speed": { "base": 35.0, "growth": 0.05 },
 		"detection_range": { "base": 135.0, "growth": 0.0 },
+		"xp": { "base": 15.0, "growth": 0.25 },
 		"skills": [
 			{
 				"name": "Slime Melee",

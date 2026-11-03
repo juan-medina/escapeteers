@@ -21,6 +21,10 @@ const HERO_MELEE_VERTICAL_TOLERANCE: float = 20.0
 const _GROUP_ENEMIES: StringName = &"enemies"
 const _GROUP_HEROES: StringName = &"heroes"
 
+@export var level: int = 1:
+	set(value):
+		level = value
+		_update_level_display()
 @export var is_player: bool = false:
 	set(value):
 		is_player = value
@@ -48,6 +52,7 @@ const _GROUP_HEROES: StringName = &"heroes"
 @export var heal_frame: int = 3
 @export var heal_effect_scene: PackedScene = preload("res://projectile/heal/heal_effect.tscn")
 
+var hero_data: HeroData = null
 var leader: Hero = null
 var squad_member: SquadMember = null:
 	set(value):
@@ -95,6 +100,7 @@ func _ready() -> void:
 	_update_player_light()
 	_update_ground_indicator()
 	_update_active_mode()
+	_update_level_display()
 	_animated_sprite.frame_changed.connect(_on_frame_changed)
 	_setup_actions()
 
@@ -477,6 +483,7 @@ func _update_active_mode() -> void:
 	var is_recruited: bool = is_player or squad_member != null
 	if _health_bar != null:
 		_health_bar.visible = is_recruited
+		_health_bar.set_level(level if (is_recruited and not is_dead) else 0)
 	if is_recruited:
 		set_process(true)
 		set_physics_process(true)
@@ -493,3 +500,9 @@ func _update_active_mode() -> void:
 				_animated_sprite.play()
 		else:
 			_animated_sprite.pause()
+
+
+func _update_level_display() -> void:
+	if _health_bar != null:
+		var is_recruited: bool = is_player or squad_member != null
+		_health_bar.set_level(level if (is_recruited and not is_dead) else 0)
