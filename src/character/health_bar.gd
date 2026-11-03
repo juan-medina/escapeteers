@@ -9,12 +9,22 @@ const DEFAULT_ENEMY_COLOR: Color = Color(0.9, 0.25, 0.25, 1.0)
 const DEFAULT_BACKGROUND_COLOR: Color = Color(0.1, 0.1, 0.1, 0.8)
 const DEFAULT_CATCHUP_COLOR: Color = Color(1.0, 1.0, 1.0, 0.95)
 const LEVEL_COLOR: Color = Color(1.0, 0.85, 0.40, 1.0)
-const LEVEL_SHADOW: Color = Color(0.05, 0.05, 0.05, 0.9)
 const DEFAULT_WIDTH: float = 12.0
 const BAR_HEIGHT: float = 1.0
 const HOLD_DELAY: float = 0.22
 const DRAIN_DURATION: float = 0.32
 const HEAL_FLASH_DURATION: float = 0.15
+
+const NUMERALS_TEXTURE: Texture2D = preload("res://data/assets/character/roman_numerals.png")
+const GLYPH_RECTS: Dictionary[String, Rect2] = {
+	"I": Rect2(0.0, 0.0, 2.0, 5.0),
+	"V": Rect2(3.0, 0.0, 4.0, 5.0),
+	"X": Rect2(8.0, 0.0, 4.0, 5.0),
+	"L": Rect2(13.0, 0.0, 4.0, 5.0),
+	"C": Rect2(18.0, 0.0, 4.0, 5.0),
+}
+const ROMAN_VALUES: Array[int] = [100, 90, 50, 40, 10, 9, 5, 4, 1]
+const ROMAN_SYMBOLS: Array[String] = ["C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"]
 
 @export var bar_width: float = DEFAULT_WIDTH
 @export var fill_color: Color = DEFAULT_HERO_COLOR
@@ -112,81 +122,30 @@ func _draw() -> void:
 
 
 func _draw_roman_level(half_width: float) -> void:
-	var roman_str: String = _get_roman_string(level)
-	if roman_str.is_empty():
-		return
-
+	var roman_str: String = _to_roman(level)
 	var total_width: float = 0.0
 	for i: int in range(roman_str.length()):
 		var ch: String = roman_str[i]
-		if ch == "I":
-			total_width += 1.0
-		elif ch == "V" or ch == "X":
-			total_width += 3.0
-		if i < roman_str.length() - 1:
-			total_width += 1.0
+		total_width += 2.0 if ch == "I" else 4.0
 
 	var cursor_x: float = -half_width - 2.0 - total_width
-	var base_y: float = -2.0
-
-	var pixels: Array[Vector2] = []
 	for i: int in range(roman_str.length()):
 		var ch: String = roman_str[i]
-		if ch == "I":
-			for y_off: int in range(4):
-				pixels.append(Vector2(cursor_x, base_y + float(y_off)))
-			cursor_x += 2.0
-		elif ch == "V":
-			pixels.append(Vector2(cursor_x + 0.0, base_y + 0.0))
-			pixels.append(Vector2(cursor_x + 0.0, base_y + 1.0))
-			pixels.append(Vector2(cursor_x + 0.0, base_y + 2.0))
-			pixels.append(Vector2(cursor_x + 1.0, base_y + 3.0))
-			pixels.append(Vector2(cursor_x + 2.0, base_y + 2.0))
-			pixels.append(Vector2(cursor_x + 2.0, base_y + 1.0))
-			pixels.append(Vector2(cursor_x + 2.0, base_y + 0.0))
-			cursor_x += 4.0
-		elif ch == "X":
-			pixels.append(Vector2(cursor_x + 0.0, base_y + 0.0))
-			pixels.append(Vector2(cursor_x + 2.0, base_y + 0.0))
-			pixels.append(Vector2(cursor_x + 1.0, base_y + 1.0))
-			pixels.append(Vector2(cursor_x + 1.0, base_y + 2.0))
-			pixels.append(Vector2(cursor_x + 0.0, base_y + 3.0))
-			pixels.append(Vector2(cursor_x + 2.0, base_y + 3.0))
-			cursor_x += 4.0
-
-	for p: Vector2 in pixels:
-		draw_rect(Rect2(p.x + 1.0, p.y + 1.0, 1.0, 1.0), LEVEL_SHADOW, true)
-
-	for p: Vector2 in pixels:
-		draw_rect(Rect2(p.x, p.y, 1.0, 1.0), level_color, true)
+		if GLYPH_RECTS.has(ch):
+			var region: Rect2 = GLYPH_RECTS[ch]
+			var dest_rect: Rect2 = Rect2(cursor_x, -2.0, region.size.x, region.size.y)
+			draw_texture_rect_region(NUMERALS_TEXTURE, dest_rect, region, level_color)
+		cursor_x += 2.0 if ch == "I" else 4.0
 
 
-static func _get_roman_string(val: int) -> String:
-	match val:
-		1:
-			return "I"
-		2:
-			return "II"
-		3:
-			return "III"
-		4:
-			return "IV"
-		5:
-			return "V"
-		6:
-			return "VI"
-		7:
-			return "VII"
-		8:
-			return "VIII"
-		9:
-			return "IX"
-		10:
-			return "X"
-		_:
-			if val > 10 and val <= 20:
-				return "X" + _get_roman_string(val - 10)
-			return "I"
+static func _to_roman(val: int) -> String:
+	var num: int = val
+	var result: String = ""
+	for i: int in range(ROMAN_VALUES.size()):
+		while num >= ROMAN_VALUES[i]:
+			result += ROMAN_SYMBOLS[i]
+			num -= ROMAN_VALUES[i]
+	return result
 
 
 func set_level(new_level: int) -> void:
