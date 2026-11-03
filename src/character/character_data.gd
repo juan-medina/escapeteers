@@ -106,4 +106,3 @@ func get_health(level: int = 1) -> float:
 
 func get_speed(level: int = 1) -> float:
 	return eval_stat(speed_stat, level, 100.0)
-

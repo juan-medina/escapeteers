@@ -1,0 +1,114 @@
+[gd_scene format=3 uid="uid://cdmqnyn1xgdbq"]
+
+[ext_resource type="Script" uid="uid://8l1uinn6f7g5" path="res://unit_card/unit_card.gd" id="1_card"]
+
+[node name="UnitCard" type="PanelContainer" unique_id=890829835]
+custom_minimum_size = Vector2(580, 84)
+offset_right = 580.0
+offset_bottom = 84.0
+script = ExtResource("1_card")
+
+[node name="Margin" type="MarginContainer" parent="." unique_id=1417635397]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 4
+
+[node name="HBox" type="HBoxContainer" parent="Margin" unique_id=73402268]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UnitColumn" type="HBoxContainer" parent="Margin/HBox" unique_id=520675593]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="PreviewContainer" type="SubViewportContainer" parent="Margin/HBox/UnitColumn" unique_id=1374017867]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+size_flags_vertical = 4
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="Margin/HBox/UnitColumn/PreviewContainer" unique_id=1815078551]
+transparent_bg = true
+handle_input_locally = false
+size = Vector2i(56, 56)
+render_target_update_mode = 4
+
+[node name="PreviewSprite" type="AnimatedSprite2D" parent="Margin/HBox/UnitColumn/PreviewContainer/SubViewport" unique_id=873675072]
+position = Vector2(28, 28)
+
+[node name="VBox" type="VBoxContainer" parent="Margin/HBox/UnitColumn" unique_id=33126364]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 1
+alignment = 1
+
+[node name="NameRow" type="HBoxContainer" parent="Margin/HBox/UnitColumn/VBox" unique_id=685941445]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="NameLabel" type="Label" parent="Margin/HBox/UnitColumn/VBox/NameRow" unique_id=1558571633]
+layout_mode = 2
+text = "Knight"
+
+[node name="LevelLabel" type="Label" parent="Margin/HBox/UnitColumn/VBox/NameRow" unique_id=1631457913]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+text = "Lv. 1"
+
+[node name="RoleLabel" type="Label" parent="Margin/HBox/UnitColumn/VBox" unique_id=574138700]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
+text = "Melee Vanguard"
+
+[node name="StatsRow" type="HBoxContainer" parent="Margin/HBox/UnitColumn/VBox" unique_id=2097831218]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="HPLabel" type="Label" parent="Margin/HBox/UnitColumn/VBox/StatsRow" unique_id=329968221]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+text = "HP:"
+
+[node name="HPValue" type="Label" parent="Margin/HBox/UnitColumn/VBox/StatsRow" unique_id=764581156]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.95, 0.45, 1)
+text = "140"
+
+[node name="SPDLabel" type="Label" parent="Margin/HBox/UnitColumn/VBox/StatsRow" unique_id=352242927]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+text = "SPD:"
+
+[node name="SPDValue" type="Label" parent="Margin/HBox/UnitColumn/VBox/StatsRow" unique_id=2041470233]
+layout_mode = 2
+text = "100"
+
+[node name="VSeparator1" type="VSeparator" parent="Margin/HBox" unique_id=1988609005]
+layout_mode = 2
+
+[node name="Skill1Column" type="VBoxContainer" parent="Margin/HBox" unique_id=976816502]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="VSeparator2" type="VSeparator" parent="Margin/HBox" unique_id=1472309140]
+layout_mode = 2
+
+[node name="Skill2Column" type="VBoxContainer" parent="Margin/HBox" unique_id=1990029063]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="VSeparator3" type="VSeparator" parent="Margin/HBox" unique_id=1849102834]
+layout_mode = 2
+
+[node name="RecruitButton" type="Button" parent="Margin/HBox" unique_id=992834102]
+custom_minimum_size = Vector2(70, 32)
+layout_mode = 2
+size_flags_vertical = 4
+text = "Recruit"

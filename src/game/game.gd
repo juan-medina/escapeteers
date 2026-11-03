@@ -23,6 +23,7 @@ const WIZARD_SCENE: PackedScene = preload("res://character/heroes/wizard/wizard.
 const UNKNOWN_SCENE: PackedScene = preload("res://character/heroes/unknown/unknown.tscn")
 const LAVA_SLIME_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_slime.tscn")
 const GAME_OVER_DIALOG_SCENE: PackedScene = preload("res://game_over_dialog/game_over_dialog.tscn")
+const RECRUIT_PANEL_SCENE: PackedScene = preload("res://recruit_panel/recruit_panel.tscn")
 
 const HERO_SPAWN_WEIGHTS: Dictionary[PackedScene, int] = {
 	ARMORED_AXEMAN_SCENE: 5,
@@ -334,7 +335,6 @@ func _on_player_death_completed() -> void:
 
 func _check_recruitment() -> void:
 	var i: int = _unrecruited_characters.size() - 1
-	var recruited_any: bool = false
 
 	while i >= 0:
 		var candidate: Character = _unrecruited_characters[i]
@@ -343,25 +343,35 @@ func _check_recruitment() -> void:
 				_unrecruited_characters.remove_at(i)
 				var recruit_pos: Vector2 = candidate.position
 				candidate.queue_free()
-
-				var hero_scene: PackedScene = _draw_next_hero_scene()
-				var new_hero: Hero = hero_scene.instantiate() as Hero
-				_characters.add_child(new_hero)
-				new_hero.is_player = false
-				new_hero.position = recruit_pos
-				new_hero.y_sort_enabled = true
-				new_hero.leader = _character
-				new_hero.squad_member = SquadMember.new()
-				new_hero.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
-				new_hero.died.connect(_on_hero_died.bind(new_hero))
-				_squad.append(new_hero)
-				recruited_any = true
-				break
+				_open_recruit_panel(recruit_pos)
+				return
 
 		i -= 1
 
-	if recruited_any:
-		_rebalance_escort_slots()
+
+func _open_recruit_panel(recruit_pos: Vector2) -> void:
+	get_tree().paused = true
+	var panel: RecruitPanel = RECRUIT_PANEL_SCENE.instantiate() as RecruitPanel
+	panel.hero_selected.connect(_on_hero_recruited.bind(recruit_pos))
+	add_child(panel)
+
+
+func _on_hero_recruited(hero_data: HeroData, recruit_pos: Vector2) -> void:
+	get_tree().paused = false
+	var new_hero: Hero = hero_data.instantiate_hero()
+	if new_hero == null:
+		return
+
+	_characters.add_child(new_hero)
+	new_hero.is_player = false
+	new_hero.position = recruit_pos
+	new_hero.y_sort_enabled = true
+	new_hero.leader = _character
+	new_hero.squad_member = SquadMember.new()
+	new_hero.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
+	new_hero.died.connect(_on_hero_died.bind(new_hero))
+	_squad.append(new_hero)
+	_rebalance_escort_slots()
 
 
 static func _is_backline_hero(hero: Hero) -> bool:

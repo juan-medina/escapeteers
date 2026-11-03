@@ -87,4 +87,3 @@ func instantiate_enemy(level: int = 1) -> Enemy:
 		apply_to_enemy(enemy, level)
 		return enemy
 	return null
-
