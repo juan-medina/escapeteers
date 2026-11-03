@@ -18,6 +18,7 @@ const HEAL_FLASH_DURATION: float = 0.15
 
 @export var bar_width: float = DEFAULT_WIDTH
 @export var fill_color: Color = DEFAULT_HERO_COLOR
+@export var level_color: Color = LEVEL_COLOR
 @export var background_color: Color = DEFAULT_BACKGROUND_COLOR
 @export var catchup_color: Color = DEFAULT_CATCHUP_COLOR
 @export var hold_delay: float = HOLD_DELAY
@@ -157,7 +158,7 @@ func _draw_roman_level(half_width: float) -> void:
 		draw_rect(Rect2(p.x + 1.0, p.y + 1.0, 1.0, 1.0), LEVEL_SHADOW, true)
 
 	for p: Vector2 in pixels:
-		draw_rect(Rect2(p.x, p.y, 1.0, 1.0), LEVEL_COLOR, true)
+		draw_rect(Rect2(p.x, p.y, 1.0, 1.0), level_color, true)
 
 
 static func _get_roman_string(val: int) -> String:
@@ -190,6 +191,11 @@ static func _get_roman_string(val: int) -> String:
 
 func set_level(new_level: int) -> void:
 	level = new_level
+
+
+func set_level_color(new_color: Color) -> void:
+	level_color = new_color
+	queue_redraw()
 
 
 func update_health(new_health: float, new_max_health: float) -> void:

@@ -23,6 +23,7 @@ const ENEMY_HURTBOX_RADIUS: float = 10.0
 @export var attack_cooldown: float = 1.2
 @export var damage: float = 10.0
 @export var xp_value: float = 10.0
+@export var level: int = 1
 
 var combat_actions: Array[CombatAction] = []
 var current_action: CombatAction = null
@@ -46,6 +47,8 @@ func _ready() -> void:
 	super._ready()
 	if _health_bar != null:
 		_health_bar.set_fill_color(HealthBar.DEFAULT_ENEMY_COLOR)
+		_health_bar.set_level_color(Color(1.0, 0.45, 0.35, 1.0))
+		_health_bar.set_level(level)
 	add_to_group(_GROUP_ENEMIES)
 	collision_layer = 8
 	collision_mask = 1 | 2 | 4 | 8
@@ -299,6 +302,13 @@ func _pick_new_patrol_destination() -> void:
 
 	var local_offset: Vector2 = Vector2(randf_range(-60.0, 60.0), randf_range(-60.0, 60.0))
 	_patrol_destination = map.clamp_to_walkable(global_position + local_offset)
+
+
+func set_level(new_level: int) -> void:
+	level = new_level
+	if _health_bar != null:
+		_health_bar.set_level_color(Color(1.0, 0.45, 0.35, 1.0))
+		_health_bar.set_level(level)
 
 
 func reset_for_pool() -> void:

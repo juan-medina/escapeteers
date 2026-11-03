@@ -9,7 +9,6 @@ const HORIZONTAL_ALIGNMENT_TOLERANCE: float = 16.0
 const MELEE_VERTICAL_TOLERANCE: float = 10.0
 
 @export var melee_damage: float = 8.0
-@export var level: int = 1
 
 
 func _ready() -> void:
@@ -18,6 +17,17 @@ func _ready() -> void:
 		data.apply_to_enemy(self, level)
 	super._ready()
 	_setup_actions()
+
+
+func set_level(new_level: int) -> void:
+	super.set_level(new_level)
+	var data: EnemyData = EnemyData.get_enemy(&"lava_slime")
+	if data != null:
+		data.apply_to_enemy(self, level)
+	combat_actions.clear()
+	_setup_actions()
+	if _health_bar != null:
+		_health_bar.update_health(health, max_health)
 
 
 func _setup_actions() -> void:

@@ -90,7 +90,9 @@ func _ready() -> void:
 	add_child(_hud)
 	_hud.update_xp(_current_xp, _xp_required, _squad_level)
 
-	Transition.set_loading_progress(0.92, &"Assembling the fellowship...")
+	var transition_mgr: Node = get_node_or_null(^"/root/Transition")
+	if transition_mgr != null:
+		transition_mgr.call(&"set_loading_progress", 0.92, &"Assembling the fellowship...")
 	await get_tree().process_frame
 	_entity_pool.setup(_characters)
 	_entity_pool.prewarm(LAVA_SLIME_SCENE, 20)
@@ -102,10 +104,12 @@ func _ready() -> void:
 		@warning_ignore("unsafe_call_argument")
 		_spawn_enemy_at(req[&"pos"], req[&"room"])
 
-	Transition.set_loading_progress(1.0, &"Ready to escape!")
+	if transition_mgr != null:
+		transition_mgr.call(&"set_loading_progress", 1.0, &"Ready to escape!")
 	await get_tree().process_frame
 	set_process(true)
-	await Transition.hide_loading()
+	if transition_mgr != null:
+		await transition_mgr.call(&"hide_loading")
 
 
 func get_active_enemy_count() -> int:
@@ -113,7 +117,9 @@ func get_active_enemy_count() -> int:
 
 
 func _on_map_generation_progress(progress: float, stage_name: StringName) -> void:
-	Transition.set_loading_progress(progress, stage_name)
+	var transition_mgr: Node = get_node_or_null(^"/root/Transition")
+	if transition_mgr != null:
+		transition_mgr.call(&"set_loading_progress", progress, stage_name)
 
 
 func _process(delta: float) -> void:
@@ -240,6 +246,9 @@ func _spawn_enemy_at(pos: Vector2, room: Rect2i) -> void:
 	slime.position = pos
 	slime.map = _map
 	slime.y_sort_enabled = true
+	var depth: int = _map.get_room_depth(room)
+	var enemy_level: int = clampi(depth, 1, 10)
+	slime.set_level(enemy_level)
 	if not slime.projectile_spawn_requested.is_connected(_on_projectile_spawn_requested):
 		slime.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
 	for conn: Dictionary in slime.died.get_connections():
