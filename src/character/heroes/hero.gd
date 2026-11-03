@@ -18,6 +18,7 @@ const PLAYER_LIGHT_SCALE: float = 1.6
 const PLAYER_HURTBOX_RADIUS: float = 3.5
 const COMPANION_HURTBOX_RADIUS: float = 4.5
 const HERO_MELEE_VERTICAL_TOLERANCE: float = 20.0
+const HEAL_TRIAGE_THRESHOLD: float = 0.75
 const _GROUP_ENEMIES: StringName = &"enemies"
 const _GROUP_HEROES: StringName = &"heroes"
 
@@ -42,11 +43,16 @@ const _GROUP_HEROES: StringName = &"heroes"
 @export var melee1_knockback: float = 85.0
 @export var melee2_knockback: float = 260.0
 @export var melee2_hit_frames: Array[int] = []
+@export var melee1_stun_duration: float = 0.0
+@export var melee_hit_effect_scene: PackedScene = null
 @export var ranged_cooldown: float = 1.0
 @export var ranged_damage: float = 10.0
 @export var ranged_knockback: float = 0.0
 @export var ranged_frame: int = 7
 @export var ranged_projectile_scene: PackedScene = preload("res://projectile/arrow/arrow.tscn")
+@export var ranged_animation: StringName = Character.ANIM_ATTACK_RANGED1
+@export var ranged_stun_duration: float = 0.0
+@export var ranged_spawn_at_target: bool = false
 @export var heal_cooldown: float = 2.4
 @export var heal_amount: float = 20.0
 @export var heal_frame: int = 3
@@ -156,6 +162,8 @@ func _setup_actions() -> void:
 		melee.cooldown = melee1_cooldown
 		melee.damage = melee1_damage
 		melee.knockback = melee1_knockback
+		melee.stun_duration = melee1_stun_duration
+		melee.hit_effect_scene = melee_hit_effect_scene
 		melee.can_heavy = can_heavy_melee
 		melee.heavy_cooldown = melee2_cooldown
 		melee.heavy_damage = melee2_damage
@@ -173,6 +181,9 @@ func _setup_actions() -> void:
 		ranged.damage = ranged_damage
 		ranged.knockback = ranged_knockback
 		ranged.projectile_frame = ranged_frame
+		ranged.animation_name = ranged_animation
+		ranged.stun_duration = ranged_stun_duration
+		ranged.spawn_at_target = ranged_spawn_at_target
 		ranged.leash_distance = 0.0
 		ranged.check_line_of_sight = true
 		combat_actions.append(ranged)
@@ -187,6 +198,11 @@ func _setup_actions() -> void:
 		heal_act.leash_distance = 0.0
 		heal_act.check_line_of_sight = true
 		combat_actions.append(heal_act)
+
+
+func refresh_combat_actions() -> void:
+	combat_actions.clear()
+	_setup_actions()
 
 
 func get_anchor_position() -> Vector2:
@@ -240,24 +256,36 @@ func _check_auto_attack() -> void:
 	var target_char: Character = null
 	var selected_action: CombatAction = null
 
+	var heal_action: HealAction = null
 	if can_heal:
-		var injured_ally: Hero = _find_injured_ally()
-		if injured_ally != null:
-			for action: CombatAction in combat_actions:
-				if action is HealAction:
-					target_char = injured_ally
-					if action.can_execute(self, injured_ally):
-						selected_action = action
-					break
+		for action: CombatAction in combat_actions:
+			if action is HealAction:
+				heal_action = action as HealAction
+				break
 
-	if target_char == null and (can_melee or can_ranged):
+	# 1. Triage priority: heal critically injured allies (<= 75% HP) if Heal is ready.
+	if heal_action != null and heal_action.is_ready():
+		var injured_ally: Hero = _find_injured_ally(HEAL_TRIAGE_THRESHOLD)
+		if injured_ally != null and heal_action.can_execute(self, injured_ally):
+			target_char = injured_ally
+			selected_action = heal_action
+
+	# 2. DPS / Stun: if no triage heal needed (or Heal is on cooldown), attack nearby enemies if DPS is ready.
+	if selected_action == null and (can_melee or can_ranged):
 		var closest_enemy: Enemy = _find_closest_enemy()
 		if closest_enemy != null:
-			target_char = closest_enemy
 			for action: CombatAction in combat_actions:
 				if not (action is HealAction) and action.can_execute(self, closest_enemy):
+					target_char = closest_enemy
 					selected_action = action
 					break
+
+	# 3. Peaceful top-off: if no enemies in range to attack, top off any ally below 100% HP.
+	if selected_action == null and heal_action != null and heal_action.is_ready():
+		var any_injured: Hero = _find_injured_ally(1.0)
+		if any_injured != null and heal_action.can_execute(self, any_injured):
+			target_char = any_injured
+			selected_action = heal_action
 
 	active_target = target_char
 	if active_target == null:
@@ -296,9 +324,9 @@ func _find_closest_enemy() -> Enemy:
 	return closest
 
 
-func _find_injured_ally() -> Hero:
+func _find_injured_ally(max_health_ratio: float = HEAL_TRIAGE_THRESHOLD) -> Hero:
 	var best_target: Hero = null
-	var lowest_health_ratio: float = 1.0
+	var lowest_health_ratio: float = max_health_ratio
 	var closest_dist_sq: float = INF
 	var max_detection: float = heal_range
 	var max_detection_sq: float = max_detection * max_detection
@@ -312,11 +340,14 @@ func _find_injured_ally() -> Hero:
 		if ally.health >= ally.max_health:
 			continue
 
+		var ratio: float = ally.health / ally.max_health
+		if ratio > max_health_ratio:
+			continue
+
 		var dist_sq: float = global_position.distance_squared_to(ally.global_position)
 		if dist_sq > max_detection_sq:
 			continue
 
-		var ratio: float = ally.health / ally.max_health
 		if ratio < lowest_health_ratio - 0.001 or (absf(ratio - lowest_health_ratio) <= 0.001 and dist_sq < closest_dist_sq):
 			lowest_health_ratio = ratio
 			closest_dist_sq = dist_sq
@@ -352,6 +383,11 @@ func _on_frame_changed() -> void:
 					continue
 				if melee.apply_hit(self, enemy):
 					enemy_hit.emit(enemy, hit_damage, is_heavy)
+					if melee.hit_effect_scene != null:
+						var effect: Projectile = melee.hit_effect_scene.instantiate() as Projectile
+						if effect != null:
+							effect.global_position = enemy.global_position
+							spawn_projectile(effect)
 	elif current_action is RangedAction and active_target != null and not _hit_applied_this_attack:
 		var ranged: RangedAction = current_action as RangedAction
 		if frame >= ranged.projectile_frame:

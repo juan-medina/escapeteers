@@ -17,6 +17,7 @@ const WAYPOINT_ARRIVE_DIST_SQ: float = 64.0
 const PATROL_TIMEOUT: float = 10.0
 const KNOCKBACK_DECAY: float = 600.0
 const SLOW_MODULATE: Color = Color(0.45, 0.75, 1.35, 1.0)
+const STUN_MODULATE: Color = Color(1.4, 1.3, 0.5, 1.0)
 const ENEMY_HURTBOX_RADIUS: float = 10.0
 
 @export var detection_range: float = 140.0
@@ -41,6 +42,7 @@ var _knockback_velocity: Vector2 = Vector2.ZERO
 var _notifier: VisibleOnScreenNotifier2D = null
 var _slow_timer: float = 0.0
 var _slow_multiplier: float = 1.0
+var _stun_timer: float = 0.0
 
 
 func _ready() -> void:
@@ -100,13 +102,29 @@ func _physics_process(delta: float) -> void:
 	if _knockback_velocity.length_squared() > 1.0:
 		_knockback_velocity = _knockback_velocity.move_toward(Vector2.ZERO, KNOCKBACK_DECAY * delta)
 
+	var status_changed: bool = false
+
+	if _stun_timer > 0.0:
+		_stun_timer -= delta
+		if _stun_timer <= 0.0:
+			_stun_timer = 0.0
+			status_changed = true
+
 	if _slow_timer > 0.0:
 		_slow_timer -= delta
 		if _slow_timer <= 0.0:
 			_slow_timer = 0.0
 			_slow_multiplier = 1.0
-			_base_modulate = Color.WHITE
-			_animated_sprite.modulate = Color.WHITE
+			status_changed = true
+
+	if status_changed:
+		_update_status_visuals()
+
+	if is_stunned():
+		velocity = _knockback_velocity
+		move_and_slide()
+		update_visuals(Vector2.ZERO)
+		return
 
 	_check_combat_actions()
 
@@ -163,12 +181,39 @@ func apply_slow(factor: float, duration: float) -> void:
 	_set_sleeping(false)
 	_slow_multiplier = clampf(factor, 0.1, 1.0)
 	_slow_timer = maxf(_slow_timer, duration)
-	_base_modulate = SLOW_MODULATE
-	_animated_sprite.modulate = SLOW_MODULATE
+	_update_status_visuals()
+
+
+func apply_stun(duration: float) -> void:
+	if is_dead or duration <= 0.0:
+		return
+	_set_sleeping(false)
+	_stun_timer = maxf(_stun_timer, duration)
+	if combat_state == CombatState.ATTACKING:
+		combat_state = CombatState.COOLDOWN
+		current_action = null
+		play(ANIM_IDLE)
+	_update_status_visuals()
 
 
 func is_slowed() -> bool:
 	return _slow_timer > 0.0
+
+
+func is_stunned() -> bool:
+	return _stun_timer > 0.0
+
+
+func _update_status_visuals() -> void:
+	if is_stunned():
+		_base_modulate = STUN_MODULATE
+		_animated_sprite.modulate = STUN_MODULATE
+	elif is_slowed():
+		_base_modulate = SLOW_MODULATE
+		_animated_sprite.modulate = SLOW_MODULATE
+	else:
+		_base_modulate = Color.WHITE
+		_animated_sprite.modulate = Color.WHITE
 
 
 func take_damage(amount: float) -> void:
@@ -319,6 +364,7 @@ func reset_for_pool() -> void:
 	current_state = State.PATROL
 	target = null
 	current_action = null
+	_stun_timer = 0.0
 	_slow_timer = 0.0
 	_slow_multiplier = 1.0
 	_knockback_velocity = Vector2.ZERO
@@ -339,6 +385,7 @@ func reset_for_pool() -> void:
 func _on_death() -> void:
 	set_physics_process(false)
 	remove_from_group(_GROUP_ENEMIES)
+	_stun_timer = 0.0
 	_slow_timer = 0.0
 	_slow_multiplier = 1.0
 	_base_modulate = Color.WHITE

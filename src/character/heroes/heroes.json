@@ -107,6 +107,15 @@
 				"heal_amount": { "base": 20.0, "growth": 0.20 },
 				"cooldown": { "base": 2.4, "growth": -0.05 },
 				"range": { "base": 140.0, "growth": 0.05 }
+			},
+			{
+				"name": "Holy Smite",
+				"type": "ranged",
+				"damage": { "base": 5.0, "growth": 0.15 },
+				"cooldown": { "base": 4.5, "growth": -0.05 },
+				"range": { "base": 140.0, "growth": 0.05 },
+				"knockback": { "base": 0.0, "growth": 0.0 },
+				"stun_duration": { "base": 2.0, "growth": 0.0 }
 			}
 		]
 	},

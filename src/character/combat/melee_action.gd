@@ -12,6 +12,8 @@ var heavy_damage: float = 25.0
 var knockback: float = 85.0
 var heavy_knockback: float = 260.0
 var vertical_tolerance: float = 18.0
+var stun_duration: float = 0.0
+var hit_effect_scene: PackedScene = null
 
 var fast_attacks_done: int = 0
 var current_is_heavy: bool = false
@@ -85,7 +87,10 @@ func apply_hit(user: Character, target: Character) -> bool:
 		push_dir = Vector2.LEFT if user.flip_h else Vector2.RIGHT
 
 	if target is Enemy:
-		(target as Enemy).apply_knockback(push_dir * applied_knockback)
+		var enemy: Enemy = target as Enemy
+		enemy.apply_knockback(push_dir * applied_knockback)
+		if stun_duration > 0.0:
+			enemy.apply_stun(stun_duration)
 
 	target.take_damage(applied_damage)
 	return true

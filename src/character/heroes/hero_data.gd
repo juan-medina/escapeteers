@@ -80,6 +80,9 @@ func apply_to_hero(hero: Hero, level: int = 1) -> void:
 				hero.melee1_cooldown = cd
 				hero.melee_range = rng
 				hero.melee1_knockback = kb
+				hero.melee1_stun_duration = eval_stat(skill.get("stun_duration"), level, 0.0)
+				if skill.has("leash"):
+					hero.melee_leash_distance = _float_val(skill, "leash", 72.0)
 				melee_idx += 1
 			elif melee_idx == 1:
 				hero.can_heavy_melee = true
@@ -95,12 +98,17 @@ func apply_to_hero(hero: Hero, level: int = 1) -> void:
 			hero.ranged_cooldown = cd
 			hero.ranged_range = rng
 			hero.ranged_knockback = kb
+			if skill.has("stun_duration"):
+				hero.ranged_stun_duration = eval_stat(skill.get("stun_duration"), level, 0.0)
 		elif type == "heal":
 			var amount: float = eval_stat(skill.get("heal_amount"), level, 20.0)
 			hero.can_heal = true
 			hero.heal_amount = amount
 			hero.heal_cooldown = cd
 			hero.heal_range = rng
+
+	if hero.is_node_ready():
+		hero.refresh_combat_actions()
 
 
 func instantiate_hero(level: int = 1) -> Hero:

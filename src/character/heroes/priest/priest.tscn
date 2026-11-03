@@ -2,8 +2,46 @@
 
 [ext_resource type="PackedScene" uid="uid://derhacq4fqbxt" path="res://character/character.tscn" id="1_base"]
 [ext_resource type="Script" uid="uid://dn2htm0m6ctby" path="res://character/heroes/priest/priest.gd" id="2_script"]
+[ext_resource type="PackedScene" uid="uid://df7h2kwl40v5r" path="res://projectile/arrow/arrow.tscn" id="3_epgk5"]
 [ext_resource type="PackedScene" path="res://projectile/heal/heal_effect.tscn" id="3_heal"]
+[ext_resource type="PackedScene" path="res://projectile/smite/smite_effect.tscn" id="4_smite"]
 [ext_resource type="Texture2D" uid="uid://bic67xjm1dhfl" path="res://data/assets/character/heroes/priest/priest.png" id="3_tex"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_d5qik"]
+atlas = ExtResource("3_tex")
+region = Rect2(0, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_5ek4m"]
+atlas = ExtResource("3_tex")
+region = Rect2(100, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_rxdpd"]
+atlas = ExtResource("3_tex")
+region = Rect2(200, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_bm284"]
+atlas = ExtResource("3_tex")
+region = Rect2(300, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_k3ttp"]
+atlas = ExtResource("3_tex")
+region = Rect2(400, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ejayw"]
+atlas = ExtResource("3_tex")
+region = Rect2(500, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ofife"]
+atlas = ExtResource("3_tex")
+region = Rect2(600, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_w458p"]
+atlas = ExtResource("3_tex")
+region = Rect2(700, 300, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_xoxyn"]
+atlas = ExtResource("3_tex")
+region = Rect2(800, 300, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_w487a"]
 atlas = ExtResource("3_tex")
@@ -121,6 +159,38 @@ region = Rect2(700, 100, 100, 100)
 animations = [{
 "frames": [{
 "duration": 1.0,
+"texture": SubResource("AtlasTexture_d5qik")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_5ek4m")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_rxdpd")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_bm284")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_k3ttp")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ejayw")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ofife")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_w458p")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_xoxyn")
+}],
+"loop": 0,
+"name": &"attack_melee1",
+"speed": 12.0
+}, {
+"frames": [{
+"duration": 1.0,
 "texture": SubResource("AtlasTexture_w487a")
 }, {
 "duration": 1.0,
@@ -231,14 +301,37 @@ animations = [{
 
 [node name="Priest" unique_id=597551981 instance=ExtResource("1_base")]
 script = ExtResource("2_script")
+level = 1
 is_player = false
-can_heal = true
-heal_range = 140.0
+can_heavy_melee = false
+melee_leash_distance = 0.0
+melee1_cooldown = 4.5
+melee2_cooldown = 3.5
+melee2_chance = 0.35
+melee1_damage = 5.0
+melee2_damage = 25.0
+melee1_knockback = 30.0
+melee2_knockback = 260.0
+melee2_hit_frames = Array[int]([])
+melee1_stun_duration = 0.0
+melee_hit_effect_scene = null
+ranged_cooldown = 4.5
+ranged_damage = 5.0
+ranged_knockback = 0.0
+ranged_frame = 2
+ranged_projectile_scene = ExtResource("4_smite")
+ranged_animation = &"attack_melee1"
+ranged_stun_duration = 2.0
+ranged_spawn_at_target = true
 heal_cooldown = 2.4
 heal_amount = 20.0
 heal_frame = 3
 heal_effect_scene = ExtResource("3_heal")
+can_ranged = true
+can_heal = true
 
 [node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]
 sprite_frames = SubResource("SpriteFrames_sf")
-animation = &"heal"
+animation = &"attack_melee1"
+frame = 8
+frame_progress = 1.0
