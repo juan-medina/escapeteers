@@ -12,13 +12,17 @@ var _display_xp: float = 0.0
 var _display_max_xp: float = 50.0
 
 @onready var damage_meter: DamageMeter = $DamageMeter
+@onready var map_overlay: MapOverlay = $MapOverlay
 @onready var _level_badge: Label = $Margin/HBox/LevelBadge
 @onready var _xp_bar: ProgressBar = $Margin/HBox/XPBar
 @onready var _xp_text: Label = $Margin/HBox/XPText
+@onready var _map_hint: Label = $MapHint
 
 
 func _ready() -> void:
 	set_process(false)
+	InputManager.device_changed.connect(_on_device_changed)
+	_update_map_prompt(InputManager.current_device)
 
 
 func _process(delta: float) -> void:
@@ -55,3 +59,26 @@ func update_xp(current_xp: float, xp_required: float, squad_level: int) -> void:
 		_display_max_xp = xp_required
 
 	set_process(true)
+
+
+func setup_map(plan: WorldPlan, target: Hero) -> void:
+	if map_overlay != null:
+		map_overlay.setup(plan, target)
+
+
+func _on_device_changed(device: InputManager.DeviceType) -> void:
+	_update_map_prompt(device)
+
+
+func _update_map_prompt(device: InputManager.DeviceType) -> void:
+	if _map_hint == null:
+		return
+	match device:
+		InputManager.DeviceType.XBOX:
+			_map_hint.text = "Press VIEW / BACK for map"
+		InputManager.DeviceType.PLAYSTATION:
+			_map_hint.text = "Press SHARE / SELECT for map"
+		InputManager.DeviceType.GENERIC_GAMEPAD:
+			_map_hint.text = "Press SELECT / BACK for map"
+		_:
+			_map_hint.text = "Press TAB / M for map"

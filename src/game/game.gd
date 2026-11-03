@@ -92,6 +92,7 @@ func _ready() -> void:
 	_hud.update_xp(_current_xp, _xp_required, _squad_level)
 	if _hud.damage_meter != null:
 		_hud.damage_meter.update_squad(_squad)
+	_hud.setup_map(_map.plan, _character)
 
 	var transition_mgr: Node = get_node_or_null(^"/root/Transition")
 	if transition_mgr != null:

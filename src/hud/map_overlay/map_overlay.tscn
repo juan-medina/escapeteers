@@ -1,0 +1,22 @@
+[gd_scene format=3 uid="uid://b5lsgvbfd70re"]
+
+[ext_resource type="Script" uid="uid://csawcvlkf4574" path="res://hud/map_overlay/map_overlay.gd" id="1_overlay"]
+[ext_resource type="Script" uid="uid://duhqvacsau1qv" path="res://hud/map_overlay/player_marker.gd" id="2_marker"]
+
+[node name="MapOverlay" type="Control" unique_id=136559416]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_overlay")
+pixels_per_tile = 3
+
+[node name="Chunks" type="Node2D" parent="." unique_id=1676614325]
+
+[node name="PlayerMarker" type="Control" parent="." unique_id=740950094]
+anchors_preset = 0
+mouse_filter = 2
+script = ExtResource("2_marker")

@@ -1,0 +1,276 @@
+# SPDX-FileCopyrightText: 2026 Juan Medina
+# SPDX-License-Identifier: MIT
+
+class_name MapOverlay
+extends Control
+
+const TILE_SIZE: float = 16.0
+const CHUNK_SIZE_TILES: int = 8
+const CHUNK_SIZE_PX: float = float(CHUNK_SIZE_TILES) * TILE_SIZE
+const WALL_COLOR: Color = Color(0.85, 0.72, 0.38, 0.65)
+
+## Screen pixels per world tile. Must be an integer so every wall vertex lands on a whole pixel (crisp, no shimmer).
+@export_range(1, 8) var pixels_per_tile: int = 2
+@export_range(1, 5) var reveal_chunk_radius: int = 2
+
+var map_scale: float = 0.0
+var _target: Hero = null
+var _chunk_segments: Dictionary[Vector2i, PackedVector2Array] = {}
+var _revealed_chunks: Dictionary[Vector2i, bool] = {}
+var _revealed_nodes: Array[MeshInstance2D] = []
+var _last_revealed_chunk: Vector2i = Vector2i(2147483647, 2147483647)
+
+@onready var _chunks_container: Node2D = $Chunks
+@onready var _player_marker: PlayerMarker = $PlayerMarker
+
+
+func _ready() -> void:
+	visible = false
+	set_process(false)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"toggle_map"):
+		toggle()
+		get_viewport().set_input_as_handled()
+
+
+func _process(_delta: float) -> void:
+	if not is_instance_valid(_target):
+		return
+	_update_discovery()
+	if visible:
+		_update_view()
+
+
+func setup(plan: WorldPlan, target: Hero) -> void:
+	_target = target
+	_build_chunks(plan)
+	set_process(true)
+	if is_instance_valid(_target):
+		_update_discovery()
+		if visible:
+			_update_view()
+
+
+func toggle() -> void:
+	set_map_visible(not visible)
+
+
+func set_map_visible(is_vis: bool) -> void:
+	visible = is_vis
+	if visible and is_instance_valid(_target):
+		_update_view()
+
+
+func _update_view() -> void:
+	var center: Vector2 = (size * 0.5).round()
+	# Snap the scroll offset to whole pixels so the lines move in steps of exactly 1 px.
+	_chunks_container.position = (center - _target.global_position * map_scale).round()
+	_player_marker.position = center
+	if _target.move_direction != Vector2.ZERO:
+		_player_marker.rotation = _target.move_direction.angle()
+
+
+func _update_discovery() -> void:
+	var cur_chunk: Vector2i = Vector2i(floori(_target.global_position.x / CHUNK_SIZE_PX), floori(_target.global_position.y / CHUNK_SIZE_PX))
+	if cur_chunk == _last_revealed_chunk:
+		return
+	_last_revealed_chunk = cur_chunk
+	_reveal_chunks_at(cur_chunk)
+
+
+func _reveal_chunks_at(player_chunk: Vector2i) -> void:
+	for dy: int in range(-reveal_chunk_radius, reveal_chunk_radius + 1):
+		for dx: int in range(-reveal_chunk_radius, reveal_chunk_radius + 1):
+			var coord: Vector2i = player_chunk + Vector2i(dx, dy)
+			if _revealed_chunks.has(coord):
+				continue
+			_revealed_chunks[coord] = true
+			if _chunk_segments.has(coord):
+				var mi: MeshInstance2D = MeshInstance2D.new()
+				mi.mesh = _create_mesh_for_vertices(_chunk_segments[coord])
+				_chunks_container.add_child(mi)
+				_revealed_nodes.append(mi)
+
+
+func _create_mesh_for_vertices(vertices: PackedVector2Array) -> ArrayMesh:
+	var colors: PackedColorArray = PackedColorArray()
+	colors.resize(vertices.size())
+	colors.fill(WALL_COLOR)
+
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_COLOR] = colors
+
+	var mesh: ArrayMesh = ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_LINES, arrays)
+	return mesh
+
+
+func _build_chunks(plan: WorldPlan) -> void:
+	for node: MeshInstance2D in _revealed_nodes:
+		node.queue_free()
+	_revealed_nodes.clear()
+	_revealed_chunks.clear()
+	_chunk_segments.clear()
+	_last_revealed_chunk = Vector2i(2147483647, 2147483647)
+
+	if plan == null or plan.carve_rects.is_empty():
+		return
+
+	map_scale = float(pixels_per_tile) / TILE_SIZE
+	_chunks_container.scale = Vector2(map_scale, map_scale)
+	_extract_chunked_wall_segments(plan)
+
+
+func _extract_chunked_wall_segments(plan: WorldPlan) -> void:
+	var rects: Array[Rect2i] = plan.carve_rects
+	var grid: SpatialGrid = plan.spatial_grid
+
+	for r: Rect2i in rects:
+		# 1. Top Edge: at y = r.position.y, x in [r.position.x, r.end.x]
+		# Outside neighbor is y = r.position.y - 1
+		var y_top: int = r.position.y
+		var y_top_out: int = y_top - 1
+		var top_blockers: Array[Vector2i] = []
+		var query_top: Rect2i = Rect2i(r.position.x, y_top_out, r.size.x, 1)
+		var cand_top: Array[int] = grid.get_candidate_ids_for_rect(query_top)
+		for idx: int in cand_top:
+			var other: Rect2i = rects[idx]
+			if other == r:
+				continue
+			if other.position.y <= y_top_out and other.end.y > y_top_out:
+				var ox1: int = maxi(r.position.x, other.position.x)
+				var ox2: int = mini(r.end.x, other.end.x)
+				if ox2 > ox1:
+					top_blockers.append(Vector2i(ox1, ox2))
+
+		var top_walls: Array[Vector2i] = _subtract_intervals(r.position.x, r.end.x, top_blockers)
+		for w: Vector2i in top_walls:
+			_split_horizontal(w.x, w.y, y_top)
+
+		# 2. Bottom Edge: at y = r.end.y, x in [r.position.x, r.end.x]
+		# Outside neighbor is y = r.end.y
+		var y_bot: int = r.end.y
+		var bot_blockers: Array[Vector2i] = []
+		var query_bot: Rect2i = Rect2i(r.position.x, y_bot, r.size.x, 1)
+		var cand_bot: Array[int] = grid.get_candidate_ids_for_rect(query_bot)
+		for idx: int in cand_bot:
+			var other: Rect2i = rects[idx]
+			if other == r:
+				continue
+			if other.position.y <= y_bot and other.end.y > y_bot:
+				var ox1: int = maxi(r.position.x, other.position.x)
+				var ox2: int = mini(r.end.x, other.end.x)
+				if ox2 > ox1:
+					bot_blockers.append(Vector2i(ox1, ox2))
+
+		var bot_walls: Array[Vector2i] = _subtract_intervals(r.position.x, r.end.x, bot_blockers)
+		for w: Vector2i in bot_walls:
+			_split_horizontal(w.x, w.y, y_bot)
+
+		# 3. Left Edge: at x = r.position.x, y in [r.position.y, r.end.y]
+		# Outside neighbor is x = r.position.x - 1
+		var x_left: int = r.position.x
+		var x_left_out: int = x_left - 1
+		var left_blockers: Array[Vector2i] = []
+		var query_left: Rect2i = Rect2i(x_left_out, r.position.y, 1, r.size.y)
+		var cand_left: Array[int] = grid.get_candidate_ids_for_rect(query_left)
+		for idx: int in cand_left:
+			var other: Rect2i = rects[idx]
+			if other == r:
+				continue
+			if other.position.x <= x_left_out and other.end.x > x_left_out:
+				var oy1: int = maxi(r.position.y, other.position.y)
+				var oy2: int = mini(r.end.y, other.end.y)
+				if oy2 > oy1:
+					left_blockers.append(Vector2i(oy1, oy2))
+
+		var left_walls: Array[Vector2i] = _subtract_intervals(r.position.y, r.end.y, left_blockers)
+		for w: Vector2i in left_walls:
+			_split_vertical(w.x, w.y, x_left)
+
+		# 4. Right Edge: at x = r.end.x, y in [r.position.y, r.end.y]
+		# Outside neighbor is x = r.end.x
+		var x_right: int = r.end.x
+		var right_blockers: Array[Vector2i] = []
+		var query_right: Rect2i = Rect2i(x_right, r.position.y, 1, r.size.y)
+		var cand_right: Array[int] = grid.get_candidate_ids_for_rect(query_right)
+		for idx: int in cand_right:
+			var other: Rect2i = rects[idx]
+			if other == r:
+				continue
+			if other.position.x <= x_right and other.end.x > x_right:
+				var oy1: int = maxi(r.position.y, other.position.y)
+				var oy2: int = mini(r.end.y, other.end.y)
+				if oy2 > oy1:
+					right_blockers.append(Vector2i(oy1, oy2))
+
+		var right_walls: Array[Vector2i] = _subtract_intervals(r.position.y, r.end.y, right_blockers)
+		for w: Vector2i in right_walls:
+			_split_vertical(w.x, w.y, x_right)
+
+
+func _split_horizontal(min_x: int, max_x: int, y: int) -> void:
+	var cy: int = floori(float(y) / float(CHUNK_SIZE_TILES))
+	var cur_x: int = min_x
+	while cur_x < max_x:
+		var cx: int = floori(float(cur_x) / float(CHUNK_SIZE_TILES))
+		var next_chunk_x: int = (cx + 1) * CHUNK_SIZE_TILES
+		var end_x: int = mini(max_x, next_chunk_x)
+
+		var coord: Vector2i = Vector2i(cx, cy)
+		if not _chunk_segments.has(coord):
+			_chunk_segments[coord] = PackedVector2Array()
+		var pts: PackedVector2Array = _chunk_segments[coord]
+		pts.append(Vector2(float(cur_x) * TILE_SIZE, float(y) * TILE_SIZE))
+		pts.append(Vector2(float(end_x) * TILE_SIZE, float(y) * TILE_SIZE))
+		_chunk_segments[coord] = pts
+		cur_x = end_x
+
+
+func _split_vertical(min_y: int, max_y: int, x: int) -> void:
+	var cx: int = floori(float(x) / float(CHUNK_SIZE_TILES))
+	var cur_y: int = min_y
+	while cur_y < max_y:
+		var cy: int = floori(float(cur_y) / float(CHUNK_SIZE_TILES))
+		var next_chunk_y: int = (cy + 1) * CHUNK_SIZE_TILES
+		var end_y: int = mini(max_y, next_chunk_y)
+
+		var coord: Vector2i = Vector2i(cx, cy)
+		if not _chunk_segments.has(coord):
+			_chunk_segments[coord] = PackedVector2Array()
+		var pts: PackedVector2Array = _chunk_segments[coord]
+		pts.append(Vector2(float(x) * TILE_SIZE, float(cur_y) * TILE_SIZE))
+		pts.append(Vector2(float(x) * TILE_SIZE, float(end_y) * TILE_SIZE))
+		_chunk_segments[coord] = pts
+		cur_y = end_y
+
+
+func _subtract_intervals(base_min: int, base_max: int, blockers: Array[Vector2i]) -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	if base_min >= base_max:
+		return result
+	if blockers.is_empty():
+		result.append(Vector2i(base_min, base_max))
+		return result
+
+	blockers.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.x < b.x)
+
+	var current: int = base_min
+	for b: Vector2i in blockers:
+		var b_start: int = clampi(b.x, base_min, base_max)
+		var b_end: int = clampi(b.y, base_min, base_max)
+		if b_start > current:
+			result.append(Vector2i(current, b_start))
+		current = maxi(current, b_end)
+		if current >= base_max:
+			break
+
+	if current < base_max:
+		result.append(Vector2i(current, base_max))
+
+	return result

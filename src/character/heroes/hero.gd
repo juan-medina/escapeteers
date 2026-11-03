@@ -135,7 +135,7 @@ func _process(delta: float) -> void:
 	if _player_light != null:
 		_player_light.energy = PLAYER_LIGHT_BASE_ENERGY + sin(_elapsed_time * 3.0) * 0.02
 
-	var input_vector: Vector2 = Input.get_vector(&"left", &"right", &"up", &"down")
+	var input_vector: Vector2 = InputManager.get_movement_vector()
 
 	if input_vector != Vector2.ZERO:
 		is_moving = true
