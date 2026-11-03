@@ -7,25 +7,25 @@ extends RefCounted
 const WORLD_SIZE_TILES: int = 4096
 const HALF_WORLD_SIZE: int = 2048
 
-const HERO_ROOM_SIZE: Vector2i = Vector2i(30, 30)
-const INITIAL_ROOM_COUNT: int = 5
+const HERO_ROOM_SIZE: Vector2i = Vector2i(18, 18)
+const INITIAL_ROOM_COUNT: int = 3
 const ROOM_PADDING: int = 8
 const CORRIDOR_WIDTH: int = 4
 const MAX_PLACEMENT_ATTEMPTS: int = 120
-const LOOP_CONNECT_MAX_DISTANCE: float = 95.0
-const LOOP_CONNECT_CHANCE: float = 0.45
+const LOOP_CONNECT_MAX_DISTANCE: float = 75.0
+const LOOP_CONNECT_CHANCE: float = 0.40
 
-const TIER_1_MIN_SIZE: Vector2i = Vector2i(24, 24)
-const TIER_1_MAX_SIZE: Vector2i = Vector2i(33, 33)
-const TIER_1_DISTANCE_RANGE: Vector2 = Vector2(45.0, 80.0)
+const TIER_1_MIN_SIZE: Vector2i = Vector2i(16, 16)
+const TIER_1_MAX_SIZE: Vector2i = Vector2i(22, 22)
+const TIER_1_DISTANCE_RANGE: Vector2 = Vector2(30.0, 48.0)
 
-const TIER_2_MIN_SIZE: Vector2i = Vector2i(36, 36)
-const TIER_2_MAX_SIZE: Vector2i = Vector2i(48, 48)
-const TIER_2_DISTANCE_RANGE: Vector2 = Vector2(58.0, 95.0)
+const TIER_2_MIN_SIZE: Vector2i = Vector2i(24, 24)
+const TIER_2_MAX_SIZE: Vector2i = Vector2i(34, 34)
+const TIER_2_DISTANCE_RANGE: Vector2 = Vector2(42.0, 66.0)
 
-const TIER_3_MIN_SIZE: Vector2i = Vector2i(56, 56)
-const TIER_3_MAX_SIZE: Vector2i = Vector2i(76, 76)
-const TIER_3_DISTANCE_RANGE: Vector2 = Vector2(75.0, 115.0)
+const TIER_3_MIN_SIZE: Vector2i = Vector2i(36, 36)
+const TIER_3_MAX_SIZE: Vector2i = Vector2i(50, 50)
+const TIER_3_DISTANCE_RANGE: Vector2 = Vector2(56.0, 84.0)
 
 var run_seed: int = 0
 var hero_room: Rect2i = Rect2i()
@@ -39,6 +39,8 @@ var _room_enemy_quotas: Dictionary[Rect2i, int] = {}
 var _room_companion_spawns: Dictionary[Rect2i, Array] = {}
 var _room_grid: SpatialGrid = SpatialGrid.new()
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var _candle_post_bases: Dictionary[Vector2i, bool] = {}
+var _candle_post_tops: Dictionary[Vector2i, bool] = {}
 
 
 func generate(seed_val: int = 0, max_depth: int = 12) -> void:
@@ -57,6 +59,8 @@ func generate(seed_val: int = 0, max_depth: int = 12) -> void:
 	_room_depths.clear()
 	_room_enemy_quotas.clear()
 	_room_companion_spawns.clear()
+	_candle_post_bases.clear()
+	_candle_post_tops.clear()
 
 	_create_hero_room()
 	_create_initial_rooms()
@@ -97,8 +101,8 @@ func get_carve_rects_in_rect(query_rect: Rect2i) -> Array[Rect2i]:
 func get_room_depth(room: Rect2i) -> int:
 	if _room_depths.has(room):
 		return _room_depths[room]
-	var center_dist: float = Vector2(room.get_center()).length()
-	return maxi(1, int(center_dist / 65.0))
+	var center_y: float = float(room.get_center().y)
+	return maxi(1, int(maxf(0.0, -center_y) / 50.0))
 
 
 func get_room_tier(room: Rect2i) -> int:
@@ -143,21 +147,32 @@ func get_room_at(cell: Vector2i) -> Rect2i:
 	return Rect2i()
 
 
+func is_candle_post_top(cell: Vector2i) -> bool:
+	return _candle_post_tops.has(cell)
+
+
+func is_candle_post_base(cell: Vector2i) -> bool:
+	return _candle_post_bases.has(cell)
+
+
 func _create_hero_room() -> void:
 	var top_left: Vector2i = Vector2i(Vector2(-HERO_ROOM_SIZE) * 0.5)
 	hero_room = Rect2i(top_left, HERO_ROOM_SIZE)
 	_room_depths[hero_room] = 0
 	_add_carve_rect(hero_room)
+	_plan_candle_posts_for_room(hero_room)
 
 
 func _create_initial_rooms() -> void:
 	var placed: int = 0
 	var attempts: int = 0
-	var base_angle_step: float = TAU / float(INITIAL_ROOM_COUNT)
+	# Distribute starter rooms in an upward arc centered on North (-PI * 0.5)
+	var starter_angles: Array[float] = [-PI * 0.75, -PI * 0.5, -PI * 0.25]
 
 	while placed < INITIAL_ROOM_COUNT and attempts < MAX_PLACEMENT_ATTEMPTS * 4:
 		attempts += 1
-		var slot_angle: float = float(placed) * base_angle_step + _rng.randf_range(-0.45, 0.45)
+		var base_angle: float = starter_angles[placed % starter_angles.size()]
+		var slot_angle: float = base_angle + _rng.randf_range(-0.15, 0.15)
 		var distance: float = _rng.randf_range(TIER_1_DISTANCE_RANGE.x, TIER_1_DISTANCE_RANGE.y)
 		var size: Vector2i = Vector2i(_rng.randi_range(TIER_1_MIN_SIZE.x, TIER_1_MAX_SIZE.x), _rng.randi_range(TIER_1_MIN_SIZE.y, TIER_1_MAX_SIZE.y))
 		var center_pos: Vector2 = Vector2.from_angle(slot_angle) * distance
@@ -190,7 +205,6 @@ func _expand_dungeon_branches(target_max_depth: int) -> void:
 			var child_depth: int = current_depth + 1
 			var target_branches: int = _rng.randi_range(1, 2)
 			var source_center: Vector2 = Vector2(parent_room.get_center())
-			var outward_angle: float = source_center.angle()
 
 			var min_size: Vector2i = _get_min_size_for_depth(child_depth)
 			var max_size: Vector2i = _get_max_size_for_depth(child_depth)
@@ -200,12 +214,24 @@ func _expand_dungeon_branches(target_max_depth: int) -> void:
 			var attempts: int = 0
 			while placed < target_branches and attempts < MAX_PLACEMENT_ATTEMPTS:
 				attempts += 1
-				var angle: float = outward_angle + _rng.randf_range(-1.15, 1.15)
+				var angle: float
+				if placed == 0:
+					# Primary branch: Northward ascent (-Y direction)
+					angle = -PI * 0.5 + _rng.randf_range(-0.55, 0.55)
+				else:
+					# Secondary branch: Lateral East or West wing
+					var side_dir: float = -1.0 if _rng.randf() < 0.5 else 1.0
+					angle = -PI * 0.5 + side_dir * _rng.randf_range(0.65, 1.25)
+
 				var step_dist: float = _rng.randf_range(dist_range.x, dist_range.y)
 				var size: Vector2i = Vector2i(_rng.randi_range(min_size.x, max_size.x), _rng.randi_range(min_size.y, max_size.y))
 				var center_pos: Vector2 = source_center + Vector2.from_angle(angle) * step_dist
 				var top_left: Vector2i = Vector2i(center_pos.round()) - Vector2i(Vector2(size) * 0.5)
 				var candidate: Rect2i = Rect2i(top_left, size)
+
+				# Prevent deep branches from looping far back to South
+				if candidate.get_center().y > parent_room.get_center().y + 10:
+					continue
 
 				if _is_outside_world_bounds(candidate) or _overlaps_any_room(candidate):
 					continue
@@ -238,11 +264,45 @@ func _add_room(room: Rect2i, depth: int) -> void:
 	_add_carve_rect(room)
 	get_room_enemy_quota(room)
 	get_companion_spawns_for_room(room)
+	_plan_candle_posts_for_room(room)
 
 
 func _add_carve_rect(rect: Rect2i) -> void:
 	carve_rects.append(rect)
 	spatial_grid.add_rect(carve_rects.size() - 1, rect)
+
+
+func _plan_candle_posts_for_room(room: Rect2i) -> void:
+	var cols: int = maxi(1, roundi(float(room.size.x - 6) / 14.0))
+	var rows: int = maxi(1, roundi(float(room.size.y - 6) / 14.0))
+	var center: Vector2i = room.get_center()
+
+	var step_x: float = float(room.size.x - 6) / float(cols + 1)
+	var step_y: float = float(room.size.y - 6) / float(rows + 1)
+
+	for r_idx: int in range(rows):
+		var target_y: int = room.position.y + 3 + int(roundf(float(r_idx + 1) * step_y))
+		for c_idx: int in range(cols):
+			var target_x: int = room.position.x + 3 + int(roundf(float(c_idx + 1) * step_x))
+			var base_cell: Vector2i = Vector2i(target_x, target_y)
+
+			# If landing on companion spawn at room center, shift slightly
+			if base_cell.distance_squared_to(center) <= 6:
+				base_cell.x += 2 if (c_idx % 2 == 0) else -2
+
+			var top_cell: Vector2i = base_cell + Vector2i(0, -1)
+			_candle_post_bases[base_cell] = true
+			_candle_post_tops[top_cell] = true
+
+
+func has_candle_post_near(cell: Vector2i, radius_sq: int = 81) -> bool:
+	var r: int = int(ceilf(sqrt(float(radius_sq))))
+	for dy: int in range(-r, r + 1):
+		for dx: int in range(-r, r + 1):
+			if dx * dx + dy * dy <= radius_sq:
+				if _candle_post_tops.has(cell + Vector2i(dx, dy)):
+					return true
+	return false
 
 
 func _overlaps_any_room(candidate: Rect2i) -> bool:
@@ -355,7 +415,7 @@ func _get_min_size_for_depth(depth: int) -> Vector2i:
 		return TIER_1_MIN_SIZE
 	if depth <= 3:
 		return TIER_2_MIN_SIZE
-	var bonus: int = mini((depth - 4) * 4, 20)
+	var bonus: int = mini((depth - 4) * 2, 10)
 	return TIER_3_MIN_SIZE + Vector2i(bonus, bonus)
 
 
@@ -364,7 +424,7 @@ func _get_max_size_for_depth(depth: int) -> Vector2i:
 		return TIER_1_MAX_SIZE
 	if depth <= 3:
 		return TIER_2_MAX_SIZE
-	var bonus: int = mini((depth - 4) * 5, 24)
+	var bonus: int = mini((depth - 4) * 3, 12)
 	return TIER_3_MAX_SIZE + Vector2i(bonus, bonus)
 
 
@@ -373,5 +433,5 @@ func _get_step_distance_for_depth(depth: int) -> Vector2:
 		return TIER_1_DISTANCE_RANGE
 	if depth <= 3:
 		return TIER_2_DISTANCE_RANGE
-	var bonus: float = minf(float(depth - 4) * 6.0, 30.0)
+	var bonus: float = minf(float(depth - 4) * 3.0, 16.0)
 	return TIER_3_DISTANCE_RANGE + Vector2(bonus, bonus)

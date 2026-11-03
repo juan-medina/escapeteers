@@ -70,6 +70,9 @@ func _ready() -> void:
 	_walls.y_sort_enabled = true
 	_decorations.y_sort_enabled = true
 	_floor.z_index = -1
+	_floor.rendering_quadrant_size = 4
+	_walls.rendering_quadrant_size = 4
+	_decorations.rendering_quadrant_size = 4
 	if _walls.tile_set == null:
 		_walls.tile_set = _floor.tile_set
 	if _decorations.tile_set == null:
@@ -276,8 +279,6 @@ func expand_frontier_near(player_world_pos: Vector2) -> Array[Rect2i]:
 
 
 func decorate_rooms(rooms: Array[Rect2i]) -> void:
-	_ensure_room_torches_for_rooms(rooms)
-	_place_candle_posts_for_rooms(rooms)
 	_place_room_props_for_rooms(rooms)
 	for r: Rect2i in rooms:
 		_decorated_rooms[r] = true

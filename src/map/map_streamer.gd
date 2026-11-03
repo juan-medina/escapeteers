@@ -159,7 +159,7 @@ func _materialize_chunk(coord: Vector2i) -> void:
 		}
 		return
 
-	var data: Dictionary = TileClassifier.classify_chunk(_raster, _run_seed)
+	var data: Dictionary = TileClassifier.classify_chunk(_raster, _run_seed, _plan)
 	var floors: Array[Vector2i] = data[&"floors"]
 	var floor_atlas: Array[Vector2i] = data[&"floor_atlas"]
 	var walls: Array[Vector2i] = data[&"walls"]

@@ -1,0 +1,19 @@
+{
+	"bounds": {
+		"h": 422,
+		"w": 295,
+		"x": -61,
+		"y": -409
+	},
+	"corridor_cells": 5521,
+	"corridor_dark_pct": 9.98007607317515,
+	"corridor_dim_pct": 9.02010505343235,
+	"corridor_lit_pct": 80.9998188733925,
+	"room_cells": 31578,
+	"room_dark_pct": 17.8257014377098,
+	"room_dim_pct": 12.3693710811324,
+	"room_lit_pct": 69.8049274811578,
+	"seed": 101,
+	"total_floor_cells": 37099,
+	"total_lights": 355
+}

@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://c515a8p2x5a7l"]
+
+[ext_resource type="Script" uid="uid://b123lightaudit" path="res://debug/light_audit.gd" id="1_audit"]
+
+[node name="LightAudit" type="Node2D"]
+script = ExtResource("1_audit")
+
