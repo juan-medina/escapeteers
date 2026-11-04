@@ -3,6 +3,10 @@
 
 extends Node
 
+const MENU_MUSIC: AudioStreamOggVorbis = preload("res://data/assets/music/11 - The Mighty Kingdom.ogg")
+const GAME_MUSIC: AudioStreamOggVorbis = preload("res://data/assets/music/09 - Battle 2.ogg")
+const HERO_DEATH_MUSIC: AudioStreamOggVorbis = preload("res://data/assets/music/18 - Never Give Up.ogg")
+
 var _suppress_hover: bool = false
 
 var _hover: AudioStreamPlayer
@@ -10,6 +14,7 @@ var _click: AudioStreamPlayer
 var _return: AudioStreamPlayer
 var _start: AudioStreamPlayer
 var _pause: AudioStreamPlayer
+var _music_player: AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -19,6 +24,7 @@ func _ready() -> void:
 	_return = _create_player(preload("res://data/assets/sounds/Return.wav"), "Return")
 	_start = _create_player(preload("res://data/assets/sounds/Start.wav"), "Start")
 	_pause = _create_player(preload("res://data/assets/sounds/Pause.wav"), "Pause")
+	_music_player = _create_music_player("MusicPlayer")
 
 
 func _create_player(stream: AudioStream, node_name: String) -> AudioStreamPlayer:
@@ -28,6 +34,40 @@ func _create_player(stream: AudioStream, node_name: String) -> AudioStreamPlayer
 	player.bus = &"Sfx"
 	add_child(player)
 	return player
+
+
+func _create_music_player(node_name: String) -> AudioStreamPlayer:
+	var player: AudioStreamPlayer = AudioStreamPlayer.new()
+	player.name = node_name
+	player.bus = &"Music"
+	add_child(player)
+	return player
+
+
+func play_menu_music() -> void:
+	_play_music(MENU_MUSIC)
+
+
+func play_game_music() -> void:
+	_play_music(GAME_MUSIC)
+
+
+func play_hero_death_music() -> void:
+	_play_music(HERO_DEATH_MUSIC)
+
+
+func stop_music() -> void:
+	_music_player.stop()
+
+
+func _play_music(stream: AudioStreamOggVorbis) -> void:
+	if stream == null:
+		return
+	stream.loop = true
+	if _music_player.stream == stream and _music_player.playing:
+		return
+	_music_player.stream = stream
+	_music_player.play()
 
 
 func play_hover() -> void:

@@ -13,6 +13,7 @@ const NOTIFICATION_DELAY: float = 2.0
 
 func _ready() -> void:
 	Audio.connect_menu_sounds(self)
+	Audio.play_menu_music()
 	if Options.is_eula_accepted(_eula_version()):
 		Transition.go_to_menu_instant()
 		return

@@ -80,6 +80,7 @@ func _ready() -> void:
 	_character.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
 	_character.enemy_hit.connect(_on_hero_enemy_hit.bind(_character))
 	_character.death_completed.connect(_on_player_death_completed)
+	_character.died.connect(_on_player_died)
 	_squad.append(_character)
 
 	_class_levels[&"soldier"] = 1
@@ -114,6 +115,7 @@ func _ready() -> void:
 	set_process(true)
 	if transition_mgr != null:
 		await transition_mgr.call(&"hide_loading")
+	Audio.play_game_music()
 
 
 func get_active_enemy_count() -> int:
@@ -466,7 +468,12 @@ func _on_hero_died(hero: Hero) -> void:
 		_unrecruited_characters.remove_at(unrecruited_idx)
 
 
+func _on_player_died() -> void:
+	Audio.play_hero_death_music()
+
+
 func _on_player_death_completed() -> void:
+	Audio.play_hero_death_music()
 	var dialog: GameOverDialog = GAME_OVER_DIALOG_SCENE.instantiate() as GameOverDialog
 	add_child(dialog)
 	get_tree().paused = true

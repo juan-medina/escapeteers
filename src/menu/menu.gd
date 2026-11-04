@@ -13,6 +13,7 @@ const NOTIFICATION_DELAY: float = 2.0
 
 func _ready() -> void:
 	super._ready()
+	Audio.play_menu_music()
 	get_tree().create_timer(NOTIFICATION_DELAY).timeout.connect(InputManager.enable_notifications)
 	_show_first(_main_menu_panel)
 
