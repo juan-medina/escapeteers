@@ -8,7 +8,7 @@ const LAVA_SPIKE_SCENE: PackedScene = preload("res://projectile/lava_spike/lava_
 const HORIZONTAL_ALIGNMENT_TOLERANCE: float = 16.0
 const MELEE_VERTICAL_TOLERANCE: float = 10.0
 
-@export var melee_damage: float = 8.0
+var melee_damage: float = 8.0
 
 
 func _ready() -> void:

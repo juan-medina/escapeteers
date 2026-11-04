@@ -232,11 +232,6 @@ animations = [{
 [node name="Wizard" unique_id=1787024550 instance=ExtResource("1_base")]
 script = ExtResource("2_script")
 is_player = false
-can_ranged = true
-ranged_range = 140.0
-ranged_cooldown = 1.4
-ranged_damage = 8.0
-ranged_knockback = 35.0
 ranged_frame = 3
 ranged_projectile_scene = ExtResource("4_ice")
 

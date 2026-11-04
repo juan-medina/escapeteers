@@ -315,26 +315,11 @@ animations = [{
 [node name="Knight" unique_id=1913640077 instance=ExtResource("1_base")]
 script = ExtResource("2_script")
 is_player = false
-can_heavy_melee = true
-melee_leash_distance = 72.0
-melee1_cooldown = 0.5
-melee2_cooldown = 3.5
-melee2_chance = 0.35
-melee1_damage = 10.0
-melee2_damage = 25.0
-melee1_knockback = 0.0
-melee2_knockback = 260.0
 melee2_hit_frames = Array[int]([])
-ranged_cooldown = 1.0
-ranged_damage = 10.0
-ranged_knockback = 0.0
 ranged_frame = 7
 ranged_projectile_scene = ExtResource("3_ls2b5")
-heal_cooldown = 2.4
-heal_amount = 20.0
 heal_frame = 3
 heal_effect_scene = ExtResource("4_4qpb0")
-can_melee = true
 
 [node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]
 sprite_frames = SubResource("SpriteFrames_sf")

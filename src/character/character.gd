@@ -35,15 +35,15 @@ const ANIM_ATTACK_MELEE2: StringName = &"attack_melee2"
 const ANIM_ATTACK_RANGED1: StringName = &"attack_ranged1"
 const ANIM_HEAL: StringName = &"heal"
 
-@export var max_health: float = 100.0
-@export var speed: float = 100.0
-@export var can_melee: bool = false
-@export var melee_range: float = 28.0
-@export var can_ranged: bool = false
-@export var ranged_min_range: float = 45.0
-@export var ranged_range: float = 140.0
-@export var can_heal: bool = false
-@export var heal_range: float = 140.0
+var max_health: float = 100.0
+var speed: float = 100.0
+var can_melee: bool = false
+var melee_range: float = 28.0
+var can_ranged: bool = false
+var ranged_min_range: float = 45.0
+var ranged_range: float = 140.0
+var can_heal: bool = false
+var heal_range: float = 140.0
 
 var health: float = 100.0
 var is_dead: bool = false

@@ -335,21 +335,9 @@ animations = [{
 [node name="Swordsman" unique_id=89725606 instance=ExtResource("1_base")]
 script = ExtResource("2_script")
 is_player = false
-can_heavy_melee = true
-melee1_cooldown = 0.5
-melee2_cooldown = 3.5
-melee2_chance = 0.35
-melee1_damage = 10.0
-melee2_damage = 8.0
-melee1_knockback = 0.0
-melee2_knockback = 0.0
 melee2_hit_frames = Array[int]([2, 5, 8])
-ranged_cooldown = 1.0
-ranged_damage = 10.0
-ranged_knockback = 0.0
 ranged_frame = 7
 ranged_projectile_scene = ExtResource("3_puv4g")
-can_melee = true
 
 [node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]
 sprite_frames = SubResource("SpriteFrames_sf")

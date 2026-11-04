@@ -20,11 +20,12 @@ const SLOW_MODULATE: Color = Color(0.45, 0.75, 1.35, 1.0)
 const STUN_MODULATE: Color = Color(1.4, 1.3, 0.5, 1.0)
 const ENEMY_HURTBOX_RADIUS: float = 10.0
 
-@export var detection_range: float = 140.0
-@export var attack_cooldown: float = 1.2
-@export var damage: float = 10.0
-@export var xp_value: float = 10.0
 @export var level: int = 1
+
+var detection_range: float = 140.0
+var attack_cooldown: float = 1.2
+var damage: float = 10.0
+var xp_value: float = 10.0
 
 var combat_actions: Array[CombatAction] = []
 var current_action: CombatAction = null

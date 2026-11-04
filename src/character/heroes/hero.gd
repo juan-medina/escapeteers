@@ -33,30 +33,32 @@ const _GROUP_HEROES: StringName = &"heroes"
 		_update_player_light()
 		_update_ground_indicator()
 		_update_active_mode()
-@export var can_heavy_melee: bool = false
-@export var melee_leash_distance: float = 96.0
-@export var melee1_cooldown: float = 0.5
-@export var melee2_cooldown: float = 3.5
-@export var melee2_chance: float = 0.35
-@export var melee1_damage: float = 10.0
-@export var melee2_damage: float = 25.0
-@export var melee1_knockback: float = 85.0
-@export var melee2_knockback: float = 260.0
-@export var melee2_hit_frames: Array[int] = []
-@export var melee1_stun_duration: float = 0.0
+
 @export var melee_hit_effect_scene: PackedScene = null
-@export var ranged_cooldown: float = 1.0
-@export var ranged_damage: float = 10.0
-@export var ranged_knockback: float = 0.0
+@export var melee2_hit_frames: Array[int] = []
 @export var ranged_frame: int = 7
 @export var ranged_projectile_scene: PackedScene = preload("res://projectile/arrow/arrow.tscn")
 @export var ranged_animation: StringName = Character.ANIM_ATTACK_RANGED1
-@export var ranged_stun_duration: float = 0.0
 @export var ranged_spawn_at_target: bool = false
-@export var heal_cooldown: float = 2.4
-@export var heal_amount: float = 20.0
 @export var heal_frame: int = 3
 @export var heal_effect_scene: PackedScene = preload("res://projectile/heal/heal_effect.tscn")
+
+var can_heavy_melee: bool = false
+var melee_leash_distance: float = 96.0
+var melee1_cooldown: float = 0.5
+var melee2_cooldown: float = 3.5
+var melee2_chance: float = 0.35
+var melee1_damage: float = 10.0
+var melee2_damage: float = 25.0
+var melee1_knockback: float = 85.0
+var melee2_knockback: float = 260.0
+var melee1_stun_duration: float = 0.0
+var ranged_cooldown: float = 1.0
+var ranged_damage: float = 10.0
+var ranged_knockback: float = 0.0
+var ranged_stun_duration: float = 0.0
+var heal_cooldown: float = 2.4
+var heal_amount: float = 20.0
 
 var hero_data: HeroData = null
 var leader: Hero = null

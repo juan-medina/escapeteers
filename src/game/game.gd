@@ -469,11 +469,11 @@ func _on_hero_died(hero: Hero) -> void:
 
 
 func _on_player_died() -> void:
-	Audio.play_hero_death_music()
+	Audio.stop_music()
 
 
 func _on_player_death_completed() -> void:
-	Audio.play_hero_death_music()
+	Audio.stop_music()
 	var dialog: GameOverDialog = GAME_OVER_DIALOG_SCENE.instantiate() as GameOverDialog
 	add_child(dialog)
 	get_tree().paused = true

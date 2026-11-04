@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bmbmjf7fckb50" path="res://character/enemies/lava_slime/lava_slime.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://d3l2t53rjfh7i" path="res://data/assets/character/enemies/lava_slime/lava_slime.png" id="2_tex"]
-[ext_resource type="Script" path="res://character/health_bar.gd" id="3_hbar"]
+[ext_resource type="Script" uid="uid://b51ct7bx358a5" path="res://character/health_bar.gd" id="3_hbar"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_m0"]
 atlas = ExtResource("2_tex")
