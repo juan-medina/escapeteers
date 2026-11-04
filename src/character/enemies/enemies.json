@@ -50,6 +50,25 @@
 				"chance": 0.35
 			}
 		]
+	},
+	"skeleton_archer": {
+		"id": "skeleton_archer",
+		"name": "Skeleton Archer",
+		"scene_path": "res://character/enemies/skeleton_archer/skeleton_archer.tscn",
+		"health": { "base": 85.0, "growth": 0.20 },
+		"speed": { "base": 45.0, "growth": 0.05 },
+		"detection_range": { "base": 175.0, "growth": 0.0 },
+		"xp": { "base": 18.0, "growth": 0.25 },
+		"skills": [
+			{
+				"name": "Bone Arrow",
+				"type": "ranged",
+				"damage": { "base": 7.0, "growth": 0.20 },
+				"cooldown": { "base": 1.4, "growth": -0.04 },
+				"range": { "base": 155.0, "growth": 0.0 },
+				"min_range": 0.0
+			}
+		]
 	}
 }
 

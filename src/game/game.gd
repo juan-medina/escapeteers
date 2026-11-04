@@ -23,6 +23,7 @@ const WIZARD_SCENE: PackedScene = preload("res://character/heroes/wizard/wizard.
 const UNKNOWN_SCENE: PackedScene = preload("res://character/heroes/unknown/unknown.tscn")
 const LAVA_SLIME_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_slime.tscn")
 const SKELETON_SCENE: PackedScene = preload("res://character/enemies/skeleton/skeleton.tscn")
+const SKELETON_ARCHER_SCENE: PackedScene = preload("res://character/enemies/skeleton_archer/skeleton_archer.tscn")
 const GAME_OVER_DIALOG_SCENE: PackedScene = preload("res://game_over_dialog/game_over_dialog.tscn")
 const RECRUIT_PANEL_SCENE: PackedScene = preload("res://recruit_panel/recruit_panel.tscn")
 const LEVEL_UP_PANEL_SCENE: PackedScene = preload("res://level_up_panel/level_up_panel.tscn")
@@ -114,8 +115,9 @@ func _ready() -> void:
 		transition_mgr.call(&"set_loading_progress", 0.92, &"Assembling the fellowship...")
 	await get_tree().process_frame
 	_entity_pool.setup(_characters)
-	_entity_pool.prewarm(LAVA_SLIME_SCENE, 40)
-	_entity_pool.prewarm(SKELETON_SCENE, 40)
+	_entity_pool.prewarm(LAVA_SLIME_SCENE, 30)
+	_entity_pool.prewarm(SKELETON_SCENE, 30)
+	_entity_pool.prewarm(SKELETON_ARCHER_SCENE, 20)
 	_spawn_initial_characters()
 	_check_recruitment()
 	_register_and_populate_rooms(_map.companion_rooms)
@@ -273,7 +275,12 @@ func _process_pending_spawns() -> void:
 
 
 func _spawn_enemy_at(pos: Vector2, room: Rect2i) -> void:
-	var enemy_scene: PackedScene = SKELETON_SCENE if randf() < 0.5 else LAVA_SLIME_SCENE
+	var roll: float = randf()
+	var enemy_scene: PackedScene = LAVA_SLIME_SCENE
+	if roll < 0.40:
+		enemy_scene = SKELETON_SCENE
+	elif roll < 0.70:
+		enemy_scene = SKELETON_ARCHER_SCENE
 	var enemy: Enemy = _entity_pool.acquire(enemy_scene) as Enemy
 	enemy.home_room = room
 	enemy.position = pos
@@ -397,6 +404,8 @@ static func _compare_room_candidate_desc(a: Dictionary, b: Dictionary) -> bool:
 func _get_enemy_scene(enemy: Enemy) -> PackedScene:
 	if enemy is Skeleton:
 		return SKELETON_SCENE
+	if enemy is SkeletonArcher:
+		return SKELETON_ARCHER_SCENE
 	return LAVA_SLIME_SCENE
 
 

@@ -10,14 +10,14 @@ This roadmap sequences upcoming gameplay milestones to build on the core pillars
 
 > **Already in Use:**
 > - **Heroes (8):** `Archer`, `Armored Axeman`, `Knight`, `Knight Templar`, `Priest`, `Soldier`, `Swordsman`, `Wizard`
-> - **Enemies (2):** `Lava Slime` (Hybrid Skirmisher), `Skeleton` (Fast Backline Rusher)
+> - **Enemies (3):** `Lava Slime` (Hybrid Skirmisher), `Skeleton` (Fast Backline Rusher), `Skeleton Archer` (Ranged Artillery)
 
 1. **[DONE] First Enemy to Build — `Skeleton` (Melee Rusher):**
    - Fast close-combat swarm unit (`80.0` speed, `95.0` HP) that persistently targets healers/ranged heroes and slips through formation gaps when moving.
    - Includes `Attack01`, heavy `Attack02`, and `summon` animation ready for `Necromancer`.
-2. **Second Enemy — `Skeleton Archer` (Ranged Artillery):**
-   - Keeps distance and fires arrows at the squad (reuses `arrow.tscn` projectile logic).
-   - Forces the player to advance into range and rely on `Archer` / `Wizard` backline fire.
+2. **[DONE] Second Enemy — `Skeleton Archer` (Ranged Artillery):**
+   - Fires `BoneArrow` projectiles across long range (`155.0` px) in any direction with line of sight, kiting backward between shots when heroes close within `65.0` px.
+   - Includes `summon` animation ready for `Necromancer`.
 3. **Third Enemy — `Necromancer` (Summoner):**
    - Hangs back and continuously summons `Skeleton` waves until eliminated.
    - Creates high-priority rush-down targets.
