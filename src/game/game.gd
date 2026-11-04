@@ -57,6 +57,7 @@ var _enemies: Array[Enemy] = []
 var _hero_deck: Array[PackedScene] = []
 var _room_remaining_enemies: Dictionary[Rect2i, int] = {}
 var _room_spawned_enemies: Dictionary[Rect2i, int] = {}
+var _room_spawned_necros: Dictionary[Rect2i, int] = {}
 var _stream_timer: float = 0.0
 var _entity_pool: EntityPool = EntityPool.new()
 var _pending_spawns: Array[Dictionary] = []
@@ -278,22 +279,15 @@ func _process_pending_spawns() -> void:
 
 
 func _spawn_enemy_at(pos: Vector2, room: Rect2i, forced_scene: PackedScene = null, forced_level: int = -1, is_summoned: bool = false) -> void:
+	var depth: int = _map.get_room_depth(room)
 	var enemy_scene: PackedScene = forced_scene
 	if enemy_scene == null:
-		var roll: float = randf()
-		enemy_scene = LAVA_SLIME_SCENE
-		if roll < 0.35:
-			enemy_scene = SKELETON_SCENE
-		elif roll < 0.60:
-			enemy_scene = SKELETON_ARCHER_SCENE
-		elif roll < 0.75:
-			enemy_scene = NECROMANCER_SCENE
+		enemy_scene = _pick_enemy_scene_for_room(room, depth)
 	var enemy: Enemy = _entity_pool.acquire(enemy_scene) as Enemy
 	enemy.home_room = room
 	enemy.position = pos
 	enemy.map = _map
 	enemy.y_sort_enabled = true
-	var depth: int = _map.get_room_depth(room)
 	var enemy_level: int = forced_level if forced_level > 0 else clampi(depth, 1, 10)
 	enemy.set_level(enemy_level)
 	if not enemy.projectile_spawn_requested.is_connected(_on_projectile_spawn_requested):
@@ -393,6 +387,8 @@ func _reclaim_distant_enemies_for_room(target_room: Rect2i, target_room_dist_sq:
 		var h_room: Rect2i = enemy_to_evict.home_room
 		if _room_spawned_enemies.has(h_room):
 			_room_spawned_enemies[h_room] = maxi(0, _room_spawned_enemies[h_room] - 1)
+		if enemy_to_evict is Necromancer and _room_spawned_necros.has(h_room):
+			_room_spawned_necros[h_room] = maxi(0, _room_spawned_necros[h_room] - 1)
 		_entity_pool.release(enemy_to_evict, _get_enemy_scene(enemy_to_evict))
 		var e_idx: int = _enemies.find(enemy_to_evict)
 		if e_idx != -1:
@@ -410,6 +406,25 @@ static func _compare_room_candidate_desc(a: Dictionary, b: Dictionary) -> bool:
 	var dist_a: float = a[&"dist_sq"]
 	var dist_b: float = b[&"dist_sq"]
 	return dist_a > dist_b
+
+
+func _pick_enemy_scene_for_room(room: Rect2i, depth: int) -> PackedScene:
+	var archetype: WorldPlan.RoomArchetype = _map.plan.get_room_archetype(room)
+	var result: PackedScene = LAVA_SLIME_SCENE
+	match archetype:
+		WorldPlan.RoomArchetype.BONE_SWARM:
+			result = SKELETON_SCENE
+		WorldPlan.RoomArchetype.ARCHER_GARRISON:
+			result = SKELETON_ARCHER_SCENE if randf() < 0.65 else SKELETON_SCENE
+		WorldPlan.RoomArchetype.NECRO_CRYPT:
+			var max_necros: int = 1 if depth <= 2 else 2
+			var spawned_necros: int = _room_spawned_necros.get(room, 0)
+			if spawned_necros < max_necros:
+				_room_spawned_necros[room] = spawned_necros + 1
+				result = NECROMANCER_SCENE
+			else:
+				result = SKELETON_ARCHER_SCENE if randf() < 0.35 else SKELETON_SCENE
+	return result
 
 
 func _get_enemy_scene(enemy: Enemy) -> PackedScene:
@@ -481,6 +496,8 @@ func _update_enemies() -> void:
 			var room: Rect2i = enemy.home_room
 			if _room_spawned_enemies.has(room):
 				_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
+			if enemy is Necromancer and _room_spawned_necros.has(room):
+				_room_spawned_necros[room] = maxi(0, _room_spawned_necros[room] - 1)
 			_entity_pool.release(enemy, _get_enemy_scene(enemy))
 			_enemies.remove_at(i)
 			i -= 1

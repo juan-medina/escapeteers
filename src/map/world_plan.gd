@@ -4,6 +4,13 @@
 class_name WorldPlan
 extends RefCounted
 
+enum RoomArchetype {
+	SLIME_PIT,
+	BONE_SWARM,
+	ARCHER_GARRISON,
+	NECRO_CRYPT,
+}
+
 const WORLD_SIZE_TILES: int = 4096
 const HALF_WORLD_SIZE: int = 2048
 
@@ -35,6 +42,8 @@ var spatial_grid: SpatialGrid = SpatialGrid.new()
 var room_children: Dictionary[Rect2i, Array] = {}
 
 var _room_depths: Dictionary[Rect2i, int] = {}
+var _room_archetypes: Dictionary[Rect2i, RoomArchetype] = {}
+var _room_neighbors: Dictionary[Rect2i, Array] = {}
 var _room_enemy_quotas: Dictionary[Rect2i, int] = {}
 var _room_companion_spawns: Dictionary[Rect2i, Array] = {}
 var _room_grid: SpatialGrid = SpatialGrid.new()
@@ -57,6 +66,8 @@ func generate(seed_val: int = 0, max_depth: int = 12) -> void:
 	room_children.clear()
 	_room_grid.clear()
 	_room_depths.clear()
+	_room_archetypes.clear()
+	_room_neighbors.clear()
 	_room_enemy_quotas.clear()
 	_room_companion_spawns.clear()
 	_candle_post_bases.clear()
@@ -65,6 +76,7 @@ func generate(seed_val: int = 0, max_depth: int = 12) -> void:
 	_create_hero_room()
 	_create_initial_rooms()
 	_expand_dungeon_branches(max_depth)
+	_color_room_graph()
 	_eliminate_narrow_gaps()
 
 
@@ -112,6 +124,92 @@ func get_room_tier(room: Rect2i) -> int:
 	if depth <= 3:
 		return 2
 	return 3
+
+
+func get_room_archetype(room: Rect2i) -> RoomArchetype:
+	if _room_archetypes.has(room):
+		return _room_archetypes[room]
+	return RoomArchetype.SLIME_PIT
+
+
+func _color_room_graph() -> void:
+	var all_colors: Array[RoomArchetype] = [
+		RoomArchetype.SLIME_PIT,
+		RoomArchetype.BONE_SWARM,
+		RoomArchetype.ARCHER_GARRISON,
+		RoomArchetype.NECRO_CRYPT,
+	]
+	var necro_at_depth: Dictionary[int, int] = {}
+	for room: Rect2i in rooms:
+		if _room_archetypes.has(room):
+			continue
+		var depth: int = get_room_depth(room)
+		var forbidden: Array[RoomArchetype] = _get_neighbor_archetypes(room)
+		var candidates: Array[RoomArchetype] = []
+		for color: RoomArchetype in all_colors:
+			if depth <= 1 and color == RoomArchetype.NECRO_CRYPT:
+				continue
+			if not forbidden.has(color):
+				candidates.append(color)
+		if candidates.is_empty():
+			candidates.append_array(all_colors)
+		var needs_necro: bool = not necro_at_depth.has(depth)
+		var chosen: RoomArchetype = _pick_weighted_archetype(candidates, depth, needs_necro)
+		_room_archetypes[room] = chosen
+		if chosen == RoomArchetype.NECRO_CRYPT:
+			necro_at_depth[depth] = (necro_at_depth[depth] + 1) if necro_at_depth.has(depth) else 1
+
+
+func _get_neighbor_archetypes(room: Rect2i) -> Array[RoomArchetype]:
+	var used: Array[RoomArchetype] = []
+	if not _room_neighbors.has(room):
+		return used
+	var neighbors: Array = _room_neighbors[room]
+	for n_var: Variant in neighbors:
+		if n_var is Rect2i:
+			var n_room: Rect2i = n_var
+			if _room_archetypes.has(n_room):
+				var arch: RoomArchetype = _room_archetypes[n_room]
+				if not used.has(arch):
+					used.append(arch)
+	return used
+
+
+func _pick_weighted_archetype(candidates: Array[RoomArchetype], depth: int, needs_necro: bool) -> RoomArchetype:
+	if depth >= 2 and needs_necro and candidates.has(RoomArchetype.NECRO_CRYPT):
+		return RoomArchetype.NECRO_CRYPT
+	var total_weight: int = 0
+	for c: RoomArchetype in candidates:
+		total_weight += _get_archetype_weight(c)
+	var roll: int = _rng.randi_range(1, maxi(1, total_weight))
+	var accum: int = 0
+	var chosen: RoomArchetype = candidates[0]
+	for c: RoomArchetype in candidates:
+		accum += _get_archetype_weight(c)
+		if roll <= accum:
+			chosen = c
+			break
+	return chosen
+
+
+static func _get_archetype_weight(archetype: RoomArchetype) -> int:
+	var weight: int = 25
+	if archetype == RoomArchetype.NECRO_CRYPT:
+		weight = 35
+	elif archetype == RoomArchetype.SLIME_PIT:
+		weight = 15
+	return weight
+
+
+func _add_neighbor_edge(room_a: Rect2i, room_b: Rect2i) -> void:
+	if not _room_neighbors.has(room_a):
+		_room_neighbors[room_a] = []
+	if not _room_neighbors[room_a].has(room_b):
+		_room_neighbors[room_a].append(room_b)
+	if not _room_neighbors.has(room_b):
+		_room_neighbors[room_b] = []
+	if not _room_neighbors[room_b].has(room_a):
+		_room_neighbors[room_b].append(room_a)
 
 
 func get_room_enemy_quota(room: Rect2i) -> int:
@@ -168,6 +266,16 @@ func _create_initial_rooms() -> void:
 	var attempts: int = 0
 	# Distribute starter rooms in an upward arc centered on North (-PI * 0.5)
 	var starter_angles: Array[float] = [-PI * 0.75, -PI * 0.5, -PI * 0.25]
+	var starter_archetypes: Array[RoomArchetype] = [
+		RoomArchetype.SLIME_PIT,
+		RoomArchetype.BONE_SWARM,
+		RoomArchetype.ARCHER_GARRISON,
+	]
+	for s_idx: int in range(starter_archetypes.size() - 1, 0, -1):
+		var swap_idx: int = _rng.randi_range(0, s_idx)
+		var tmp: RoomArchetype = starter_archetypes[s_idx]
+		starter_archetypes[s_idx] = starter_archetypes[swap_idx]
+		starter_archetypes[swap_idx] = tmp
 
 	while placed < INITIAL_ROOM_COUNT and attempts < MAX_PLACEMENT_ATTEMPTS * 4:
 		attempts += 1
@@ -182,6 +290,7 @@ func _create_initial_rooms() -> void:
 		if _overlaps_any_room(candidate_room):
 			continue
 
+		_room_archetypes[candidate_room] = starter_archetypes[placed % starter_archetypes.size()]
 		_add_room(candidate_room, 1)
 		_carve_corridor(hero_room.get_center(), candidate_room.get_center())
 		placed += 1
@@ -192,6 +301,7 @@ func _create_initial_rooms() -> void:
 			var center_a: Vector2i = rooms[i].get_center()
 			var center_b: Vector2i = rooms[next_idx].get_center()
 			if Vector2(center_a).distance_to(Vector2(center_b)) <= LOOP_CONNECT_MAX_DISTANCE:
+				_add_neighbor_edge(rooms[i], rooms[next_idx])
 				_carve_corridor(center_a, center_b)
 
 
@@ -238,7 +348,12 @@ func _expand_dungeon_branches(target_max_depth: int) -> void:
 
 				if not room_children.has(parent_room):
 					room_children[parent_room] = []
+				for sibling_var: Variant in room_children[parent_room]:
+					if sibling_var is Rect2i:
+						var sibling_room: Rect2i = sibling_var
+						_add_neighbor_edge(candidate, sibling_room)
 				room_children[parent_room].append(candidate)
+				_add_neighbor_edge(parent_room, candidate)
 
 				_add_room(candidate, child_depth)
 				_carve_corridor(parent_room.get_center(), candidate.get_center())
@@ -250,6 +365,7 @@ func _expand_dungeon_branches(target_max_depth: int) -> void:
 						continue
 					var d: float = Vector2(candidate.get_center()).distance_to(Vector2(other_room.get_center()))
 					if d <= LOOP_CONNECT_MAX_DISTANCE and _rng.randf() <= LOOP_CONNECT_CHANCE:
+						_add_neighbor_edge(candidate, other_room)
 						_carve_corridor(candidate.get_center(), other_room.get_center())
 						break
 

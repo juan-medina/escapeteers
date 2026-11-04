@@ -22,11 +22,13 @@ This roadmap sequences upcoming gameplay milestones to build on the core pillars
    - Pure summoner that hangs back (`95.0` px kite distance) and casts `Raise Undead` every `4.5s`, placing green `SummonPentagram` circles (Row 9) in a radius around itself to raise `Skeleton` and `Skeleton Archer` minions via their `summon` animations.
 4. **Fourth Enemy — `Armored Orc` or `Hellhound` (Tier 2 Threat):**
    - `Hellhound` / `Werewolf` as a high-speed pack rusher, or `Armored Orc` as a high-HP frontline bruiser with knockback resistance.
-5. **Tiered Room Spawning & Grouping:**
-   - Update `WorldPlan` and `Game` spawning logic to mix enemy types by depth/tier:
-     - **Tier 1 (Depth 1):** `Skeleton` + `Lava Slime`
-     - **Tier 2 (Depth 2–3):** `Skeleton` + `Skeleton Archer` + `Hellhound` / `Armored Orc`
-     - **Tier 3 (Depth 4+):** `Necromancer` guarded by `Skeleton` + `Skeleton Archer` + `Lava Slime`
+5. **[DONE] Themed Room Archetypes & Encounter Spawning:**
+   - Assign each room a distinct **Encounter Type** (`RoomArchetype`) in `WorldPlan` so rooms have recognizable identities when entered ("Oh no, a Necro room!", "A Trap room!", "An Archer Ambush!"):
+     - **Slime Pit:** `Lava Slime` swarm (slow, heavy projectile crossfire).
+     - **Bone Swarm:** Fast `Skeleton` rushers testing frontline protection of your `Priest`.
+     - **Archer Garrison:** `Skeleton Archer` firing line (`65%`) guarded by `Skeleton` blockers (`35%`).
+     - **Necromancer Crypt (Depth 2+):** `1–2 Necromancer` summoners guarded by Undead; once triggered, there is no safe retreat—if you do not push in and kill the `Necromancer` fast, he continuously summons an army.
+     - **Trap / Key / Boss Chambers (Milestones 2–4):** Spike gauntlets, key guardians, and boss arenas.
 
 ---
 
