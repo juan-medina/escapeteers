@@ -25,12 +25,15 @@ var _chunk_segments: Dictionary[Vector2i, PackedVector2Array] = {}
 var _chunk_floor_vertices: Dictionary[Vector2i, PackedVector2Array] = {}
 var _revealed_chunks: Dictionary[Vector2i, bool] = {}
 var _explored_chunks: Dictionary[Vector2i, bool] = {}
-var _revealed_nodes: Array[MeshInstance2D] = []
-var _revealed_floor_nodes: Dictionary[Vector2i, MeshInstance2D] = {}
 var _last_revealed_chunk: Vector2i = Vector2i(2147483647, 2147483647)
 var _anchor_map_pos: Vector2 = Vector2.ZERO
 var _has_anchor: bool = false
 var _is_recentering: bool = false
+var _dirty: bool = false
+
+var _unexplored_floor_mesh: MeshInstance2D = null
+var _explored_floor_mesh: MeshInstance2D = null
+var _walls_mesh: MeshInstance2D = null
 
 @onready var _chunks_container: Node2D = $Chunks
 @onready var _player_marker: PlayerMarker = $PlayerMarker
@@ -41,6 +44,18 @@ func _ready() -> void:
 	set_process(false)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_player_marker.rotation = -PI * 0.5
+
+	_unexplored_floor_mesh = MeshInstance2D.new()
+	_unexplored_floor_mesh.self_modulate = UNEXPLORED_FLOOR_COLOR
+	_chunks_container.add_child(_unexplored_floor_mesh)
+
+	_explored_floor_mesh = MeshInstance2D.new()
+	_explored_floor_mesh.self_modulate = EXPLORED_FLOOR_COLOR
+	_chunks_container.add_child(_explored_floor_mesh)
+
+	_walls_mesh = MeshInstance2D.new()
+	_walls_mesh.self_modulate = WALL_COLOR
+	_chunks_container.add_child(_walls_mesh)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -80,6 +95,8 @@ func set_map_visible(is_vis: bool) -> void:
 	if visible and is_instance_valid(_target):
 		_center_anchor_on_target()
 		_update_view(0.0)
+		if _dirty:
+			_rebuild_meshes()
 
 
 func _center_anchor_on_target() -> void:
@@ -122,67 +139,68 @@ func _update_discovery() -> void:
 
 
 func _reveal_chunks_at(player_chunk: Vector2i) -> void:
+	var state_changed: bool = false
 	for dy: int in range(-reveal_chunk_radius, reveal_chunk_radius + 1):
 		for dx: int in range(-reveal_chunk_radius, reveal_chunk_radius + 1):
 			var coord: Vector2i = player_chunk + Vector2i(dx, dy)
 			if not _revealed_chunks.has(coord):
 				_revealed_chunks[coord] = true
-				if _chunk_floor_vertices.has(coord):
-					var floor_mi: MeshInstance2D = MeshInstance2D.new()
-					floor_mi.self_modulate = UNEXPLORED_FLOOR_COLOR
-					floor_mi.mesh = _create_floor_mesh_for_vertices(_chunk_floor_vertices[coord])
-					_chunks_container.add_child(floor_mi)
-					_chunks_container.move_child(floor_mi, 0)
-					_revealed_floor_nodes[coord] = floor_mi
-				if _chunk_segments.has(coord):
-					var mi: MeshInstance2D = MeshInstance2D.new()
-					mi.mesh = _create_mesh_for_vertices(_chunk_segments[coord])
-					_chunks_container.add_child(mi)
-					_revealed_nodes.append(mi)
+				state_changed = true
 
 			if maxi(absi(dx), absi(dy)) <= explore_chunk_radius and not _explored_chunks.has(coord):
 				_explored_chunks[coord] = true
-				if _revealed_floor_nodes.has(coord):
-					_revealed_floor_nodes[coord].self_modulate = EXPLORED_FLOOR_COLOR
+				state_changed = true
+
+	if state_changed:
+		_dirty = true
+		if visible:
+			_rebuild_meshes()
 
 
-func _create_mesh_for_vertices(vertices: PackedVector2Array) -> ArrayMesh:
-	var colors: PackedColorArray = PackedColorArray()
-	colors.resize(vertices.size())
-	colors.fill(WALL_COLOR)
+func _rebuild_meshes() -> void:
+	if not _dirty:
+		return
+	_dirty = false
 
+	var unexp_verts: PackedVector2Array = PackedVector2Array()
+	var exp_verts: PackedVector2Array = PackedVector2Array()
+	var wall_verts: PackedVector2Array = PackedVector2Array()
+
+	for coord: Vector2i in _revealed_chunks:
+		if _explored_chunks.has(coord):
+			if _chunk_floor_vertices.has(coord):
+				exp_verts.append_array(_chunk_floor_vertices[coord])
+		else:
+			if _chunk_floor_vertices.has(coord):
+				unexp_verts.append_array(_chunk_floor_vertices[coord])
+
+		if _chunk_segments.has(coord):
+			wall_verts.append_array(_chunk_segments[coord])
+
+	_unexplored_floor_mesh.mesh = _create_simple_mesh(unexp_verts, Mesh.PRIMITIVE_TRIANGLES)
+	_explored_floor_mesh.mesh = _create_simple_mesh(exp_verts, Mesh.PRIMITIVE_TRIANGLES)
+	_walls_mesh.mesh = _create_simple_mesh(wall_verts, Mesh.PRIMITIVE_LINES)
+
+
+static func _create_simple_mesh(vertices: PackedVector2Array, primitive: Mesh.PrimitiveType) -> ArrayMesh:
+	if vertices.is_empty():
+		return null
 	var arrays: Array = []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
-	arrays[Mesh.ARRAY_COLOR] = colors
-
 	var mesh: ArrayMesh = ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_LINES, arrays)
-	return mesh
-
-
-func _create_floor_mesh_for_vertices(vertices: PackedVector2Array) -> ArrayMesh:
-	var colors: PackedColorArray = PackedColorArray()
-	colors.resize(vertices.size())
-	colors.fill(Color.WHITE)
-
-	var arrays: Array = []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = vertices
-	arrays[Mesh.ARRAY_COLOR] = colors
-
-	var mesh: ArrayMesh = ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	mesh.add_surface_from_arrays(primitive, arrays)
 	return mesh
 
 
 func _build_chunks(plan: WorldPlan) -> void:
-	for node: MeshInstance2D in _revealed_nodes:
-		node.queue_free()
-	_revealed_nodes.clear()
-	for coord: Vector2i in _revealed_floor_nodes:
-		_revealed_floor_nodes[coord].queue_free()
-	_revealed_floor_nodes.clear()
+	if _unexplored_floor_mesh != null:
+		_unexplored_floor_mesh.mesh = null
+	if _explored_floor_mesh != null:
+		_explored_floor_mesh.mesh = null
+	if _walls_mesh != null:
+		_walls_mesh.mesh = null
+	_dirty = false
 	_revealed_chunks.clear()
 	_explored_chunks.clear()
 	_chunk_segments.clear()
