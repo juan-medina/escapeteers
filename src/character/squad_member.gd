@@ -103,6 +103,10 @@ func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 			if hero.can_reach_target(hero.active_target):
 				hero.movement_state = Character.MovementState.IDLE
 				move_dest = hero.position
+				if not hero.is_attacking:
+					var diff_x: float = target_pos.x - hero.global_position.x
+					if absf(diff_x) > 1.0:
+						hero.flip_h = diff_x < 0.0
 			else:
 				hero.movement_state = Character.MovementState.NAVIGATING
 				move_dest = target_pos

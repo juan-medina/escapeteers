@@ -34,7 +34,7 @@ const _GROUP_HEROES: StringName = &"heroes"
 		_update_ground_indicator()
 		_update_active_mode()
 @export var can_heavy_melee: bool = false
-@export var melee_leash_distance: float = 72.0
+@export var melee_leash_distance: float = 96.0
 @export var melee1_cooldown: float = 0.5
 @export var melee2_cooldown: float = 3.5
 @export var melee2_chance: float = 0.35
@@ -279,6 +279,10 @@ func _check_auto_attack() -> void:
 					target_char = closest_enemy
 					selected_action = action
 					break
+			if target_char == null and can_melee and not is_player:
+				var leash: float = get_current_leash()
+				if leash > 0.0 and get_anchor_position().distance_squared_to(closest_enemy.global_position) <= leash * leash:
+					target_char = closest_enemy
 
 	# 3. Peaceful top-off: if no enemies in range to attack, top off any ally below 100% HP.
 	if selected_action == null and heal_action != null and heal_action.is_ready():
@@ -316,6 +320,10 @@ func _find_closest_enemy() -> Enemy:
 	var min_dist_sq: float = INF
 	var max_detection: float = get_detection_range()
 	var max_detection_sq: float = max_detection * max_detection
+	var leash: float = get_current_leash()
+	var leash_sq: float = leash * leash
+	var anchor_pos: Vector2 = get_anchor_position()
+	var enforce_leash: bool = not is_player and not can_ranged and leash > 0.0
 
 	for node: Node in get_tree().get_nodes_in_group(_GROUP_ENEMIES):
 		var enemy: Enemy = node as Enemy
@@ -323,9 +331,17 @@ func _find_closest_enemy() -> Enemy:
 			continue
 
 		var dist_to_self_sq: float = global_position.distance_squared_to(enemy.global_position)
-		if dist_to_self_sq <= max_detection_sq and dist_to_self_sq < min_dist_sq:
-			min_dist_sq = dist_to_self_sq
-			closest = enemy
+		if dist_to_self_sq >= min_dist_sq:
+			continue
+
+		if enforce_leash:
+			if anchor_pos.distance_squared_to(enemy.global_position) > leash_sq:
+				continue
+		elif dist_to_self_sq > max_detection_sq:
+			continue
+
+		min_dist_sq = dist_to_self_sq
+		closest = enemy
 
 	return closest
 

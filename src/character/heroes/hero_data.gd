@@ -81,7 +81,7 @@ func apply_to_hero(hero: Hero, level: int = 1) -> void:
 				hero.melee1_knockback = kb
 				hero.melee1_stun_duration = eval_stat(skill.get("stun_duration"), level, 0.0)
 				if skill.has("leash"):
-					hero.melee_leash_distance = _float_val(skill, "leash", 72.0)
+					hero.melee_leash_distance = _float_val(skill, "leash", 96.0)
 				melee_idx += 1
 			elif melee_idx == 1:
 				hero.can_heavy_melee = true

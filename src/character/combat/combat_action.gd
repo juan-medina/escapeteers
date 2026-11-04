@@ -9,7 +9,7 @@ var cooldown_timer: float = 0.0
 var damage: float = 10.0
 var range_distance: float = 28.0
 var min_range_distance: float = 0.0
-var leash_distance: float = 72.0
+var leash_distance: float = 96.0
 
 
 func update(delta: float) -> void:

@@ -41,12 +41,6 @@ func can_reach(user: Character, target: Character) -> bool:
 	if dx > range_distance:
 		return false
 
-	var diff_x: float = target_pos.x - user_pos.x
-	if user.flip_h and diff_x > target_radius:
-		return false
-	if not user.flip_h and diff_x < -target_radius:
-		return false
-
 	var edge_dist: float = maxf(0.0, user_pos.distance_to(target_pos) - target_radius)
 	return edge_dist >= min_range_distance and edge_dist <= range_distance
 
@@ -77,6 +71,15 @@ func apply_hit(user: Character, target: Character) -> bool:
 		return false
 
 	if not can_reach(user, target):
+		return false
+
+	var user_pos: Vector2 = user.get_hurtbox_position()
+	var target_pos: Vector2 = target.get_hurtbox_position()
+	var target_radius: float = target.get_hurtbox_radius()
+	var diff_x: float = target_pos.x - user_pos.x
+	if user.flip_h and diff_x > target_radius:
+		return false
+	if not user.flip_h and diff_x < -target_radius:
 		return false
 
 	var applied_damage: float = heavy_damage if current_is_heavy else damage
