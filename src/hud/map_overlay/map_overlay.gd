@@ -8,18 +8,24 @@ const TILE_SIZE: float = 16.0
 const CHUNK_SIZE_TILES: int = 2
 const CHUNK_SIZE_PX: float = float(CHUNK_SIZE_TILES) * TILE_SIZE
 const WALL_COLOR: Color = Color(0.85, 0.72, 0.38, 0.65)
+const EXPLORED_FLOOR_COLOR: Color = Color(0.22, 0.48, 0.68, 0.38)
+const UNEXPLORED_FLOOR_COLOR: Color = Color(0.55, 0.25, 0.30, 0.28)
 const DEADZONE_HALF_EXTENT: Vector2 = Vector2(220.0, 130.0)
 const RECENTER_SPEED: float = 420.0
 
 ## Screen pixels per world tile. Must be an integer so every wall vertex lands on a whole pixel (crisp, no shimmer).
 @export_range(1, 8) var pixels_per_tile: int = 2
 @export_range(1, 16) var reveal_chunk_radius: int = 8
+@export_range(1, 8) var explore_chunk_radius: int = 2
 
 var map_scale: float = 0.0
 var _target: CharacterBody2D = null
 var _chunk_segments: Dictionary[Vector2i, PackedVector2Array] = {}
+var _chunk_floor_vertices: Dictionary[Vector2i, PackedVector2Array] = {}
 var _revealed_chunks: Dictionary[Vector2i, bool] = {}
+var _explored_chunks: Dictionary[Vector2i, bool] = {}
 var _revealed_nodes: Array[MeshInstance2D] = []
+var _revealed_floor_nodes: Dictionary[Vector2i, MeshInstance2D] = {}
 var _last_revealed_chunk: Vector2i = Vector2i(2147483647, 2147483647)
 var _anchor_map_pos: Vector2 = Vector2.ZERO
 var _has_anchor: bool = false
@@ -117,14 +123,25 @@ func _reveal_chunks_at(player_chunk: Vector2i) -> void:
 	for dy: int in range(-reveal_chunk_radius, reveal_chunk_radius + 1):
 		for dx: int in range(-reveal_chunk_radius, reveal_chunk_radius + 1):
 			var coord: Vector2i = player_chunk + Vector2i(dx, dy)
-			if _revealed_chunks.has(coord):
-				continue
-			_revealed_chunks[coord] = true
-			if _chunk_segments.has(coord):
-				var mi: MeshInstance2D = MeshInstance2D.new()
-				mi.mesh = _create_mesh_for_vertices(_chunk_segments[coord])
-				_chunks_container.add_child(mi)
-				_revealed_nodes.append(mi)
+			if not _revealed_chunks.has(coord):
+				_revealed_chunks[coord] = true
+				if _chunk_floor_vertices.has(coord):
+					var floor_mi: MeshInstance2D = MeshInstance2D.new()
+					floor_mi.self_modulate = UNEXPLORED_FLOOR_COLOR
+					floor_mi.mesh = _create_floor_mesh_for_vertices(_chunk_floor_vertices[coord])
+					_chunks_container.add_child(floor_mi)
+					_chunks_container.move_child(floor_mi, 0)
+					_revealed_floor_nodes[coord] = floor_mi
+				if _chunk_segments.has(coord):
+					var mi: MeshInstance2D = MeshInstance2D.new()
+					mi.mesh = _create_mesh_for_vertices(_chunk_segments[coord])
+					_chunks_container.add_child(mi)
+					_revealed_nodes.append(mi)
+
+			if maxi(absi(dx), absi(dy)) <= explore_chunk_radius and not _explored_chunks.has(coord):
+				_explored_chunks[coord] = true
+				if _revealed_floor_nodes.has(coord):
+					_revealed_floor_nodes[coord].self_modulate = EXPLORED_FLOOR_COLOR
 
 
 func _create_mesh_for_vertices(vertices: PackedVector2Array) -> ArrayMesh:
@@ -142,12 +159,32 @@ func _create_mesh_for_vertices(vertices: PackedVector2Array) -> ArrayMesh:
 	return mesh
 
 
+func _create_floor_mesh_for_vertices(vertices: PackedVector2Array) -> ArrayMesh:
+	var colors: PackedColorArray = PackedColorArray()
+	colors.resize(vertices.size())
+	colors.fill(Color.WHITE)
+
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_COLOR] = colors
+
+	var mesh: ArrayMesh = ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
+
+
 func _build_chunks(plan: WorldPlan) -> void:
 	for node: MeshInstance2D in _revealed_nodes:
 		node.queue_free()
 	_revealed_nodes.clear()
+	for coord: Vector2i in _revealed_floor_nodes:
+		_revealed_floor_nodes[coord].queue_free()
+	_revealed_floor_nodes.clear()
 	_revealed_chunks.clear()
+	_explored_chunks.clear()
 	_chunk_segments.clear()
+	_chunk_floor_vertices.clear()
 	_last_revealed_chunk = Vector2i(2147483647, 2147483647)
 
 	if plan == null or plan.carve_rects.is_empty():
@@ -155,7 +192,44 @@ func _build_chunks(plan: WorldPlan) -> void:
 
 	map_scale = float(pixels_per_tile) / TILE_SIZE
 	_chunks_container.scale = Vector2(map_scale, map_scale)
+	_extract_chunked_floors(plan)
 	_extract_chunked_wall_segments(plan)
+
+
+func _extract_chunked_floors(plan: WorldPlan) -> void:
+	var touched_chunks: Dictionary[Vector2i, bool] = {}
+	for r: Rect2i in plan.carve_rects:
+		var min_cx: int = floori(float(r.position.x) / float(CHUNK_SIZE_TILES))
+		var max_cx: int = floori(float(r.end.x - 1) / float(CHUNK_SIZE_TILES))
+		var min_cy: int = floori(float(r.position.y) / float(CHUNK_SIZE_TILES))
+		var max_cy: int = floori(float(r.end.y - 1) / float(CHUNK_SIZE_TILES))
+		for cy: int in range(min_cy, max_cy + 1):
+			for cx: int in range(min_cx, max_cx + 1):
+				touched_chunks[Vector2i(cx, cy)] = true
+
+	for coord: Vector2i in touched_chunks:
+		var verts: PackedVector2Array = PackedVector2Array()
+		var base_tx: int = coord.x * CHUNK_SIZE_TILES
+		var base_ty: int = coord.y * CHUNK_SIZE_TILES
+		for dy: int in range(CHUNK_SIZE_TILES):
+			var ty: int = base_ty + dy
+			var y0: float = float(ty) * TILE_SIZE
+			var y1: float = float(ty + 1) * TILE_SIZE
+			for dx: int in range(CHUNK_SIZE_TILES):
+				var tx: int = base_tx + dx
+				if not plan.is_floor(Vector2i(tx, ty)):
+					continue
+				var x0: float = float(tx) * TILE_SIZE
+				var x1: float = float(tx + 1) * TILE_SIZE
+				verts.append(Vector2(x0, y0))
+				verts.append(Vector2(x1, y0))
+				verts.append(Vector2(x1, y1))
+				verts.append(Vector2(x0, y0))
+				verts.append(Vector2(x1, y1))
+				verts.append(Vector2(x0, y1))
+
+		if not verts.is_empty():
+			_chunk_floor_vertices[coord] = verts
 
 
 func _extract_chunked_wall_segments(plan: WorldPlan) -> void:
