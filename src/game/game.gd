@@ -22,6 +22,7 @@ const SWORDSMAN_SCENE: PackedScene = preload("res://character/heroes/swordsman/s
 const WIZARD_SCENE: PackedScene = preload("res://character/heroes/wizard/wizard.tscn")
 const UNKNOWN_SCENE: PackedScene = preload("res://character/heroes/unknown/unknown.tscn")
 const LAVA_SLIME_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_slime.tscn")
+const SKELETON_SCENE: PackedScene = preload("res://character/enemies/skeleton/skeleton.tscn")
 const GAME_OVER_DIALOG_SCENE: PackedScene = preload("res://game_over_dialog/game_over_dialog.tscn")
 const RECRUIT_PANEL_SCENE: PackedScene = preload("res://recruit_panel/recruit_panel.tscn")
 const LEVEL_UP_PANEL_SCENE: PackedScene = preload("res://level_up_panel/level_up_panel.tscn")
@@ -113,7 +114,8 @@ func _ready() -> void:
 		transition_mgr.call(&"set_loading_progress", 0.92, &"Assembling the fellowship...")
 	await get_tree().process_frame
 	_entity_pool.setup(_characters)
-	_entity_pool.prewarm(LAVA_SLIME_SCENE, 80)
+	_entity_pool.prewarm(LAVA_SLIME_SCENE, 40)
+	_entity_pool.prewarm(SKELETON_SCENE, 40)
 	_spawn_initial_characters()
 	_check_recruitment()
 	_register_and_populate_rooms(_map.companion_rooms)
@@ -271,26 +273,27 @@ func _process_pending_spawns() -> void:
 
 
 func _spawn_enemy_at(pos: Vector2, room: Rect2i) -> void:
-	var slime: Enemy = _entity_pool.acquire(LAVA_SLIME_SCENE) as Enemy
-	slime.home_room = room
-	slime.position = pos
-	slime.map = _map
-	slime.y_sort_enabled = true
+	var enemy_scene: PackedScene = SKELETON_SCENE if randf() < 0.5 else LAVA_SLIME_SCENE
+	var enemy: Enemy = _entity_pool.acquire(enemy_scene) as Enemy
+	enemy.home_room = room
+	enemy.position = pos
+	enemy.map = _map
+	enemy.y_sort_enabled = true
 	var depth: int = _map.get_room_depth(room)
 	var enemy_level: int = clampi(depth, 1, 10)
-	slime.set_level(enemy_level)
-	if not slime.projectile_spawn_requested.is_connected(_on_projectile_spawn_requested):
-		slime.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
-	for conn: Dictionary in slime.died.get_connections():
+	enemy.set_level(enemy_level)
+	if not enemy.projectile_spawn_requested.is_connected(_on_projectile_spawn_requested):
+		enemy.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
+	for conn: Dictionary in enemy.died.get_connections():
 		@warning_ignore("unsafe_call_argument")
-		slime.died.disconnect(conn.callable)
-	slime.died.connect(_on_enemy_died.bind(slime, room))
-	for d_conn: Dictionary in slime.death_completed.get_connections():
+		enemy.died.disconnect(conn.callable)
+	enemy.died.connect(_on_enemy_died.bind(enemy, room))
+	for d_conn: Dictionary in enemy.death_completed.get_connections():
 		@warning_ignore("unsafe_call_argument")
-		slime.death_completed.disconnect(d_conn.callable)
-	slime.death_completed.connect(_on_enemy_death_completed.bind(slime))
-	slime.sync_screen_state(_camera.global_position)
-	_enemies.append(slime)
+		enemy.death_completed.disconnect(d_conn.callable)
+	enemy.death_completed.connect(_on_enemy_death_completed.bind(enemy))
+	enemy.sync_screen_state(_camera.global_position)
+	_enemies.append(enemy)
 
 
 func _respawn_nearby_hibernating_rooms() -> void:
@@ -372,7 +375,7 @@ func _reclaim_distant_enemies_for_room(target_room: Rect2i, target_room_dist_sq:
 		var h_room: Rect2i = enemy_to_evict.home_room
 		if _room_spawned_enemies.has(h_room):
 			_room_spawned_enemies[h_room] = maxi(0, _room_spawned_enemies[h_room] - 1)
-		_entity_pool.release(enemy_to_evict, LAVA_SLIME_SCENE)
+		_entity_pool.release(enemy_to_evict, _get_enemy_scene(enemy_to_evict))
 		var e_idx: int = _enemies.find(enemy_to_evict)
 		if e_idx != -1:
 			_enemies.remove_at(e_idx)
@@ -391,17 +394,23 @@ static func _compare_room_candidate_desc(a: Dictionary, b: Dictionary) -> bool:
 	return dist_a > dist_b
 
 
-func _on_enemy_died(slime: Enemy, room: Rect2i) -> void:
+func _get_enemy_scene(enemy: Enemy) -> PackedScene:
+	if enemy is Skeleton:
+		return SKELETON_SCENE
+	return LAVA_SLIME_SCENE
+
+
+func _on_enemy_died(enemy: Enemy, room: Rect2i) -> void:
 	if _room_remaining_enemies.has(room):
 		_room_remaining_enemies[room] = maxi(0, _room_remaining_enemies[room] - 1)
 	if _room_spawned_enemies.has(room):
 		_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
 
-	_add_squad_xp(slime.xp_value)
+	_add_squad_xp(enemy.xp_value)
 
 
-func _on_enemy_death_completed(slime: Enemy) -> void:
-	_entity_pool.release(slime, LAVA_SLIME_SCENE)
+func _on_enemy_death_completed(enemy: Enemy) -> void:
+	_entity_pool.release(enemy, _get_enemy_scene(enemy))
 
 
 func _on_projectile_spawn_requested(projectile: Projectile) -> void:
@@ -431,7 +440,7 @@ func _update_enemies() -> void:
 			var room: Rect2i = enemy.home_room
 			if _room_spawned_enemies.has(room):
 				_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
-			_entity_pool.release(enemy, LAVA_SLIME_SCENE)
+			_entity_pool.release(enemy, _get_enemy_scene(enemy))
 			_enemies.remove_at(i)
 			i -= 1
 			continue
@@ -445,23 +454,28 @@ func _update_enemies() -> void:
 		if not enemy.is_physics_processing():
 			enemy.sync_screen_state(camera_pos)
 
-		var closest: Hero = _get_closest_squad_member(enemy.global_position)
-		if closest != null:
-			enemy.set_target_candidate(closest)
+		var best_target: Hero = _get_best_squad_target(enemy)
+		if best_target != null:
+			enemy.set_target_candidate(best_target)
 		i -= 1
 
 
-func _get_closest_squad_member(pos: Vector2) -> Hero:
-	var closest: Hero = null
-	var min_dist_sq: float = INF
+func _get_best_squad_target(enemy: Enemy) -> Hero:
+	var best: Hero = null
+	var min_eff_dist_sq: float = INF
+	var max_dist_sq: float = enemy.detection_range * enemy.detection_range
+	var enemy_pos: Vector2 = enemy.global_position
 	for member: Hero in _squad:
 		if not is_instance_valid(member) or member.is_dead:
 			continue
-		var dist_sq: float = pos.distance_squared_to(member.global_position)
-		if dist_sq < min_dist_sq:
-			min_dist_sq = dist_sq
-			closest = member
-	return closest
+		var raw_dist_sq: float = enemy_pos.distance_squared_to(member.global_position)
+		if raw_dist_sq > max_dist_sq:
+			continue
+		var eff_dist_sq: float = enemy.get_effective_target_dist_sq(member)
+		if eff_dist_sq < min_eff_dist_sq:
+			min_eff_dist_sq = eff_dist_sq
+			best = member
+	return best
 
 
 func _on_hero_died(hero: Hero) -> void:

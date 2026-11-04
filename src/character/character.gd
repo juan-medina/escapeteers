@@ -34,6 +34,7 @@ const ANIM_ATTACK_MELEE1: StringName = &"attack_melee1"
 const ANIM_ATTACK_MELEE2: StringName = &"attack_melee2"
 const ANIM_ATTACK_RANGED1: StringName = &"attack_ranged1"
 const ANIM_HEAL: StringName = &"heal"
+const ANIM_SUMMON: StringName = &"summon"
 
 var max_health: float = 100.0
 var speed: float = 100.0

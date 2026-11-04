@@ -24,6 +24,32 @@
 				"min_range": 65.0
 			}
 		]
+	},
+	"skeleton": {
+		"id": "skeleton",
+		"name": "Skeleton",
+		"scene_path": "res://character/enemies/skeleton/skeleton.tscn",
+		"health": { "base": 95.0, "growth": 0.20 },
+		"speed": { "base": 80.0, "growth": 0.05 },
+		"detection_range": { "base": 145.0, "growth": 0.0 },
+		"xp": { "base": 15.0, "growth": 0.25 },
+		"skills": [
+			{
+				"name": "Bone Slash",
+				"type": "melee",
+				"damage": { "base": 9.0, "growth": 0.20 },
+				"cooldown": { "base": 1.1, "growth": -0.03 },
+				"range": { "base": 22.0, "growth": 0.0 }
+			},
+			{
+				"name": "Bone Cleave",
+				"type": "melee",
+				"damage": { "base": 18.0, "growth": 0.20 },
+				"cooldown": { "base": 3.5, "growth": -0.05 },
+				"range": { "base": 22.0, "growth": 0.0 },
+				"chance": 0.35
+			}
+		]
 	}
 }
 

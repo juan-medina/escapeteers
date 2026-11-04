@@ -157,6 +157,10 @@ func _on_screen_exited() -> void:
 		_set_sleeping(true)
 
 
+func get_effective_target_dist_sq(hero_candidate: Hero) -> float:
+	return global_position.distance_squared_to(hero_candidate.global_position)
+
+
 func set_target_candidate(hero_candidate: Hero) -> void:
 	if hero_candidate == null or not is_instance_valid(hero_candidate) or hero_candidate.is_dead:
 		return
@@ -175,8 +179,9 @@ func set_target_candidate(hero_candidate: Hero) -> void:
 		current_state = State.CHASE
 		_navigator.reset()
 	elif target != hero_candidate and is_instance_valid(target):
-		var current_dist_sq: float = global_position.distance_squared_to(target.global_position)
-		if dist_sq < current_dist_sq * 0.85:
+		var candidate_eff_sq: float = get_effective_target_dist_sq(hero_candidate)
+		var current_eff_sq: float = get_effective_target_dist_sq(target)
+		if candidate_eff_sq < current_eff_sq * 0.85:
 			target = hero_candidate
 			_navigator.reset()
 
@@ -440,7 +445,8 @@ func _on_animation_finished() -> void:
 	if current_action is MeleeAction and target != null:
 		var melee: MeleeAction = current_action as MeleeAction
 		if melee.apply_hit(self, target):
-			attacked.emit(target, melee.damage)
+			var applied_dmg: float = melee.heavy_damage if melee.current_is_heavy else melee.damage
+			attacked.emit(target, applied_dmg)
 	elif current_action is RangedAction and target != null:
 		var ranged: RangedAction = current_action as RangedAction
 		var proj: Projectile = ranged.spawn_projectile(self, target)

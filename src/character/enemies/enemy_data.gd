@@ -63,6 +63,7 @@ func apply_to_enemy(enemy: Enemy, level: int = 1) -> void:
 	enemy.detection_range = get_detection_range(level)
 	enemy.xp_value = get_xp(level)
 
+	var melee_idx: int = 0
 	for skill: Dictionary in skills:
 		var type: String = _str_val(skill, "type")
 		var cd: float = eval_stat(skill.get("cooldown"), level, 1.2)
@@ -71,9 +72,18 @@ func apply_to_enemy(enemy: Enemy, level: int = 1) -> void:
 		if type == "melee":
 			var dmg: float = eval_stat(skill.get("damage"), level, 8.0)
 			enemy.can_melee = true
-			enemy.melee_range = rng
-			enemy.attack_cooldown = cd
-			enemy.set(&"melee_damage", dmg)
+			if melee_idx == 0:
+				enemy.melee_range = rng
+				enemy.attack_cooldown = cd
+				enemy.set(&"melee_damage", dmg)
+				melee_idx += 1
+			elif melee_idx == 1:
+				var chance: float = _float_val(skill, "chance", 0.35)
+				enemy.set(&"can_heavy_melee", true)
+				enemy.set(&"melee2_damage", dmg)
+				enemy.set(&"melee2_cooldown", cd)
+				enemy.set(&"melee2_chance", chance)
+				melee_idx += 1
 		elif type == "ranged":
 			var dmg: float = eval_stat(skill.get("damage"), level, 5.0)
 			var min_rng: float = _float_val(skill, "min_range", 65.0)
