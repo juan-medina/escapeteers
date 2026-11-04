@@ -5,20 +5,25 @@ class_name MapOverlay
 extends Control
 
 const TILE_SIZE: float = 16.0
-const CHUNK_SIZE_TILES: int = 8
+const CHUNK_SIZE_TILES: int = 2
 const CHUNK_SIZE_PX: float = float(CHUNK_SIZE_TILES) * TILE_SIZE
 const WALL_COLOR: Color = Color(0.85, 0.72, 0.38, 0.65)
+const DEADZONE_HALF_EXTENT: Vector2 = Vector2(220.0, 130.0)
+const RECENTER_SPEED: float = 420.0
 
 ## Screen pixels per world tile. Must be an integer so every wall vertex lands on a whole pixel (crisp, no shimmer).
 @export_range(1, 8) var pixels_per_tile: int = 2
-@export_range(1, 5) var reveal_chunk_radius: int = 2
+@export_range(1, 16) var reveal_chunk_radius: int = 8
 
 var map_scale: float = 0.0
-var _target: Hero = null
+var _target: CharacterBody2D = null
 var _chunk_segments: Dictionary[Vector2i, PackedVector2Array] = {}
 var _revealed_chunks: Dictionary[Vector2i, bool] = {}
 var _revealed_nodes: Array[MeshInstance2D] = []
 var _last_revealed_chunk: Vector2i = Vector2i(2147483647, 2147483647)
+var _anchor_map_pos: Vector2 = Vector2.ZERO
+var _has_anchor: bool = false
+var _is_recentering: bool = false
 
 @onready var _chunks_container: Node2D = $Chunks
 @onready var _player_marker: PlayerMarker = $PlayerMarker
@@ -28,6 +33,7 @@ func _ready() -> void:
 	visible = false
 	set_process(false)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_player_marker.rotation = -PI * 0.5
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -36,22 +42,26 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if not is_instance_valid(_target):
 		return
 	_update_discovery()
 	if visible:
-		_update_view()
+		_update_view(delta)
 
 
-func setup(plan: WorldPlan, target: Hero) -> void:
+func setup(plan: WorldPlan, target: CharacterBody2D) -> void:
 	_target = target
+	_player_marker.rotation = -PI * 0.5
+	_has_anchor = false
+	_is_recentering = false
 	_build_chunks(plan)
 	set_process(true)
 	if is_instance_valid(_target):
+		_center_anchor_on_target()
 		_update_discovery()
 		if visible:
-			_update_view()
+			_update_view(0.0)
 
 
 func toggle() -> void:
@@ -61,16 +71,38 @@ func toggle() -> void:
 func set_map_visible(is_vis: bool) -> void:
 	visible = is_vis
 	if visible and is_instance_valid(_target):
-		_update_view()
+		_center_anchor_on_target()
+		_update_view(0.0)
 
 
-func _update_view() -> void:
+func _center_anchor_on_target() -> void:
+	_anchor_map_pos = (_target.global_position * map_scale).round()
+	_has_anchor = true
+	_is_recentering = false
+
+
+func _update_view(delta: float) -> void:
+	if not _has_anchor:
+		_center_anchor_on_target()
+
 	var center: Vector2 = (size * 0.5).round()
-	# Snap the scroll offset to whole pixels so the lines move in steps of exactly 1 px.
-	_chunks_container.position = (center - _target.global_position * map_scale).round()
-	_player_marker.position = center
-	if _target.move_direction != Vector2.ZERO:
-		_player_marker.rotation = _target.move_direction.angle()
+	var player_map_pos: Vector2 = (_target.global_position * map_scale).round()
+	var offset: Vector2 = player_map_pos - _anchor_map_pos
+
+	if absf(offset.x) > DEADZONE_HALF_EXTENT.x or absf(offset.y) > DEADZONE_HALF_EXTENT.y:
+		_is_recentering = true
+
+	if _is_recentering:
+		_anchor_map_pos = _anchor_map_pos.move_toward(player_map_pos, RECENTER_SPEED * delta)
+		if _anchor_map_pos.distance_squared_to(player_map_pos) <= 0.25:
+			_anchor_map_pos = player_map_pos
+			_is_recentering = false
+
+	var snapped_anchor: Vector2 = _anchor_map_pos.round()
+	_chunks_container.position = center - snapped_anchor
+	_player_marker.position = center + (player_map_pos - snapped_anchor)
+	if _target.velocity.length_squared() > 0.01:
+		_player_marker.rotation = _target.velocity.angle()
 
 
 func _update_discovery() -> void:
