@@ -46,6 +46,9 @@ var _squad_level: int = 1
 var _current_xp: float = 0.0
 var _xp_required: float = 50.0
 var _pending_level_ups: int = 0
+var _recruit_panel: RecruitPanel = null
+var _level_up_panel: LevelUpPanel = null
+var _pending_recruit_pos: Vector2 = Vector2.ZERO
 var _enemies: Array[Enemy] = []
 var _hero_deck: Array[PackedScene] = []
 var _room_remaining_enemies: Dictionary[Rect2i, int] = {}
@@ -94,6 +97,16 @@ func _ready() -> void:
 	if _hud.damage_meter != null:
 		_hud.damage_meter.update_squad(_squad)
 	_hud.setup_map(_map.plan, _character)
+
+	_recruit_panel = RECRUIT_PANEL_SCENE.instantiate() as RecruitPanel
+	_recruit_panel.visible = false
+	_recruit_panel.hero_selected.connect(_on_hero_recruited)
+	add_child(_recruit_panel)
+
+	_level_up_panel = LEVEL_UP_PANEL_SCENE.instantiate() as LevelUpPanel
+	_level_up_panel.visible = false
+	_level_up_panel.class_leveled_up.connect(_on_class_leveled_up)
+	add_child(_level_up_panel)
 
 	var transition_mgr: Node = get_node_or_null(^"/root/Transition")
 	if transition_mgr != null:
@@ -497,13 +510,12 @@ func _check_recruitment() -> void:
 
 func _open_recruit_panel(recruit_pos: Vector2) -> void:
 	get_tree().paused = true
-	var panel: RecruitPanel = RECRUIT_PANEL_SCENE.instantiate() as RecruitPanel
-	panel.hero_selected.connect(_on_hero_recruited.bind(recruit_pos))
-	add_child(panel)
-	panel.setup_choices(_class_levels, _get_squad_unit_counts())
+	_pending_recruit_pos = recruit_pos
+	_recruit_panel.visible = true
+	_recruit_panel.setup_choices(_class_levels, _get_squad_unit_counts())
 
 
-func _on_hero_recruited(hero_data: HeroData, recruit_pos: Vector2) -> void:
+func _on_hero_recruited(hero_data: HeroData) -> void:
 	get_tree().paused = false
 	var hero_level: int = get_class_level(hero_data.id)
 	var new_hero: Hero = hero_data.instantiate_hero(hero_level)
@@ -512,7 +524,7 @@ func _on_hero_recruited(hero_data: HeroData, recruit_pos: Vector2) -> void:
 
 	_characters.add_child(new_hero)
 	new_hero.is_player = false
-	new_hero.position = recruit_pos
+	new_hero.position = _pending_recruit_pos
 	new_hero.y_sort_enabled = true
 	new_hero.leader = _character
 	new_hero.squad_member = SquadMember.new()
@@ -568,10 +580,8 @@ func _open_next_level_up() -> void:
 
 	_pending_level_ups -= 1
 	get_tree().paused = true
-	var panel: LevelUpPanel = LEVEL_UP_PANEL_SCENE.instantiate() as LevelUpPanel
-	panel.class_leveled_up.connect(_on_class_leveled_up)
-	add_child(panel)
-	panel.setup_choices(_squad, _class_levels)
+	_level_up_panel.visible = true
+	_level_up_panel.setup_choices(_squad, _class_levels)
 
 
 func _on_class_leveled_up(hero_data: HeroData) -> void:

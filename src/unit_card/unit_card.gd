@@ -46,7 +46,7 @@ var button_text: String = "Recruit":
 
 @onready var _name_label: Label = $Margin/HBox/UnitColumn/VBox/NameRow/NameLabel
 @onready var _level_label: Label = $Margin/HBox/UnitColumn/VBox/NameRow/LevelLabel
-@onready var _preview_sprite: AnimatedSprite2D = $Margin/HBox/UnitColumn/PreviewContainer/SubViewport/PreviewSprite
+@onready var _preview_sprite: AnimatedSprite2D = $Margin/HBox/UnitColumn/PreviewContainer/PreviewSprite
 @onready var _hp_value_label: Label = $Margin/HBox/UnitColumn/VBox/HPRow/HPValue
 @onready var _count_value_label: Label = $Margin/HBox/UnitColumn/VBox/CountRow/CountValue
 @onready var _skill1_container: VBoxContainer = $Margin/HBox/Skill1Column
@@ -226,18 +226,13 @@ func _add_stat_pair(container: Control, label_text: String, value_text: String, 
 
 
 func _setup_preview_sprite() -> void:
-	if hero_data == null or hero_data.scene == null:
+	if hero_data == null or _preview_sprite == null:
 		return
-
-	var inst: Node = hero_data.scene.instantiate()
-	if inst is Character:
-		var hero: Character = inst
-		var sprite: AnimatedSprite2D = hero.get_node_or_null(^"AnimatedSprite2D") as AnimatedSprite2D
-		if sprite != null and sprite.sprite_frames != null:
-			_preview_sprite.sprite_frames = sprite.sprite_frames
-			if _preview_sprite.sprite_frames.has_animation(Character.ANIM_IDLE):
-				_preview_sprite.play(Character.ANIM_IDLE)
-	inst.queue_free()
+	var frames: SpriteFrames = hero_data.get_sprite_frames()
+	if frames != null:
+		_preview_sprite.sprite_frames = frames
+		if frames.has_animation(Character.ANIM_IDLE):
+			_preview_sprite.play(Character.ANIM_IDLE)
 
 
 func _on_recruit_pressed() -> void:

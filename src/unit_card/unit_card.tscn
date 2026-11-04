@@ -24,19 +24,13 @@ custom_minimum_size = Vector2(145, 0)
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="PreviewContainer" type="SubViewportContainer" parent="Margin/HBox/UnitColumn" unique_id=1374017867]
+[node name="PreviewContainer" type="Control" parent="Margin/HBox/UnitColumn" unique_id=1374017867]
+clip_contents = true
 custom_minimum_size = Vector2(56, 56)
 layout_mode = 2
 size_flags_vertical = 4
-stretch = true
 
-[node name="SubViewport" type="SubViewport" parent="Margin/HBox/UnitColumn/PreviewContainer" unique_id=1815078551]
-transparent_bg = true
-handle_input_locally = false
-size = Vector2i(56, 56)
-render_target_update_mode = 4
-
-[node name="PreviewSprite" type="AnimatedSprite2D" parent="Margin/HBox/UnitColumn/PreviewContainer/SubViewport" unique_id=873675072]
+[node name="PreviewSprite" type="AnimatedSprite2D" parent="Margin/HBox/UnitColumn/PreviewContainer" unique_id=873675072]
 position = Vector2(28, 28)
 
 [node name="VBox" type="VBoxContainer" parent="Margin/HBox/UnitColumn" unique_id=33126364]

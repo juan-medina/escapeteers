@@ -10,6 +10,7 @@ static var _cached_heroes: Dictionary[StringName, HeroData] = {}
 static var _cached_order: Array[StringName] = []
 
 var role: String = ""
+var _cached_sprite_frames: SpriteFrames = null
 
 
 static func _ensure_loaded() -> void:
@@ -120,3 +121,18 @@ func instantiate_hero(level: int = 1) -> Hero:
 		apply_to_hero(hero, level)
 		return hero
 	return null
+
+
+func get_sprite_frames() -> SpriteFrames:
+	if _cached_sprite_frames != null:
+		return _cached_sprite_frames
+	if scene == null:
+		return null
+	var inst: Node = scene.instantiate()
+	if inst is Character:
+		var hero: Character = inst
+		var sprite: AnimatedSprite2D = hero.get_node_or_null(^"AnimatedSprite2D") as AnimatedSprite2D
+		if sprite != null:
+			_cached_sprite_frames = sprite.sprite_frames
+	inst.queue_free()
+	return _cached_sprite_frames
