@@ -99,14 +99,12 @@ func _update_header() -> void:
 	if _title_label == null:
 		return
 
+	_title_label.text = "DPS [%ds]" % int(roundf(_combat_duration))
 	if _in_combat:
-		_title_label.text = "COMBAT [%ds]" % int(roundf(_combat_duration))
 		_title_label.add_theme_color_override(&"font_color", Color(1.0, 0.45, 0.40, 1.0))
 	elif _total_encounter_damage > 0.0:
-		_title_label.text = "CLEARED [%ds]" % int(roundf(_combat_duration))
 		_title_label.add_theme_color_override(&"font_color", Color(0.40, 0.90, 0.50, 1.0))
 	else:
-		_title_label.text = "IDLE"
 		_title_label.add_theme_color_override(&"font_color", Color(0.65, 0.70, 0.78, 1.0))
 
 

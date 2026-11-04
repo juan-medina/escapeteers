@@ -43,7 +43,7 @@ theme_override_constants/separation = 4
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
-text = "IDLE"
+text = "DPS [0s]"
 
 [node name="ColumnsLabel" type="Label" parent="Margin/VBox/Header"]
 custom_minimum_size = Vector2(76, 0)

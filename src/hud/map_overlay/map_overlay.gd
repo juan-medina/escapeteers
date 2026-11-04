@@ -11,6 +11,7 @@ const WALL_COLOR: Color = Color(0.85, 0.72, 0.38, 0.65)
 const EXPLORED_FLOOR_COLOR: Color = Color(0.22, 0.48, 0.68, 0.38)
 const UNEXPLORED_FLOOR_COLOR: Color = Color(0.55, 0.25, 0.30, 0.28)
 const DEADZONE_HALF_EXTENT: Vector2 = Vector2(220.0, 130.0)
+const DAMAGE_METER_SAFE_MARGIN: float = 192.0
 const RECENTER_SPEED: float = 420.0
 
 ## Screen pixels per world tile. Must be an integer so every wall vertex lands on a whole pixel (crisp, no shimmer).
@@ -95,7 +96,8 @@ func _update_view(delta: float) -> void:
 	var player_map_pos: Vector2 = (_target.global_position * map_scale).round()
 	var offset: Vector2 = player_map_pos - _anchor_map_pos
 
-	if absf(offset.x) > DEADZONE_HALF_EXTENT.x or absf(offset.y) > DEADZONE_HALF_EXTENT.y:
+	var max_right_extent: float = clampf(center.x - DAMAGE_METER_SAFE_MARGIN, 32.0, DEADZONE_HALF_EXTENT.x)
+	if offset.x < -DEADZONE_HALF_EXTENT.x or offset.x > max_right_extent or absf(offset.y) > DEADZONE_HALF_EXTENT.y:
 		_is_recentering = true
 
 	if _is_recentering:
