@@ -12,9 +12,9 @@ const SECTION_AUDIO: StringName = &"audio"
 const SECTION_EULA: StringName = &"eula"
 
 const DEFAULT_FULLSCREEN: bool = true
-const DEFAULT_MASTER_VOLUME: float = 1.0
-const DEFAULT_MUSIC_VOLUME: float = 1.0
-const DEFAULT_SFX_VOLUME: float = 0.5
+const DEFAULT_MASTER_VOLUME: float = 0.8
+const DEFAULT_MUSIC_VOLUME: float = 0.7
+const DEFAULT_SFX_VOLUME: float = 1.0
 const DEFAULT_EULA_VERSION: StringName = &""
 const DEFAULT_CRT_BORDER: bool = true
 const DEFAULT_SCANLINES: bool = false
@@ -236,7 +236,7 @@ func _apply_bus_volume(bus_name: StringName, volume_linear: float) -> void:
 				base_db = _base_master_db
 
 		# Convert linear 0.0-1.0 to Db offset, and apply to the base Db
-		var volume_db: float = base_db + linear_to_db(volume_linear) if volume_linear > 0.0 else -80.0
+		var volume_db: float = base_db + linear_to_db(volume_linear * volume_linear) if volume_linear > 0.0 else -80.0
 		AudioServer.set_bus_volume_db(bus_index, volume_db)
 	else:
 		printerr(&"Options: Audio Bus '%s' not found!" % bus_name)
