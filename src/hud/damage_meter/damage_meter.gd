@@ -40,6 +40,7 @@ var _total_encounter_damage: float = 0.0
 var _class_damages: Dictionary[StringName, float] = {}
 var _squad_counts: Dictionary[StringName, int] = {}
 var _row_pool: Array[DamageMeterRow] = []
+var _entry_pool: Array[MeterEntry] = []
 
 @onready var _title_label: Label = $Margin/VBox/Header/TitleLabel
 @onready var _rows_container: VBoxContainer = $Margin/VBox/RowsContainer
@@ -73,7 +74,8 @@ func record_damage(class_id: StringName, amount: float) -> void:
 	if amount <= 0.0:
 		return
 
-	if not _in_combat and _time_since_last_hit >= COMBAT_TIMEOUT:
+	var is_new_encounter: bool = not _in_combat and _time_since_last_hit >= COMBAT_TIMEOUT
+	if is_new_encounter:
 		_class_damages.clear()
 		_total_encounter_damage = 0.0
 		_combat_duration = 0.0
@@ -83,7 +85,8 @@ func record_damage(class_id: StringName, amount: float) -> void:
 	_class_damages[class_id] = _class_damages.get(class_id, 0.0) + amount
 	_total_encounter_damage += amount
 
-	_refresh_display()
+	if is_new_encounter:
+		_refresh_display()
 
 
 func update_squad(squad: Array[Hero]) -> void:
@@ -124,6 +127,7 @@ func _refresh_display() -> void:
 
 	var effective_time: float = maxf(1.0, _combat_duration)
 	var entries: Array[MeterEntry] = []
+	var entry_idx: int = 0
 
 	for cid: StringName in tracked_classes:
 		var dmg: float = _class_damages.get(cid, 0.0)
@@ -133,7 +137,13 @@ func _refresh_display() -> void:
 		var pct: float = (dmg / _total_encounter_damage * 100.0) if _total_encounter_damage > 0.0 else 0.0
 
 		var cfg: ClassConfig = _configs.get(cid, _default_config)
-		var entry: MeterEntry = MeterEntry.new()
+		var entry: MeterEntry
+		if entry_idx < _entry_pool.size():
+			entry = _entry_pool[entry_idx]
+		else:
+			entry = MeterEntry.new()
+			_entry_pool.append(entry)
+
 		entry.class_id = cid
 		entry.abbr = cfg.abbr
 		entry.color = cfg.color
@@ -142,6 +152,7 @@ func _refresh_display() -> void:
 		entry.avg_dps = avg_dps
 		entry.pct = pct
 		entries.append(entry)
+		entry_idx += 1
 
 	entries.sort_custom(_compare_entries)
 
