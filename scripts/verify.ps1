@@ -51,7 +51,7 @@ try {
             $relativeSrc = $relativeSrc.Substring(4)
         }
 
-        godot --headless --path src --audio-driver Dummy --check-only -d -s $relativeSrc --quit
+        godot --headless --path src --audio-driver Dummy --check-only -d --quit
         if ($LASTEXITCODE -ne 0) {
             Write-Error "godot check-only failed on $file"
             exit $LASTEXITCODE

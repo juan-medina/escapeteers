@@ -493,7 +493,7 @@ func _open_recruit_panel(recruit_pos: Vector2) -> void:
 	var panel: RecruitPanel = RECRUIT_PANEL_SCENE.instantiate() as RecruitPanel
 	panel.hero_selected.connect(_on_hero_recruited.bind(recruit_pos))
 	add_child(panel)
-	panel.setup_choices(_class_levels)
+	panel.setup_choices(_class_levels, _get_squad_unit_counts())
 
 
 func _on_hero_recruited(hero_data: HeroData, recruit_pos: Vector2) -> void:
@@ -525,6 +525,15 @@ func _on_hero_enemy_hit(_enemy: Enemy, damage: float, _is_heavy: bool, hero: Her
 
 func get_class_level(class_id: StringName) -> int:
 	return _class_levels.get(class_id, 1)
+
+
+func _get_squad_unit_counts() -> Dictionary[StringName, int]:
+	var counts: Dictionary[StringName, int] = {}
+	for member: Hero in _squad:
+		if is_instance_valid(member) and not member.is_dead and member.hero_data != null:
+			var id: StringName = member.hero_data.id
+			counts[id] = counts.get(id, 0) + 1
+	return counts
 
 
 static func _get_xp_required_for_level(lvl: int) -> float:

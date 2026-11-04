@@ -40,9 +40,12 @@ func setup_choices(squad: Array[Hero], class_levels: Dictionary[StringName, int]
 		child.queue_free()
 
 	var unique_classes: Dictionary[StringName, HeroData] = {}
+	var class_counts: Dictionary[StringName, int] = {}
 	for h: Hero in squad:
 		if is_instance_valid(h) and not h.is_dead and h.hero_data != null:
-			unique_classes[h.hero_data.id] = h.hero_data
+			var id: StringName = h.hero_data.id
+			unique_classes[id] = h.hero_data
+			class_counts[id] = class_counts.get(id, 0) + 1
 
 	var candidate_list: Array[HeroData] = []
 	for hero_data: HeroData in unique_classes.values():
@@ -60,6 +63,7 @@ func setup_choices(squad: Array[Hero], class_levels: Dictionary[StringName, int]
 		card.hero_data = hero_data
 		card.previous_level = cur_lvl
 		card.level = next_lvl
+		card.unit_count = class_counts.get(hero_data.id, 0)
 		card.button_text = "Level Up"
 		card.chosen.connect(_on_card_chosen)
 		_cards_container.add_child(card)

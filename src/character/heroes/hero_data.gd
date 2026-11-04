@@ -62,7 +62,6 @@ func apply_to_hero(hero: Hero, level: int = 1) -> void:
 	hero.hero_data = self
 	hero.max_health = get_health(level)
 	hero.health = hero.max_health
-	hero.speed = get_speed(level)
 
 	var melee_idx: int = 0
 	for skill: Dictionary in skills:

@@ -32,6 +32,12 @@ var previous_level: int = 0:
 		if is_inside_tree():
 			_update_display()
 
+var unit_count: int = 0:
+	set(value):
+		unit_count = value
+		if is_inside_tree():
+			_update_display()
+
 var button_text: String = "Recruit":
 	set(value):
 		button_text = value
@@ -42,7 +48,7 @@ var button_text: String = "Recruit":
 @onready var _level_label: Label = $Margin/HBox/UnitColumn/VBox/NameRow/LevelLabel
 @onready var _preview_sprite: AnimatedSprite2D = $Margin/HBox/UnitColumn/PreviewContainer/SubViewport/PreviewSprite
 @onready var _hp_value_label: Label = $Margin/HBox/UnitColumn/VBox/HPRow/HPValue
-@onready var _spd_value_label: Label = $Margin/HBox/UnitColumn/VBox/SPDRow/SPDValue
+@onready var _count_value_label: Label = $Margin/HBox/UnitColumn/VBox/CountRow/CountValue
 @onready var _skill1_container: VBoxContainer = $Margin/HBox/Skill1Column
 @onready var _skill2_container: VBoxContainer = $Margin/HBox/Skill2Column
 @onready var _sep2: VSeparator = $Margin/HBox/VSeparator2
@@ -96,16 +102,8 @@ func _update_display() -> void:
 	else:
 		_hp_value_label.text = "%d" % int(current_hp)
 
-	var current_spd: float = hero_data.get_speed(level)
-	if previous_level > 0:
-		var prev_spd: float = hero_data.get_speed(previous_level)
-		var delta_spd: int = int(current_spd) - int(prev_spd)
-		if delta_spd > 0:
-			_spd_value_label.text = "%d (+%d)" % [int(current_spd), delta_spd]
-		else:
-			_spd_value_label.text = "%d" % int(current_spd)
-	else:
-		_spd_value_label.text = "%d" % int(current_spd)
+	if _count_value_label != null:
+		_count_value_label.text = "%d" % unit_count
 
 	_setup_preview_sprite()
 

@@ -38,7 +38,7 @@ func _ensure_focus() -> void:
 			first_card.grab_recruit_focus()
 
 
-func setup_choices(class_levels: Dictionary[StringName, int] = {}) -> void:
+func setup_choices(class_levels: Dictionary[StringName, int] = {}, unit_counts: Dictionary[StringName, int] = {}) -> void:
 	for child: Node in _cards_container.get_children():
 		child.queue_free()
 
@@ -49,6 +49,7 @@ func setup_choices(class_levels: Dictionary[StringName, int] = {}) -> void:
 		var card: UnitCard = UNIT_CARD_SCENE.instantiate() as UnitCard
 		card.hero_data = data
 		card.level = class_levels.get(data.id, 1)
+		card.unit_count = unit_counts.get(data.id, 0)
 		card.chosen.connect(_on_card_chosen)
 		_cards_container.add_child(card)
 		if first_card == null:

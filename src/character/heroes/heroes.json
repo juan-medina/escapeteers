@@ -4,7 +4,6 @@
 		"name": "Archer",
 		"scene_path": "res://character/heroes/archer/archer.tscn",
 		"health": { "base": 80.0, "growth": 0.20 },
-		"speed": { "base": 100.0, "growth": 0.0 },
 		"skills": [
 			{
 				"name": "Snipe Arrow",
@@ -21,7 +20,6 @@
 		"name": "Armored Axeman",
 		"scene_path": "res://character/heroes/armored_axeman/armored_axeman.tscn",
 		"health": { "base": 120.0, "growth": 0.20 },
-		"speed": { "base": 100.0, "growth": 0.0 },
 		"skills": [
 			{
 				"name": "Axe Chop",
@@ -47,7 +45,6 @@
 		"name": "Knight",
 		"scene_path": "res://character/heroes/knight/knight.tscn",
 		"health": { "base": 140.0, "growth": 0.20 },
-		"speed": { "base": 100.0, "growth": 0.0 },
 		"skills": [
 			{
 				"name": "Sword Strike",
@@ -73,7 +70,6 @@
 		"name": "Knight Templar",
 		"scene_path": "res://character/heroes/knight_templar/knight_templar.tscn",
 		"health": { "base": 130.0, "growth": 0.20 },
-		"speed": { "base": 100.0, "growth": 0.0 },
 		"skills": [
 			{
 				"name": "Pike Thrust",
@@ -99,7 +95,6 @@
 		"name": "Priest",
 		"scene_path": "res://character/heroes/priest/priest.tscn",
 		"health": { "base": 80.0, "growth": 0.20 },
-		"speed": { "base": 100.0, "growth": 0.0 },
 		"skills": [
 			{
 				"name": "Divine Heal",
@@ -124,7 +119,6 @@
 		"name": "Soldier",
 		"scene_path": "res://character/heroes/soldier/soldier.tscn",
 		"health": { "base": 100.0, "growth": 0.20 },
-		"speed": { "base": 100.0, "growth": 0.0 },
 		"skills": [
 			{
 				"name": "Arrow Shot",
@@ -149,7 +143,6 @@
 		"name": "Swordsman",
 		"scene_path": "res://character/heroes/swordsman/swordsman.tscn",
 		"health": { "base": 100.0, "growth": 0.20 },
-		"speed": { "base": 100.0, "growth": 0.0 },
 		"skills": [
 			{
 				"name": "Quick Slash",
@@ -176,7 +169,6 @@
 		"name": "Wizard",
 		"scene_path": "res://character/heroes/wizard/wizard.tscn",
 		"health": { "base": 70.0, "growth": 0.20 },
-		"speed": { "base": 100.0, "growth": 0.0 },
 		"skills": [
 			{
 				"name": "Frost Bolt",
