@@ -24,6 +24,8 @@ const UNKNOWN_SCENE: PackedScene = preload("res://character/heroes/unknown/unkno
 const LAVA_SLIME_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_slime.tscn")
 const SKELETON_SCENE: PackedScene = preload("res://character/enemies/skeleton/skeleton.tscn")
 const SKELETON_ARCHER_SCENE: PackedScene = preload("res://character/enemies/skeleton_archer/skeleton_archer.tscn")
+const NECROMANCER_SCENE: PackedScene = preload("res://character/enemies/necromancer/necromancer.tscn")
+const SUMMON_PENTAGRAM_SCENE: PackedScene = preload("res://projectile/summon_pentagram/summon_pentagram.tscn")
 const GAME_OVER_DIALOG_SCENE: PackedScene = preload("res://game_over_dialog/game_over_dialog.tscn")
 const RECRUIT_PANEL_SCENE: PackedScene = preload("res://recruit_panel/recruit_panel.tscn")
 const LEVEL_UP_PANEL_SCENE: PackedScene = preload("res://level_up_panel/level_up_panel.tscn")
@@ -115,9 +117,10 @@ func _ready() -> void:
 		transition_mgr.call(&"set_loading_progress", 0.92, &"Assembling the fellowship...")
 	await get_tree().process_frame
 	_entity_pool.setup(_characters)
-	_entity_pool.prewarm(LAVA_SLIME_SCENE, 30)
+	_entity_pool.prewarm(LAVA_SLIME_SCENE, 25)
 	_entity_pool.prewarm(SKELETON_SCENE, 30)
-	_entity_pool.prewarm(SKELETON_ARCHER_SCENE, 20)
+	_entity_pool.prewarm(SKELETON_ARCHER_SCENE, 15)
+	_entity_pool.prewarm(NECROMANCER_SCENE, 10)
 	_spawn_initial_characters()
 	_check_recruitment()
 	_register_and_populate_rooms(_map.companion_rooms)
@@ -274,23 +277,29 @@ func _process_pending_spawns() -> void:
 		spawned += 1
 
 
-func _spawn_enemy_at(pos: Vector2, room: Rect2i) -> void:
-	var roll: float = randf()
-	var enemy_scene: PackedScene = LAVA_SLIME_SCENE
-	if roll < 0.40:
-		enemy_scene = SKELETON_SCENE
-	elif roll < 0.70:
-		enemy_scene = SKELETON_ARCHER_SCENE
+func _spawn_enemy_at(pos: Vector2, room: Rect2i, forced_scene: PackedScene = null, forced_level: int = -1, is_summoned: bool = false) -> void:
+	var enemy_scene: PackedScene = forced_scene
+	if enemy_scene == null:
+		var roll: float = randf()
+		enemy_scene = LAVA_SLIME_SCENE
+		if roll < 0.35:
+			enemy_scene = SKELETON_SCENE
+		elif roll < 0.60:
+			enemy_scene = SKELETON_ARCHER_SCENE
+		elif roll < 0.75:
+			enemy_scene = NECROMANCER_SCENE
 	var enemy: Enemy = _entity_pool.acquire(enemy_scene) as Enemy
 	enemy.home_room = room
 	enemy.position = pos
 	enemy.map = _map
 	enemy.y_sort_enabled = true
 	var depth: int = _map.get_room_depth(room)
-	var enemy_level: int = clampi(depth, 1, 10)
+	var enemy_level: int = forced_level if forced_level > 0 else clampi(depth, 1, 10)
 	enemy.set_level(enemy_level)
 	if not enemy.projectile_spawn_requested.is_connected(_on_projectile_spawn_requested):
 		enemy.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
+	if not enemy.minion_summon_requested.is_connected(_on_enemy_minion_summon_requested):
+		enemy.minion_summon_requested.connect(_on_enemy_minion_summon_requested)
 	for conn: Dictionary in enemy.died.get_connections():
 		@warning_ignore("unsafe_call_argument")
 		enemy.died.disconnect(conn.callable)
@@ -300,6 +309,8 @@ func _spawn_enemy_at(pos: Vector2, room: Rect2i) -> void:
 		enemy.death_completed.disconnect(d_conn.callable)
 	enemy.death_completed.connect(_on_enemy_death_completed.bind(enemy))
 	enemy.sync_screen_state(_camera.global_position)
+	if is_summoned:
+		enemy.play_summon_intro()
 	_enemies.append(enemy)
 
 
@@ -406,7 +417,28 @@ func _get_enemy_scene(enemy: Enemy) -> PackedScene:
 		return SKELETON_SCENE
 	if enemy is SkeletonArcher:
 		return SKELETON_ARCHER_SCENE
+	if enemy is Necromancer:
+		return NECROMANCER_SCENE
 	return LAVA_SLIME_SCENE
+
+
+func _on_enemy_minion_summon_requested(pos: Vector2, room: Rect2i, enemy_level: int) -> void:
+	if _enemies.size() >= MAX_ENEMIES:
+		return
+	var cell: Vector2i = _map.local_to_map(pos)
+	if not _map.is_cell_walkable(cell):
+		return
+	var pentagram: Projectile = SUMMON_PENTAGRAM_SCENE.instantiate() as Projectile
+	pentagram.global_position = pos
+	_projectiles.add_child(pentagram)
+
+	if _room_remaining_enemies.has(room):
+		_room_remaining_enemies[room] += 1
+	if _room_spawned_enemies.has(room):
+		_room_spawned_enemies[room] += 1
+
+	var minion_scene: PackedScene = SKELETON_ARCHER_SCENE if randf() < 0.30 else SKELETON_SCENE
+	_spawn_enemy_at(pos, room, minion_scene, enemy_level, true)
 
 
 func _on_enemy_died(enemy: Enemy, room: Rect2i) -> void:

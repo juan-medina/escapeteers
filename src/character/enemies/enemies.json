@@ -69,6 +69,24 @@
 				"min_range": 0.0
 			}
 		]
+	},
+	"necromancer": {
+		"id": "necromancer",
+		"name": "Necromancer",
+		"scene_path": "res://character/enemies/necromancer/necromancer.tscn",
+		"health": { "base": 150.0, "growth": 0.20 },
+		"speed": { "base": 42.0, "growth": 0.05 },
+		"detection_range": { "base": 190.0, "growth": 0.0 },
+		"xp": { "base": 35.0, "growth": 0.25 },
+		"skills": [
+			{
+				"name": "Raise Undead",
+				"type": "summon",
+				"cooldown": { "base": 4.5, "growth": -0.04 },
+				"range": { "base": 180.0, "growth": 0.0 },
+				"summon_count": 2
+			}
+		]
 	}
 }
 

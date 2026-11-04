@@ -10,7 +10,7 @@ This roadmap sequences upcoming gameplay milestones to build on the core pillars
 
 > **Already in Use:**
 > - **Heroes (8):** `Archer`, `Armored Axeman`, `Knight`, `Knight Templar`, `Priest`, `Soldier`, `Swordsman`, `Wizard`
-> - **Enemies (3):** `Lava Slime` (Hybrid Skirmisher), `Skeleton` (Fast Backline Rusher), `Skeleton Archer` (Ranged Artillery)
+> - **Enemies (4):** `Lava Slime` (Hybrid Skirmisher), `Skeleton` (Fast Backline Rusher), `Skeleton Archer` (Ranged Artillery), `Necromancer` (Summoner)
 
 1. **[DONE] First Enemy to Build — `Skeleton` (Melee Rusher):**
    - Fast close-combat swarm unit (`80.0` speed, `95.0` HP) that persistently targets healers/ranged heroes and slips through formation gaps when moving.
@@ -18,9 +18,8 @@ This roadmap sequences upcoming gameplay milestones to build on the core pillars
 2. **[DONE] Second Enemy — `Skeleton Archer` (Ranged Artillery):**
    - Fires `BoneArrow` projectiles across long range (`155.0` px) in any direction with line of sight, kiting backward between shots when heroes close within `65.0` px.
    - Includes `summon` animation ready for `Necromancer`.
-3. **Third Enemy — `Necromancer` (Summoner):**
-   - Hangs back and continuously summons `Skeleton` waves until eliminated.
-   - Creates high-priority rush-down targets.
+3. **[DONE] Third Enemy — `Necromancer` (Summoner):**
+   - Pure summoner that hangs back (`95.0` px kite distance) and casts `Raise Undead` every `4.5s`, placing green `SummonPentagram` circles (Row 9) in a radius around itself to raise `Skeleton` and `Skeleton Archer` minions via their `summon` animations.
 4. **Fourth Enemy — `Armored Orc` or `Hellhound` (Tier 2 Threat):**
    - `Hellhound` / `Werewolf` as a high-speed pack rusher, or `Armored Orc` as a high-HP frontline bruiser with knockback resistance.
 5. **Tiered Room Spawning & Grouping:**

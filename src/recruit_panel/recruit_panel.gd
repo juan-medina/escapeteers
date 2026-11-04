@@ -9,6 +9,8 @@ signal hero_selected(hero: HeroData)
 const UNIT_CARD_SCENE: PackedScene = preload("res://unit_card/unit_card.tscn")
 
 var _cards: Array[UnitCard] = []
+var _recruit_roll_count: int = 0
+var _healer_offered_early: bool = false
 
 @onready var _cards_container: VBoxContainer = $Center/Panel/VBox/CardsContainer
 
@@ -51,7 +53,19 @@ func _ensure_focus() -> void:
 
 func setup_choices(class_levels: Dictionary[StringName, int] = {}, unit_counts: Dictionary[StringName, int] = {}) -> void:
 	_ensure_cards()
+	_recruit_roll_count += 1
 	var choices: Array[HeroData] = HeroData.get_random_choices(3)
+	var priest_data: HeroData = HeroData.get_hero(&"priest")
+
+	if priest_data != null:
+		if choices.has(priest_data):
+			_healer_offered_early = true
+		elif _recruit_roll_count <= 2 and not _healer_offered_early and unit_counts.get(&"priest", 0) == 0:
+			if _recruit_roll_count == 2 or randf() < 0.5:
+				var replace_idx: int = randi_range(0, choices.size() - 1)
+				choices[replace_idx] = priest_data
+				_healer_offered_early = true
+
 	var first_card: UnitCard = null
 
 	for i: int in range(_cards.size()):

@@ -92,6 +92,12 @@ func apply_to_enemy(enemy: Enemy, level: int = 1) -> void:
 			enemy.ranged_range = rng
 			enemy.ranged_min_range = min_rng
 			enemy.attack_cooldown = cd
+		elif type == "summon":
+			var count: int = int(_float_val(skill, "summon_count", 2.0))
+			enemy.set(&"can_summon", true)
+			enemy.set(&"summon_range", rng)
+			enemy.set(&"summon_count", count)
+			enemy.attack_cooldown = cd
 
 
 func instantiate_enemy(level: int = 1) -> Enemy:

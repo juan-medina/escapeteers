@@ -5,6 +5,8 @@ class_name Enemy
 extends Character
 
 signal attacked(target: Hero, damage_amount: float)
+@warning_ignore("unused_signal")
+signal minion_summon_requested(pos: Vector2, room: Rect2i, enemy_level: int)
 
 enum State {
 	PATROL,
@@ -44,6 +46,7 @@ var _notifier: VisibleOnScreenNotifier2D = null
 var _slow_timer: float = 0.0
 var _slow_multiplier: float = 1.0
 var _stun_timer: float = 0.0
+var _is_summoning_in: bool = false
 
 
 func _ready() -> void:
@@ -95,7 +98,7 @@ func _set_sleeping(sleeping: bool) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if is_dead:
+	if is_dead or _is_summoning_in:
 		return
 
 	for action: CombatAction in combat_actions:
@@ -155,6 +158,14 @@ func _on_screen_exited() -> void:
 	is_on_screen = false
 	if current_state == State.PATROL:
 		_set_sleeping(true)
+
+
+func play_summon_intro() -> void:
+	if is_dead:
+		return
+	_is_summoning_in = true
+	_set_sleeping(false)
+	play(ANIM_SUMMON)
 
 
 func get_effective_target_dist_sq(hero_candidate: Hero) -> float:
@@ -398,6 +409,7 @@ func deactivate_for_pool() -> void:
 func reset_for_pool() -> void:
 	health = max_health
 	is_dead = false
+	_is_summoning_in = false
 	movement_state = MovementState.IDLE
 	combat_state = CombatState.READY
 	current_state = State.PATROL
@@ -439,6 +451,12 @@ func _on_death() -> void:
 
 
 func _on_animation_finished() -> void:
+	if _is_summoning_in:
+		_is_summoning_in = false
+		combat_state = CombatState.READY
+		if not is_dead:
+			play(ANIM_IDLE)
+		return
 	super._on_animation_finished()
 	if is_dead:
 		return
