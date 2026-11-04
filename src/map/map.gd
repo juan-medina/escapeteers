@@ -185,6 +185,12 @@ func get_navigation_path(from_pos: Vector2, to_pos: Vector2) -> PackedVector2Arr
 	return nav_window.get_path(from_pos, to_pos)
 
 
+func is_in_nav_bounds(world_pos: Vector2) -> bool:
+	if nav_window == null or _floor == null:
+		return false
+	return nav_window.is_in_bounds(_floor.local_to_map(world_pos))
+
+
 func generate_map() -> void:
 	if debug_seed != 0:
 		seed(debug_seed)

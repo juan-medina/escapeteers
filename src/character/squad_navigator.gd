@@ -57,8 +57,16 @@ func get_next_waypoint(character: Character, destination: Vector2, map: Map, del
 	if needs_repath and map != null:
 		_repath_timer = REPATH_INTERVAL + randf_range(0.0, 0.08)
 		_target_pos = destination
+		if not map.is_in_nav_bounds(character.global_position) or not map.is_in_nav_bounds(destination):
+			_current_path.clear()
+			_path_index = 0
+			_repath_timer = 0.5 + randf_range(0.0, 0.1)
+			return destination
+
 		_current_path = map.get_navigation_path(character.global_position, destination)
 		_path_index = 0
+		if _current_path.is_empty():
+			_repath_timer = 0.5 + randf_range(0.0, 0.1)
 
 	if _current_path.is_empty():
 		return destination
