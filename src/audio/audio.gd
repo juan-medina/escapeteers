@@ -3,9 +3,8 @@
 
 extends Node
 
-const MENU_MUSIC: AudioStreamOggVorbis = preload("res://data/assets/music/11 - The Mighty Kingdom.ogg")
-const GAME_MUSIC: AudioStreamOggVorbis = preload("res://data/assets/music/09 - Battle 2.ogg")
-const HERO_DEATH_MUSIC: AudioStreamOggVorbis = preload("res://data/assets/music/18 - Never Give Up.ogg")
+const MENU_MUSIC: AudioStreamOggVorbis = preload("res://data/assets/music/Three Red Hearts - Three Red Hearts.ogg")
+const GAME_MUSIC: AudioStreamOggVorbis = preload("res://data/assets/music/Three Red Hearts - Box Jump.ogg")
 
 var _suppress_hover: bool = false
 
@@ -50,10 +49,6 @@ func play_menu_music() -> void:
 
 func play_game_music() -> void:
 	_play_music(GAME_MUSIC)
-
-
-func play_hero_death_music() -> void:
-	_play_music(HERO_DEATH_MUSIC)
 
 
 func stop_music() -> void:

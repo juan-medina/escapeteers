@@ -56,12 +56,10 @@ The submodule is private: without access, the clone succeeds but `src/data` stay
 
 ### Music
 
-#### 16-Bit Fantasy: Battles Music Pack
-* **Author:** [Marllon Silva (xDeviruchi)](https://xdeviruchi.itch.io/)
-* **Source:** [Itch.io](https://xdeviruchi.itch.io/16-bit-fantasy-battles-music-pack)
-* **License:** Paid. Used under a purchased license (personal and commercial
-  use allowed; minor edits allowed; redistribution, resale, and OST releases
-  prohibited). Attribution optional but appreciated.
+#### Three Red Hearts - Prepare to Dev
+* **Author:** [Tallbeard Studios (Benjamin Burnes)](https://tallbeard.itch.io/)
+* **Source:** [Itch.io](https://tallbeard.itch.io/three-red-hearts-prepare-to-dev)
+* **License:** [Creative Commons Zero (CC0 1.0)](https://creativecommons.org/publicdomain/zero/1.0/) — public domain, free for personal and commercial use. The pack was purchased to support the author.
 
 ### Sound Effects
 

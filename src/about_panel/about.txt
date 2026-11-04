@@ -44,10 +44,10 @@ License: Creative Commons Zero (CC0), public domain.
 
 [color=#ffffff][b]MUSIC[/b][/color]
 
-[color=#ffffff][b]16-Bit Fantasy: Battles Music Pack[/b][/color]
-Author: [url=https://xdeviruchi.itch.io/]Marllon Silva (xDeviruchi)[/url]
-Source: [url=https://xdeviruchi.itch.io/16-bit-fantasy-battles-music-pack]Itch.io[/url]
-License: Paid. Used under a purchased license (personal and commercial use allowed; minor edits allowed; redistribution, resale, and OST releases prohibited). Attribution optional but appreciated.
+[color=#ffffff][b]Three Red Hearts - Prepare to Dev[/b][/color]
+Author: [url=https://tallbeard.itch.io/]Tallbeard Studios (Benjamin Burnes)[/url]
+Source: [url=https://tallbeard.itch.io/three-red-hearts-prepare-to-dev]Itch.io[/url]
+License: Creative Commons Zero (CC0), public domain. The pack was purchased to support the author.
 
 [color=#ffffff][b]SOUND EFFECTS[/b][/color]
 
