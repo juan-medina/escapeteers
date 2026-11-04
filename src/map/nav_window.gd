@@ -63,6 +63,9 @@ func get_path(from_pos: Vector2, to_pos: Vector2) -> PackedVector2Array:
 	if _astar.is_point_solid(to_cell):
 		to_cell = _find_closest_walkable_cell(to_cell)
 
+	if _astar.is_point_solid(from_cell) or _astar.is_point_solid(to_cell):
+		return PackedVector2Array()
+
 	if from_cell == to_cell:
 		return PackedVector2Array([to_pos])
 

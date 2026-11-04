@@ -24,10 +24,27 @@ func set_level(new_level: int) -> void:
 	var data: EnemyData = EnemyData.get_enemy(&"lava_slime")
 	if data != null:
 		data.apply_to_enemy(self, level)
-	combat_actions.clear()
-	_setup_actions()
+	if combat_actions.is_empty():
+		_setup_actions()
+	else:
+		_refresh_actions()
 	if _health_bar != null:
 		_health_bar.update_health(health, max_health)
+
+
+func _refresh_actions() -> void:
+	for action: CombatAction in combat_actions:
+		if action is MeleeAction:
+			var melee: MeleeAction = action as MeleeAction
+			melee.range_distance = melee_range
+			melee.damage = melee_damage
+			melee.cooldown = attack_cooldown
+		elif action is RangedAction:
+			var ranged: RangedAction = action as RangedAction
+			ranged.range_distance = ranged_range
+			ranged.min_range_distance = ranged_min_range
+			ranged.damage = damage
+			ranged.cooldown = attack_cooldown
 
 
 func _setup_actions() -> void:

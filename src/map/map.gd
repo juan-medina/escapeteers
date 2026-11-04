@@ -242,38 +242,46 @@ func update_streaming(player_world_pos: Vector2, player_velocity: Vector2) -> vo
 	light_manager.set_focus(player_world_pos)
 
 
+func is_room_materialized(room: Rect2i) -> bool:
+	return is_cell_walkable(room.get_center())
+
+
 func expand_frontier_near(player_world_pos: Vector2) -> Array[Rect2i]:
 	var player_cell: Vector2i = _floor.local_to_map(player_world_pos)
 	var trigger_dist_sq: float = EXPAND_TRIGGER_DISTANCE_TILES * EXPAND_TRIGGER_DISTANCE_TILES
+	var new_rooms: Array[Rect2i] = []
 
-	var best_room: Rect2i = Rect2i()
-	var best_dist_sq: float = INF
-	var found: bool = false
+	for candidate_room: Rect2i in plan.rooms:
+		if not companion_rooms.has(candidate_room):
+			var d_sq: float = Vector2(player_cell).distance_squared_to(Vector2(candidate_room.get_center()))
+			if d_sq <= trigger_dist_sq:
+				companion_rooms.append(candidate_room)
+				new_rooms.append(candidate_room)
 
+	var rooms_to_expand: Array[Rect2i] = []
 	for room: Rect2i in companion_rooms:
 		if _expanded_rooms.has(room):
 			continue
 		var dist_sq: float = Vector2(player_cell).distance_squared_to(Vector2(room.get_center()))
-		if dist_sq <= trigger_dist_sq and dist_sq < best_dist_sq:
-			best_dist_sq = dist_sq
-			best_room = room
-			found = true
+		if dist_sq <= trigger_dist_sq:
+			rooms_to_expand.append(room)
 
-	if not found:
-		return []
+	for expand_room: Rect2i in rooms_to_expand:
+		_expanded_rooms[expand_room] = true
+		var raw_children: Array = plan.get_child_rooms(expand_room)
+		for item: Variant in raw_children:
+			if item is Rect2i:
+				var child_room: Rect2i = item
+				if not companion_rooms.has(child_room):
+					companion_rooms.append(child_room)
+					new_rooms.append(child_room)
 
-	_expanded_rooms[best_room] = true
-	var raw_children: Array = plan.get_child_rooms(best_room)
-	var new_rooms: Array[Rect2i] = []
-	for item: Variant in raw_children:
-		if item is Rect2i:
-			var child_room: Rect2i = item
-			if not companion_rooms.has(child_room):
-				companion_rooms.append(child_room)
-				new_rooms.append(child_room)
-
-	if not new_rooms.is_empty():
-		decorate_rooms(new_rooms)
+	var ready_to_decorate: Array[Rect2i] = []
+	for r: Rect2i in companion_rooms:
+		if not _decorated_rooms.has(r) and is_room_materialized(r):
+			ready_to_decorate.append(r)
+	if not ready_to_decorate.is_empty():
+		decorate_rooms(ready_to_decorate)
 
 	return new_rooms
 

@@ -6,11 +6,11 @@ extends Node2D
 
 const MAX_CHARACTERS: int = 80
 const MAX_ENEMIES: int = 160
-const MAX_SPAWNS_PER_FRAME: int = 3
+const MAX_SPAWNS_PER_FRAME: int = 8
 const ENEMY_ACTIVE_DIST_SQ: float = 480.0 * 480.0
-const ENEMY_DESPAWN_DIST_SQ: float = 1650.0 * 1650.0
-const ROOM_RESPAWN_DIST_SQ: float = 1350.0 * 1350.0
-const STREAM_CHECK_INTERVAL: float = 0.25
+const ENEMY_DESPAWN_DIST_SQ: float = 1350.0 * 1350.0
+const ROOM_RESPAWN_DIST_SQ: float = 950.0 * 950.0
+const STREAM_CHECK_INTERVAL: float = 0.15
 
 const ARCHER_SCENE: PackedScene = preload("res://character/heroes/archer/archer.tscn")
 const ARMORED_AXEMAN_SCENE: PackedScene = preload("res://character/heroes/armored_axeman/armored_axeman.tscn")
@@ -99,7 +99,7 @@ func _ready() -> void:
 		transition_mgr.call(&"set_loading_progress", 0.92, &"Assembling the fellowship...")
 	await get_tree().process_frame
 	_entity_pool.setup(_characters)
-	_entity_pool.prewarm(LAVA_SLIME_SCENE, 20)
+	_entity_pool.prewarm(LAVA_SLIME_SCENE, 80)
 	_spawn_initial_characters()
 	_check_recruitment()
 	_register_and_populate_rooms(_map.companion_rooms)
@@ -208,15 +208,20 @@ func _build_hero_deck() -> Array[PackedScene]:
 
 
 func _register_and_populate_rooms(rooms: Array[Rect2i]) -> void:
+	var player_pos: Vector2 = _character.global_position
 	for room: Rect2i in rooms:
 		if not _room_remaining_enemies.has(room):
 			var quota: int = _map.get_room_enemy_quota(room)
 			_room_remaining_enemies[room] = quota
 			_room_spawned_enemies[room] = 0
-		_populate_room_enemies(room)
+		var room_center_world: Vector2 = _map.map_to_local(room.get_center())
+		if _map.is_room_materialized(room) and player_pos.distance_squared_to(room_center_world) <= ROOM_RESPAWN_DIST_SQ:
+			_populate_room_enemies(room)
 
 
 func _populate_room_enemies(room: Rect2i) -> void:
+	if not _map.is_room_materialized(room):
+		return
 	var remaining: int = _room_remaining_enemies.get(room, 0)
 	var alive_in_room: int = _room_spawned_enemies.get(room, 0)
 	var needed: int = remaining - alive_in_room
@@ -234,12 +239,18 @@ func _populate_room_enemies(room: Rect2i) -> void:
 
 func _process_pending_spawns() -> void:
 	var spawned: int = 0
+	var cam_pos: Vector2 = _camera.global_position
 	while not _pending_spawns.is_empty() and spawned < MAX_SPAWNS_PER_FRAME:
 		if _enemies.size() >= MAX_ENEMIES:
 			break
 		var req: Dictionary = _pending_spawns.pop_front()
 		var room: Rect2i = req[&"room"]
 		var pos: Vector2 = req[&"pos"]
+		var cell: Vector2i = _map.local_to_map(pos)
+		if pos.distance_squared_to(cam_pos) > ENEMY_DESPAWN_DIST_SQ or not _map.is_cell_walkable(cell):
+			if _room_spawned_enemies.has(room):
+				_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
+			continue
 		_spawn_enemy_at(pos, room)
 		spawned += 1
 
@@ -259,25 +270,107 @@ func _spawn_enemy_at(pos: Vector2, room: Rect2i) -> void:
 		@warning_ignore("unsafe_call_argument")
 		slime.died.disconnect(conn.callable)
 	slime.died.connect(_on_enemy_died.bind(slime, room))
+	for d_conn: Dictionary in slime.death_completed.get_connections():
+		@warning_ignore("unsafe_call_argument")
+		slime.death_completed.disconnect(d_conn.callable)
+	slime.death_completed.connect(_on_enemy_death_completed.bind(slime))
+	slime.sync_screen_state(_camera.global_position)
 	_enemies.append(slime)
 
 
 func _respawn_nearby_hibernating_rooms() -> void:
-	if _enemies.size() >= MAX_ENEMIES:
-		return
-
 	var player_pos: Vector2 = _character.global_position
+	var room_candidates: Array[Dictionary] = []
+
 	for room: Rect2i in _map.companion_rooms:
 		var remaining: int = _room_remaining_enemies.get(room, 0)
 		var spawned: int = _room_spawned_enemies.get(room, 0)
-		if remaining <= spawned:
+		if remaining <= spawned or not _map.is_room_materialized(room):
 			continue
 
 		var room_world_center: Vector2 = _map.map_to_local(room.get_center())
-		if player_pos.distance_squared_to(room_world_center) <= ROOM_RESPAWN_DIST_SQ:
-			_populate_room_enemies(room)
-			if _enemies.size() >= MAX_ENEMIES:
-				break
+		var dist_sq: float = player_pos.distance_squared_to(room_world_center)
+		if dist_sq <= ROOM_RESPAWN_DIST_SQ:
+			room_candidates.append({&"room": room, &"dist_sq": dist_sq})
+
+	if room_candidates.is_empty():
+		return
+
+	room_candidates.sort_custom(_compare_room_candidate_asc)
+
+	for cand: Dictionary in room_candidates:
+		var room: Rect2i = cand[&"room"]
+		var room_dist_sq: float = float(cand[&"dist_sq"])
+		var remaining: int = _room_remaining_enemies.get(room, 0)
+		var spawned: int = _room_spawned_enemies.get(room, 0)
+		var needed: int = remaining - spawned
+		if needed <= 0:
+			continue
+
+		var free_slots: int = MAX_ENEMIES - (_enemies.size() + _pending_spawns.size())
+		if free_slots < needed:
+			_reclaim_distant_enemies_for_room(room, room_dist_sq, needed - free_slots, player_pos)
+
+		_populate_room_enemies(room)
+
+
+func _reclaim_distant_enemies_for_room(target_room: Rect2i, target_room_dist_sq: float, count_needed: int, player_pos: Vector2) -> void:
+	var reclaimed: int = 0
+	var min_evict_dist_sq: float = target_room_dist_sq + 6400.0
+
+	var p_idx: int = _pending_spawns.size() - 1
+	while p_idx >= 0 and reclaimed < count_needed:
+		var req: Dictionary = _pending_spawns[p_idx]
+		var r_room: Rect2i = req[&"room"]
+		if r_room != target_room:
+			var r_center: Vector2 = _map.map_to_local(r_room.get_center())
+			if player_pos.distance_squared_to(r_center) > min_evict_dist_sq:
+				_pending_spawns.remove_at(p_idx)
+				if _room_spawned_enemies.has(r_room):
+					_room_spawned_enemies[r_room] = maxi(0, _room_spawned_enemies[r_room] - 1)
+				reclaimed += 1
+		p_idx -= 1
+
+	if reclaimed >= count_needed:
+		return
+
+	var evictable: Array[Dictionary] = []
+	for enemy: Enemy in _enemies:
+		if not is_instance_valid(enemy) or enemy.is_dead:
+			continue
+		if enemy.home_room == target_room or enemy.is_on_screen or enemy.current_state != Enemy.State.PATROL:
+			continue
+		var home_center: Vector2 = _map.map_to_local(enemy.home_room.get_center())
+		var home_dist_sq: float = player_pos.distance_squared_to(home_center)
+		if home_dist_sq > min_evict_dist_sq:
+			evictable.append({&"enemy": enemy, &"dist_sq": home_dist_sq})
+
+	if evictable.is_empty():
+		return
+
+	evictable.sort_custom(_compare_room_candidate_desc)
+
+	for item: Dictionary in evictable:
+		if reclaimed >= count_needed:
+			break
+		@warning_ignore("unsafe_cast")
+		var enemy_to_evict: Enemy = item[&"enemy"] as Enemy
+		var h_room: Rect2i = enemy_to_evict.home_room
+		if _room_spawned_enemies.has(h_room):
+			_room_spawned_enemies[h_room] = maxi(0, _room_spawned_enemies[h_room] - 1)
+		_entity_pool.release(enemy_to_evict, LAVA_SLIME_SCENE)
+		var e_idx: int = _enemies.find(enemy_to_evict)
+		if e_idx != -1:
+			_enemies.remove_at(e_idx)
+		reclaimed += 1
+
+
+static func _compare_room_candidate_asc(a: Dictionary, b: Dictionary) -> bool:
+	return float(a.get(&"dist_sq", 0.0)) < float(b.get(&"dist_sq", 0.0))
+
+
+static func _compare_room_candidate_desc(a: Dictionary, b: Dictionary) -> bool:
+	return float(a.get(&"dist_sq", 0.0)) > float(b.get(&"dist_sq", 0.0))
 
 
 func _on_enemy_died(slime: Enemy, room: Rect2i) -> void:
@@ -287,6 +380,10 @@ func _on_enemy_died(slime: Enemy, room: Rect2i) -> void:
 		_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
 
 	_add_squad_xp(slime.xp_value)
+
+
+func _on_enemy_death_completed(slime: Enemy) -> void:
+	_entity_pool.release(slime, LAVA_SLIME_SCENE)
 
 
 func _on_projectile_spawn_requested(projectile: Projectile) -> void:
@@ -322,8 +419,13 @@ func _update_enemies() -> void:
 			continue
 
 		if dist_sq > ENEMY_ACTIVE_DIST_SQ:
+			if enemy.current_state == Enemy.State.PATROL and enemy.is_physics_processing():
+				enemy.sync_screen_state(camera_pos)
 			i -= 1
 			continue
+
+		if not enemy.is_physics_processing():
+			enemy.sync_screen_state(camera_pos)
 
 		var closest: Hero = _get_closest_squad_member(enemy.global_position)
 		if closest != null:

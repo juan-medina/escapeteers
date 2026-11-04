@@ -31,10 +31,10 @@ func acquire(scene: PackedScene) -> Node2D:
 	var inst: Node2D = null
 
 	while not pool.is_empty():
-		@warning_ignore("unsafe_cast")
-		var candidate: Node2D = pool.pop_back() as Node2D
-		if is_instance_valid(candidate):
-			inst = candidate
+		var raw_candidate: Variant = pool.pop_back()
+		if is_instance_valid(raw_candidate):
+			@warning_ignore("unsafe_cast")
+			inst = raw_candidate as Node2D
 			break
 
 	if inst == null:
@@ -51,24 +51,29 @@ func release(node: Node2D, scene: PackedScene) -> void:
 	if not _pools.has(scene):
 		_pools[scene] = []
 	_deactivate(node)
-	_pools[scene].append(node)
+	if not _pools[scene].has(node):
+		_pools[scene].append(node)
 
 
 func _activate(node: Node2D) -> void:
 	node.visible = true
-	node.set_physics_process(true)
-	node.set_process(true)
 	if node is Enemy:
 		(node as Enemy).reset_for_pool()
 	elif node.has_method(&"reset_for_pool"):
 		node.call(&"reset_for_pool")
+	else:
+		node.set_physics_process(true)
+		node.set_process(true)
 
 
 func _deactivate(node: Node2D) -> void:
 	node.visible = false
 	node.set_physics_process(false)
 	node.set_process(false)
-	if node is Character:
+	node.position = Vector2(-999999.0, -999999.0)
+	if node is Enemy:
+		(node as Enemy).deactivate_for_pool()
+	elif node is Character:
 		(node as Character).disable_collisions()
 	elif node.has_method(&"disable_collisions"):
 		node.call(&"disable_collisions")

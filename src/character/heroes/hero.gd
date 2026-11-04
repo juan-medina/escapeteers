@@ -305,6 +305,12 @@ func _check_auto_attack() -> void:
 			heal_cast_started.emit(animation)
 
 
+func _is_valid_enemy_target(enemy: Enemy) -> bool:
+	if enemy == null or not is_instance_valid(enemy) or not enemy.visible:
+		return false
+	return not enemy.is_dead and enemy.health > 0.0 and not enemy.is_queued_for_deletion()
+
+
 func _find_closest_enemy() -> Enemy:
 	var closest: Enemy = null
 	var min_dist_sq: float = INF
@@ -313,7 +319,7 @@ func _find_closest_enemy() -> Enemy:
 
 	for node: Node in get_tree().get_nodes_in_group(_GROUP_ENEMIES):
 		var enemy: Enemy = node as Enemy
-		if enemy == null or not is_instance_valid(enemy) or enemy.health <= 0.0 or enemy.is_queued_for_deletion():
+		if not _is_valid_enemy_target(enemy):
 			continue
 
 		var dist_to_self_sq: float = global_position.distance_squared_to(enemy.global_position)
@@ -379,7 +385,7 @@ func _on_frame_changed() -> void:
 		if should_hit:
 			for node: Node in get_tree().get_nodes_in_group(_GROUP_ENEMIES):
 				var enemy: Enemy = node as Enemy
-				if enemy == null or not is_instance_valid(enemy) or enemy.health <= 0.0 or enemy.is_queued_for_deletion():
+				if not _is_valid_enemy_target(enemy):
 					continue
 				if melee.apply_hit(self, enemy):
 					enemy_hit.emit(enemy, hit_damage, is_heavy)

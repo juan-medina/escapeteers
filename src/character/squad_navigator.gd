@@ -47,13 +47,15 @@ func get_next_waypoint(character: Character, destination: Vector2, map: Map, del
 		_path_index = 0
 		return destination
 
-	var needs_repath: bool = _current_path.is_empty() or _path_index >= _current_path.size()
-	if not needs_repath and _repath_timer <= 0.0:
-		if destination.distance_squared_to(_target_pos) > REPATH_DISTANCE_MOVED_SQ:
+	var needs_repath: bool = false
+	if _repath_timer <= 0.0:
+		if _current_path.is_empty() or _path_index >= _current_path.size():
+			needs_repath = true
+		elif destination.distance_squared_to(_target_pos) > REPATH_DISTANCE_MOVED_SQ:
 			needs_repath = true
 
 	if needs_repath and map != null:
-		_repath_timer = REPATH_INTERVAL
+		_repath_timer = REPATH_INTERVAL + randf_range(0.0, 0.08)
 		_target_pos = destination
 		_current_path = map.get_navigation_path(character.global_position, destination)
 		_path_index = 0

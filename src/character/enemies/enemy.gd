@@ -65,14 +65,24 @@ func _ready() -> void:
 	_notifier.screen_entered.connect(_on_screen_entered)
 	_notifier.screen_exited.connect(_on_screen_exited)
 	add_child(_notifier)
+	set_process(false)
 	is_on_screen = _notifier.is_on_screen()
 	if not is_on_screen:
 		_set_sleeping(true)
 
 
+func sync_screen_state(camera_pos: Vector2) -> void:
+	var diff: Vector2 = (global_position - camera_pos).abs()
+	is_on_screen = diff.x <= 384.0 and diff.y <= 244.0
+	if not is_on_screen and current_state == State.PATROL:
+		_set_sleeping(true)
+	else:
+		_set_sleeping(false)
+
+
 func _set_sleeping(sleeping: bool) -> void:
 	set_physics_process(not sleeping)
-	set_process(not sleeping)
+	set_process(false)
 	if sleeping:
 		_animated_sprite.pause()
 		disable_collisions()
@@ -171,12 +181,14 @@ func set_target_candidate(hero_candidate: Hero) -> void:
 
 
 func apply_knockback(force: Vector2) -> void:
+	if is_dead or not visible:
+		return
 	_set_sleeping(false)
 	_knockback_velocity = force
 
 
 func apply_slow(factor: float, duration: float) -> void:
-	if is_dead or duration <= 0.0:
+	if is_dead or not visible or duration <= 0.0:
 		return
 	_set_sleeping(false)
 	_slow_multiplier = clampf(factor, 0.1, 1.0)
@@ -185,7 +197,7 @@ func apply_slow(factor: float, duration: float) -> void:
 
 
 func apply_stun(duration: float) -> void:
-	if is_dead or duration <= 0.0:
+	if is_dead or not visible or duration <= 0.0:
 		return
 	_set_sleeping(false)
 	_stun_timer = maxf(_stun_timer, duration)
@@ -217,6 +229,8 @@ func _update_status_visuals() -> void:
 
 
 func take_damage(amount: float) -> void:
+	if is_dead or not visible:
+		return
 	_set_sleeping(false)
 	super.take_damage(amount)
 
@@ -333,6 +347,12 @@ func _pick_new_patrol_destination() -> void:
 		_patrol_destination = global_position
 		return
 
+	var current_cell: Vector2i = map.local_to_map(global_position)
+	if not map.is_cell_walkable(current_cell):
+		_patrol_destination = global_position
+		_idle_wait_timer = randf_range(0.6, 1.4)
+		return
+
 	if home_room != Rect2i():
 		var min_x: int = home_room.position.x + 2
 		var max_x: int = home_room.position.x + home_room.size.x - 3
@@ -342,7 +362,11 @@ func _pick_new_patrol_destination() -> void:
 			var rx: int = randi_range(min_x, max_x)
 			var ry: int = randi_range(min_y, max_y)
 			var target_cell: Vector2i = Vector2i(rx, ry)
-			_patrol_destination = map.clamp_to_walkable(map.map_to_local(target_cell))
+			if not map.is_cell_walkable(target_cell):
+				_patrol_destination = global_position
+				_idle_wait_timer = randf_range(0.6, 1.4)
+				return
+			_patrol_destination = map.map_to_local(target_cell)
 			return
 
 	var local_offset: Vector2 = Vector2(randf_range(-60.0, 60.0), randf_range(-60.0, 60.0))
@@ -356,6 +380,15 @@ func set_level(new_level: int) -> void:
 		_health_bar.set_level(level)
 
 
+func deactivate_for_pool() -> void:
+	if is_in_group(_GROUP_ENEMIES):
+		remove_from_group(_GROUP_ENEMIES)
+	target = null
+	current_action = null
+	_knockback_velocity = Vector2.ZERO
+	_set_sleeping(true)
+
+
 func reset_for_pool() -> void:
 	health = max_health
 	is_dead = false
@@ -364,6 +397,9 @@ func reset_for_pool() -> void:
 	current_state = State.PATROL
 	target = null
 	current_action = null
+	_patrol_destination = Vector2.ZERO
+	_patrol_timer = 0.0
+	_idle_wait_timer = randf_range(0.1, 0.8)
 	_stun_timer = 0.0
 	_slow_timer = 0.0
 	_slow_multiplier = 1.0
@@ -374,12 +410,12 @@ func reset_for_pool() -> void:
 		_animated_sprite.modulate = Color.WHITE
 		_animated_sprite.play(ANIM_IDLE)
 	if _health_bar != null:
+		_health_bar.visible = true
 		_health_bar.update_health(health, max_health)
-	enable_collisions()
-	set_physics_process(true)
 	visible = true
 	if not is_in_group(_GROUP_ENEMIES):
 		add_to_group(_GROUP_ENEMIES)
+	_set_sleeping(true)
 
 
 func _on_death() -> void:
@@ -391,8 +427,9 @@ func _on_death() -> void:
 	_base_modulate = Color.WHITE
 	_animated_sprite.modulate = Color.WHITE
 	super._on_death()
-	if not _animated_sprite.animation_finished.is_connected(queue_free):
-		_animated_sprite.animation_finished.connect(queue_free, CONNECT_ONE_SHOT)
+	if death_completed.get_connections().is_empty():
+		if not _animated_sprite.animation_finished.is_connected(queue_free):
+			_animated_sprite.animation_finished.connect(queue_free, CONNECT_ONE_SHOT)
 
 
 func _on_animation_finished() -> void:
