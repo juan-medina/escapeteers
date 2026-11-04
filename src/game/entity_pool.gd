@@ -33,8 +33,7 @@ func acquire(scene: PackedScene) -> Node2D:
 	while not pool.is_empty():
 		var raw_candidate: Variant = pool.pop_back()
 		if is_instance_valid(raw_candidate):
-			@warning_ignore("unsafe_cast")
-			inst = raw_candidate as Node2D
+			inst = raw_candidate
 			break
 
 	if inst == null:

@@ -300,7 +300,7 @@ func _respawn_nearby_hibernating_rooms() -> void:
 
 	for cand: Dictionary in room_candidates:
 		var room: Rect2i = cand[&"room"]
-		var room_dist_sq: float = float(cand[&"dist_sq"])
+		var room_dist_sq: float = cand[&"dist_sq"]
 		var remaining: int = _room_remaining_enemies.get(room, 0)
 		var spawned: int = _room_spawned_enemies.get(room, 0)
 		var needed: int = remaining - spawned
@@ -353,8 +353,7 @@ func _reclaim_distant_enemies_for_room(target_room: Rect2i, target_room_dist_sq:
 	for item: Dictionary in evictable:
 		if reclaimed >= count_needed:
 			break
-		@warning_ignore("unsafe_cast")
-		var enemy_to_evict: Enemy = item[&"enemy"] as Enemy
+		var enemy_to_evict: Enemy = item[&"enemy"]
 		var h_room: Rect2i = enemy_to_evict.home_room
 		if _room_spawned_enemies.has(h_room):
 			_room_spawned_enemies[h_room] = maxi(0, _room_spawned_enemies[h_room] - 1)
@@ -366,11 +365,15 @@ func _reclaim_distant_enemies_for_room(target_room: Rect2i, target_room_dist_sq:
 
 
 static func _compare_room_candidate_asc(a: Dictionary, b: Dictionary) -> bool:
-	return float(a.get(&"dist_sq", 0.0)) < float(b.get(&"dist_sq", 0.0))
+	var dist_a: float = a[&"dist_sq"]
+	var dist_b: float = b[&"dist_sq"]
+	return dist_a < dist_b
 
 
 static func _compare_room_candidate_desc(a: Dictionary, b: Dictionary) -> bool:
-	return float(a.get(&"dist_sq", 0.0)) > float(b.get(&"dist_sq", 0.0))
+	var dist_a: float = a[&"dist_sq"]
+	var dist_b: float = b[&"dist_sq"]
+	return dist_a > dist_b
 
 
 func _on_enemy_died(slime: Enemy, room: Rect2i) -> void:

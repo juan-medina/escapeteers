@@ -12,7 +12,6 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_overlay")
-pixels_per_tile = 2
 
 [node name="Chunks" type="Node2D" parent="." unique_id=1676614325]
 

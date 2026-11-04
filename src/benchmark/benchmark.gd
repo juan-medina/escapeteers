@@ -278,8 +278,8 @@ func _record_spike_candidate(
 
 
 static func _compare_spike_records(a: Dictionary, b: Dictionary) -> bool:
-	var cpu_a: float = float(a.get(&"cpu_ms", 0.0))
-	var cpu_b: float = float(b.get(&"cpu_ms", 0.0))
+	var cpu_a: float = a[&"cpu_ms"]
+	var cpu_b: float = b[&"cpu_ms"]
 	return cpu_a > cpu_b
 
 
@@ -384,7 +384,7 @@ func _finish_benchmark() -> void:
 	print(&"TOP %d SLOWEST CPU FRAMES:" % _spike_records.size())
 	for rec: Dictionary in _spike_records:
 		var part1: String = (
-			"  Frame %04d: cpu=%.2fms (delta=%.2fms) | enemies=%d (pend=%d)"
+			&"  Frame %04d: cpu=%.2fms (delta=%.2fms) | enemies=%d (pend=%d)"
 			% [
 				rec[&"frame"],
 				rec[&"cpu_ms"],
@@ -394,7 +394,7 @@ func _finish_benchmark() -> void:
 			]
 		)
 		var part2: String = (
-			" | awake_off=%d | unstream=%d | empty_path=%d | q_chunks=%d | recenter=%s"
+			&" | awake_off=%d | unstream=%d | empty_path=%d | q_chunks=%d | recenter=%s"
 			% [
 				rec[&"awake_offscreen"],
 				rec[&"unmaterialized"],
