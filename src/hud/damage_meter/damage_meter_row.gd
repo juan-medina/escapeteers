@@ -4,6 +4,8 @@
 class_name DamageMeterRow
 extends HBoxContainer
 
+const FONT_M3X6: FontFile = preload("res://data/assets/pixel_ui_theme/m3x6.ttf")
+
 var _class_label: Label = null
 var _progress_bar: ProgressBar = null
 var _stats_label: Label = null
@@ -16,16 +18,17 @@ var _last_stats_text: String = ""
 
 
 func _init() -> void:
-	custom_minimum_size = Vector2(154.0, 12.0)
+	custom_minimum_size = Vector2(126.0, 11.0)
 	add_theme_constant_override(&"separation", 4)
 
 	_class_label = Label.new()
-	_class_label.custom_minimum_size = Vector2(44.0, 0.0)
+	_class_label.custom_minimum_size = Vector2(34.0, 0.0)
+	_class_label.add_theme_font_override(&"font", FONT_M3X6)
 	_class_label.text = "??? x0"
 	add_child(_class_label)
 
 	_progress_bar = ProgressBar.new()
-	_progress_bar.custom_minimum_size = Vector2(30.0, 6.0)
+	_progress_bar.custom_minimum_size = Vector2(24.0, 5.0)
 	_progress_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_progress_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_progress_bar.max_value = 100.0
@@ -40,8 +43,9 @@ func _init() -> void:
 	add_child(_progress_bar)
 
 	_stats_label = Label.new()
-	_stats_label.custom_minimum_size = Vector2(76.0, 0.0)
+	_stats_label.custom_minimum_size = Vector2(48.0, 0.0)
 	_stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_stats_label.add_theme_font_override(&"font", FONT_M3X6)
 	_stats_label.add_theme_color_override(&"font_color", Color(0.85, 0.85, 0.85, 1.0))
 	_stats_label.text = "0 (0) 0%"
 	add_child(_stats_label)

@@ -99,8 +99,7 @@ func _ready() -> void:
 	_hud = HUD_SCENE.instantiate() as Hud
 	add_child(_hud)
 	_hud.update_xp(_current_xp, _xp_required, _squad_level)
-	if _hud.damage_meter != null:
-		_hud.damage_meter.update_squad(_squad)
+	_sync_hud_squad()
 	_hud.setup_map(_map.plan, _character)
 
 	_recruit_panel = RECRUIT_PANEL_SCENE.instantiate() as RecruitPanel
@@ -174,6 +173,7 @@ func remove_member(hero: Hero) -> void:
 	_squad.remove_at(idx)
 	hero.queue_free()
 	_rebalance_escort_slots()
+	_sync_hud_squad()
 
 
 func _update_map_streaming() -> void:
@@ -544,8 +544,7 @@ func _on_hero_died(hero: Hero) -> void:
 	if squad_idx != -1:
 		_squad.remove_at(squad_idx)
 		_rebalance_escort_slots()
-		if _hud != null and _hud.damage_meter != null:
-			_hud.damage_meter.update_squad(_squad)
+		_sync_hud_squad()
 		return
 
 	var unrecruited_idx: int = _unrecruited_characters.find(hero)
@@ -605,8 +604,16 @@ func _on_hero_recruited(hero_data: HeroData) -> void:
 	new_hero.died.connect(_on_hero_died.bind(new_hero))
 	_squad.append(new_hero)
 	_rebalance_escort_slots()
-	if _hud != null and _hud.damage_meter != null:
+	_sync_hud_squad()
+
+
+func _sync_hud_squad() -> void:
+	if _hud == null:
+		return
+	if _hud.damage_meter != null:
 		_hud.damage_meter.update_squad(_squad)
+	if _hud.squad_grid != null:
+		_hud.squad_grid.update_squad(_squad)
 
 
 func _on_hero_enemy_hit(_enemy: Enemy, damage: float, _is_heavy: bool, hero: Hero) -> void:
@@ -665,6 +672,8 @@ func _on_class_leveled_up(hero_data: HeroData) -> void:
 			if member.hero_data != null and member.hero_data.id == hero_data.id:
 				hero_data.apply_to_hero(member, new_level)
 				member.health = member.max_health
+
+	_sync_hud_squad()
 
 	get_tree().paused = false
 	if _pending_level_ups > 0:

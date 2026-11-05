@@ -26,6 +26,7 @@ class MeterEntry:
 	var pct: float = 0.0
 
 
+const FONT_M3X6: FontFile = preload("res://data/assets/pixel_ui_theme/m3x6.ttf")
 const COMBAT_TIMEOUT: float = 4.0
 const REFRESH_INTERVAL: float = 0.2
 
@@ -43,10 +44,13 @@ var _row_pool: Array[DamageMeterRow] = []
 var _entry_pool: Array[MeterEntry] = []
 
 @onready var _title_label: Label = $Margin/VBox/Header/TitleLabel
+@onready var _columns_label: Label = $Margin/VBox/Header/ColumnsLabel
 @onready var _rows_container: VBoxContainer = $Margin/VBox/RowsContainer
 
 
 func _ready() -> void:
+	_title_label.add_theme_font_override(&"font", FONT_M3X6)
+	_columns_label.add_theme_font_override(&"font", FONT_M3X6)
 	_ensure_configs()
 	_update_header()
 

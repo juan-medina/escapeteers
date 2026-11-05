@@ -1,0 +1,13 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://hud/squad_grid/squad_grid.gd" id="1_squad_grid"]
+
+[node name="SquadGrid" type="GridContainer"]
+offset_left = 16.0
+offset_top = 30.0
+offset_right = 99.0
+offset_bottom = 46.0
+mouse_filter = 2
+columns = 4
+script = ExtResource("1_squad_grid")
+
