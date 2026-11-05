@@ -5,16 +5,6 @@ class_name DamageMeter
 extends PanelContainer
 
 
-class ClassConfig:
-	extends RefCounted
-	var abbr: String = ""
-	var color: Color = Color.WHITE
-
-	func _init(p_abbr: String, p_color: Color) -> void:
-		abbr = p_abbr
-		color = p_color
-
-
 class MeterEntry:
 	extends RefCounted
 	var class_id: StringName = &""
@@ -29,9 +19,6 @@ class MeterEntry:
 const FONT_M3X6: FontFile = preload("res://data/assets/pixel_ui_theme/m3x6.ttf")
 const COMBAT_TIMEOUT: float = 4.0
 const REFRESH_INTERVAL: float = 0.2
-
-static var _configs: Dictionary[StringName, ClassConfig] = {}
-static var _default_config: ClassConfig = ClassConfig.new("????", Color(0.7, 0.7, 0.7, 1.0))
 
 var _in_combat: bool = false
 var _combat_duration: float = 0.0
@@ -51,7 +38,6 @@ var _entry_pool: Array[MeterEntry] = []
 func _ready() -> void:
 	_title_label.add_theme_font_override(&"font", FONT_M3X6)
 	_columns_label.add_theme_font_override(&"font", FONT_M3X6)
-	_ensure_configs()
 	_update_header()
 
 
@@ -96,16 +82,13 @@ func record_damage(class_id: StringName, amount: float) -> void:
 func update_squad(squad: Array[Hero]) -> void:
 	_squad_counts.clear()
 	for hero: Hero in squad:
-		if hero != null and is_instance_valid(hero) and not hero.is_dead and hero.hero_data != null:
+		if not hero.is_dead:
 			var cid: StringName = hero.hero_data.id
 			_squad_counts[cid] = _squad_counts.get(cid, 0) + 1
 	_refresh_display()
 
 
 func _update_header() -> void:
-	if _title_label == null:
-		return
-
 	_title_label.text = "DPS [%ds]" % int(roundf(_combat_duration))
 	if _in_combat:
 		_title_label.add_theme_color_override(&"font_color", Color(1.0, 0.45, 0.40, 1.0))
@@ -116,10 +99,6 @@ func _update_header() -> void:
 
 
 func _refresh_display() -> void:
-	if _rows_container == null:
-		return
-
-	_ensure_configs()
 	_update_header()
 
 	var tracked_classes: Array[StringName] = []
@@ -140,7 +119,7 @@ func _refresh_display() -> void:
 		var avg_dps: float = dps / float(maxi(1, count))
 		var pct: float = (dmg / _total_encounter_damage * 100.0) if _total_encounter_damage > 0.0 else 0.0
 
-		var cfg: ClassConfig = _configs.get(cid, _default_config)
+		var hero_data: HeroData = HeroData.get_hero(cid)
 		var entry: MeterEntry
 		if entry_idx < _entry_pool.size():
 			entry = _entry_pool[entry_idx]
@@ -149,8 +128,8 @@ func _refresh_display() -> void:
 			_entry_pool.append(entry)
 
 		entry.class_id = cid
-		entry.abbr = cfg.abbr
-		entry.color = cfg.color
+		entry.abbr = hero_data.abbr
+		entry.color = hero_data.color
 		entry.count = count
 		entry.dps = dps
 		entry.avg_dps = avg_dps
@@ -175,20 +154,6 @@ func _refresh_display() -> void:
 
 	for i: int in range(entries.size(), _row_pool.size()):
 		_row_pool[i].visible = false
-
-
-static func _ensure_configs() -> void:
-	if not _configs.is_empty():
-		return
-
-	_configs[&"archer"] = ClassConfig.new("ARCH", Color(0.333, 0.651, 0.188, 1.0))
-	_configs[&"armored_axeman"] = ClassConfig.new("AXEM", Color(0.906, 0.435, 0.318, 1.0))
-	_configs[&"knight"] = ClassConfig.new("KNGH", Color(0.227, 0.525, 1.0, 1.0))
-	_configs[&"knight_templar"] = ClassConfig.new("TMPL", Color(1.0, 0.820, 0.400, 1.0))
-	_configs[&"priest"] = ClassConfig.new("PRST", Color(0.878, 0.984, 0.988, 1.0))
-	_configs[&"soldier"] = ClassConfig.new("SOLD", Color(0.753, 0.224, 0.169, 1.0))
-	_configs[&"swordsman"] = ClassConfig.new("SWRD", Color(0.165, 0.616, 0.561, 1.0))
-	_configs[&"wizard"] = ClassConfig.new("WIZD", Color(0.608, 0.365, 0.898, 1.0))
 
 
 static func _compare_entries(a: MeterEntry, b: MeterEntry) -> bool:

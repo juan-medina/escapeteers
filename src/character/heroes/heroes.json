@@ -2,6 +2,8 @@
 	"archer": {
 		"id": "archer",
 		"name": "Archer",
+		"abbr": "ARCH",
+		"color": "#55a630",
 		"scene_path": "res://character/heroes/archer/archer.tscn",
 		"health": { "base": 80.0, "growth": 0.20 },
 		"skills": [
@@ -18,6 +20,8 @@
 	"armored_axeman": {
 		"id": "armored_axeman",
 		"name": "Armored Axeman",
+		"abbr": "AXEM",
+		"color": "#e76f51",
 		"scene_path": "res://character/heroes/armored_axeman/armored_axeman.tscn",
 		"health": { "base": 120.0, "growth": 0.20 },
 		"skills": [
@@ -43,6 +47,8 @@
 	"knight": {
 		"id": "knight",
 		"name": "Knight",
+		"abbr": "KNGH",
+		"color": "#3a86ff",
 		"scene_path": "res://character/heroes/knight/knight.tscn",
 		"health": { "base": 140.0, "growth": 0.20 },
 		"skills": [
@@ -68,6 +74,8 @@
 	"knight_templar": {
 		"id": "knight_templar",
 		"name": "Knight Templar",
+		"abbr": "TMPL",
+		"color": "#ffd166",
 		"scene_path": "res://character/heroes/knight_templar/knight_templar.tscn",
 		"health": { "base": 130.0, "growth": 0.20 },
 		"skills": [
@@ -93,6 +101,8 @@
 	"priest": {
 		"id": "priest",
 		"name": "Priest",
+		"abbr": "PRST",
+		"color": "#e0fbfc",
 		"scene_path": "res://character/heroes/priest/priest.tscn",
 		"health": { "base": 80.0, "growth": 0.20 },
 		"skills": [
@@ -117,6 +127,8 @@
 	"soldier": {
 		"id": "soldier",
 		"name": "Soldier",
+		"abbr": "SOLD",
+		"color": "#c0392b",
 		"scene_path": "res://character/heroes/soldier/soldier.tscn",
 		"health": { "base": 100.0, "growth": 0.20 },
 		"skills": [
@@ -141,6 +153,8 @@
 	"swordsman": {
 		"id": "swordsman",
 		"name": "Swordsman",
+		"abbr": "SWRD",
+		"color": "#2a9d8f",
 		"scene_path": "res://character/heroes/swordsman/swordsman.tscn",
 		"health": { "base": 100.0, "growth": 0.20 },
 		"skills": [
@@ -167,6 +181,8 @@
 	"wizard": {
 		"id": "wizard",
 		"name": "Wizard",
+		"abbr": "WIZD",
+		"color": "#9b5de5",
 		"scene_path": "res://character/heroes/wizard/wizard.tscn",
 		"health": { "base": 70.0, "growth": 0.20 },
 		"skills": [

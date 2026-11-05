@@ -554,6 +554,7 @@ func _on_hero_died(hero: Hero) -> void:
 
 func _on_player_died() -> void:
 	Audio.stop_music()
+	_sync_hud_squad()
 
 
 func _on_player_death_completed() -> void:
@@ -608,17 +609,11 @@ func _on_hero_recruited(hero_data: HeroData) -> void:
 
 
 func _sync_hud_squad() -> void:
-	if _hud == null:
-		return
-	if _hud.damage_meter != null:
-		_hud.damage_meter.update_squad(_squad)
-	if _hud.squad_grid != null:
-		_hud.squad_grid.update_squad(_squad)
+	_hud.update_squad(_squad)
 
 
 func _on_hero_enemy_hit(_enemy: Enemy, damage: float, _is_heavy: bool, hero: Hero) -> void:
-	if _hud != null and _hud.damage_meter != null and hero != null and hero.hero_data != null:
-		_hud.damage_meter.record_damage(hero.hero_data.id, damage)
+	_hud.record_damage(hero.hero_data.id, damage)
 
 
 func get_class_level(class_id: StringName) -> int:

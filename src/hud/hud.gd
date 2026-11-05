@@ -11,9 +11,9 @@ var _target_xp: float = 0.0
 var _display_xp: float = 0.0
 var _display_max_xp: float = 50.0
 
-@onready var damage_meter: DamageMeter = $DamageMeter
-@onready var squad_grid: SquadGrid = $SquadGrid
-@onready var map_overlay: MapOverlay = $MapOverlay
+@onready var _damage_meter: DamageMeter = $DamageMeter
+@onready var _squad_grid: SquadGrid = $SquadGrid
+@onready var _map_overlay: MapOverlay = $MapOverlay
 @onready var _level_badge: Label = $Margin/HBox/LevelBadge
 @onready var _xp_bar: ProgressBar = $Margin/HBox/XPBar
 @onready var _xp_text: Label = $Margin/HBox/XPText
@@ -62,9 +62,17 @@ func update_xp(current_xp: float, xp_required: float, squad_level: int) -> void:
 	set_process(true)
 
 
+func update_squad(squad: Array[Hero]) -> void:
+	_damage_meter.update_squad(squad)
+	_squad_grid.update_squad(squad)
+
+
+func record_damage(class_id: StringName, amount: float) -> void:
+	_damage_meter.record_damage(class_id, amount)
+
+
 func setup_map(plan: WorldPlan, target: Hero) -> void:
-	if map_overlay != null:
-		map_overlay.setup(plan, target)
+	_map_overlay.setup(plan, target)
 
 
 func _on_device_changed(device: InputManager.DeviceType) -> void:
@@ -72,8 +80,6 @@ func _on_device_changed(device: InputManager.DeviceType) -> void:
 
 
 func _update_map_prompt(device: InputManager.DeviceType) -> void:
-	if _map_hint == null:
-		return
 	match device:
 		InputManager.DeviceType.XBOX:
 			_map_hint.text = "Press VIEW / BACK for map"

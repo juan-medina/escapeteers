@@ -10,6 +10,8 @@ static var _cached_heroes: Dictionary[StringName, HeroData] = {}
 static var _cached_order: Array[StringName] = []
 
 var role: String = ""
+var abbr: String = ""
+var color: Color = Color.WHITE
 var _cached_sprite_frames: SpriteFrames = null
 
 
@@ -31,6 +33,8 @@ static func _from_dict(dict: Dictionary) -> HeroData:
 	var h: HeroData = HeroData.new()
 	h.parse_base_fields(dict)
 	h.role = _str_val(dict, "role")
+	h.abbr = _str_val(dict, "abbr")
+	h.color = Color.from_string(_str_val(dict, "color"), Color.WHITE)
 	return h
 
 
