@@ -68,7 +68,7 @@ func apply_to_hero(hero: Hero, level: int = 1) -> void:
 	for skill: Dictionary in skills:
 		var type: String = _str_val(skill, "type")
 		var cd: float = eval_stat(skill.get("cooldown"), level, 1.0)
-		var rng: float = eval_stat(skill.get("range"), level, 28.0)
+		var rng: float = eval_stat(skill.get("range"), level, 20.0)
 		var kb: float = eval_stat(skill.get("knockback"), level, 0.0)
 		var chance: float = _float_val(skill, "chance", 0.35)
 

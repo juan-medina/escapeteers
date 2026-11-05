@@ -15,6 +15,7 @@ enum State {
 }
 
 const _GROUP_ENEMIES: StringName = &"enemies"
+const _GROUP_HEROES: StringName = &"heroes"
 const WAYPOINT_ARRIVE_DIST_SQ: float = 64.0
 const PATROL_TIMEOUT: float = 10.0
 const KNOCKBACK_DECAY: float = 600.0
@@ -34,6 +35,7 @@ var current_action: CombatAction = null
 var current_state: State = State.PATROL
 var map: Map = null
 var target: Hero = null
+var attack_target: Hero = null
 var home_room: Rect2i = Rect2i()
 var is_on_screen: bool = false
 
@@ -221,6 +223,7 @@ func apply_stun(duration: float) -> void:
 	if combat_state == CombatState.ATTACKING:
 		combat_state = CombatState.COOLDOWN
 		current_action = null
+		attack_target = null
 		play(ANIM_IDLE)
 	_update_status_visuals()
 
@@ -252,10 +255,10 @@ func take_damage(amount: float) -> void:
 	super.take_damage(amount)
 
 
-func apply_melee_damage(attack_target: Hero, damage_amount: float) -> void:
-	if attack_target != null and is_instance_valid(attack_target):
-		attack_target.take_damage(damage_amount)
-		attacked.emit(attack_target, damage_amount)
+func apply_melee_damage(hit_hero: Hero, damage_amount: float) -> void:
+	if hit_hero != null and is_instance_valid(hit_hero):
+		hit_hero.take_damage(damage_amount)
+		attacked.emit(hit_hero, damage_amount)
 
 
 func _process_patrol(delta: float) -> void:
@@ -310,7 +313,10 @@ func _process_chase(delta: float) -> void:
 			_set_sleeping(true)
 		return
 
-	var diff_x: float = target.global_position.x - global_position.x
+	var look_target: Hero = (
+		attack_target if (combat_state == CombatState.ATTACKING and attack_target != null and is_instance_valid(attack_target)) else target
+	)
+	var diff_x: float = look_target.global_position.x - global_position.x
 	if absf(diff_x) > 2.0:
 		flip_h = diff_x < 0.0
 
@@ -351,9 +357,39 @@ func _check_combat_actions() -> void:
 	for action: CombatAction in combat_actions:
 		if action.can_execute(self, target):
 			current_action = action
+			attack_target = target
 			combat_state = CombatState.ATTACKING
 			action.execute(self, target)
-			break
+			return
+
+	for action: CombatAction in combat_actions:
+		if action is MeleeAction and action.is_ready():
+			var melee: MeleeAction = action as MeleeAction
+			var blocker: Hero = _find_blocking_hero(melee)
+			if blocker != null:
+				current_action = melee
+				attack_target = blocker
+				combat_state = CombatState.ATTACKING
+				melee.execute(self, blocker)
+				return
+
+
+func _find_blocking_hero(melee: MeleeAction) -> Hero:
+	var best_blocker: Hero = null
+	var min_dist_sq: float = INF
+	for node: Node in get_tree().get_nodes_in_group(_GROUP_HEROES):
+		var hero: Hero = node as Hero
+		if hero == null or not is_instance_valid(hero) or hero.is_dead or hero.health <= 0.0:
+			continue
+		if not hero.is_player and hero.squad_member == null:
+			continue
+		if not melee.can_reach(self, hero):
+			continue
+		var dist_sq: float = global_position.distance_squared_to(hero.global_position)
+		if dist_sq < min_dist_sq:
+			min_dist_sq = dist_sq
+			best_blocker = hero
+	return best_blocker
 
 
 func _pick_new_patrol_destination() -> void:
@@ -401,6 +437,7 @@ func deactivate_for_pool() -> void:
 	if is_in_group(_GROUP_ENEMIES):
 		remove_from_group(_GROUP_ENEMIES)
 	target = null
+	attack_target = null
 	current_action = null
 	_knockback_velocity = Vector2.ZERO
 	_set_sleeping(true)
@@ -414,6 +451,7 @@ func reset_for_pool() -> void:
 	combat_state = CombatState.READY
 	current_state = State.PATROL
 	target = null
+	attack_target = null
 	current_action = null
 	_patrol_destination = Vector2.ZERO
 	_patrol_timer = 0.0
@@ -460,13 +498,15 @@ func _on_animation_finished() -> void:
 	super._on_animation_finished()
 	if is_dead:
 		return
-	if current_action is MeleeAction and target != null:
+	var hit_target: Hero = attack_target if (attack_target != null and is_instance_valid(attack_target) and not attack_target.is_dead) else target
+	attack_target = null
+	if current_action is MeleeAction and hit_target != null:
 		var melee: MeleeAction = current_action as MeleeAction
-		if melee.apply_hit(self, target):
+		if melee.apply_hit(self, hit_target):
 			var applied_dmg: float = melee.heavy_damage if melee.current_is_heavy else melee.damage
-			attacked.emit(target, applied_dmg)
-	elif current_action is RangedAction and target != null:
+			attacked.emit(hit_target, applied_dmg)
+	elif current_action is RangedAction and hit_target != null:
 		var ranged: RangedAction = current_action as RangedAction
-		var proj: Projectile = ranged.spawn_projectile(self, target)
+		var proj: Projectile = ranged.spawn_projectile(self, hit_target)
 		if proj != null:
 			spawn_projectile(proj)

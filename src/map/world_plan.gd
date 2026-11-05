@@ -506,22 +506,14 @@ func _compute_companion_spawns_for_room(room: Rect2i) -> Array[Vector2i]:
 	var tier: int = get_room_tier(room)
 
 	positions.append(center_cell)
-	if tier == 1:
-		if _rng.randf() > 0.6:
-			var offset: Vector2i = Vector2i(_rng.randi_range(-1, 1), _rng.randi_range(-1, 1))
-			if offset != Vector2i.ZERO:
-				positions.append(center_cell + offset)
-	elif tier == 2:
-		for _k: int in range(2):
-			var offset: Vector2i = Vector2i(_rng.randi_range(-2, 2), _rng.randi_range(-2, 2))
-			if offset != Vector2i.ZERO:
-				positions.append(center_cell + offset)
-	else:
-		var extra_recruits: int = clampi(1 + int(float(get_room_depth(room)) * 0.5), 2, 4)
-		for _k: int in range(extra_recruits):
-			var offset: Vector2i = Vector2i(_rng.randi_range(-3, 3), _rng.randi_range(-3, 3))
-			if offset != Vector2i.ZERO:
-				positions.append(center_cell + offset)
+	if tier == 2 and _rng.randf() < 0.35:
+		var offset: Vector2i = Vector2i(_rng.randi_range(-2, 2), _rng.randi_range(-2, 2))
+		if offset != Vector2i.ZERO:
+			positions.append(center_cell + offset)
+	elif tier >= 3 and _rng.randf() < 0.65:
+		var offset: Vector2i = Vector2i(_rng.randi_range(-3, 3), _rng.randi_range(-3, 3))
+		if offset != Vector2i.ZERO:
+			positions.append(center_cell + offset)
 
 	return positions
 

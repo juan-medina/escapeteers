@@ -7,7 +7,6 @@ extends RefCounted
 const REPATH_INTERVAL: float = 0.2
 const WAYPOINT_REACHED_DIST_SQ: float = 64.0
 const REPATH_DISTANCE_MOVED_SQ: float = 144.0
-const AGGRESSIVE_PATH_DIST_SQ: float = 2304.0
 
 var _current_path: PackedVector2Array = PackedVector2Array()
 var _path_index: int = 0
@@ -39,10 +38,7 @@ func reset() -> void:
 func get_next_waypoint(character: Character, destination: Vector2, map: Map, delta: float) -> Vector2:
 	_repath_timer -= delta
 
-	var dist_to_dest_sq: float = character.global_position.distance_squared_to(destination)
-	var direct_los: bool = has_line_of_sight(character, destination)
-
-	if direct_los and dist_to_dest_sq <= AGGRESSIVE_PATH_DIST_SQ:
+	if has_line_of_sight(character, destination):
 		_current_path.clear()
 		_path_index = 0
 		return destination

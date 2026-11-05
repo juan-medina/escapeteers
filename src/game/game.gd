@@ -689,7 +689,7 @@ static func _compare_hero_formation_priority(a: Hero, b: Hero) -> bool:
 	return _get_hero_formation_priority(a) < _get_hero_formation_priority(b)
 
 
-static func _calculate_arc_angles(count: int, is_front: bool, full_circle: bool) -> Array[float]:
+static func _calculate_arc_angles(count: int, is_front: bool) -> Array[float]:
 	var angles: Array[float] = []
 	if count <= 0:
 		return angles
@@ -697,12 +697,6 @@ static func _calculate_arc_angles(count: int, is_front: bool, full_circle: bool)
 	var center_angle: float = 0.0 if is_front else PI
 	if count == 1:
 		angles.append(center_angle)
-		return angles
-
-	if full_circle:
-		var step: float = TAU / float(count)
-		for i: int in range(count):
-			angles.append(center_angle + float(i) * step)
 		return angles
 
 	var max_span: float = PI * 0.75
@@ -756,8 +750,8 @@ func _rebalance_escort_slots() -> void:
 		var b_count: int = ring_backline.size()
 		var f_count: int = ring_frontline.size()
 
-		var b_angles: Array[float] = _calculate_arc_angles(b_count, false, f_count == 0 and b_count > 4)
-		var f_angles: Array[float] = _calculate_arc_angles(f_count, true, b_count == 0 and f_count > 4)
+		var b_angles: Array[float] = _calculate_arc_angles(b_count, false)
+		var f_angles: Array[float] = _calculate_arc_angles(f_count, true)
 
 		for i: int in range(b_count):
 			var follower: Hero = ring_backline[i]
