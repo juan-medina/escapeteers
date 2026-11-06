@@ -48,12 +48,12 @@ static func initialize() -> void:
 static func _from_dict(dict: Dictionary) -> HeroData:
 	var h: HeroData = HeroData.new()
 	h.parse_base_fields(dict)
-	h.role = _str_val(dict, "role")
+	h.role = _str_val(dict, &"role")
 	if h.role.is_empty():
 		h.role = _infer_role_from_skills(h.skills)
 	h.role_color = get_role_color_for_name(h.role)
-	h.abbr = _str_val(dict, "abbr")
-	h.color = Color.from_string(_str_val(dict, "color"), Color.WHITE)
+	h.abbr = _str_val(dict, &"abbr")
+	h.color = Color.from_string(_str_val(dict, &"color"), Color.WHITE)
 	return h
 
 
@@ -62,7 +62,7 @@ static func _infer_role_from_skills(skill_list: Array[Dictionary]) -> String:
 	var has_ranged: bool = false
 	var has_heal: bool = false
 	for skill: Dictionary in skill_list:
-		var st: String = CharacterData._str_val(skill, "type")
+		var st: String = CharacterData._str_val(skill, &"type")
 		if st == "heal":
 			has_heal = true
 		elif st == "ranged":
@@ -138,23 +138,23 @@ func apply_to_hero(hero: Hero, level: int = 1) -> void:
 
 	var melee_idx: int = 0
 	for skill: Dictionary in skills:
-		var type: String = _str_val(skill, "type")
-		var cd: float = eval_stat(skill.get("cooldown"), level, 1.0)
-		var rng: float = eval_stat(skill.get("range"), level, 20.0)
-		var kb: float = eval_stat(skill.get("knockback"), level, 0.0)
-		var chance: float = _float_val(skill, "chance", 0.35)
+		var type: String = _str_val(skill, &"type")
+		var cd: float = eval_stat(skill.get(&"cooldown"), level, 1.0)
+		var rng: float = eval_stat(skill.get(&"range"), level, 20.0)
+		var kb: float = eval_stat(skill.get(&"knockback"), level, 0.0)
+		var chance: float = _float_val(skill, &"chance", 0.35)
 
 		if type == "melee":
-			var dmg: float = eval_stat(skill.get("damage"), level, 10.0)
+			var dmg: float = eval_stat(skill.get(&"damage"), level, 10.0)
 			hero.can_melee = true
 			if melee_idx == 0:
 				hero.melee1_damage = dmg
 				hero.melee1_cooldown = cd
 				hero.melee_range = rng
 				hero.melee1_knockback = kb
-				hero.melee1_stun_duration = eval_stat(skill.get("stun_duration"), level, 0.0)
-				if skill.has("leash"):
-					hero.melee_leash_distance = _float_val(skill, "leash", 96.0)
+				hero.melee1_stun_duration = eval_stat(skill.get(&"stun_duration"), level, 0.0)
+				if skill.has(&"leash"):
+					hero.melee_leash_distance = _float_val(skill, &"leash", 96.0)
 				melee_idx += 1
 			elif melee_idx == 1:
 				hero.can_heavy_melee = true
@@ -164,16 +164,16 @@ func apply_to_hero(hero: Hero, level: int = 1) -> void:
 				hero.melee2_chance = chance
 				melee_idx += 1
 		elif type == "ranged":
-			var dmg: float = eval_stat(skill.get("damage"), level, 10.0)
+			var dmg: float = eval_stat(skill.get(&"damage"), level, 10.0)
 			hero.can_ranged = true
 			hero.ranged_damage = dmg
 			hero.ranged_cooldown = cd
 			hero.ranged_range = rng
 			hero.ranged_knockback = kb
-			if skill.has("stun_duration"):
-				hero.ranged_stun_duration = eval_stat(skill.get("stun_duration"), level, 0.0)
+			if skill.has(&"stun_duration"):
+				hero.ranged_stun_duration = eval_stat(skill.get(&"stun_duration"), level, 0.0)
 		elif type == "heal":
-			var amount: float = eval_stat(skill.get("heal_amount"), level, 20.0)
+			var amount: float = eval_stat(skill.get(&"heal_amount"), level, 20.0)
 			hero.can_heal = true
 			hero.heal_amount = amount
 			hero.heal_cooldown = cd

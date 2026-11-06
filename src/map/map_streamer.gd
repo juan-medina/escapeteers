@@ -23,6 +23,9 @@ var _load_queue: Array[Vector2i] = []
 var _queued_set: Dictionary[Vector2i, bool] = {}
 var _raster: ChunkRaster = ChunkRaster.new()
 var _last_player_chunk: Vector2i = Vector2i(-999999, -999999)
+var _sort_center_chunk: Vector2i = Vector2i.ZERO
+var _sort_has_vel: bool = false
+var _sort_move_dir: Vector2 = Vector2.ZERO
 
 
 func setup(
@@ -113,27 +116,28 @@ func _queue_chunks_in_radius(center_chunk: Vector2i) -> void:
 
 
 func _sort_queue(center_chunk: Vector2i, velocity: Vector2) -> void:
-	var has_vel: bool = velocity.length_squared() > 1.0
-	var move_dir: Vector2 = velocity.normalized() if has_vel else Vector2.ZERO
+	_sort_center_chunk = center_chunk
+	_sort_has_vel = velocity.length_squared() > 1.0
+	_sort_move_dir = velocity.normalized() if _sort_has_vel else Vector2.ZERO
+	_load_queue.sort_custom(_compare_chunk_priority)
 
-	_load_queue.sort_custom(
-		func(a: Vector2i, b: Vector2i) -> bool:
-			var da: Vector2 = Vector2(a - center_chunk)
-			var db: Vector2 = Vector2(b - center_chunk)
-			var dist_a: float = da.length()
-			var dist_b: float = db.length()
 
-			var score_a: float = dist_a
-			var score_b: float = dist_b
+func _compare_chunk_priority(a: Vector2i, b: Vector2i) -> bool:
+	var da: Vector2 = Vector2(a - _sort_center_chunk)
+	var db: Vector2 = Vector2(b - _sort_center_chunk)
+	var dist_a: float = da.length()
+	var dist_b: float = db.length()
 
-			if has_vel:
-				if dist_a > 0.001:
-					score_a -= da.normalized().dot(move_dir) * 1.5
-				if dist_b > 0.001:
-					score_b -= db.normalized().dot(move_dir) * 1.5
+	var score_a: float = dist_a
+	var score_b: float = dist_b
 
-			return score_a < score_b
-	)
+	if _sort_has_vel:
+		if dist_a > 0.001:
+			score_a -= da.normalized().dot(_sort_move_dir) * 1.5
+		if dist_b > 0.001:
+			score_b -= db.normalized().dot(_sort_move_dir) * 1.5
+
+	return score_a < score_b
 
 
 func _process_queue() -> void:

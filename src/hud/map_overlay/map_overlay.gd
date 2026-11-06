@@ -384,7 +384,7 @@ func _subtract_intervals(base_min: int, base_max: int, blockers: Array[Vector2i]
 		result.append(Vector2i(base_min, base_max))
 		return result
 
-	blockers.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.x < b.x)
+	blockers.sort_custom(_compare_intervals_asc)
 
 	var current: int = base_min
 	for b: Vector2i in blockers:
@@ -400,3 +400,7 @@ func _subtract_intervals(base_min: int, base_max: int, blockers: Array[Vector2i]
 		result.append(Vector2i(current, base_max))
 
 	return result
+
+
+static func _compare_intervals_asc(a: Vector2i, b: Vector2i) -> bool:
+	return a.x < b.x

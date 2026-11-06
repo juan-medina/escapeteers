@@ -59,7 +59,6 @@ func _ready() -> void:
 	Audio.connect_menu_sounds(self)
 
 	_recruit_button.text = button_text
-	_recruit_button.pressed.connect(_on_recruit_pressed)
 
 	if hero_data == null:
 		hero_data = HeroData.get_hero(&"knight")
@@ -121,8 +120,8 @@ func _render_skill_column(container: VBoxContainer, skill: Dictionary) -> void:
 	for child: Node in container.get_children():
 		child.queue_free()
 
-	var skill_name: String = CharacterData._str_val(skill, "name")
-	var skill_type: String = CharacterData._str_val(skill, "type").capitalize()
+	var skill_name: String = CharacterData._str_val(skill, &"name")
+	var skill_type: String = CharacterData._str_val(skill, &"type").capitalize()
 
 	var header: Label = Label.new()
 	header.text = "%s [%s]" % [skill_name, skill_type]
@@ -137,35 +136,35 @@ func _render_skill_column(container: VBoxContainer, skill: Dictionary) -> void:
 	grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	if skill_type.to_lower() == "heal":
-		var heal_val: float = CharacterData.eval_stat(skill.get("heal_amount"), level, 20.0)
+		var heal_val: float = CharacterData.eval_stat(skill.get(&"heal_amount"), level, 20.0)
 		var heal_str: String = "%d" % int(heal_val)
 		if previous_level > 0:
-			var prev_heal: float = CharacterData.eval_stat(skill.get("heal_amount"), previous_level, 20.0)
+			var prev_heal: float = CharacterData.eval_stat(skill.get(&"heal_amount"), previous_level, 20.0)
 			var d_heal: int = int(heal_val) - int(prev_heal)
 			if d_heal > 0:
 				heal_str = "%d (+%d)" % [int(heal_val), d_heal]
 
-		var cd: float = CharacterData.eval_stat(skill.get("cooldown"), level, 2.4)
+		var cd: float = CharacterData.eval_stat(skill.get(&"cooldown"), level, 2.4)
 		var cd_str: String = "%.1fs" % cd
 		if previous_level > 0:
-			var prev_cd: float = CharacterData.eval_stat(skill.get("cooldown"), previous_level, 2.4)
+			var prev_cd: float = CharacterData.eval_stat(skill.get(&"cooldown"), previous_level, 2.4)
 			var d_cd: float = cd - prev_cd
 			if d_cd < -0.01:
 				cd_str = "%.1fs (%.1fs)" % [cd, d_cd]
 
-		var rng: float = CharacterData.eval_stat(skill.get("range"), level, 140.0)
+		var rng: float = CharacterData.eval_stat(skill.get(&"range"), level, 140.0)
 		_add_stat_pair(grid, "HEAL", heal_str, COLOR_HP)
 		_add_stat_pair(grid, "CD", cd_str, COLOR_CD)
 		_add_stat_pair(grid, "RNG", "%d" % int(rng), COLOR_RNG)
 	else:
-		var dmg_val: float = CharacterData.eval_stat(skill.get("damage"), level, 10.0)
-		var hits: int = int(CharacterData._float_val(skill, "hits", 1.0))
+		var dmg_val: float = CharacterData.eval_stat(skill.get(&"damage"), level, 10.0)
+		var hits: int = int(CharacterData._float_val(skill, &"hits", 1.0))
 		var dmg_str: String = "%d" % int(dmg_val)
 		if hits > 1:
 			dmg_str = "%dx%d" % [int(dmg_val), hits]
 
 		if previous_level > 0:
-			var prev_dmg: float = CharacterData.eval_stat(skill.get("damage"), previous_level, 10.0)
+			var prev_dmg: float = CharacterData.eval_stat(skill.get(&"damage"), previous_level, 10.0)
 			var d_dmg: int = int(dmg_val) - int(prev_dmg)
 			if d_dmg > 0:
 				if hits > 1:
@@ -173,19 +172,19 @@ func _render_skill_column(container: VBoxContainer, skill: Dictionary) -> void:
 				else:
 					dmg_str = "%d (+%d)" % [int(dmg_val), d_dmg]
 
-		var cd: float = CharacterData.eval_stat(skill.get("cooldown"), level, 1.0)
+		var cd: float = CharacterData.eval_stat(skill.get(&"cooldown"), level, 1.0)
 		var cd_str: String = "%.1fs" % cd
 		if previous_level > 0:
-			var prev_cd: float = CharacterData.eval_stat(skill.get("cooldown"), previous_level, 1.0)
+			var prev_cd: float = CharacterData.eval_stat(skill.get(&"cooldown"), previous_level, 1.0)
 			var d_cd: float = cd - prev_cd
 			if d_cd < -0.01:
 				cd_str = "%.1fs (%.1fs)" % [cd, d_cd]
 
-		var rng: float = CharacterData.eval_stat(skill.get("range"), level, 28.0)
-		var kb: float = CharacterData.eval_stat(skill.get("knockback"), level, 0.0)
+		var rng: float = CharacterData.eval_stat(skill.get(&"range"), level, 28.0)
+		var kb: float = CharacterData.eval_stat(skill.get(&"knockback"), level, 0.0)
 		var kb_str: String = "%d" % int(kb)
 		if previous_level > 0:
-			var prev_kb: float = CharacterData.eval_stat(skill.get("knockback"), previous_level, 0.0)
+			var prev_kb: float = CharacterData.eval_stat(skill.get(&"knockback"), previous_level, 0.0)
 			var d_kb: int = int(kb) - int(prev_kb)
 			if d_kb > 0:
 				kb_str = "%d (+%d)" % [int(kb), d_kb]

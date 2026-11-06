@@ -72,16 +72,13 @@ func _terminate(is_error: bool, message: StringName) -> void:
 	var tree: SceneTree = get_tree()
 	tree.paused = true
 
-	Transition.visible = true
-
 	var master_index: int = AudioServer.get_bus_index(&"Master")
 	var start_db: float = AudioServer.get_bus_volume_db(master_index)
 	var set_db: Callable = Callable(Audio, &"set_master_volume_db")
 
-	var tween: Tween = create_tween().set_parallel(true)
-	tween.tween_property(Transition.filler, ^"color:a", 1.0, Transition.FADE_PHASE)
+	var tween: Tween = create_tween()
 	tween.tween_method(set_db, start_db, -80.0, Transition.FADE_PHASE)
-	await tween.finished
+	await Transition.fade_to_black(Transition.FADE_PHASE)
 
 	Audio.stop_all_players(tree.root)
 

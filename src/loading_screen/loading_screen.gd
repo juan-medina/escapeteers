@@ -154,7 +154,7 @@ func _extract_sprite_frames(scene: PackedScene) -> SpriteFrames:
 	var frames: SpriteFrames = null
 	if sprite != null:
 		frames = sprite.sprite_frames
-	instance.free()
+	instance.queue_free()
 	return frames
 
 

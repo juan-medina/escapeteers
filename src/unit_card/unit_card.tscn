@@ -105,3 +105,5 @@ custom_minimum_size = Vector2(70, 32)
 layout_mode = 2
 size_flags_vertical = 4
 text = "Recruit"
+
+[connection signal="pressed" from="Margin/HBox/RecruitButton" to="." method="_on_recruit_pressed"]

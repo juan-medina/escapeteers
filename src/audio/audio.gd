@@ -18,15 +18,15 @@ var _music_player: AudioStreamPlayer
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	_hover = _create_player(preload("res://data/assets/sounds/Hover.wav"), "Hover")
-	_click = _create_player(preload("res://data/assets/sounds/Click.wav"), "Click")
-	_return = _create_player(preload("res://data/assets/sounds/Return.wav"), "Return")
-	_start = _create_player(preload("res://data/assets/sounds/Start.wav"), "Start")
-	_pause = _create_player(preload("res://data/assets/sounds/Pause.wav"), "Pause")
-	_music_player = _create_music_player("MusicPlayer")
+	_hover = _create_player(preload("res://data/assets/sounds/Hover.wav"), &"Hover")
+	_click = _create_player(preload("res://data/assets/sounds/Click.wav"), &"Click")
+	_return = _create_player(preload("res://data/assets/sounds/Return.wav"), &"Return")
+	_start = _create_player(preload("res://data/assets/sounds/Start.wav"), &"Start")
+	_pause = _create_player(preload("res://data/assets/sounds/Pause.wav"), &"Pause")
+	_music_player = _create_music_player(&"MusicPlayer")
 
 
-func _create_player(stream: AudioStream, node_name: String) -> AudioStreamPlayer:
+func _create_player(stream: AudioStream, node_name: StringName) -> AudioStreamPlayer:
 	var player: AudioStreamPlayer = AudioStreamPlayer.new()
 	player.name = node_name
 	player.stream = stream
@@ -35,7 +35,7 @@ func _create_player(stream: AudioStream, node_name: String) -> AudioStreamPlayer
 	return player
 
 
-func _create_music_player(node_name: String) -> AudioStreamPlayer:
+func _create_music_player(node_name: StringName) -> AudioStreamPlayer:
 	var player: AudioStreamPlayer = AudioStreamPlayer.new()
 	player.name = node_name
 	player.bus = &"Music"

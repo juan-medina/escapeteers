@@ -14,10 +14,10 @@ const LOADING_SCREEN_SCENE: PackedScene = preload("res://loading_screen/loading_
 const MENU_SCENE: PackedScene = preload("res://menu/menu.tscn")
 
 var in_transition: bool = false
-var filler: ColorRect = null
 var pending_menu_target: MenuTarget = MenuTarget.MAIN_MENU
 var starting_hero_id: StringName = &"soldier"
 
+var _filler: ColorRect = null
 var _loading_screen: LoadingScreen = null
 
 
@@ -27,15 +27,20 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
 
-	filler = ColorRect.new()
-	filler.color = Color(0, 0, 0, 0)
-	filler.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	filler.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(filler)
+	_filler = ColorRect.new()
+	_filler.color = Color(0, 0, 0, 0)
+	_filler.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_filler.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_filler)
 
 	_loading_screen = LOADING_SCREEN_SCENE.instantiate() as LoadingScreen
 	_loading_screen.visible = false
 	add_child(_loading_screen)
+
+
+func fade_to_black(duration: float = FADE_PHASE) -> void:
+	visible = true
+	await _filler.create_tween().tween_property(_filler, ^"color:a", 1.0, duration).finished
 
 
 func set_loading_progress(progress: float, message: StringName = &"") -> void:
@@ -75,7 +80,7 @@ func go_to_menu(target: MenuTarget = MenuTarget.MAIN_MENU) -> void:
 	visible = true
 	in_transition = true
 
-	await filler.create_tween().tween_property(filler, ^"color:a", 1.0, 0.25).finished
+	await _filler.create_tween().tween_property(_filler, ^"color:a", 1.0, 0.25).finished
 
 	tree.change_scene_to_packed.call_deferred(MENU_SCENE)
 	tree.paused = false
@@ -85,7 +90,7 @@ func go_to_menu(target: MenuTarget = MenuTarget.MAIN_MENU) -> void:
 	if Alerts.is_terminating():
 		return
 
-	await filler.create_tween().tween_property(filler, ^"color:a", 0.0, 0.25).finished
+	await _filler.create_tween().tween_property(_filler, ^"color:a", 0.0, 0.25).finished
 	visible = false
 	in_transition = false
 

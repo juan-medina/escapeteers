@@ -14,14 +14,14 @@ var speed_stat: Dictionary = {}
 var skills: Array[Dictionary] = []
 
 
-static func _str_val(dict: Dictionary, key: String, default_val: String = "") -> String:
+static func _str_val(dict: Dictionary, key: StringName, default_val: String = "") -> String:
 	var val: Variant = dict.get(key)
 	if val is String:
 		return val
 	return default_val
 
 
-static func _float_val(dict: Dictionary, key: String, default_val: float = 0.0) -> float:
+static func _float_val(dict: Dictionary, key: StringName, default_val: float = 0.0) -> float:
 	var val: Variant = dict.get(key)
 	if val is float:
 		return val
@@ -31,7 +31,7 @@ static func _float_val(dict: Dictionary, key: String, default_val: float = 0.0) 
 	return default_val
 
 
-static func _dict_val(dict: Dictionary, key: String) -> Dictionary:
+static func _dict_val(dict: Dictionary, key: StringName) -> Dictionary:
 	var val: Variant = dict.get(key)
 	if val is Dictionary:
 		return val
@@ -41,8 +41,8 @@ static func _dict_val(dict: Dictionary, key: String) -> Dictionary:
 static func eval_stat(stat_val: Variant, level: int = 1, default_base: float = 0.0) -> float:
 	if stat_val is Dictionary:
 		var d: Dictionary = stat_val
-		var base: float = _float_val(d, "base", default_base)
-		var growth: float = _float_val(d, "growth", 0.0)
+		var base: float = _float_val(d, &"base", default_base)
+		var growth: float = _float_val(d, &"growth", 0.0)
 		return base * (1.0 + float(maxi(1, level) - 1) * growth)
 	if stat_val is float:
 		return stat_val
@@ -79,15 +79,15 @@ static func load_json_file(file_path: StringName) -> Dictionary:
 
 
 func parse_base_fields(dict: Dictionary) -> void:
-	id = StringName(_str_val(dict, "id"))
-	name = _str_val(dict, "name")
-	scene_path = _str_val(dict, "scene_path")
+	id = StringName(_str_val(dict, &"id"))
+	name = _str_val(dict, &"name")
+	scene_path = _str_val(dict, &"scene_path")
 	scene = load(scene_path) as PackedScene
 
-	health_stat = _dict_val(dict, "health")
-	speed_stat = _dict_val(dict, "speed")
+	health_stat = _dict_val(dict, &"health")
+	speed_stat = _dict_val(dict, &"speed")
 
-	var raw_skills: Variant = dict.get("skills")
+	var raw_skills: Variant = dict.get(&"skills")
 	if raw_skills is Array:
 		var arr: Array = raw_skills
 		for item: Variant in arr:

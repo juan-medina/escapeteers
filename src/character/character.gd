@@ -205,7 +205,7 @@ func _on_death() -> void:
 func _flash_hurt() -> void:
 	var tween: Tween = create_tween()
 	_animated_sprite.modulate = Color(2.5, 0.4, 0.4)
-	tween.tween_property(_animated_sprite, "modulate", _base_modulate, 0.08)
+	tween.tween_property(_animated_sprite, ^"modulate", _base_modulate, 0.08)
 
 
 func _on_animation_finished() -> void:
