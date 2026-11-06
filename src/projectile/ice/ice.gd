@@ -59,15 +59,15 @@ func _on_area_entered(area: Area2D) -> void:
 			if _hit_targets.has(target):
 				return
 			_hit_targets.append(target)
-			if target.has_method(&"apply_slow"):
-				target.call(&"apply_slow", slow_factor, slow_duration)
-			if target.has_method(&"take_damage"):
-				target.call(&"take_damage", damage)
-			if knockback > 0.0 and target.has_method(&"apply_knockback"):
-				target.call(&"apply_knockback", direction * knockback)
+			var enemy: Enemy = target as Enemy
+			if enemy != null:
+				enemy.apply_slow(slow_factor, slow_duration)
+			target.take_damage(damage)
+			if knockback > 0.0 and enemy != null:
+				enemy.apply_knockback(direction * knockback)
 			hit_target.emit(target, damage)
-			if source_hero != null and is_instance_valid(source_hero) and target is Enemy:
-				source_hero.enemy_hit.emit(target as Enemy, damage, false)
+			if source_hero != null and is_instance_valid(source_hero) and enemy != null:
+				source_hero.enemy_hit.emit(enemy, damage, false)
 			if max_pierce_count > 0 and _hit_targets.size() >= max_pierce_count:
 				_destroy()
 

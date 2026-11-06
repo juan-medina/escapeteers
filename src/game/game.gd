@@ -114,9 +114,7 @@ func _ready() -> void:
 	_level_up_panel.class_leveled_up.connect(_on_class_leveled_up)
 	add_child(_level_up_panel)
 
-	var transition_mgr: Node = get_node_or_null(^"/root/Transition")
-	if transition_mgr != null:
-		transition_mgr.call(&"set_loading_progress", 0.92, &"Assembling the fellowship...")
+	Transition.set_loading_progress(0.92, &"Assembling the fellowship...")
 	await get_tree().process_frame
 	_entity_pool.setup(_characters)
 	_entity_pool.prewarm(LAVA_SLIME_SCENE, 25)
@@ -131,12 +129,10 @@ func _ready() -> void:
 		@warning_ignore("unsafe_call_argument")
 		_spawn_enemy_at(req[&"pos"], req[&"room"])
 
-	if transition_mgr != null:
-		transition_mgr.call(&"set_loading_progress", 1.0, &"Ready to escape!")
+	Transition.set_loading_progress(1.0, &"Ready to escape!")
 	await get_tree().process_frame
 	set_process(true)
-	if transition_mgr != null:
-		await transition_mgr.call(&"hide_loading")
+	await Transition.hide_loading()
 	Audio.play_game_music()
 
 
@@ -145,9 +141,7 @@ func get_active_enemy_count() -> int:
 
 
 func _on_map_generation_progress(progress: float, stage_name: StringName) -> void:
-	var transition_mgr: Node = get_node_or_null(^"/root/Transition")
-	if transition_mgr != null:
-		transition_mgr.call(&"set_loading_progress", progress, stage_name)
+	Transition.set_loading_progress(progress, stage_name)
 
 
 func _process(delta: float) -> void:
@@ -593,8 +587,6 @@ func _on_hero_recruited(hero_data: HeroData) -> void:
 	get_tree().paused = false
 	var hero_level: int = get_class_level(hero_data.id)
 	var new_hero: Hero = hero_data.instantiate_hero(hero_level)
-	if new_hero == null:
-		return
 
 	_characters.add_child(new_hero)
 	new_hero.is_player = false

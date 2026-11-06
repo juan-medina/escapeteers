@@ -85,15 +85,17 @@ func _on_area_entered(area: Area2D) -> void:
 
 
 func _on_hit(target: Node2D) -> void:
-	if target.has_method(&"take_damage"):
-		target.call(&"take_damage", damage)
+	var character: Character = target as Character
+	if character != null:
+		character.take_damage(damage)
 
-	if knockback > 0.0 and target.has_method(&"apply_knockback"):
-		target.call(&"apply_knockback", direction * knockback)
+	var enemy: Enemy = target as Enemy
+	if knockback > 0.0 and enemy != null:
+		enemy.apply_knockback(direction * knockback)
 
 	hit_target.emit(target, damage)
-	if source_hero != null and is_instance_valid(source_hero) and target is Enemy:
-		source_hero.enemy_hit.emit(target as Enemy, damage, false)
+	if source_hero != null and is_instance_valid(source_hero) and enemy != null:
+		source_hero.enemy_hit.emit(enemy, damage, false)
 	_destroy()
 
 

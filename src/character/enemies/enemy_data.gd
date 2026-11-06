@@ -4,7 +4,7 @@
 class_name EnemyData
 extends CharacterData
 
-const ENEMIES_JSON_PATH: String = "res://character/enemies/enemies.json"
+const ENEMIES_JSON_PATH: StringName = &"res://character/enemies/enemies.json"
 
 static var _cached_enemies: Dictionary[StringName, EnemyData] = {}
 static var _cached_order: Array[StringName] = []
@@ -13,11 +13,11 @@ var detection_range_stat: Dictionary = {}
 var xp_stat: Dictionary = {}
 
 
-static func _ensure_loaded() -> void:
+static func initialize() -> void:
 	if not _cached_enemies.is_empty():
 		return
 
-	var root: Dictionary = CharacterData.load_json_file(ENEMIES_JSON_PATH)
+	var root: Dictionary = await CharacterData.load_json_file(ENEMIES_JSON_PATH)
 	for key: Variant in root.keys():
 		var entry_val: Variant = root[key]
 		if entry_val is Dictionary:
@@ -36,7 +36,6 @@ static func _from_dict(dict: Dictionary) -> EnemyData:
 
 
 static func get_all_enemies() -> Array[EnemyData]:
-	_ensure_loaded()
 	var list: Array[EnemyData] = []
 	for id_key: StringName in _cached_order:
 		list.append(_cached_enemies[id_key])
@@ -44,7 +43,6 @@ static func get_all_enemies() -> Array[EnemyData]:
 
 
 static func get_enemy(enemy_id: StringName) -> EnemyData:
-	_ensure_loaded()
 	return _cached_enemies.get(enemy_id, null)
 
 
@@ -101,12 +99,6 @@ func apply_to_enemy(enemy: Enemy, level: int = 1) -> void:
 
 
 func instantiate_enemy(level: int = 1) -> Enemy:
-	if scene == null:
-		push_error("Cannot instantiate enemy, scene is null for: " + name)
-		return null
-	var inst: Node = scene.instantiate()
-	if inst is Enemy:
-		var enemy: Enemy = inst
-		apply_to_enemy(enemy, level)
-		return enemy
-	return null
+	var enemy: Enemy = scene.instantiate() as Enemy
+	apply_to_enemy(enemy, level)
+	return enemy

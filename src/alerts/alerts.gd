@@ -9,6 +9,7 @@ const ERROR_DIALOG_SCENE: PackedScene = preload("res://error_dialog/error_dialog
 var _toast: ToastScene
 
 var _terminating: bool = false
+var _error_dialog_shown: bool = false
 
 
 func _ready() -> void:
@@ -24,7 +25,8 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		if _terminating:
-			get_tree().quit()
+			if _error_dialog_shown:
+				get_tree().quit()
 			return
 		await quit_game()
 
@@ -91,6 +93,7 @@ func _terminate(is_error: bool, message: StringName) -> void:
 
 
 func _show_error_dialog(message: StringName) -> void:
+	_error_dialog_shown = true
 	var dialog: ErrorDialog = ERROR_DIALOG_SCENE.instantiate()
 	add_child(dialog)
 	dialog.setup(message)

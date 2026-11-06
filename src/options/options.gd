@@ -115,6 +115,8 @@ func _ready() -> void:
 
 	_parse_arguments()
 	await BuildInfo.initialize()
+	await HeroData.initialize()
+	await EnemyData.initialize()
 	_update_title()
 
 	# Cache default bus decibel levels from the audio bus layout.

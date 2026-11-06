@@ -56,10 +56,9 @@ func release(node: Node2D, scene: PackedScene) -> void:
 
 func _activate(node: Node2D) -> void:
 	node.visible = true
-	if node is Enemy:
-		(node as Enemy).reset_for_pool()
-	elif node.has_method(&"reset_for_pool"):
-		node.call(&"reset_for_pool")
+	var enemy: Enemy = node as Enemy
+	if enemy != null:
+		enemy.reset_for_pool()
 	else:
 		node.set_physics_process(true)
 		node.set_process(true)
@@ -70,9 +69,10 @@ func _deactivate(node: Node2D) -> void:
 	node.set_physics_process(false)
 	node.set_process(false)
 	node.position = Vector2(-999999.0, -999999.0)
-	if node is Enemy:
-		(node as Enemy).deactivate_for_pool()
-	elif node is Character:
-		(node as Character).disable_collisions()
-	elif node.has_method(&"disable_collisions"):
-		node.call(&"disable_collisions")
+	var enemy: Enemy = node as Enemy
+	if enemy != null:
+		enemy.deactivate_for_pool()
+	else:
+		var character: Character = node as Character
+		if character != null:
+			character.disable_collisions()

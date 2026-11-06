@@ -13,9 +13,9 @@ func _find_closest_enemy() -> Enemy:
 	var max_detection: float = get_detection_range()
 	var max_detection_sq: float = max_detection * max_detection
 
-	for node: Node in get_tree().get_nodes_in_group(&"enemies"):
+	for node: Node in get_tree().get_nodes_in_group(_GROUP_ENEMIES):
 		var enemy: Enemy = node as Enemy
-		if enemy == null or not is_instance_valid(enemy) or enemy.health <= 0.0 or enemy.is_queued_for_deletion():
+		if not _is_valid_enemy_target(enemy):
 			continue
 
 		var dist_to_self_sq: float = global_position.distance_squared_to(enemy.global_position)

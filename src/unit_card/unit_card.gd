@@ -56,9 +56,7 @@ var button_text: String = "Recruit":
 
 
 func _ready() -> void:
-	var audio_mgr: Node = get_node_or_null(^"/root/Audio")
-	if audio_mgr != null:
-		audio_mgr.call(&"connect_menu_sounds", self)
+	Audio.connect_menu_sounds(self)
 
 	_recruit_button.text = button_text
 	_recruit_button.pressed.connect(_on_recruit_pressed)
@@ -70,11 +68,7 @@ func _ready() -> void:
 
 
 func grab_recruit_focus() -> void:
-	var audio_mgr: Node = get_node_or_null(^"/root/Audio")
-	if audio_mgr != null:
-		audio_mgr.call(&"grab_focus_silent", _recruit_button)
-	else:
-		_recruit_button.call_deferred(&"grab_focus")
+	Audio.grab_focus_silent(_recruit_button)
 
 
 func get_recruit_button() -> Button:

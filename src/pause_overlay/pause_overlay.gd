@@ -38,9 +38,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if get_tree().paused and not visible:
 		return
 	if not visible:
-		var audio_mgr: Node = get_node_or_null(^"/root/Audio")
-		if audio_mgr != null:
-			audio_mgr.call(&"play_pause")
+		Audio.play_pause()
 		_open_pause()
 
 

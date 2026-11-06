@@ -52,14 +52,11 @@ static func eval_stat(stat_val: Variant, level: int = 1, default_base: float = 0
 	return default_base
 
 
-static func load_json_file(file_path: String) -> Dictionary:
-	if not FileAccess.file_exists(file_path):
-		push_error("JSON file not found: " + file_path)
-		return {}
-
+static func load_json_file(file_path: StringName) -> Dictionary:
 	var file: FileAccess = FileAccess.open(file_path, FileAccess.READ)
 	if file == null:
-		push_error("Failed to open JSON file: " + file_path)
+		printerr(&"CharacterData: Failed to open %s !" % file_path)
+		await Alerts.fatal_error(&"Could not load game data")
 		return {}
 
 	var json_text: String = file.get_as_text()
@@ -68,14 +65,16 @@ static func load_json_file(file_path: String) -> Dictionary:
 	var json: JSON = JSON.new()
 	var parse_result: Error = json.parse(json_text)
 	if parse_result != OK:
-		push_error("Failed to parse " + file_path + ": " + json.get_error_message())
+		printerr(&"CharacterData: Failed to parse %s at line %d: %s !" % [file_path, json.get_error_line(), json.get_error_message()])
+		await Alerts.fatal_error(&"Could not load game data")
 		return {}
 
 	var root_data: Variant = json.data
 	if root_data is Dictionary:
 		return root_data
 
-	push_error("JSON root must be a Dictionary: " + file_path)
+	printerr(&"CharacterData: JSON root must be a Dictionary in %s !" % file_path)
+	await Alerts.fatal_error(&"Could not load game data")
 	return {}
 
 
@@ -83,10 +82,7 @@ func parse_base_fields(dict: Dictionary) -> void:
 	id = StringName(_str_val(dict, "id"))
 	name = _str_val(dict, "name")
 	scene_path = _str_val(dict, "scene_path")
-	if ResourceLoader.exists(scene_path):
-		var res: Resource = load(scene_path)
-		if res is PackedScene:
-			scene = res
+	scene = load(scene_path) as PackedScene
 
 	health_stat = _dict_val(dict, "health")
 	speed_stat = _dict_val(dict, "speed")

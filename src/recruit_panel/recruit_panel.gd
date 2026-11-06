@@ -17,11 +17,7 @@ var _healer_offered_early: bool = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-
-	var audio_mgr: Node = get_node_or_null(^"/root/Audio")
-	if audio_mgr != null:
-		audio_mgr.call(&"connect_menu_sounds", self)
-
+	Audio.connect_menu_sounds(self)
 	_ensure_cards()
 
 

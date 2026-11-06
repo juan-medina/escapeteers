@@ -53,12 +53,12 @@ func spawn_projectile(user: Character, target: Character) -> Projectile:
 			projectile.direction = Vector2.ZERO
 			projectile.damage = damage
 			projectile.knockback = 0.0
-			if target is Enemy and stun_duration > 0.0:
-				(target as Enemy).apply_stun(stun_duration)
-			if target.has_method(&"take_damage"):
-				target.call(&"take_damage", damage)
-			if user is Hero and target is Enemy:
-				(user as Hero).enemy_hit.emit(target as Enemy, damage, false)
+			var enemy: Enemy = target as Enemy
+			if enemy != null and stun_duration > 0.0:
+				enemy.apply_stun(stun_duration)
+			target.take_damage(damage)
+			if user is Hero and enemy != null:
+				(user as Hero).enemy_hit.emit(enemy, damage, false)
 		else:
 			var spawn_pos: Vector2 = user.global_position + Vector2(dir_x * 8.0, 0.0)
 			var fire_dir: Vector2 = Vector2(dir_x, 0.0)

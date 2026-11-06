@@ -4,7 +4,7 @@
 class_name HeroData
 extends CharacterData
 
-const HEROES_JSON_PATH: String = "res://character/heroes/heroes.json"
+const HEROES_JSON_PATH: StringName = &"res://character/heroes/heroes.json"
 
 const COLOR_ROLE_MELEE: Color = Color(1.0, 0.45, 0.35)
 const COLOR_ROLE_RANGED: Color = Color(0.40, 0.80, 1.0)
@@ -28,11 +28,11 @@ var color: Color = Color.WHITE
 var _cached_sprite_frames: SpriteFrames = null
 
 
-static func _ensure_loaded() -> void:
+static func initialize() -> void:
 	if not _cached_heroes.is_empty():
 		return
 
-	var root: Dictionary = CharacterData.load_json_file(HEROES_JSON_PATH)
+	var root: Dictionary = await CharacterData.load_json_file(HEROES_JSON_PATH)
 	for key: Variant in root.keys():
 		var entry_val: Variant = root[key]
 		if entry_val is Dictionary:
@@ -87,7 +87,6 @@ static func _compare_role_order(a: HeroData, b: HeroData) -> bool:
 
 
 static func get_all_heroes() -> Array[HeroData]:
-	_ensure_loaded()
 	var list: Array[HeroData] = []
 	for id_key: StringName in _cached_order:
 		list.append(_cached_heroes[id_key])
@@ -95,17 +94,14 @@ static func get_all_heroes() -> Array[HeroData]:
 
 
 static func get_heroes_by_role_order() -> Array[HeroData]:
-	_ensure_loaded()
 	return _cached_role_order.duplicate()
 
 
 static func get_hero(hero_id: StringName) -> HeroData:
-	_ensure_loaded()
 	return _cached_heroes.get(hero_id, null)
 
 
 static func get_random_choices(count: int) -> Array[HeroData]:
-	_ensure_loaded()
 	var pool: Array[StringName] = _cached_order.duplicate()
 	pool.shuffle()
 	var result: Array[HeroData] = []
@@ -188,15 +184,9 @@ func apply_to_hero(hero: Hero, level: int = 1) -> void:
 
 
 func instantiate_hero(level: int = 1) -> Hero:
-	if scene == null:
-		push_error("Cannot instantiate hero, scene is null for: " + name)
-		return null
-	var inst: Node = scene.instantiate()
-	if inst is Hero:
-		var hero: Hero = inst
-		apply_to_hero(hero, level)
-		return hero
-	return null
+	var hero: Hero = scene.instantiate() as Hero
+	apply_to_hero(hero, level)
+	return hero
 
 
 func get_sprite_frames() -> SpriteFrames:
