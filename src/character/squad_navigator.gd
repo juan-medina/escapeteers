@@ -8,6 +8,8 @@ const REPATH_INTERVAL: float = 0.2
 const WAYPOINT_REACHED_DIST_SQ: float = 64.0
 const REPATH_DISTANCE_MOVED_SQ: float = 144.0
 
+static var _los_query: PhysicsRayQueryParameters2D = PhysicsRayQueryParameters2D.new()
+
 var _current_path: PackedVector2Array = PackedVector2Array()
 var _path_index: int = 0
 var _target_pos: Vector2 = Vector2.ZERO
@@ -23,8 +25,10 @@ static func has_line_of_sight(character: Character, target_pos: Vector2) -> bool
 	if space_state == null:
 		return true
 
-	var query: PhysicsRayQueryParameters2D = PhysicsRayQueryParameters2D.create(character.global_position, target_pos, 1)
-	var hit: Dictionary = space_state.intersect_ray(query)
+	_los_query.from = character.global_position
+	_los_query.to = target_pos
+	_los_query.collision_mask = 1
+	var hit: Dictionary = space_state.intersect_ray(_los_query)
 	return hit.is_empty()
 
 

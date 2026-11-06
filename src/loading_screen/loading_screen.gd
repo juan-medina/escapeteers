@@ -54,7 +54,26 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_setup_characters()
 	_init_particles()
-	set_process(true)
+	_sync_visibility_state()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED:
+		_sync_visibility_state()
+
+
+func _sync_visibility_state() -> void:
+	set_process(visible)
+	if _squad_node == null:
+		return
+	for child: Node in _squad_node.get_children():
+		var sprite: AnimatedSprite2D = child as AnimatedSprite2D
+		if sprite == null:
+			continue
+		if visible:
+			sprite.play(&"run")
+		else:
+			sprite.pause()
 
 
 func _process(delta: float) -> void:
@@ -149,13 +168,7 @@ func _setup_characters() -> void:
 
 
 func _extract_sprite_frames(scene: PackedScene) -> SpriteFrames:
-	var instance: Node = scene.instantiate()
-	var sprite: AnimatedSprite2D = instance.get_node_or_null(^"AnimatedSprite2D") as AnimatedSprite2D
-	var frames: SpriteFrames = null
-	if sprite != null:
-		frames = sprite.sprite_frames
-	instance.queue_free()
-	return frames
+	return CharacterData.extract_sprite_frames(scene)
 
 
 func _init_particles() -> void:

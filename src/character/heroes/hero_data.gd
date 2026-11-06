@@ -190,15 +190,6 @@ func instantiate_hero(level: int = 1) -> Hero:
 
 
 func get_sprite_frames() -> SpriteFrames:
-	if _cached_sprite_frames != null:
-		return _cached_sprite_frames
-	if scene == null:
-		return null
-	var inst: Node = scene.instantiate()
-	if inst is Character:
-		var hero: Character = inst
-		var sprite: AnimatedSprite2D = hero.get_node_or_null(^"AnimatedSprite2D") as AnimatedSprite2D
-		if sprite != null:
-			_cached_sprite_frames = sprite.sprite_frames
-	inst.queue_free()
+	if _cached_sprite_frames == null:
+		_cached_sprite_frames = CharacterData.extract_sprite_frames(scene)
 	return _cached_sprite_frames

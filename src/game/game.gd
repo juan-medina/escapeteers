@@ -125,7 +125,7 @@ func _ready() -> void:
 	_check_recruitment()
 	_register_and_populate_rooms(_map.companion_rooms)
 	while not _pending_spawns.is_empty():
-		var req: Dictionary = _pending_spawns.pop_front()
+		var req: Dictionary = _pending_spawns.pop_back()
 		@warning_ignore("unsafe_call_argument")
 		_spawn_enemy_at(req[&"pos"], req[&"room"])
 
@@ -262,7 +262,7 @@ func _process_pending_spawns() -> void:
 	while not _pending_spawns.is_empty() and spawned < MAX_SPAWNS_PER_FRAME:
 		if _enemies.size() >= MAX_ENEMIES:
 			break
-		var req: Dictionary = _pending_spawns.pop_front()
+		var req: Dictionary = _pending_spawns.pop_back()
 		var room: Rect2i = req[&"room"]
 		var pos: Vector2 = req[&"pos"]
 		var cell: Vector2i = _map.local_to_map(pos)

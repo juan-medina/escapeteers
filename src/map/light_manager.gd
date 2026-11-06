@@ -4,16 +4,6 @@
 class_name LightManager
 extends Node2D
 
-
-class LightCandidate:
-	var light: TorchLight
-	var dist_sq: float
-
-	func _init(p_light: TorchLight, p_dist_sq: float) -> void:
-		light = p_light
-		dist_sq = p_dist_sq
-
-
 const MAX_ENABLED_LIGHTS: int = 36
 const MAX_LIGHT_DISTANCE_SQ: float = 750.0 * 750.0
 const FLICKER_SPEED: float = 8.0
@@ -23,6 +13,8 @@ var _all_lights: Array[TorchLight] = []
 var _chunk_lights: Dictionary[Vector2i, Array] = {}
 var _cell_lights: Dictionary[Vector2i, TorchLight] = {}
 var _enabled_lights: Array[TorchLight] = []
+var _candidates: Array[TorchLight] = []
+var _next_enabled_lights: Array[TorchLight] = []
 
 var _focus_pos: Vector2 = Vector2.ZERO
 var _time: float = 0.0
@@ -94,6 +86,8 @@ func clear() -> void:
 	_chunk_lights.clear()
 	_cell_lights.clear()
 	_enabled_lights.clear()
+	_candidates.clear()
+	_next_enabled_lights.clear()
 
 
 func get_active_light_count() -> int:
@@ -116,32 +110,35 @@ func _process(delta: float) -> void:
 
 
 func _update_culling_and_flicker() -> void:
-	var candidates: Array[LightCandidate] = []
+	_candidates.clear()
 	for torch: TorchLight in _all_lights:
 		if not is_instance_valid(torch):
 			continue
 		var dist_sq: float = torch.global_position.distance_squared_to(_focus_pos)
 		if dist_sq <= MAX_LIGHT_DISTANCE_SQ:
-			candidates.append(LightCandidate.new(torch, dist_sq))
+			torch.current_dist_sq = dist_sq
+			_candidates.append(torch)
 
-	if candidates.size() > MAX_ENABLED_LIGHTS:
-		candidates.sort_custom(_compare_candidate_distance)
+	if _candidates.size() > MAX_ENABLED_LIGHTS:
+		_candidates.sort_custom(_compare_candidate_distance)
 
-	var new_enabled: Array[TorchLight] = []
-	var limit: int = mini(candidates.size(), MAX_ENABLED_LIGHTS)
+	_next_enabled_lights.clear()
+	var limit: int = mini(_candidates.size(), MAX_ENABLED_LIGHTS)
 	for i: int in range(limit):
-		var torch: TorchLight = candidates[i].light
-		new_enabled.append(torch)
+		var torch: TorchLight = _candidates[i]
+		_next_enabled_lights.append(torch)
 		torch.enabled = true
 		var wave: float = sin(_time * FLICKER_SPEED + torch.phase_offset) * 0.04
 		torch.apply_flicker(wave, _jitter)
 
 	for old_torch: TorchLight in _enabled_lights:
-		if is_instance_valid(old_torch) and not new_enabled.has(old_torch):
+		if is_instance_valid(old_torch) and not _next_enabled_lights.has(old_torch):
 			old_torch.enabled = false
 
-	_enabled_lights = new_enabled
+	var prev_enabled: Array[TorchLight] = _enabled_lights
+	_enabled_lights = _next_enabled_lights
+	_next_enabled_lights = prev_enabled
 
 
-static func _compare_candidate_distance(a: LightCandidate, b: LightCandidate) -> bool:
-	return a.dist_sq < b.dist_sq
+static func _compare_candidate_distance(a: TorchLight, b: TorchLight) -> bool:
+	return a.current_dist_sq < b.current_dist_sq

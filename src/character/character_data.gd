@@ -78,6 +78,24 @@ static func load_json_file(file_path: StringName) -> Dictionary:
 	return {}
 
 
+static func extract_sprite_frames(packed_scene: PackedScene) -> SpriteFrames:
+	if packed_scene == null:
+		return null
+	var state: SceneState = packed_scene.get_state()
+	for i: int in range(state.get_node_count()):
+		if state.get_node_name(i) == &"AnimatedSprite2D":
+			for j: int in range(state.get_node_property_count(i)):
+				if state.get_node_property_name(i, j) == &"sprite_frames":
+					var val: Variant = state.get_node_property_value(i, j)
+					if val is SpriteFrames:
+						return val
+	var inst: Node = packed_scene.instantiate()
+	var sprite: AnimatedSprite2D = inst.get_node_or_null(^"AnimatedSprite2D") as AnimatedSprite2D
+	var frames: SpriteFrames = sprite.sprite_frames if sprite != null else null
+	inst.queue_free()
+	return frames
+
+
 func parse_base_fields(dict: Dictionary) -> void:
 	id = StringName(_str_val(dict, &"id"))
 	name = _str_val(dict, &"name")

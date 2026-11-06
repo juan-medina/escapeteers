@@ -17,6 +17,12 @@ func _ready() -> void:
 
 
 func set_level(new_level: int) -> void:
+	if level == new_level and not combat_actions.is_empty():
+		health = max_health
+		if _health_bar != null:
+			_health_bar.set_level(level)
+			_health_bar.update_health(health, max_health)
+		return
 	super.set_level(new_level)
 	var data: EnemyData = EnemyData.get_enemy(&"skeleton_archer")
 	if data != null:

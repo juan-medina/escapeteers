@@ -11,6 +11,7 @@ const BASE_SCALE: float = 1.4
 
 var phase_offset: float = 0.0
 var cell_pos: Vector2i = Vector2i.ZERO
+var current_dist_sq: float = 0.0
 
 
 func _ready() -> void:

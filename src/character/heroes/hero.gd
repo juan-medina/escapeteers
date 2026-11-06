@@ -11,6 +11,7 @@ signal enemy_hit(enemy: Enemy, damage: float, is_heavy: bool)
 signal ally_healed(ally: Character, amount: float)
 
 const MAX_HISTORY_DURATION: float = 2.5
+const HISTORY_CAPACITY: int = 256
 const CRESCENT_BLEND_SPEED: float = 5.0
 const PLAYER_LIGHT_TEXTURE: Texture2D = preload("res://map/light_texture.tres")
 const PLAYER_LIGHT_BASE_ENERGY: float = 0.25
@@ -77,6 +78,8 @@ var current_action: CombatAction = null
 var _elapsed_time: float = 0.0
 var _pos_history: Array[Vector2] = []
 var _time_history: Array[float] = []
+var _history_head: int = 0
+var _history_count: int = 0
 var _player_light: PointLight2D = null
 var _hit_applied_this_attack: bool = false
 var _hits_applied_frames: Array[int] = []
@@ -463,30 +466,43 @@ func _on_animation_finished() -> void:
 
 func record_step(delta: float) -> void:
 	_elapsed_time += delta
-	_pos_history.push_front(position)
-	_time_history.push_front(_elapsed_time)
+	if _pos_history.size() < HISTORY_CAPACITY:
+		_pos_history.resize(HISTORY_CAPACITY)
+		_time_history.resize(HISTORY_CAPACITY)
+
+	_pos_history[_history_head] = position
+	_time_history[_history_head] = _elapsed_time
+	_history_head = (_history_head + 1) % HISTORY_CAPACITY
+	if _history_count < HISTORY_CAPACITY:
+		_history_count += 1
 
 	var cutoff_time: float = _elapsed_time - MAX_HISTORY_DURATION
-	while _time_history.size() > 2 and _time_history.back() < cutoff_time:
-		_time_history.pop_back()
-		_pos_history.pop_back()
+	while _history_count > 2:
+		var oldest_idx: int = (_history_head - _history_count + HISTORY_CAPACITY) % HISTORY_CAPACITY
+		if _time_history[oldest_idx] < cutoff_time:
+			_history_count -= 1
+		else:
+			break
 
 
 func get_delayed_position(delay: float) -> Vector2:
-	if _pos_history.is_empty() or delay <= 0.001:
+	if _history_count == 0 or delay <= 0.001:
 		return position
 
 	var target_time: float = _elapsed_time - delay
-	for i: int in range(_time_history.size() - 1):
-		var t1: float = _time_history[i]
-		var t2: float = _time_history[i + 1]
+	for step: int in range(_history_count - 1):
+		var idx1: int = (_history_head - 1 - step + HISTORY_CAPACITY) % HISTORY_CAPACITY
+		var idx2: int = (_history_head - 2 - step + HISTORY_CAPACITY) % HISTORY_CAPACITY
+		var t1: float = _time_history[idx1]
+		var t2: float = _time_history[idx2]
 		if t1 >= target_time and target_time >= t2:
 			var span: float = t1 - t2
 			if span <= 0.0001:
-				return _pos_history[i]
-			return _pos_history[i].lerp(_pos_history[i + 1], (t1 - target_time) / span)
+				return _pos_history[idx1]
+			return _pos_history[idx1].lerp(_pos_history[idx2], (t1 - target_time) / span)
 
-	return _pos_history.back()
+	var oldest_idx: int = (_history_head - _history_count + HISTORY_CAPACITY) % HISTORY_CAPACITY
+	return _pos_history[oldest_idx]
 
 
 func _update_player_light() -> void:
