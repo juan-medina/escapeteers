@@ -290,14 +290,10 @@ func _spawn_enemy_at(pos: Vector2, room: Rect2i, forced_scene: PackedScene = nul
 		enemy.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
 	if not enemy.minion_summon_requested.is_connected(_on_enemy_minion_summon_requested):
 		enemy.minion_summon_requested.connect(_on_enemy_minion_summon_requested)
-	for conn: Dictionary in enemy.died.get_connections():
-		@warning_ignore("unsafe_call_argument")
-		enemy.died.disconnect(conn.callable)
-	enemy.died.connect(_on_enemy_died.bind(enemy, room))
-	for d_conn: Dictionary in enemy.death_completed.get_connections():
-		@warning_ignore("unsafe_call_argument")
-		enemy.death_completed.disconnect(d_conn.callable)
-	enemy.death_completed.connect(_on_enemy_death_completed.bind(enemy))
+	if enemy.died.get_connections().is_empty():
+		enemy.died.connect(_on_enemy_died.bind(enemy))
+	if enemy.death_completed.get_connections().is_empty():
+		enemy.death_completed.connect(_on_enemy_death_completed.bind(enemy))
 	enemy.sync_screen_state(_camera.global_position)
 	if is_summoned:
 		enemy.play_summon_intro()
@@ -452,7 +448,8 @@ func _on_enemy_minion_summon_requested(pos: Vector2, room: Rect2i, enemy_level: 
 	_spawn_enemy_at(pos, room, minion_scene, enemy_level, true)
 
 
-func _on_enemy_died(enemy: Enemy, room: Rect2i) -> void:
+func _on_enemy_died(enemy: Enemy) -> void:
+	var room: Rect2i = enemy.home_room
 	if _room_remaining_enemies.has(room):
 		_room_remaining_enemies[room] = maxi(0, _room_remaining_enemies[room] - 1)
 	if _room_spawned_enemies.has(room):

@@ -29,6 +29,8 @@ const TORCH_RIGHT_ALT_ID: int = 1
 const TORCH_GRID_SIZE: int = 10
 const TORCH_BLOCK_MARGIN: int = 2
 const MIN_TORCH_DIST_SQ: int = 49
+const CANDLE_POST_TOP: Vector2i = Vector2i(10, 30)
+const CANDLE_POST_BOTTOM: Vector2i = Vector2i(10, 31)
 
 
 static func cell_hash(run_seed: int, gx: int, gy: int) -> int:
@@ -46,51 +48,6 @@ static func get_floor_atlas(run_seed: int, gx: int, gy: int) -> Vector2i:
 	var ax: int = FLOOR_ATLAS_START.x + (h % FLOOR_ATLAS_SIZE.x)
 	var ay: int = FLOOR_ATLAS_START.y + (floori(float(h) / float(FLOOR_ATLAS_SIZE.x)) % FLOOR_ATLAS_SIZE.y)
 	return Vector2i(ax, ay)
-
-
-static func classify_wall(raster: ChunkRaster, lx: int, ly: int, run_seed: int) -> Dictionary:
-	var gx: int = raster.origin.x + lx
-	var gy: int = raster.origin.y + ly
-	var is_f: bool = raster.is_floor_local(lx, ly)
-	var n: bool = raster.is_floor_local(lx, ly - 1)
-	var e: bool = raster.is_floor_local(lx + 1, ly)
-	var w: bool = raster.is_floor_local(lx - 1, ly)
-	var ne: bool = raster.is_floor_local(lx + 1, ly - 1)
-	var nw: bool = raster.is_floor_local(lx - 1, ly - 1)
-
-	if is_f:
-		if not n:
-			if ne and not w:
-				return {&"coords": WALL_TOP_LEFT_INNER, &"alt": 0}
-			if nw and not e:
-				return {&"coords": WALL_TOP_RIGHT_INNER, &"alt": 0}
-			var h: int = cell_hash(run_seed, gx, gy)
-			return {&"coords": WALL_TOP_VARIANTS[h % WALL_TOP_VARIANTS.size()], &"alt": 0}
-		return {&"coords": Vector2i(-1, -1), &"alt": 0}
-
-	if e and not ne:
-		return {&"coords": WALL_TOP_LEFT_OUTER, &"alt": 0}
-	if w and not nw:
-		return {&"coords": WALL_TOP_RIGHT_OUTER, &"alt": 0}
-	if n:
-		if e and not w:
-			return {&"coords": WALL_BOTTOM_LEFT_INNER, &"alt": 0}
-		if w and not e:
-			return {&"coords": WALL_BOTTOM_RIGHT_INNER, &"alt": 0}
-		var h: int = cell_hash(run_seed, gx, gy)
-		return {&"coords": WALL_BOTTOM_VARIANTS[h % WALL_BOTTOM_VARIANTS.size()], &"alt": 0}
-	if ne and not e:
-		return {&"coords": WALL_BOTTOM_LEFT_OUTER, &"alt": 0}
-	if nw and not w:
-		return {&"coords": WALL_BOTTOM_RIGHT_OUTER, &"alt": 0}
-	if e:
-		var h: int = cell_hash(run_seed, gx, gy)
-		return {&"coords": WALL_LEFT_VARIANTS[h % WALL_LEFT_VARIANTS.size()], &"alt": 0}
-	if w:
-		var h: int = cell_hash(run_seed, gx, gy)
-		return {&"coords": WALL_RIGHT_VARIANTS[h % WALL_RIGHT_VARIANTS.size()], &"alt": 0}
-
-	return {&"coords": Vector2i(-1, -1), &"alt": 0}
 
 
 static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan = null) -> Dictionary:
@@ -250,9 +207,6 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan =
 				out_lights.append(gpos)
 
 	# Candle posts streamed directly from WorldPlan
-	const CANDLE_POST_TOP: Vector2i = Vector2i(10, 30)
-	const CANDLE_POST_BOTTOM: Vector2i = Vector2i(10, 31)
-
 	if plan != null:
 		for ly: int in range(ChunkRaster.CHUNK_SIZE):
 			var gy: int = raster.origin.y + ly

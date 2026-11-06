@@ -73,14 +73,14 @@ func apply_to_enemy(enemy: Enemy, level: int = 1) -> void:
 			if melee_idx == 0:
 				enemy.melee_range = rng
 				enemy.attack_cooldown = cd
-				enemy.set(&"melee_damage", dmg)
+				enemy.melee_damage = dmg
 				melee_idx += 1
 			elif melee_idx == 1:
 				var chance: float = _float_val(skill, &"chance", 0.35)
-				enemy.set(&"can_heavy_melee", true)
-				enemy.set(&"melee2_damage", dmg)
-				enemy.set(&"melee2_cooldown", cd)
-				enemy.set(&"melee2_chance", chance)
+				enemy.can_heavy_melee = true
+				enemy.melee2_damage = dmg
+				enemy.melee2_cooldown = cd
+				enemy.melee2_chance = chance
 				melee_idx += 1
 		elif type == "ranged":
 			var dmg: float = eval_stat(skill.get(&"damage"), level, 5.0)
@@ -92,9 +92,9 @@ func apply_to_enemy(enemy: Enemy, level: int = 1) -> void:
 			enemy.attack_cooldown = cd
 		elif type == "summon":
 			var count: int = int(_float_val(skill, &"summon_count", 2.0))
-			enemy.set(&"can_summon", true)
-			enemy.set(&"summon_range", rng)
-			enemy.set(&"summon_count", count)
+			enemy.can_summon = true
+			enemy.summon_range = rng
+			enemy.summon_count = count
 			enemy.attack_cooldown = cd
 
 

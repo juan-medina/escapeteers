@@ -25,10 +25,20 @@ const ENEMY_HURTBOX_RADIUS: float = 10.0
 
 @export var level: int = 1
 
+var enemy_id: StringName = &""
 var detection_range: float = 140.0
 var attack_cooldown: float = 1.2
 var damage: float = 10.0
 var xp_value: float = 10.0
+var melee_damage: float = 8.0
+var can_heavy_melee: bool = false
+var melee2_damage: float = 20.0
+var melee2_cooldown: float = 3.5
+var melee2_chance: float = 0.35
+var can_summon: bool = false
+var summon_range: float = 180.0
+var summon_count: int = 2
+var kite_distance: float = 0.0
 
 var combat_actions: Array[CombatAction] = []
 var current_action: CombatAction = null
@@ -52,6 +62,10 @@ var _is_summoning_in: bool = false
 
 
 func _ready() -> void:
+	if enemy_id != &"":
+		var data: EnemyData = EnemyData.get_enemy(enemy_id)
+		if data != null:
+			data.apply_to_enemy(self, level)
 	super._ready()
 	if _health_bar != null:
 		_health_bar.set_fill_color(HealthBar.DEFAULT_ENEMY_COLOR)
@@ -75,6 +89,7 @@ func _ready() -> void:
 	is_on_screen = _notifier.is_on_screen()
 	if not is_on_screen:
 		_set_sleeping(true)
+	_setup_actions()
 
 
 func sync_screen_state(camera_pos: Vector2) -> void:
@@ -313,6 +328,9 @@ func _process_chase(delta: float) -> void:
 			_set_sleeping(true)
 		return
 
+	if _try_kite_away(dist_to_target, delta):
+		return
+
 	var look_target: Hero = (
 		attack_target if (combat_state == CombatState.ATTACKING and attack_target != null and is_instance_valid(attack_target)) else target
 	)
@@ -339,6 +357,21 @@ func _process_chase(delta: float) -> void:
 	velocity = (move_vec * speed * _slow_multiplier) + _knockback_velocity
 	move_and_slide()
 	update_visuals(velocity * delta)
+
+
+func _try_kite_away(dist_to_target: float, delta: float) -> bool:
+	if kite_distance <= 0.0 or combat_state != CombatState.COOLDOWN or dist_to_target >= kite_distance:
+		return false
+	var diff_x: float = target.global_position.x - global_position.x
+	if absf(diff_x) > 2.0:
+		flip_h = diff_x < 0.0
+	var away_dir: Vector2 = (global_position - target.global_position).normalized()
+	if away_dir.length_squared() < 0.01:
+		away_dir = Vector2.LEFT if not flip_h else Vector2.RIGHT
+	velocity = (away_dir * speed * _slow_multiplier) + _knockback_velocity
+	move_and_slide()
+	update_visuals(velocity * delta)
+	return true
 
 
 func _can_reach_target() -> bool:
@@ -427,10 +460,53 @@ func _pick_new_patrol_destination() -> void:
 
 
 func set_level(new_level: int) -> void:
+	if level == new_level and not combat_actions.is_empty():
+		health = max_health
+		if _health_bar != null:
+			_health_bar.set_level(level)
+			_health_bar.update_health(health, max_health)
+		return
 	level = new_level
+	if enemy_id != &"":
+		var data: EnemyData = EnemyData.get_enemy(enemy_id)
+		if data != null:
+			data.apply_to_enemy(self, level)
+	if combat_actions.is_empty():
+		_setup_actions()
+	else:
+		_refresh_actions()
 	if _health_bar != null:
 		_health_bar.set_level_color(Color(1.0, 0.45, 0.35, 1.0))
 		_health_bar.set_level(level)
+		_health_bar.update_health(health, max_health)
+
+
+func _setup_actions() -> void:
+	pass
+
+
+func _refresh_actions() -> void:
+	for action: CombatAction in combat_actions:
+		if action is MeleeAction:
+			var melee: MeleeAction = action as MeleeAction
+			melee.range_distance = melee_range
+			melee.damage = melee_damage
+			melee.cooldown = attack_cooldown
+			melee.can_heavy = can_heavy_melee
+			melee.heavy_damage = melee2_damage
+			melee.heavy_cooldown = melee2_cooldown
+			melee.heavy_chance = melee2_chance
+		elif action is RangedAction:
+			var ranged: RangedAction = action as RangedAction
+			ranged.range_distance = ranged_range
+			ranged.min_range_distance = ranged_min_range
+			ranged.damage = damage
+			ranged.cooldown = attack_cooldown
+		elif action is SummonAction:
+			var summon: SummonAction = action as SummonAction
+			summon.range_distance = summon_range
+			summon.cooldown = attack_cooldown
+			summon.summon_count = summon_count
 
 
 func deactivate_for_pool() -> void:

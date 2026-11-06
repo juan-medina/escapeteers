@@ -44,19 +44,16 @@ try {
             Write-Error "gdlint failed on $file"
             exit $LASTEXITCODE
         }
-
-        # 3. Godot check-only
-        $relativeSrc = $file.Replace("\", "/")
-        if ($relativeSrc.StartsWith("src/")) {
-            $relativeSrc = $relativeSrc.Substring(4)
-        }
-
-        godot --headless --path src --audio-driver Dummy --check-only -d --quit
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "godot check-only failed on $file"
-            exit $LASTEXITCODE
-        }
     }
+
+    # 3. Godot check-only (run once for the project)
+    Write-Host "Running Godot compiler check..." -ForegroundColor Cyan
+    godot --headless --path src --audio-driver Dummy --check-only -d --quit
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "godot check-only failed"
+        exit $LASTEXITCODE
+    }
+
     Write-Host "All files verified successfully!" -ForegroundColor Green
 } finally {
     Pop-Location
