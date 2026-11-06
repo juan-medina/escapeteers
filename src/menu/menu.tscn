@@ -2,8 +2,9 @@
 
 [ext_resource type="Script" path="res://menu/menu.gd" id="1_g18jx"]
 [ext_resource type="PackedScene" path="res://main_menu_panel/main_menu_panel.tscn" id="2_main"]
-[ext_resource type="PackedScene" path="res://settings_panel/settings_panel.tscn" id="3_settings"]
-[ext_resource type="PackedScene" path="res://about_panel/about_panel.tscn" id="4_about"]
+[ext_resource type="PackedScene" path="res://hero_select_panel/hero_select_panel.tscn" id="3_hero_select"]
+[ext_resource type="PackedScene" path="res://settings_panel/settings_panel.tscn" id="4_settings"]
+[ext_resource type="PackedScene" path="res://about_panel/about_panel.tscn" id="5_about"]
 
 [node name="MenuOverlay" type="CanvasLayer"]
 script = ExtResource("1_g18jx")
@@ -26,11 +27,15 @@ grow_vertical = 2
 [node name="MainMenuPanel" parent="Center" instance=ExtResource("2_main")]
 layout_mode = 2
 
-[node name="SettingsPanel" parent="Center" instance=ExtResource("3_settings")]
+[node name="HeroSelectPanel" parent="Center" instance=ExtResource("3_hero_select")]
 visible = false
 layout_mode = 2
 
-[node name="AboutPanel" parent="Center" instance=ExtResource("4_about")]
+[node name="SettingsPanel" parent="Center" instance=ExtResource("4_settings")]
+visible = false
+layout_mode = 2
+
+[node name="AboutPanel" parent="Center" instance=ExtResource("5_about")]
 visible = false
 layout_mode = 2
 
@@ -38,5 +43,7 @@ layout_mode = 2
 [connection signal="exit_requested" from="Center/MainMenuPanel" to="." method="_on_exit_requested"]
 [connection signal="play_requested" from="Center/MainMenuPanel" to="." method="_on_play_requested"]
 [connection signal="settings_requested" from="Center/MainMenuPanel" to="." method="_on_settings_requested"]
+[connection signal="back_requested" from="Center/HeroSelectPanel" to="." method="_on_panel_back_requested"]
+[connection signal="hero_selected" from="Center/HeroSelectPanel" to="." method="_on_hero_selected"]
 [connection signal="back_requested" from="Center/SettingsPanel" to="." method="_on_panel_back_requested"]
 [connection signal="back_requested" from="Center/AboutPanel" to="." method="_on_panel_back_requested"]

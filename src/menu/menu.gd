@@ -7,6 +7,7 @@ extends PanelHost
 const NOTIFICATION_DELAY: float = 2.0
 
 @onready var _main_menu_panel: MainMenuPanel = $Center/MainMenuPanel
+@onready var _hero_select_panel: HeroSelectPanel = $Center/HeroSelectPanel
 @onready var _settings_panel: SettingsPanel = $Center/SettingsPanel
 @onready var _about_panel: AboutPanel = $Center/AboutPanel
 
@@ -19,7 +20,11 @@ func _ready() -> void:
 
 
 func _on_play_requested() -> void:
-	await Transition.reload_game()
+	show_panel(_hero_select_panel)
+
+
+func _on_hero_selected(hero: HeroData) -> void:
+	await Transition.reload_game(hero.id)
 
 
 func _on_settings_requested() -> void:

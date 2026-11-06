@@ -61,10 +61,10 @@ var _room_spawned_necros: Dictionary[Rect2i, int] = {}
 var _stream_timer: float = 0.0
 var _entity_pool: EntityPool = EntityPool.new()
 var _pending_spawns: Array[Dictionary] = []
+var _character: Hero = null
 
 @onready var _camera: Camera2D = $Camera2D
 @onready var _characters: Node2D = $Characters
-@onready var _character: Hero = $Characters/Character as Hero
 @onready var _map: Map = $Map
 @onready var _projectiles: Node2D = $Projectiles
 
@@ -79,6 +79,11 @@ func _ready() -> void:
 	_map.generation_progress_updated.connect(_on_map_generation_progress)
 	await _map.generate_map()
 
+	var starting_data: HeroData = HeroData.get_hero(Transition.starting_hero_id)
+	_character = starting_data.instantiate_hero(1)
+	_character.name = &"Character"
+	_characters.add_child(_character)
+
 	_character.position = _map.get_hero_spawn_position()
 	_camera.position = _character.position
 	_character.y_sort_enabled = true
@@ -91,10 +96,7 @@ func _ready() -> void:
 	_character.died.connect(_on_player_died)
 	_squad.append(_character)
 
-	_class_levels[&"soldier"] = 1
-	var soldier_data: HeroData = HeroData.get_hero(&"soldier")
-	if soldier_data != null:
-		soldier_data.apply_to_hero(_character, 1)
+	_class_levels[starting_data.id] = 1
 
 	_hud = HUD_SCENE.instantiate() as Hud
 	add_child(_hud)

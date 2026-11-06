@@ -6,10 +6,23 @@ extends CharacterData
 
 const HEROES_JSON_PATH: String = "res://character/heroes/heroes.json"
 
+const COLOR_ROLE_MELEE: Color = Color(1.0, 0.45, 0.35)
+const COLOR_ROLE_RANGED: Color = Color(0.40, 0.80, 1.0)
+const COLOR_ROLE_HYBRID: Color = Color(1.0, 0.80, 0.30)
+const COLOR_ROLE_HEALER: Color = Color(0.40, 0.95, 0.55)
+const ROLE_PRIORITY: Dictionary[String, int] = {
+	"Melee": 0,
+	"Ranged": 1,
+	"Healer": 2,
+	"Hybrid": 3,
+}
+
 static var _cached_heroes: Dictionary[StringName, HeroData] = {}
 static var _cached_order: Array[StringName] = []
+static var _cached_role_order: Array[HeroData] = []
 
 var role: String = ""
+var role_color: Color = COLOR_ROLE_MELEE
 var abbr: String = ""
 var color: Color = Color.WHITE
 var _cached_sprite_frames: SpriteFrames = null
@@ -27,15 +40,50 @@ static func _ensure_loaded() -> void:
 			var hero_data: HeroData = HeroData._from_dict(entry)
 			_cached_heroes[hero_data.id] = hero_data
 			_cached_order.append(hero_data.id)
+			_cached_role_order.append(hero_data)
+
+	_cached_role_order.sort_custom(HeroData._compare_role_order)
 
 
 static func _from_dict(dict: Dictionary) -> HeroData:
 	var h: HeroData = HeroData.new()
 	h.parse_base_fields(dict)
 	h.role = _str_val(dict, "role")
+	if h.role.is_empty():
+		h.role = _infer_role_from_skills(h.skills)
+	h.role_color = get_role_color_for_name(h.role)
 	h.abbr = _str_val(dict, "abbr")
 	h.color = Color.from_string(_str_val(dict, "color"), Color.WHITE)
 	return h
+
+
+static func _infer_role_from_skills(skill_list: Array[Dictionary]) -> String:
+	var has_melee: bool = false
+	var has_ranged: bool = false
+	var has_heal: bool = false
+	for skill: Dictionary in skill_list:
+		var st: String = CharacterData._str_val(skill, "type")
+		if st == "heal":
+			has_heal = true
+		elif st == "ranged":
+			has_ranged = true
+		elif st == "melee":
+			has_melee = true
+	if has_heal:
+		return "Healer"
+	if has_melee and has_ranged:
+		return "Hybrid"
+	if has_ranged:
+		return "Ranged"
+	return "Melee"
+
+
+static func _compare_role_order(a: HeroData, b: HeroData) -> bool:
+	var prio_a: int = ROLE_PRIORITY.get(a.role, 99)
+	var prio_b: int = ROLE_PRIORITY.get(b.role, 99)
+	if prio_a != prio_b:
+		return prio_a < prio_b
+	return a.name < b.name
 
 
 static func get_all_heroes() -> Array[HeroData]:
@@ -44,6 +92,11 @@ static func get_all_heroes() -> Array[HeroData]:
 	for id_key: StringName in _cached_order:
 		list.append(_cached_heroes[id_key])
 	return list
+
+
+static func get_heroes_by_role_order() -> Array[HeroData]:
+	_ensure_loaded()
+	return _cached_role_order.duplicate()
 
 
 static func get_hero(hero_id: StringName) -> HeroData:
@@ -60,6 +113,25 @@ static func get_random_choices(count: int) -> Array[HeroData]:
 	for i: int in range(take_count):
 		result.append(_cached_heroes[pool[i]])
 	return result
+
+
+static func get_role_color_for_name(role_name: String) -> Color:
+	var r: String = role_name.to_lower()
+	if "heal" in r or "support" in r:
+		return COLOR_ROLE_HEALER
+	if "hybrid" in r:
+		return COLOR_ROLE_HYBRID
+	if "range" in r:
+		return COLOR_ROLE_RANGED
+	return COLOR_ROLE_MELEE
+
+
+func get_role_name() -> String:
+	return role
+
+
+func get_role_color() -> Color:
+	return role_color
 
 
 func apply_to_hero(hero: Hero, level: int = 1) -> void:
