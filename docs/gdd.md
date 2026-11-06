@@ -8,14 +8,14 @@
 ---
 
 ## 1. High Concept
-Lead an auto-battling fellowship of survivors through a room-based dungeon. Steer your growing party through corridors and chambers, recruit new heroes with distinct skills to expand your squad's firepower, navigate past localized spike hazards, eliminate diverse enemy threats including persistent summoners, and hunt down color-coded keys in distant rooms to unlock matching doors and advance.
+Lead an auto-battling fellowship of survivors through a room-based dungeon. Choose your starting leader, steer your growing party through corridors and themed encounter chambers, draft new heroes and level up hero classes to expand your squad's firepower, navigate past localized spike hazards, eliminate diverse enemy threats including persistent summoners, and hunt down color-coded keys in distant rooms to unlock matching doors and advance.
 
 ---
 
 ## 2. Core Design Pillars
 - **The Fellowship Formation:** Your squad surrounds you in layered rings. Standing still forms a protective circle around you; walking parts the allies ahead and causes the group to flow around your flanks and rear in a trailing crescent.
 - **Stick-Only Spatial Control:** No manual combat or stance buttons. All shooting, melee strikes, and healing trigger automatically based on proximity and cooldowns. Gameplay focuses on spatial navigation: closing distance for melee units, keeping ranged units in line of sight, and steering trailing companions away from hazards.
-- **Squad Growth & Attrition:** Rescue unrecruited heroes discovered waiting in dungeon rooms to grow party size and firepower. Healers sustain damaged allies between skirmishes, and new recruits replace fallen companions.
+- **Squad Drafting & Class Progression:** Rescue mystery survivors waiting in dungeon rooms to draft a new hero from a choice of candidates. Defeating enemies awards squad experience; leveling up lets you upgrade an active hero class, boosting the stats of all current and future squad members of that class.
 - **Color-Coded Key & Door Progression:** Advancement requires exploring rooms to find color-coded keys that unlock matching doors blocking corridors to new dungeon sections.
 - **Mindful Hazard Navigation:** Localized spike trap patches punish careless steering, requiring the leader to take wide turns so trailing followers do not drag across hazard zones.
 
@@ -24,7 +24,8 @@ Lead an auto-battling fellowship of survivors through a room-based dungeon. Stee
 ## 3. World & Level Design
 The dungeon is procedurally generated as an ascending labyrinth of interconnected rooms and corridors structured around directional progression, exploration, and lock-and-key advancement:
 
-- **Ascending Northward Progression:** The party begins at the southern base of the dungeon in a compact starting chamber scaled to an initial small squad. Pushing northward ascends deeper into the labyrinth where both enemy threat and chamber scale grow to accommodate larger horde battles, while lateral east and west branches offer side routes for recruitment and exploration.
+- **Ascending Northward Progression:** The party begins at the southern base of the dungeon in a compact starting chamber scaled to an initial small squad. Pushing northward ascends deeper into the labyrinth where enemy level, encounter quotas, and chamber scale grow to accommodate larger horde battles, while lateral east and west branches offer side routes for recruitment and exploration.
+- **Themed Room Encounters:** Each room is assigned an encounter archetype (such as slime pits, undead swarms, archer garrisons, or necromancer crypts) so chambers present distinct tactical challenges upon entry, while preventing adjacent rooms from repeating the same theme.
 - **Rooms & Corridors:** Corridors funnel the party into tight formations, while chambers provide space for tactical repositioning, companion recruitment, and skirmishes.
 - **Atmospheric Dungeon Lighting:** Wall-mounted torches along corridors and free-standing candle posts distributed across room interiors carve warm pools of visibility out of the surrounding darkness, balancing moody shadow contrast with clear combat readability.
 - **Color-Coded Doors & Keys:** Locked doors (e.g. Red, Blue, Yellow) block passage to subsequent dungeon sectors. Matching keys are hidden in different rooms, requiring purposeful exploration and route planning.
@@ -33,12 +34,16 @@ The dungeon is procedurally generated as an ascending labyrinth of interconnecte
 ---
 
 ## 4. The Squad (The Escapeteers)
-The player guides the lead character as the focal point of the fellowship. Companions are discovered as gray mystery survivors waiting in dungeon rooms and reveal a random hero to join the party upon physical contact. The starting chamber presents unrecruited gray units ahead of the player to initiate the squad's growth.
+Before entering the dungeon, the player selects a starting hero class to act as the lead character and focal point of the fellowship. Companions are discovered as unrecruited mystery survivors waiting in the starting chamber and throughout dungeon rooms; making physical contact opens a recruitment choice where the player drafts one hero from a set of random candidates (with early protection to ensure a healer is offered near the start of a run).
+
+### Progression & HUD Readability
+- **Squad Experience & Class Upgrades:** Defeating enemies grants experience toward the overall squad level. Each level-up presents a choice of classes currently represented in the squad; upgrading a class advances its level, scaling the attributes of all active and future members of that class and restoring existing members of that class to full health.
+- **Tactical HUD & Map Overlay:** The interface provides a live squad health grid, an encounter damage-per-second meter broken down by hero class, an experience tracker, and a toggleable dungeon map overlay that distinguishes explored rooms from revealed frontier chambers.
 
 ### Formation & Engagement Behaviors
 - **Multi-Ring Inner Support & Auto-Rotate Frontline:** Companions distribute across concentric formation rings based on role and squad size. Fragile healers and ranged heroes prioritize the innermost rings closest to the leader and anchor in the rear arc. Melee brawlers take outer rings and the forward arc, forming an outward-facing perimeter shield that rotates with the leader's facing and movement direction. During movement, frontline units maintain their forward screen while backline companions flow into a trailing crescent.
-- **Melee Leashing & Arc Strikes:** Melee fighters watch a leash range around their formation slot. When enemies are detected, they step forward to strike all targets within their forward attack arc, returning to formation when targets die or the leader pulls away.
-- **Formation Anchors:** Ranged attackers and healers stay strictly locked to their formation positions, never breaking ranks to chase.
+- **Melee Leashing & Arc Strikes:** Melee fighters watch a leash range around their formation slot. When enemies are detected, they step forward to strike targets within their forward attack range, returning to formation when targets die or the leader pulls away.
+- **Formation Anchors:** Pure ranged attackers and healers stay strictly locked to their formation positions, never breaking ranks to chase.
 - **Navmesh Steering:** Companions steer along navmesh paths around walls and obstacles, maintaining line of sight to targets.
 
 ### Hero Archetypes & Skills
@@ -46,57 +51,56 @@ The player guides the lead character as the focal point of the fellowship. Compa
 #### 1. Archer (Ranged Physical)
 - **Role:** Long-range single-target sniper.
 - **Abilities:**
-  - *Snipe Arrow:* Fires swift arrows at distant targets across long range on a moderate cooldown.
-  - *Impact Force:* Inflicts heavy knockback on hit to push advancing enemies away from the squad.
+  - *Snipe Arrow:* Fires swift arrows at distant targets across long range on a moderate cooldown, inflicting heavy knockback on hit to push advancing enemies away from the squad.
 - **Positioning:** Stays strictly anchored in formation; requires clear line of sight.
 
 #### 2. Armored Axeman (Melee Brawler)
 - **Role:** Frontline brawler and crowd disruptor.
 - **Abilities:**
   - *Axe Chop:* Rapid melee slashes on a short cooldown with moderate knockback.
-  - *Crushing Cleave (Heavy Strike):* Has a chance after successive swings to unleash a heavy chop on a long cooldown, delivering high burst damage and massive knockback.
+  - *Whirlwind Cleave (Heavy Strike):* Has a chance on attack to unleash a sweeping heavy chop on a longer cooldown, delivering high burst damage and heavy knockback.
 - **Positioning:** Steps out on a melee leash to intercept nearby threats.
 
 #### 3. Knight (Melee Vanguard)
 - **Role:** Frontline anchor and crowd control pin.
 - **Abilities:**
-  - *Sword Strike:* Fast melee slashes on a short cooldown with zero knockback, pinning enemies in place for squad focus fire.
-  - *Shield Slam (Heavy Strike):* Has a chance after successive swings to deliver a heavy blow on a long cooldown, dealing heavy damage and strong knockback.
+  - *Sword Strike:* Fast melee slashes on a short cooldown with no knockback, pinning enemies in place for squad focus fire.
+  - *Heavy Swing (Heavy Strike):* Has a chance on attack to deliver a heavy blow on a longer cooldown, dealing high burst damage and strong knockback.
 - **Positioning:** Steps out on a melee leash to lock down advancing targets.
 
 #### 4. Knight Templar (Melee Shock Infantry)
 - **Role:** Aggressive frontline defender with high-impact displacement.
 - **Abilities:**
-  - *Heavy Blade:* Powerful melee slashes on a short cooldown with elevated standard knockback, consistently shoving enemies away.
-  - *Smite (Heavy Strike):* Has a chance after successive swings to unleash an empowered strike on a long cooldown with massive knockback.
+  - *Pike Thrust:* Powerful melee thrusts on a short cooldown with strong standard knockback, consistently shoving enemies away.
+  - *Heavy Smite (Heavy Strike):* Has a chance on attack to unleash an empowered strike on a longer cooldown with heavy damage and knockback.
 - **Positioning:** Steps out on a melee leash to create space for backline allies.
 
-#### 5. Priest (Support Healer)
-- **Role:** Dedicated squad triage and sustain.
+#### 5. Priest (Support Healer & Crowd Control)
+- **Role:** Dedicated squad triage, sustain, and disruption.
 - **Abilities:**
-  - *Divine Heal:* Targets the most injured ally within long range and channels healing magic on a moderate cooldown, restoring substantial health.
-  - *Protective Focus:* Pure support hero; does not attack, dedicating full attention to sustaining the party.
+  - *Divine Heal:* Prioritizes critically injured allies during combat (and tops off injured allies out of combat), channeling healing magic at range on a moderate cooldown.
+  - *Holy Smite:* When no urgent triage healing is needed, calls down holy magic on an enemy at range to deal light damage and stun the target.
 - **Positioning:** Stays protected within the core of the formation.
 
 #### 6. Soldier (Hybrid Melee / Ranged)
 - **Role:** Adaptive combatant adjusting to target distance.
 - **Abilities:**
-  - *Ranged Salvo:* Fires arrows on a short cooldown while enemies remain at distance.
-  - *Melee Engagement:* Draws a blade and steps out on a melee leash when enemies get close, delivering fast slashes on a short cooldown and occasional heavy strikes on a long cooldown.
+  - *Arrow Shot:* Fires ranged arrows on a short cooldown while enemies remain at distance.
+  - *Sword Slash:* Draws a blade and steps out on a melee leash when enemies close in, delivering fast melee slashes with no knockback.
 - **Positioning:** Dynamically transitions between formation archery and leash-based melee combat.
 
 #### 7. Swordsman (Melee Skirmisher)
 - **Role:** Rapid-strike duelist specializing in multi-hit damage.
 - **Abilities:**
-  - *Quick Slash:* Fast sword slices on a short cooldown with zero knockback to maintain pressure.
-  - *Flurry Combo (Heavy Strike):* Has a chance after successive strikes to trigger a multi-hit flurry on a long cooldown, striking in rapid succession for heavy compound damage.
-- **Positioning:** Steps out on a melee leash to shred high-priority targets.
+  - *Quick Slash:* Fast sword slices on a short cooldown with no knockback to maintain pressure.
+  - *Blade Flurry (Heavy Strike):* Has a chance on attack to trigger a multi-hit flurry on a longer cooldown, striking multiple times in rapid succession for heavy compound damage without pushing the target away.
+- **Positioning:** Steps out on a melee leash to shred priority targets.
 
 #### 8. Wizard (Ranged Crowd Control)
-- **Role:** Area spellcaster and crowd decelerator.
+- **Role:** Spellcaster and crowd decelerator.
 - **Abilities:**
-  - *Ice Bolt:* Launches piercing ice missiles at long range on a moderate-to-long cooldown.
-  - *Chill Status Effect:* Afflicts struck targets with a chilling slow, heavily reducing their movement speed for a sustained duration.
+  - *Frost Bolt:* Launches ice missiles at long range on a moderate cooldown with light knockback, smartly prioritizing enemies that are not yet slowed.
+  - *Chill Status Effect:* Afflicts struck targets with a chilling slow, reducing their movement speed for a sustained duration.
 - **Positioning:** Stays strictly in formation slot.
 
 ---
@@ -105,32 +109,40 @@ The player guides the lead character as the focal point of the fellowship. Compa
 
 ### Enemies
 
-#### 1. Lava Slime (Implemented)
-- **Role:** Hybrid skirmisher mob.
-- **Behavior:** Patrols room bounds with idle pauses; hibernates off-screen; chases closest squad member upon gaining direct line of sight.
+#### 1. Lava Slime (Implemented — Hybrid Skirmisher)
+- **Role:** Slow, durable area denial skirmisher.
+- **Behavior:** Patrols room bounds with idle pauses; hibernates when distant; chases the closest squad member upon detection.
 - **Attacks:**
-  - *Slime Strike:* Close-range melee attack on a moderate cooldown.
-  - *Lava Spike:* Spits a lava projectile across long distances on a moderate cooldown when horizontally aligned with line of sight.
-- **Vulnerabilities:** Susceptible to knockback pushback and frost slow effects.
+  - *Slime Melee:* Close-range strike on a moderate cooldown.
+  - *Lava Spike:* Spits a ranged lava projectile on a moderate cooldown when horizontally aligned with a target in line of sight.
+- **Vulnerabilities:** Susceptible to knockback displacement, stun, and frost slow effects.
 
-#### 2. Melee Enemies (Planned)
-- **Role:** Close-combat rushers.
-- **Behavior:** Charge directly toward squad members to breach the fellowship's perimeter and force melee companions to engage.
-- **Threat:** Put pressure on frontline defenders and can slip past to reach fragile ranged allies if not blocked.
+#### 2. Skeleton (Implemented — Melee Rusher)
+- **Role:** Fast close-combat swarm unit and backline diver.
+- **Behavior:** Charges aggressively toward the fellowship, weighting its targeting toward healers and ranged backline heroes to exploit gaps in the formation. Can also be raised mid-battle by summoners.
+- **Attacks:**
+  - *Bone Slash:* Fast close-range melee strike.
+  - *Bone Cleave (Heavy Strike):* Occasional heavy melee swing dealing elevated burst damage.
 
-#### 3. Ranged Enemies (Planned)
-- **Role:** Distance artillery.
-- **Behavior:** Keep their distance and fire projectiles at squad members from afar.
-- **Threat:** Harass backline units and force the player to steer the squad forward into attack range.
+#### 3. Skeleton Archer (Implemented — Ranged Artillery)
+- **Role:** Mobile distance harasser.
+- **Behavior:** Maintains distance and kites backward away from advancing heroes between shots. Can also be raised mid-battle by summoners.
+- **Attacks:**
+  - *Bone Arrow:* Fires arrows across long range in any direction with clear line of sight.
 
-#### 4. Summoner Enemies (Planned)
-- **Role:** Priority spawner.
-- **Behavior:** Hangs back and continuously summons minion waves without stopping until destroyed.
-- **Threat:** Overwhelms the squad through sheer numbers if left alive, making them a high-priority target to rush down and eliminate.
+#### 4. Necromancer (Implemented — Summoner)
+- **Role:** High-priority backline spawner.
+- **Behavior:** Kites away from approaching heroes while periodically channeling dark magic to summon undead reinforcements around itself.
+- **Attacks:**
+  - *Raise Undead:* Places summoning circles nearby that raise `Skeleton` and `Skeleton Archer` minions directly into the room encounter until the summoner is eliminated.
+
+#### 5. Tier 2 Bruiser / Pack Threat (Planned)
+- **Role:** Heavy frontline disruptor or fast pack hunter.
+- **Behavior:** High-durability bruiser with knockback resistance or fast pack rusher that pressures outer melee rings.
 
 ### Environmental Hazards
 
-#### Localized Spike Trap Areas
+#### Localized Spike Trap Areas (Planned)
 - **Behavior:** Floor spike patches placed in select rooms and corridor sections.
 - **Threat:** Dealing damage to any party member walking over them.
 - **Gameplay Impact:** Demands cautious steering from the player, as trailing followers swinging around corners can drag across spikes if the leader turns too tightly.
@@ -138,15 +150,15 @@ The player guides the lead character as the focal point of the fellowship. Compa
 ---
 
 ## 6. Core Game Loop
-1. **Explore the Dungeon:** Guide the fellowship through corridors and open rooms using stick or directional keys.
-2. **Grow the Squad:** Locate stranded heroes in dungeon rooms and walk into contact to recruit them, adding new skills and firepower to your party.
-3. **Engage Diverse Foes:** Auto-battle melee rushers, return fire against ranged enemies, and focus down persistent summoners before they overwhelm the party.
+1. **Choose Leader & Explore:** Select a starting hero leader and guide the fellowship through procedurally generated corridors and themed rooms.
+2. **Draft & Upgrade the Squad:** Touch stranded mystery survivors to draft new heroes into your formation, and collect experience from fallen foes to level up your active hero classes.
+3. **Engage Diverse Foes:** Auto-battle fast melee rushers, close the gap on kiting archers, and push deep into crypts to eliminate summoners before their undead waves overwhelm the party.
 4. **Mind Hazard Zones:** Steer carefully around localized floor spike traps so trailing squad members stay out of harm's way.
 5. **Collect Color-Coded Keys:** Search rooms to locate keys (e.g. Red, Blue, Yellow) needed for locked doors.
-6. **Unlock Doors & Advance:** Bring the matching key to locked color-coded doors to open access to new dungeon sectors.
+6. **Unlock Doors & Advance:** Bring the matching key to locked color-coded doors to open access to deeper dungeon sectors.
 
 ---
 
 ## 7. Win & Lose Conditions
-- **Advancement Goal:** Locate color-coded keys, open matching doors, and clear dungeon sectors.
-- **Lose Condition:** The run ends immediately if the player's lead character loses all health. Fallen companions can be replaced by recruiting new heroes found in dungeon rooms.
+- **Advancement Goal:** Locate color-coded keys, open matching doors, clear deeper dungeon sectors, and defeat the final boss.
+- **Lose Condition:** The run ends immediately if the player's lead character loses all health. Fallen companions are permanently lost for the run, though new survivors can be recruited in unexplored rooms.

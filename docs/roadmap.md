@@ -1,56 +1,51 @@
 # ESCAPETEERS — DEVELOPMENT ROADMAP
 
-This roadmap sequences upcoming gameplay milestones to build on the core pillars in [gdd.md](gdd.md): **Stick-Only Spatial Control**, **The Fellowship Formation**, **Mindful Hazard Navigation**, and **Lock-and-Key Progression**.
+This roadmap sequences upcoming gameplay milestones to build on the core pillars in [gdd.md](gdd.md): **Stick-Only Spatial Control**, **The Fellowship Formation**, **Squad Drafting & Class Progression**, **Mindful Hazard Navigation**, and **Lock-and-Key Progression**.
 
 ---
 
-## Milestone 1: Enemy Roster & Room Composition
-**Goal:** Make the 8 hero archetypes (knockback, pinning, cleave, slow, heal) matter by introducing distinct enemy roles and mixed room spawns.
-**Estimated Effort:** ~6–8 hours total (~1.5–2 hours per enemy type + spawning rules)
+## Completed Foundation: Squad Progression, HUD & Core Enemy Roster
+- **[DONE] Hero Selection, Recruitment Drafting & Class Leveling:**
+  - Starting hero selection before entering the dungeon.
+  - Card-based recruitment drafting when rescuing mystery survivors, including early healer availability protection.
+  - Squad experience progression and class level-up choices that upgrade all active and future units of the chosen hero class.
+- **[DONE] Tactical HUD & Map Overlay:**
+  - Live squad health grid, per-class encounter DPS meter, XP progress bar, and toggleable dungeon map overlay showing explored vs. revealed frontier areas.
+- **[DONE] Core Enemy Archetypes:**
+  - **Lava Slime (Hybrid Skirmisher):** Close-range melee and horizontally aligned ranged lava projectiles.
+  - **Skeleton (Melee Rusher):** Fast close-combat swarm unit with light and heavy strikes that prioritizes healers and ranged backline heroes.
+  - **Skeleton Archer (Ranged Artillery):** Long-range archer that fires in any direction with line of sight and kites away when heroes close in.
+  - **Necromancer (Summoner):** Backline caster that kites away from threats and periodically places summoning circles to raise undead melee and archer minions.
+- **[DONE] Themed Room Archetypes & Encounter Spawning:**
+  - Rooms receive distinct encounter archetypes (`Slime Pit`, `Bone Swarm`, `Archer Garrison`, and deeper `Necromancer Crypt` chambers) with graph coloring so adjacent rooms vary their tactical identity.
 
-> **Already in Use:**
-> - **Heroes (8):** `Archer`, `Armored Axeman`, `Knight`, `Knight Templar`, `Priest`, `Soldier`, `Swordsman`, `Wizard`
-> - **Enemies (4):** `Lava Slime` (Hybrid Skirmisher), `Skeleton` (Fast Backline Rusher), `Skeleton Archer` (Ranged Artillery), `Necromancer` (Summoner)
+---
 
-1. **[DONE] First Enemy to Build — `Skeleton` (Melee Rusher):**
-   - Fast close-combat swarm unit (`80.0` speed, `95.0` HP) that persistently targets healers/ranged heroes and slips through formation gaps when moving.
-   - Includes `Attack01`, heavy `Attack02`, and `summon` animation ready for `Necromancer`.
-2. **[DONE] Second Enemy — `Skeleton Archer` (Ranged Artillery):**
-   - Fires `BoneArrow` projectiles across long range (`155.0` px) in any direction with line of sight, kiting backward between shots when heroes close within `65.0` px.
-   - Includes `summon` animation ready for `Necromancer`.
-3. **[DONE] Third Enemy — `Necromancer` (Summoner):**
-   - Pure summoner that hangs back (`95.0` px kite distance) and casts `Raise Undead` every `4.5s`, placing green `SummonPentagram` circles (Row 9) in a radius around itself to raise `Skeleton` and `Skeleton Archer` minions via their `summon` animations.
-4. **Fourth Enemy — `Armored Orc` or `Hellhound` (Tier 2 Threat):**
-   - `Hellhound` / `Werewolf` as a high-speed pack rusher, or `Armored Orc` as a high-HP frontline bruiser with knockback resistance.
-5. **[DONE] Themed Room Archetypes & Encounter Spawning:**
-   - Assign each room a distinct **Encounter Type** (`RoomArchetype`) in `WorldPlan` so rooms have recognizable identities when entered ("Oh no, a Necro room!", "A Trap room!", "An Archer Ambush!"):
-     - **Slime Pit:** `Lava Slime` swarm (slow, heavy projectile crossfire).
-     - **Bone Swarm:** Fast `Skeleton` rushers testing frontline protection of your `Priest`.
-     - **Archer Garrison:** `Skeleton Archer` firing line (`65%`) guarded by `Skeleton` blockers (`35%`).
-     - **Necromancer Crypt (Depth 2+):** `1–2 Necromancer` summoners guarded by Undead; once triggered, there is no safe retreat—if you do not push in and kill the `Necromancer` fast, he continuously summons an army.
-     - **Trap / Key / Boss Chambers (Milestones 2–4):** Spike gauntlets, key guardians, and boss arenas.
+## Milestone 1: Tier 2 Enemy Threat
+**Goal:** Complete the enemy roster with a durable frontline bruiser or fast pack hunter to test knockback and formation perimeter strength.
+
+1. **Tier 2 Threat — `Armored Orc` or `Hellhound`:**
+   - `Hellhound` / `Werewolf` as a high-speed pack rusher, or `Armored Orc` as a durable frontline bruiser with knockback resistance.
 
 ---
 
 ## Milestone 2: Localized Spike Traps
 **Goal:** Challenge squad steering in corridors and rooms, keeping navigation tense even when no enemies are present.
-**Estimated Effort:** ~2–3 hours
 
 1. **Spike Trap Hazard Scene & Tile Placement:**
    - Place localized floor spike patches in corridor chokepoints, room corners, and around key pedestals.
 2. **Trailing Squad Navigation Risk:**
-   - Deal damage to any hero or companion stepping on active spikes, rewarding wide turns so the trailing crescent formation does not drag fragile backline units (`Priest`, `Wizard`) across hazards.
+   - Deal damage to any hero or companion stepping on active spikes, rewarding wide turns so the trailing crescent formation does not drag fragile backline units across hazards.
 
 ---
 
 ## Milestone 3: Color-Coded Keys, Doors & Backtrack Ambushes
 **Goal:** Add macro-level exploration and route planning across east/west branches while keeping backtracking engaging.
-**Estimated Effort:** ~5–7 hours
 
-1. **Color Doors & Keys in `WorldPlan`:**
+1. **Color Doors & Keys:**
    - Generate locked color-coded doors (e.g., Yellow, Blue, Red) blocking northward progression or branch sectors, with matching keys placed in accessible lateral rooms.
 2. **HUD Key Tracker:**
-   - Display collected keys on the HUD and minimap overlay (`MapOverlay`).
+   - Display collected keys on the HUD and dungeon map overlay.
 3. **Key-Pickup Ambush Waves (Anti-Empty Backtrack):**
    - Picking up a key triggers a fresh ambush quota in selected cleared rooms along the return route, combining with spike traps so backtracking never feels empty.
 
@@ -58,25 +53,24 @@ This roadmap sequences upcoming gameplay milestones to build on the core pillars
 
 ## Milestone 4: Boss Encounters & Run Victory
 **Goal:** Provide climactic combat tests and a clear win condition to complete the core game loop.
-**Estimated Effort:** ~5–8 hours
 
-1. **Sector Mini-Boss — `Minotaur` or `Greatsword Skeleton` (1.5x Scale):**
-   - High-health key guardian with heavy cleave knockback that punishes stationary squads.
-2. **Final Boss — `Demon_A` or `Black Knight_A` (1.75x–2x Scale):**
-   - Placed in the pinnacle northern chamber (`max_depth` in `WorldPlan`).
+1. **Sector Mini-Boss — `Minotaur` or `Greatsword Skeleton`:**
+   - Enlarged, high-durability key guardian with heavy cleave knockback that punishes stationary squads.
+2. **Final Boss — `Demon` or `Black Knight`:**
+   - Placed in the pinnacle northern chamber of the dungeon.
    - Combines heavy area melee slams with periodic minion summon waves.
 3. **Victory Flow:**
-   - Trigger a Run Victory dialog/screen upon defeating the Final Boss (mirroring the `GameOverDialog` flow).
+   - Trigger a Run Victory dialog/screen upon defeating the Final Boss (mirroring the game-over flow).
 
 ---
 
 ## Milestone 5: Combat Readability & Scope Guardrails
-**Goal:** Keep large-scale 80-hero vs. 160-enemy battles readable and faithful to the core design.
-**Estimated Effort:** ~2–3 hours
+**Goal:** Keep large-scale horde battles readable and faithful to the core design.
 
 1. **Visual & Audio Telegraphs:**
    - Add brief cast/attack telegraphs and sound effects for ranged enemy volleys, summoner waves, and boss slams.
 2. **Skill Scope Guardrail (Deferred / Out of Scope):**
-   - Avoid passive DoT perks (burning, poison) that only add background numbers.
-   - Keep any future skill iterations strictly tied to **spatial control** (knockback, pull, slow, pinning, arc size, formation protection).
+   - Avoid passive damage-over-time perks (burning, poison) that only add background numbers.
+   - Keep any future skill iterations strictly tied to **spatial control** (knockback, pull, slow, stun, pinning, arc size, formation protection).
+
 
