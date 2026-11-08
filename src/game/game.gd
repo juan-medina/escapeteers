@@ -77,6 +77,7 @@ func _ready() -> void:
 	set_process(false)
 
 	_map.generation_progress_updated.connect(_on_map_generation_progress)
+	_map.secret_torches_completed.connect(_on_secret_torches_completed)
 	await _map.generate_map()
 
 	var starting_data: HeroData = HeroData.get_hero(Transition.starting_hero_id)
@@ -144,6 +145,10 @@ func _on_map_generation_progress(progress: float, stage_name: StringName) -> voi
 	Transition.set_loading_progress(progress, stage_name)
 
 
+func _on_secret_torches_completed() -> void:
+	_spawn_recruit_at(_map.get_hero_spawn_position(), &"torchero")
+
+
 func _process(delta: float) -> void:
 	if is_instance_valid(_character):
 		_camera.position = _character.position
@@ -209,8 +214,9 @@ func _draw_next_hero_scene() -> PackedScene:
 	return _hero_deck.pop_back()
 
 
-func _spawn_recruit_at(pos: Vector2) -> void:
+func _spawn_recruit_at(pos: Vector2, forced_hero_id: StringName = &"") -> void:
 	var ch: Unknown = UNKNOWN_SCENE.instantiate() as Unknown
+	ch.forced_hero_id = forced_hero_id
 	_characters.add_child(ch)
 	ch.position = pos
 	ch.y_sort_enabled = true
@@ -566,18 +572,19 @@ func _check_recruitment() -> void:
 			if candidate.is_touching(member):
 				_unrecruited_characters.remove_at(i)
 				var recruit_pos: Vector2 = candidate.position
+				var forced_id: StringName = (candidate as Unknown).forced_hero_id if candidate is Unknown else &""
 				candidate.queue_free()
-				_open_recruit_panel(recruit_pos)
+				_open_recruit_panel(recruit_pos, forced_id)
 				return
 
 		i -= 1
 
 
-func _open_recruit_panel(recruit_pos: Vector2) -> void:
+func _open_recruit_panel(recruit_pos: Vector2, forced_hero_id: StringName = &"") -> void:
 	get_tree().paused = true
 	_pending_recruit_pos = recruit_pos
 	_recruit_panel.visible = true
-	_recruit_panel.setup_choices(_class_levels, _get_squad_unit_counts())
+	_recruit_panel.setup_choices(_class_levels, _get_squad_unit_counts(), forced_hero_id)
 
 
 func _on_hero_recruited(hero_data: HeroData) -> void:

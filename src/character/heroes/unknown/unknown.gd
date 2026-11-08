@@ -4,6 +4,8 @@
 class_name Unknown
 extends Character
 
+var forced_hero_id: StringName = &""
+
 @onready var _ground_indicator: GroundIndicator = get_node_or_null(^"GroundIndicator") as GroundIndicator
 
 

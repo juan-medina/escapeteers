@@ -195,5 +195,26 @@
 				"knockback": { "base": 35.0, "growth": 0.05 }
 			}
 		]
+	},
+	"torchero": {
+		"id": "torchero",
+		"name": "Torchero",
+		"abbr": "TRCH",
+		"color": "#ff6b35",
+		"secret": true,
+		"scene_path": "res://character/heroes/torchero/torchero.tscn",
+		"health": { "base": 140.0, "growth": 0.20 },
+		"skills": [
+			{
+				"name": "Torch Strike",
+				"type": "melee",
+				"damage": { "base": 12.0, "growth": 0.20 },
+				"burn_damage": { "base": 6.0, "growth": 0.25 },
+				"burn_duration": 6.0,
+				"cooldown": { "base": 0.5, "growth": -0.03 },
+				"range": { "base": 20.0, "growth": 0.0 },
+				"knockback": { "base": 0.0, "growth": 0.0 }
+			}
+		]
 	}
 }

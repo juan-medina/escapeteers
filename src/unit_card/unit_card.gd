@@ -9,6 +9,7 @@ signal chosen(hero: HeroData)
 const COLOR_LABEL: Color = Color(0.65, 0.70, 0.78)
 const COLOR_HP: Color = Color(0.40, 0.95, 0.45)
 const COLOR_DMG: Color = Color(1.0, 0.50, 0.35)
+const COLOR_BURN: Color = Color(1.0, 0.65, 0.20)
 const COLOR_RNG: Color = Color(0.45, 0.80, 1.0)
 const COLOR_KB: Color = Color(0.90, 0.60, 1.0)
 const COLOR_CD: Color = Color(1.0, 0.90, 0.50)
@@ -190,6 +191,16 @@ func _render_skill_column(container: VBoxContainer, skill: Dictionary) -> void:
 				kb_str = "%d (+%d)" % [int(kb), d_kb]
 
 		_add_stat_pair(grid, "DMG", dmg_str, COLOR_DMG)
+		var burn_val: float = CharacterData.eval_stat(skill.get(&"burn_damage"), level, 0.0)
+		var burn_dur: float = CharacterData.eval_stat(skill.get(&"burn_duration"), level, 0.0)
+		if burn_val > 0.0 and burn_dur > 0.0:
+			var burn_str: String = "%d/s (%ds)" % [int(burn_val), int(burn_dur)]
+			if previous_level > 0:
+				var prev_burn: float = CharacterData.eval_stat(skill.get(&"burn_damage"), previous_level, 0.0)
+				var d_burn: int = int(burn_val) - int(prev_burn)
+				if d_burn > 0:
+					burn_str = "%d/s (+%d)" % [int(burn_val), d_burn]
+			_add_stat_pair(grid, "BURN", burn_str, COLOR_BURN)
 		_add_stat_pair(grid, "CD", cd_str, COLOR_CD)
 		_add_stat_pair(grid, "RNG", "%d" % int(rng), COLOR_RNG)
 		if kb > 0.0:

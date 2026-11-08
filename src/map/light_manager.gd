@@ -56,6 +56,40 @@ func has_light(cell_pos: Vector2i) -> bool:
 	return _cell_lights.has(cell_pos)
 
 
+func set_light_blinking(cell_pos: Vector2i, blinking: bool) -> void:
+	var torch: TorchLight = _cell_lights.get(cell_pos, null)
+	if torch != null and is_instance_valid(torch):
+		torch.is_blinking = blinking
+
+
+func remove_light_at(cell_pos: Vector2i) -> void:
+	var torch: TorchLight = _cell_lights.get(cell_pos, null)
+	if torch == null:
+		return
+	_cell_lights.erase(cell_pos)
+	var enabled_idx: int = _enabled_lights.find(torch)
+	if enabled_idx != -1:
+		_enabled_lights.remove_at(enabled_idx)
+	var all_idx: int = _all_lights.find(torch)
+	if all_idx != -1:
+		_all_lights.remove_at(all_idx)
+	for chunk_coord: Vector2i in _chunk_lights:
+		var chunk_arr: Array = _chunk_lights[chunk_coord]
+		var c_idx: int = chunk_arr.find(torch)
+		if c_idx != -1:
+			chunk_arr.remove_at(c_idx)
+	if is_instance_valid(torch):
+		torch.queue_free()
+
+
+func get_lights_in_rect(rect: Rect2i) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for cell_pos: Vector2i in _cell_lights:
+		if rect.has_point(cell_pos):
+			cells.append(cell_pos)
+	return cells
+
+
 func remove_chunk_lights(chunk_coord: Vector2i) -> void:
 	if not _chunk_lights.has(chunk_coord):
 		return
@@ -129,7 +163,7 @@ func _update_culling_and_flicker() -> void:
 		_next_enabled_lights.append(torch)
 		torch.enabled = true
 		var wave: float = sin(_time * FLICKER_SPEED + torch.phase_offset) * 0.04
-		torch.apply_flicker(wave, _jitter)
+		torch.apply_flicker(wave, _jitter, _time)
 
 	for old_torch: TorchLight in _enabled_lights:
 		if is_instance_valid(old_torch) and not _next_enabled_lights.has(old_torch):

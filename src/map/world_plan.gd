@@ -258,7 +258,6 @@ func _create_hero_room() -> void:
 	hero_room = Rect2i(top_left, HERO_ROOM_SIZE)
 	_room_depths[hero_room] = 0
 	_add_carve_rect(hero_room)
-	_plan_candle_posts_for_room(hero_room)
 
 
 func _create_initial_rooms() -> void:

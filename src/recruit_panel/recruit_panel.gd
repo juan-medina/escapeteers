@@ -47,20 +47,28 @@ func _ensure_focus() -> void:
 		_cards[0].grab_recruit_focus()
 
 
-func setup_choices(class_levels: Dictionary[StringName, int] = {}, unit_counts: Dictionary[StringName, int] = {}) -> void:
+func setup_choices(
+	class_levels: Dictionary[StringName, int] = {}, unit_counts: Dictionary[StringName, int] = {}, forced_hero_id: StringName = &""
+) -> void:
 	_ensure_cards()
-	_recruit_roll_count += 1
-	var choices: Array[HeroData] = HeroData.get_random_choices(3)
-	var priest_data: HeroData = HeroData.get_hero(&"priest")
+	var choices: Array[HeroData] = []
+	if forced_hero_id != &"":
+		var forced_data: HeroData = HeroData.get_hero(forced_hero_id)
+		if forced_data != null:
+			choices.append(forced_data)
+	else:
+		_recruit_roll_count += 1
+		choices = HeroData.get_random_choices(3)
+		var priest_data: HeroData = HeroData.get_hero(&"priest")
 
-	if priest_data != null:
-		if choices.has(priest_data):
-			_healer_offered_early = true
-		elif _recruit_roll_count <= 2 and not _healer_offered_early and unit_counts.get(&"priest", 0) == 0:
-			if _recruit_roll_count == 2 or randf() < 0.5:
-				var replace_idx: int = randi_range(0, choices.size() - 1)
-				choices[replace_idx] = priest_data
+		if priest_data != null:
+			if choices.has(priest_data):
 				_healer_offered_early = true
+			elif _recruit_roll_count <= 2 and not _healer_offered_early and unit_counts.get(&"priest", 0) == 0:
+				if _recruit_roll_count == 2 or randf() < 0.5:
+					var replace_idx: int = randi_range(0, choices.size() - 1)
+					choices[replace_idx] = priest_data
+					_healer_offered_early = true
 
 	var first_card: UnitCard = null
 

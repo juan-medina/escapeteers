@@ -25,6 +25,7 @@ var role: String = ""
 var role_color: Color = COLOR_ROLE_MELEE
 var abbr: String = ""
 var color: Color = Color.WHITE
+var is_secret: bool = false
 var _cached_sprite_frames: SpriteFrames = null
 
 
@@ -39,8 +40,9 @@ static func initialize() -> void:
 			var entry: Dictionary = entry_val
 			var hero_data: HeroData = HeroData._from_dict(entry)
 			_cached_heroes[hero_data.id] = hero_data
-			_cached_order.append(hero_data.id)
-			_cached_role_order.append(hero_data)
+			if not hero_data.is_secret:
+				_cached_order.append(hero_data.id)
+				_cached_role_order.append(hero_data)
 
 	_cached_role_order.sort_custom(HeroData._compare_role_order)
 
@@ -54,6 +56,7 @@ static func _from_dict(dict: Dictionary) -> HeroData:
 	h.role_color = get_role_color_for_name(h.role)
 	h.abbr = _str_val(dict, &"abbr")
 	h.color = Color.from_string(_str_val(dict, &"color"), Color.WHITE)
+	h.is_secret = dict.get(&"secret", false) == true
 	return h
 
 
@@ -153,6 +156,8 @@ func apply_to_hero(hero: Hero, level: int = 1) -> void:
 				hero.melee_range = rng
 				hero.melee1_knockback = kb
 				hero.melee1_stun_duration = eval_stat(skill.get(&"stun_duration"), level, 0.0)
+				hero.melee1_burn_dps = eval_stat(skill.get(&"burn_damage"), level, 0.0)
+				hero.melee1_burn_duration = eval_stat(skill.get(&"burn_duration"), level, 0.0)
 				if skill.has(&"leash"):
 					hero.melee_leash_distance = _float_val(skill, &"leash", 96.0)
 				melee_idx += 1

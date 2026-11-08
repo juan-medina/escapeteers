@@ -54,6 +54,8 @@ var melee2_damage: float = 25.0
 var melee1_knockback: float = 85.0
 var melee2_knockback: float = 260.0
 var melee1_stun_duration: float = 0.0
+var melee1_burn_dps: float = 0.0
+var melee1_burn_duration: float = 0.0
 var ranged_cooldown: float = 1.0
 var ranged_damage: float = 10.0
 var ranged_knockback: float = 0.0
@@ -168,6 +170,8 @@ func _setup_actions() -> void:
 		melee.damage = melee1_damage
 		melee.knockback = melee1_knockback
 		melee.stun_duration = melee1_stun_duration
+		melee.burn_dps = melee1_burn_dps
+		melee.burn_duration = melee1_burn_duration
 		melee.hit_effect_scene = melee_hit_effect_scene
 		melee.can_heavy = can_heavy_melee
 		melee.heavy_cooldown = melee2_cooldown

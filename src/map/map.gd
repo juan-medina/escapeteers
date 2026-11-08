@@ -5,6 +5,7 @@ class_name Map
 extends Node2D
 
 signal generation_progress_updated(progress: float, stage_name: StringName)
+signal secret_torches_completed
 
 const PROP_BARREL: Vector2i = Vector2i(4, 28)
 const PROP_BOX: Vector2i = Vector2i(4, 29)
@@ -12,6 +13,8 @@ const PROP_SKULLS_AND_BONES: Array[Vector2i] = [Vector2i(5, 29), Vector2i(6, 29)
 
 const ROOM_PADDING: int = 8
 const EXPAND_TRIGGER_DISTANCE_TILES: float = 75.0
+const SECRET_TORCH_COUNT: int = 4
+const SECRET_TORCH_TRIGGER_DIST_SQ: float = 28.0 * 28.0
 
 @export var debug_seed: int = 0
 
@@ -25,6 +28,8 @@ var light_manager: LightManager = LightManager.new()
 var _walkable_cells: Dictionary[Vector2i, bool] = {}
 var _expanded_rooms: Dictionary[Rect2i, bool] = {}
 var _decorated_rooms: Dictionary[Rect2i, bool] = {}
+var _secret_torch_cells: Array[Vector2i] = []
+var _secret_torch_index: int = 0
 
 @onready var _floor: TileMapLayer = $Floor
 @onready var _walls: TileMapLayer = $Walls
@@ -201,7 +206,8 @@ func generate_map() -> void:
 
 	var initial_rooms: Array[Rect2i] = [hero_room]
 	initial_rooms.append_array(companion_rooms)
-	decorate_rooms(initial_rooms)
+	_decorate_rooms(initial_rooms)
+	_setup_secret_torches()
 
 	generation_progress_updated.emit(0.90, &"Lighting dungeon torches...")
 	await get_tree().process_frame
@@ -210,6 +216,7 @@ func generate_map() -> void:
 func update_streaming(player_world_pos: Vector2, player_velocity: Vector2) -> void:
 	streamer.update(player_world_pos, player_velocity)
 	light_manager.set_focus(player_world_pos)
+	_check_secret_torch_proximity(player_world_pos)
 
 
 func is_room_materialized(room: Rect2i) -> bool:
@@ -251,15 +258,35 @@ func expand_frontier_near(player_world_pos: Vector2) -> Array[Rect2i]:
 		if not _decorated_rooms.has(r) and is_room_materialized(r):
 			ready_to_decorate.append(r)
 	if not ready_to_decorate.is_empty():
-		decorate_rooms(ready_to_decorate)
+		_decorate_rooms(ready_to_decorate)
 
 	return new_rooms
 
 
-func decorate_rooms(rooms: Array[Rect2i]) -> void:
+func _decorate_rooms(rooms: Array[Rect2i]) -> void:
 	_place_room_props_for_rooms(rooms)
 	for r: Rect2i in rooms:
 		_decorated_rooms[r] = true
+
+
+func _check_secret_torch_proximity(player_world_pos: Vector2) -> void:
+	if _secret_torch_index >= _secret_torch_cells.size():
+		return
+
+	var target_cell: Vector2i = _secret_torch_cells[_secret_torch_index]
+	var torch_world_pos: Vector2 = _decorations.map_to_local(target_cell)
+	if player_world_pos.distance_squared_to(torch_world_pos) > SECRET_TORCH_TRIGGER_DIST_SQ:
+		return
+
+	_decorations.erase_cell(target_cell)
+	light_manager.remove_light_at(target_cell)
+	_secret_torch_index += 1
+
+	if _secret_torch_index < _secret_torch_cells.size():
+		light_manager.set_light_blinking(_secret_torch_cells[_secret_torch_index], true)
+		return
+
+	secret_torches_completed.emit()
 
 
 func _find_closest_walkable_cell(target_cell: Vector2i) -> Vector2i:
@@ -285,6 +312,90 @@ func _pick_random_tile(tiles: Array[Vector2i]) -> Vector2i:
 func _clear_lights() -> void:
 	if light_manager != null:
 		light_manager.clear()
+
+
+func _setup_secret_torches() -> void:
+	_secret_torch_cells.clear()
+	_secret_torch_index = 0
+
+	var clear_rect: Rect2i = hero_room.grow(2)
+	var existing_lights: Array[Vector2i] = light_manager.get_lights_in_rect(clear_rect)
+	for cell_pos: Vector2i in existing_lights:
+		_decorations.erase_cell(cell_pos)
+		light_manager.remove_light_at(cell_pos)
+
+	var top_left: Array[Dictionary] = []
+	var top_right: Array[Dictionary] = []
+	var side_left: Array[Dictionary] = []
+	var side_right: Array[Dictionary] = []
+	var all_candidates: Array[Dictionary] = []
+	var center: Vector2i = hero_room.get_center()
+
+	for x: int in range(hero_room.position.x + 1, hero_room.end.x - 1):
+		var top_cell: Vector2i = Vector2i(x, hero_room.position.y)
+		if _walls.get_cell_atlas_coords(top_cell) in TileClassifier.WALL_TOP_VARIANTS:
+			var entry: Dictionary = {&"cell": top_cell, &"atlas": TileClassifier.TORCH_TOP, &"alt": 0}
+			all_candidates.append(entry)
+			if x < center.x:
+				top_left.append(entry)
+			else:
+				top_right.append(entry)
+
+	for y: int in range(hero_room.position.y + 2, hero_room.end.y - 1):
+		var left_wall: Vector2i = Vector2i(hero_room.position.x - 1, y)
+		var left_floor: Vector2i = Vector2i(hero_room.position.x, y)
+		if _walls.get_cell_atlas_coords(left_wall) in TileClassifier.WALL_LEFT_VARIANTS and _walls.get_cell_source_id(left_floor) == -1:
+			var entry_l: Dictionary = {&"cell": left_floor, &"atlas": TileClassifier.TORCH_SIDE, &"alt": 0}
+			all_candidates.append(entry_l)
+			if y >= center.y:
+				side_left.append(entry_l)
+
+		var right_wall: Vector2i = Vector2i(hero_room.end.x, y)
+		var right_floor: Vector2i = Vector2i(hero_room.end.x - 1, y)
+		if _walls.get_cell_atlas_coords(right_wall) in TileClassifier.WALL_RIGHT_VARIANTS and _walls.get_cell_source_id(right_floor) == -1:
+			var entry_r: Dictionary = {
+				&"cell": right_floor,
+				&"atlas": TileClassifier.TORCH_SIDE,
+				&"alt": TileClassifier.TORCH_RIGHT_ALT_ID,
+			}
+			all_candidates.append(entry_r)
+			if y >= center.y:
+				side_right.append(entry_r)
+
+	var chosen: Array[Dictionary] = []
+	var buckets: Array[Array] = [top_left, top_right, side_left, side_right]
+	for bucket: Array in buckets:
+		if not bucket.is_empty():
+			var pick: Dictionary = bucket[int(float(bucket.size()) * 0.5)]
+			chosen.append(pick)
+
+	all_candidates.shuffle()
+	for cand: Dictionary in all_candidates:
+		if chosen.size() >= SECRET_TORCH_COUNT:
+			break
+		var cand_cell: Vector2i = cand[&"cell"]
+		var too_close: bool = false
+		for existing: Dictionary in chosen:
+			var ex_cell: Vector2i = existing[&"cell"]
+			if cand_cell.distance_squared_to(ex_cell) < 16:
+				too_close = true
+				break
+		if not too_close:
+			chosen.append(cand)
+
+	for torch_info: Dictionary in chosen:
+		var cell: Vector2i = torch_info[&"cell"]
+		var atlas: Vector2i = torch_info[&"atlas"]
+		var alt: int = torch_info[&"alt"]
+		_decorations.set_cell(cell, TileClassifier.TILE_SET_SOURCE_ID, atlas, alt)
+		var chunk_coord: Vector2i = MapStreamer.cell_to_chunk(cell)
+		var world_pos: Vector2 = _decorations.map_to_local(cell)
+		light_manager.add_light(chunk_coord, cell, world_pos)
+		_secret_torch_cells.append(cell)
+
+	_secret_torch_cells.shuffle()
+	if not _secret_torch_cells.is_empty():
+		light_manager.set_light_blinking(_secret_torch_cells[0], true)
 
 
 func _is_corner_cell(cell: Vector2i) -> bool:

@@ -21,6 +21,8 @@ const PATROL_TIMEOUT: float = 10.0
 const KNOCKBACK_DECAY: float = 600.0
 const SLOW_MODULATE: Color = Color(0.45, 0.75, 1.35, 1.0)
 const STUN_MODULATE: Color = Color(1.4, 1.3, 0.5, 1.0)
+const BURN_MODULATE: Color = Color(1.5, 0.55, 0.2, 1.0)
+const BURN_TICK_INTERVAL: float = 0.5
 const ENEMY_HURTBOX_RADIUS: float = 10.0
 
 @export var level: int = 1
@@ -58,6 +60,10 @@ var _notifier: VisibleOnScreenNotifier2D = null
 var _slow_timer: float = 0.0
 var _slow_multiplier: float = 1.0
 var _stun_timer: float = 0.0
+var _burn_timer: float = 0.0
+var _burn_dps: float = 0.0
+var _burn_tick_timer: float = 0.0
+var _burn_source: Hero = null
 var _is_summoning_in: bool = false
 
 
@@ -95,7 +101,7 @@ func _ready() -> void:
 func sync_screen_state(camera_pos: Vector2) -> void:
 	var diff: Vector2 = (global_position - camera_pos).abs()
 	is_on_screen = diff.x <= 384.0 and diff.y <= 244.0
-	if not is_on_screen and current_state == State.PATROL:
+	if not is_on_screen and current_state == State.PATROL and not is_burning():
 		_set_sleeping(true)
 	else:
 		_set_sleeping(false)
@@ -148,6 +154,26 @@ func _physics_process(delta: float) -> void:
 			_slow_multiplier = 1.0
 			status_changed = true
 
+	if _burn_timer > 0.0:
+		_burn_timer -= delta
+		_burn_tick_timer -= delta
+		if _burn_tick_timer <= 0.0:
+			_burn_tick_timer += BURN_TICK_INTERVAL
+			var tick_dmg: float = _burn_dps * BURN_TICK_INTERVAL
+			if tick_dmg > 0.0 and not is_dead:
+				var src: Hero = _burn_source
+				take_damage(tick_dmg)
+				if src != null and is_instance_valid(src):
+					src.enemy_hit.emit(self, tick_dmg, false)
+				if is_dead:
+					return
+		if _burn_timer <= 0.0:
+			_burn_timer = 0.0
+			_burn_dps = 0.0
+			_burn_tick_timer = 0.0
+			_burn_source = null
+			status_changed = true
+
 	if status_changed:
 		_update_status_visuals()
 
@@ -173,7 +199,7 @@ func _on_screen_entered() -> void:
 
 func _on_screen_exited() -> void:
 	is_on_screen = false
-	if current_state == State.PATROL:
+	if current_state == State.PATROL and not is_burning():
 		_set_sleeping(true)
 
 
@@ -243,6 +269,23 @@ func apply_stun(duration: float) -> void:
 	_update_status_visuals()
 
 
+func apply_burn(dps: float, duration: float, source_hero: Hero = null) -> void:
+	if is_dead or not visible or duration <= 0.0 or dps <= 0.0:
+		return
+	_set_sleeping(false)
+	if _burn_timer <= 0.0:
+		_burn_tick_timer = BURN_TICK_INTERVAL
+	_burn_dps = maxf(_burn_dps, dps)
+	_burn_timer = maxf(_burn_timer, duration)
+	if source_hero != null:
+		_burn_source = source_hero
+	_update_status_visuals()
+
+
+func is_burning() -> bool:
+	return _burn_timer > 0.0
+
+
 func is_slowed() -> bool:
 	return _slow_timer > 0.0
 
@@ -255,6 +298,9 @@ func _update_status_visuals() -> void:
 	if is_stunned():
 		_base_modulate = STUN_MODULATE
 		_animated_sprite.modulate = STUN_MODULATE
+	elif is_burning():
+		_base_modulate = BURN_MODULATE
+		_animated_sprite.modulate = BURN_MODULATE
 	elif is_slowed():
 		_base_modulate = SLOW_MODULATE
 		_animated_sprite.modulate = SLOW_MODULATE
@@ -535,6 +581,10 @@ func reset_for_pool() -> void:
 	_stun_timer = 0.0
 	_slow_timer = 0.0
 	_slow_multiplier = 1.0
+	_burn_timer = 0.0
+	_burn_dps = 0.0
+	_burn_tick_timer = 0.0
+	_burn_source = null
 	_knockback_velocity = Vector2.ZERO
 	_navigator.reset()
 	_base_modulate = Color.WHITE
@@ -556,6 +606,10 @@ func _on_death() -> void:
 	_stun_timer = 0.0
 	_slow_timer = 0.0
 	_slow_multiplier = 1.0
+	_burn_timer = 0.0
+	_burn_dps = 0.0
+	_burn_tick_timer = 0.0
+	_burn_source = null
 	_base_modulate = Color.WHITE
 	_animated_sprite.modulate = Color.WHITE
 	super._on_death()
