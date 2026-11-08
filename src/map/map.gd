@@ -98,13 +98,6 @@ func get_companion_spawn_positions_for_room(room: Rect2i) -> Array[Vector2]:
 	return positions
 
 
-func get_companion_spawn_positions() -> Array[Vector2]:
-	var positions: Array[Vector2] = get_starter_companion_spawn_positions()
-	for room: Rect2i in companion_rooms:
-		positions.append_array(get_companion_spawn_positions_for_room(room))
-	return positions
-
-
 func get_room_enemy_quota(room: Rect2i) -> int:
 	return plan.get_room_enemy_quota(room)
 
@@ -217,6 +210,12 @@ func update_streaming(player_world_pos: Vector2, player_velocity: Vector2) -> vo
 	streamer.update(player_world_pos, player_velocity)
 	light_manager.set_focus(player_world_pos)
 	_check_secret_torch_proximity(player_world_pos)
+
+
+func cancel_secret_torches() -> void:
+	if _secret_torch_index < _secret_torch_cells.size():
+		light_manager.set_light_blinking(_secret_torch_cells[_secret_torch_index], false)
+		_secret_torch_index = _secret_torch_cells.size()
 
 
 func is_room_materialized(room: Rect2i) -> bool:

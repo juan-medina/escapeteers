@@ -44,6 +44,7 @@ const HERO_SPAWN_WEIGHTS: Dictionary[PackedScene, int] = {
 
 var _squad: Array[Hero] = []
 var _unrecruited_characters: Array[Character] = []
+var _starter_recruits: Array[Unknown] = []
 var _class_levels: Dictionary[StringName, int] = {}
 var _hud: Hud = null
 var _squad_level: int = 1
@@ -146,7 +147,12 @@ func _on_map_generation_progress(progress: float, stage_name: StringName) -> voi
 
 
 func _on_secret_torches_completed() -> void:
-	_spawn_recruit_at(_map.get_hero_spawn_position(), &"torchero")
+	for starter: Unknown in _starter_recruits:
+		if is_instance_valid(starter) and _unrecruited_characters.has(starter):
+			starter.forced_hero_id = &"torchero"
+			starter.ignite_secret_light()
+			break
+	_starter_recruits.clear()
 
 
 func _process(delta: float) -> void:
@@ -188,9 +194,10 @@ func _update_map_streaming() -> void:
 
 
 func _spawn_initial_characters() -> void:
+	_starter_recruits.clear()
 	var starter_positions: Array[Vector2] = _map.get_starter_companion_spawn_positions()
 	for pos: Vector2 in starter_positions:
-		_spawn_recruit_at(pos)
+		_starter_recruits.append(_spawn_recruit_at(pos))
 
 	for room: Rect2i in _map.companion_rooms:
 		_spawn_companions_for_room(room)
@@ -214,13 +221,14 @@ func _draw_next_hero_scene() -> PackedScene:
 	return _hero_deck.pop_back()
 
 
-func _spawn_recruit_at(pos: Vector2, forced_hero_id: StringName = &"") -> void:
+func _spawn_recruit_at(pos: Vector2, forced_hero_id: StringName = &"") -> Unknown:
 	var ch: Unknown = UNKNOWN_SCENE.instantiate() as Unknown
 	ch.forced_hero_id = forced_hero_id
 	_characters.add_child(ch)
 	ch.position = pos
 	ch.y_sort_enabled = true
 	_unrecruited_characters.append(ch)
+	return ch
 
 
 func _build_hero_deck() -> Array[PackedScene]:
@@ -572,7 +580,15 @@ func _check_recruitment() -> void:
 			if candidate.is_touching(member):
 				_unrecruited_characters.remove_at(i)
 				var recruit_pos: Vector2 = candidate.position
-				var forced_id: StringName = (candidate as Unknown).forced_hero_id if candidate is Unknown else &""
+				var forced_id: StringName = &""
+				if candidate is Unknown:
+					var unknown_char: Unknown = candidate as Unknown
+					forced_id = unknown_char.forced_hero_id
+					var starter_idx: int = _starter_recruits.find(unknown_char)
+					if starter_idx != -1:
+						_starter_recruits.remove_at(starter_idx)
+						if _starter_recruits.is_empty():
+							_map.cancel_secret_torches()
 				candidate.queue_free()
 				_open_recruit_panel(recruit_pos, forced_id)
 				return
