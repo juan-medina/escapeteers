@@ -1,0 +1,39 @@
+[center][color=#ffffff][b]Escapeteers — Changelog[/b][/color][/center]
+
+[color=#ffffff][b]v0.3.0 - In Development (WIP)[/b][/color]
+
+[color=#e0e0e0][b]Added[/b][/color]
+- [color=#ffffff][b]Starting Hero Selection:[/b][/color] Choose your starting squad leader before entering the dungeon.
+- [color=#ffffff][b]Expanded Enemy Roster:[/b][/color]
+  • [b]Skeleton Rusher:[/b] Fast swarming melee attackers that charge past tanks to pressure backline heroes.
+  • [b]Skeleton Archer:[/b] Long-range snipers that fire arrows and retreat when approached.
+  • [b]Necromancer:[/b] Dark spellcasters that summon continuous waves of undead minions.
+- [color=#ffffff][b]Themed Dungeon Rooms:[/b][/color] Distinct encounter chambers with varied enemy groupings, including Slime Pits, Bone Swarms, Archer Garrisons, and Necromancer Crypts.
+- [color=#ffffff][b]Secret Hero (Torchero):[/b][/color] A mysterious torch-bearing hero capable of braving deep dark passages.
+
+[color=#e0e0e0][b]Changed[/b][/color]
+- [color=#ffffff][b]Squad Grid & UI Polish:[/b][/color] Refined squad health status grid, streamlined damage meter readout, and updated retro typography.
+- [color=#ffffff][b]Frontline Encounter Balance:[/b][/color] Rebalanced squad survival scaling against enemy swarm pressure.
+
+[color=#ffffff][b]v0.2.0 - 2026-11-04[/b][/color]
+
+[color=#e0e0e0][b]Added[/b][/color]
+- [color=#ffffff][b]Original Soundtrack:[/b][/color] Added atmospheric background music across title screens, menus, and dungeon gameplay.
+
+[color=#e0e0e0][b]Changed[/b][/color]
+- [color=#ffffff][b]Unified Squad Movement:[/b][/color] Removed individual hero speed stats so companions march together cohesively at the party leader's pace.
+- [color=#ffffff][b]Combat Feel & Melee Rework:[/b][/color] Improved swing hit registration, attack reach, and recovery windows for all melee units.
+- [color=#ffffff][b]Priest Tuning:[/b][/color] Faster Holy Smite cooldown and longer Divine Heal intervals to encourage active combat participation.
+- [color=#ffffff][b]Tactical Map Overlay:[/b][/color] Smoother minimap scaling and improved visibility of explored vs. unexplored dungeon areas.
+- [color=#ffffff][b]Performance & Stability:[/b][/color] Monster spawning and entity pooling optimizations for smooth frame rates during large swarms.
+
+[color=#ffffff][b]v0.1.0 - 2026-11-04[/b][/color]
+
+[color=#e0e0e0][b]Added[/b][/color]
+- [color=#ffffff][b]Procedural Dungeon Exploration:[/b][/color] Randomly generated dungeon chambers and corridors with dynamic torchlight and destructible objects.
+- [color=#ffffff][b]Fellowship Formation Movement:[/b][/color] Single-stick control scheme where recruited companions automatically navigate behind the leader in formation.
+- [color=#ffffff][b]8 Playable Hero Classes:[/b][/color] Archer, Armored Axeman, Knight, Knight Templar, Priest, Soldier, Swordsman, and Wizard.
+- [color=#ffffff][b]Survivor Recruitment & Leveling:[/b][/color] Rescue trapped companions to draft new party members and select class upgrade traits on level up.
+- [color=#ffffff][b]Lava Slime Enemies:[/b][/color] Slime monsters featuring close-quarters attacks and ranged fire projectiles.
+- [color=#ffffff][b]Tactical HUD & Retro Visuals:[/b][/color] Live party status, encounter damage meter, gamepad and keyboard (WASD) support, and toggleable CRT monitor filter.
+

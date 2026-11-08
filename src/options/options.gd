@@ -10,12 +10,14 @@ const SECTION_DISPLAY: StringName = &"display"
 const CRT_SECTION: StringName = &"crt"
 const SECTION_AUDIO: StringName = &"audio"
 const SECTION_EULA: StringName = &"eula"
+const SECTION_CHANGELOG: StringName = &"changelog"
 
 const DEFAULT_FULLSCREEN: bool = true
 const DEFAULT_MASTER_VOLUME: float = 0.8
 const DEFAULT_MUSIC_VOLUME: float = 0.7
 const DEFAULT_SFX_VOLUME: float = 1.0
-const DEFAULT_EULA_VERSION: StringName = &""
+const DEFAULT_EULA_HASH: StringName = &""
+const DEFAULT_CHANGELOG_HASH: StringName = &""
 const DEFAULT_CRT_BORDER: bool = true
 const DEFAULT_SCANLINES: bool = false
 const DEFAULT_CURVATURE: bool = false
@@ -95,13 +97,22 @@ var sfx_volume: float = DEFAULT_SFX_VOLUME:
 		_apply_bus_volume(&"Sfx", sfx_volume)
 		_save_options()
 
-var eula_accepted_version: StringName = DEFAULT_EULA_VERSION:
+var eula_accepted_hash: StringName = DEFAULT_EULA_HASH:
 	get():
-		return eula_accepted_version
+		return eula_accepted_hash
 	set(value):
-		if eula_accepted_version == value:
+		if eula_accepted_hash == value:
 			return
-		eula_accepted_version = value
+		eula_accepted_hash = value
+		_save_options()
+
+var changelog_seen_hash: StringName = DEFAULT_CHANGELOG_HASH:
+	get():
+		return changelog_seen_hash
+	set(value):
+		if changelog_seen_hash == value:
+			return
+		changelog_seen_hash = value
 		_save_options()
 
 var _base_master_db: float = 0.0
@@ -166,7 +177,8 @@ func _load_options() -> void:
 		master_volume = config.get_value(SECTION_AUDIO, &"master_volume", DEFAULT_MASTER_VOLUME)
 		music_volume = config.get_value(SECTION_AUDIO, &"music_volume", DEFAULT_MUSIC_VOLUME)
 		sfx_volume = config.get_value(SECTION_AUDIO, &"sfx_volume", DEFAULT_SFX_VOLUME)
-		eula_accepted_version = config.get_value(SECTION_EULA, &"accepted_version", DEFAULT_EULA_VERSION)
+		eula_accepted_hash = config.get_value(SECTION_EULA, &"accepted_hash", DEFAULT_EULA_HASH)
+		changelog_seen_hash = config.get_value(SECTION_CHANGELOG, &"seen_hash", DEFAULT_CHANGELOG_HASH)
 		scanlines = config.get_value(CRT_SECTION, &"scanlines", DEFAULT_SCANLINES)
 		curvature = config.get_value(CRT_SECTION, &"curvature", DEFAULT_CURVATURE)
 		crt_border = config.get_value(CRT_SECTION, &"crt_border", DEFAULT_CRT_BORDER)
@@ -176,7 +188,8 @@ func _load_options() -> void:
 		master_volume = DEFAULT_MASTER_VOLUME
 		music_volume = DEFAULT_MUSIC_VOLUME
 		sfx_volume = DEFAULT_SFX_VOLUME
-		eula_accepted_version = DEFAULT_EULA_VERSION
+		eula_accepted_hash = DEFAULT_EULA_HASH
+		changelog_seen_hash = DEFAULT_CHANGELOG_HASH
 		scanlines = DEFAULT_SCANLINES
 		curvature = DEFAULT_CURVATURE
 		crt_border = DEFAULT_CRT_BORDER
@@ -190,7 +203,8 @@ func _save_options() -> void:
 	config.set_value(SECTION_AUDIO, &"master_volume", master_volume)
 	config.set_value(SECTION_AUDIO, &"music_volume", music_volume)
 	config.set_value(SECTION_AUDIO, &"sfx_volume", sfx_volume)
-	config.set_value(SECTION_EULA, &"accepted_version", eula_accepted_version)
+	config.set_value(SECTION_EULA, &"accepted_hash", eula_accepted_hash)
+	config.set_value(SECTION_CHANGELOG, &"seen_hash", changelog_seen_hash)
 	config.set_value(CRT_SECTION, &"scanlines", scanlines)
 	config.set_value(CRT_SECTION, &"curvature", curvature)
 	config.set_value(CRT_SECTION, &"crt_border", crt_border)
@@ -200,8 +214,12 @@ func _save_options() -> void:
 		printerr(&"Options: Failed to save config to %s. Error: %d !" % [CONFIG_PATH, err])
 
 
-func is_eula_accepted(minor_version: StringName) -> bool:
-	return eula_accepted_version == minor_version
+func is_eula_accepted(hash_value: StringName) -> bool:
+	return not hash_value.is_empty() and eula_accepted_hash == hash_value
+
+
+func is_changelog_seen(hash_value: StringName) -> bool:
+	return not hash_value.is_empty() and changelog_seen_hash == hash_value
 
 
 func _apply_all_settings() -> void:

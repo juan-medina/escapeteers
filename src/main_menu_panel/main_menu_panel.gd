@@ -7,6 +7,7 @@ extends MenuPanel
 signal play_requested
 signal settings_requested
 signal about_requested
+signal changelog_requested
 signal exit_requested
 
 @onready var _play_button: Button = $VBox/MenuBox/ButtonsVBox/Play
@@ -33,6 +34,10 @@ func _on_settings_pressed() -> void:
 
 func _on_about_pressed() -> void:
 	about_requested.emit()
+
+
+func _on_changelog_pressed() -> void:
+	changelog_requested.emit()
 
 
 func _on_exit_pressed() -> void:

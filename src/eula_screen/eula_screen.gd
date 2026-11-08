@@ -13,7 +13,8 @@ const NOTIFICATION_DELAY: float = 2.0
 
 func _ready() -> void:
 	Audio.connect_menu_sounds(self)
-	if Options.is_eula_accepted(_eula_version()):
+	var current_hash: StringName = _eula_hash()
+	if Options.is_eula_accepted(current_hash):
 		Transition.go_to_menu_instant()
 		return
 
@@ -22,17 +23,12 @@ func _ready() -> void:
 	Audio.grab_focus_silent(_accept_button)
 
 
-# Acceptance is keyed to the major.minor version so a patch release does not
-# force the player to agree again, but a minor bump (a changed EULA) does.
-func _eula_version() -> StringName:
-	var parts: PackedStringArray = BuildInfo.version.split(&".")
-	if parts.size() >= 2:
-		return StringName(&"%s.%s" % [parts[0], parts[1]])
-	return BuildInfo.version
+func _eula_hash() -> StringName:
+	return StringName(FileAccess.get_sha256(str(EULA_PATH)))
 
 
 func _on_accept_pressed() -> void:
-	Options.eula_accepted_version = _eula_version()
+	Options.eula_accepted_hash = _eula_hash()
 	await Transition.go_to_menu(Transition.MenuTarget.MAIN_MENU)
 
 

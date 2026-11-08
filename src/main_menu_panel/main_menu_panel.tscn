@@ -57,6 +57,12 @@ layout_mode = 2
 size_flags_horizontal = 4
 text = "About"
 
+[node name="Changelog" type="Button" parent="VBox/MenuBox/ButtonsVBox"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Changelog"
+
 [node name="HSeparator" type="HSeparator" parent="VBox/MenuBox/ButtonsVBox"]
 layout_mode = 2
 
@@ -70,4 +76,5 @@ text = "Exit"
 [connection signal="pressed" from="VBox/MenuBox/ButtonsVBox/Play" to="." method="_on_play_pressed"]
 [connection signal="pressed" from="VBox/MenuBox/ButtonsVBox/Settings" to="." method="_on_settings_pressed"]
 [connection signal="pressed" from="VBox/MenuBox/ButtonsVBox/About" to="." method="_on_about_pressed"]
+[connection signal="pressed" from="VBox/MenuBox/ButtonsVBox/Changelog" to="." method="_on_changelog_pressed"]
 [connection signal="pressed" from="VBox/MenuBox/ButtonsVBox/Exit" to="." method="_on_exit_pressed"]
