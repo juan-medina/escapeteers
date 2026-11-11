@@ -298,7 +298,7 @@ func _spawn_enemy_at(pos: Vector2, room: Rect2i, forced_scene: PackedScene = nul
 	enemy.position = pos
 	enemy.map = _map
 	enemy.y_sort_enabled = true
-	var enemy_level: int = forced_level if forced_level > 0 else clampi(depth, 1, 10)
+	var enemy_level: int = forced_level if forced_level > 0 else clampi(depth, 1, 12)
 	enemy.set_level(enemy_level)
 	if not enemy.projectile_spawn_requested.is_connected(_on_projectile_spawn_requested):
 		enemy.projectile_spawn_requested.connect(_on_projectile_spawn_requested)

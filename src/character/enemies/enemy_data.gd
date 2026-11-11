@@ -51,7 +51,9 @@ func get_detection_range(level: int = 1) -> float:
 
 
 func get_xp(level: int = 1) -> float:
-	return eval_stat(xp_stat, level, 10.0)
+	var base: float = _float_val(xp_stat, &"base", 10.0)
+	var growth: float = _float_val(xp_stat, &"growth", 0.0)
+	return base * (1.0 + float(maxi(1, level) - 1) * growth)
 
 
 func apply_to_enemy(enemy: Enemy, level: int = 1) -> void:

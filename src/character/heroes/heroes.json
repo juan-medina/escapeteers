@@ -5,15 +5,15 @@
 		"abbr": "ARCH",
 		"color": "#55a630",
 		"scene_path": "res://character/heroes/archer/archer.tscn",
-		"health": { "base": 80.0, "growth": 0.20 },
+		"health": { "base": 80.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Snipe Arrow",
 				"type": "ranged",
-				"damage": { "base": 15.0, "growth": 0.20 },
+				"damage": { "base": 15.0, "growth": 0.10 },
 				"cooldown": { "base": 1.4, "growth": -0.05 },
-				"range": { "base": 140.0, "growth": 0.10 },
-				"knockback": { "base": 260.0, "growth": 0.05 }
+				"range": { "base": 140.0, "growth": 0.0 },
+				"knockback": { "base": 260.0, "growth": 0.0 }
 			}
 		]
 	},
@@ -23,23 +23,23 @@
 		"abbr": "AXEM",
 		"color": "#e76f51",
 		"scene_path": "res://character/heroes/armored_axeman/armored_axeman.tscn",
-		"health": { "base": 120.0, "growth": 0.20 },
+		"health": { "base": 120.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Axe Chop",
 				"type": "melee",
-				"damage": { "base": 10.0, "growth": 0.20 },
+				"damage": { "base": 10.0, "growth": 0.10 },
 				"cooldown": { "base": 0.5, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 },
-				"knockback": { "base": 85.0, "growth": 0.05 }
+				"knockback": { "base": 85.0, "growth": 0.0 }
 			},
 			{
 				"name": "Whirlwind Cleave",
 				"type": "melee",
-				"damage": { "base": 25.0, "growth": 0.20 },
+				"damage": { "base": 25.0, "growth": 0.10 },
 				"cooldown": { "base": 3.5, "growth": -0.05 },
 				"range": { "base": 20.0, "growth": 0.0 },
-				"knockback": { "base": 260.0, "growth": 0.05 },
+				"knockback": { "base": 260.0, "growth": 0.0 },
 				"chance": 0.35
 			}
 		]
@@ -50,12 +50,12 @@
 		"abbr": "KNGH",
 		"color": "#3a86ff",
 		"scene_path": "res://character/heroes/knight/knight.tscn",
-		"health": { "base": 140.0, "growth": 0.20 },
+		"health": { "base": 140.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Sword Strike",
 				"type": "melee",
-				"damage": { "base": 10.0, "growth": 0.20 },
+				"damage": { "base": 10.0, "growth": 0.10 },
 				"cooldown": { "base": 0.5, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 },
 				"knockback": { "base": 0.0, "growth": 0.0 }
@@ -63,10 +63,10 @@
 			{
 				"name": "Heavy Swing",
 				"type": "melee",
-				"damage": { "base": 25.0, "growth": 0.20 },
+				"damage": { "base": 25.0, "growth": 0.10 },
 				"cooldown": { "base": 3.5, "growth": -0.05 },
 				"range": { "base": 20.0, "growth": 0.0 },
-				"knockback": { "base": 260.0, "growth": 0.05 },
+				"knockback": { "base": 260.0, "growth": 0.0 },
 				"chance": 0.35
 			}
 		]
@@ -77,23 +77,23 @@
 		"abbr": "TMPL",
 		"color": "#ffd166",
 		"scene_path": "res://character/heroes/knight_templar/knight_templar.tscn",
-		"health": { "base": 130.0, "growth": 0.20 },
+		"health": { "base": 130.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Pike Thrust",
 				"type": "melee",
-				"damage": { "base": 10.0, "growth": 0.20 },
+				"damage": { "base": 10.0, "growth": 0.10 },
 				"cooldown": { "base": 0.5, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 },
-				"knockback": { "base": 120.0, "growth": 0.05 }
+				"knockback": { "base": 120.0, "growth": 0.0 }
 			},
 			{
 				"name": "Heavy Smite",
 				"type": "melee",
-				"damage": { "base": 25.0, "growth": 0.20 },
+				"damage": { "base": 25.0, "growth": 0.10 },
 				"cooldown": { "base": 3.5, "growth": -0.05 },
 				"range": { "base": 20.0, "growth": 0.0 },
-				"knockback": { "base": 260.0, "growth": 0.05 },
+				"knockback": { "base": 260.0, "growth": 0.0 },
 				"chance": 0.35
 			}
 		]
@@ -104,21 +104,21 @@
 		"abbr": "PRST",
 		"color": "#e0fbfc",
 		"scene_path": "res://character/heroes/priest/priest.tscn",
-		"health": { "base": 80.0, "growth": 0.20 },
+		"health": { "base": 80.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Divine Heal",
 				"type": "heal",
-				"heal_amount": { "base": 20.0, "growth": 0.20 },
+				"heal_amount": { "base": 20.0, "growth": 0.10 },
 				"cooldown": { "base": 5.0, "growth": -0.05 },
-				"range": { "base": 140.0, "growth": 0.05 }
+				"range": { "base": 140.0, "growth": 0.0 }
 			},
 			{
 				"name": "Holy Smite",
 				"type": "ranged",
-				"damage": { "base": 5.0, "growth": 0.15 },
+				"damage": { "base": 5.0, "growth": 0.10 },
 				"cooldown": { "base": 2.5, "growth": -0.05 },
-				"range": { "base": 140.0, "growth": 0.05 },
+				"range": { "base": 140.0, "growth": 0.0 },
 				"knockback": { "base": 0.0, "growth": 0.0 },
 				"stun_duration": { "base": 2.0, "growth": 0.0 }
 			}
@@ -130,20 +130,20 @@
 		"abbr": "SOLD",
 		"color": "#c0392b",
 		"scene_path": "res://character/heroes/soldier/soldier.tscn",
-		"health": { "base": 100.0, "growth": 0.20 },
+		"health": { "base": 100.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Arrow Shot",
 				"type": "ranged",
-				"damage": { "base": 10.0, "growth": 0.15 },
+				"damage": { "base": 10.0, "growth": 0.10 },
 				"cooldown": { "base": 1.0, "growth": -0.03 },
-				"range": { "base": 140.0, "growth": 0.05 },
+				"range": { "base": 140.0, "growth": 0.0 },
 				"knockback": { "base": 0.0, "growth": 0.0 }
 			},
 			{
 				"name": "Sword Slash",
 				"type": "melee",
-				"damage": { "base": 10.0, "growth": 0.20 },
+				"damage": { "base": 10.0, "growth": 0.10 },
 				"cooldown": { "base": 0.5, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 },
 				"knockback": { "base": 0.0, "growth": 0.0 }
@@ -156,12 +156,12 @@
 		"abbr": "SWRD",
 		"color": "#2a9d8f",
 		"scene_path": "res://character/heroes/swordsman/swordsman.tscn",
-		"health": { "base": 100.0, "growth": 0.20 },
+		"health": { "base": 100.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Quick Slash",
 				"type": "melee",
-				"damage": { "base": 10.0, "growth": 0.20 },
+				"damage": { "base": 10.0, "growth": 0.10 },
 				"cooldown": { "base": 0.5, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 },
 				"knockback": { "base": 0.0, "growth": 0.0 }
@@ -169,7 +169,7 @@
 			{
 				"name": "Blade Flurry",
 				"type": "melee",
-				"damage": { "base": 8.0, "growth": 0.20 },
+				"damage": { "base": 8.0, "growth": 0.10 },
 				"hits": 3,
 				"cooldown": { "base": 3.5, "growth": -0.05 },
 				"range": { "base": 20.0, "growth": 0.0 },
@@ -184,15 +184,15 @@
 		"abbr": "WIZD",
 		"color": "#9b5de5",
 		"scene_path": "res://character/heroes/wizard/wizard.tscn",
-		"health": { "base": 70.0, "growth": 0.20 },
+		"health": { "base": 70.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Frost Bolt",
 				"type": "ranged",
-				"damage": { "base": 8.0, "growth": 0.20 },
+				"damage": { "base": 8.0, "growth": 0.10 },
 				"cooldown": { "base": 1.4, "growth": -0.05 },
-				"range": { "base": 140.0, "growth": 0.08 },
-				"knockback": { "base": 35.0, "growth": 0.05 }
+				"range": { "base": 140.0, "growth": 0.0 },
+				"knockback": { "base": 35.0, "growth": 0.0 }
 			}
 		]
 	},
@@ -203,13 +203,13 @@
 		"color": "#ff6b35",
 		"secret": true,
 		"scene_path": "res://character/heroes/torchero/torchero.tscn",
-		"health": { "base": 140.0, "growth": 0.20 },
+		"health": { "base": 140.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Torch Strike",
 				"type": "melee",
-				"damage": { "base": 12.0, "growth": 0.20 },
-				"burn_damage": { "base": 6.0, "growth": 0.25 },
+				"damage": { "base": 12.0, "growth": 0.10 },
+				"burn_damage": { "base": 6.0, "growth": 0.10 },
 				"burn_duration": 6.0,
 				"cooldown": { "base": 0.5, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 },

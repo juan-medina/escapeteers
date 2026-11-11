@@ -43,7 +43,12 @@ static func eval_stat(stat_val: Variant, level: int = 1, default_base: float = 0
 		var d: Dictionary = stat_val
 		var base: float = _float_val(d, &"base", default_base)
 		var growth: float = _float_val(d, &"growth", 0.0)
-		return base * (1.0 + float(maxi(1, level) - 1) * growth)
+		var steps: float = float(maxi(1, level) - 1)
+		if growth < 0.0:
+			return base / (1.0 + steps * absf(growth))
+		if growth > 0.0:
+			return base * pow(1.0 + growth, steps)
+		return base
 	if stat_val is float:
 		return stat_val
 	if stat_val is int:

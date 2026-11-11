@@ -1,5 +1,11 @@
 [center][color=#ffffff][b]Escapeteers — Changelog[/b][/color][/center]
 
+[color=#ffffff][b]v0.4.0 - WIP[/b][/color]
+
+[color=#e0e0e0][b]Changed[/b][/color]
+- [color=#ffffff][b]Stat & Cooldown Scaling Curve:[/b][/color] Reworked hero and enemy stat scaling using compound growth for health and damage, and attack-speed divisor scaling for cooldown reduction.
+- [color=#ffffff][b]Dungeon Difficulty & Quotas:[/b][/color] Rebalanced room enemy quotas and level scaling so encounter pressure builds progressively through deeper sectors.
+
 [color=#ffffff][b]v0.3.0 - 2026-11-11[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]

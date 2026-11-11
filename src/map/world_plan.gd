@@ -217,11 +217,12 @@ func get_room_enemy_quota(room: Rect2i) -> int:
 		return _room_enemy_quotas[room]
 	var depth: int = get_room_depth(room)
 	var area_factor: float = float(room.size.x * room.size.y) / (28.0 * 28.0)
-	var base_min: int = 5 + (depth - 1) * 6
-	var base_max: int = 8 + (depth - 1) * 9
-	var scaled_min: int = int(roundf(float(base_min) * clampf(area_factor * 0.65, 0.8, 2.6)))
-	var scaled_max: int = int(roundf(float(base_max) * clampf(area_factor * 0.65, 0.8, 2.6)))
-	var quota: int = clampi(_rng.randi_range(scaled_min, maxi(scaled_min, scaled_max)), 5, 65)
+	var steps: int = depth - 1
+	var base_min: int = 4 + steps * 4 + steps * steps
+	var base_max: int = 6 + steps * 6 + steps * steps
+	var scaled_min: int = int(roundf(float(base_min) * clampf(area_factor * 0.65, 0.8, 2.2)))
+	var scaled_max: int = int(roundf(float(base_max) * clampf(area_factor * 0.65, 0.8, 2.2)))
+	var quota: int = clampi(_rng.randi_range(scaled_min, maxi(scaled_min, scaled_max)), 4, 140)
 	_room_enemy_quotas[room] = quota
 	return quota
 
