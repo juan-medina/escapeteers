@@ -1,6 +1,6 @@
 [center][color=#ffffff][b]Escapeteers — Changelog[/b][/color][/center]
 
-[color=#ffffff][b]v0.3.0 - In Development (WIP)[/b][/color]
+[color=#ffffff][b]v0.3.0 - 2026-11-11[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
 - [color=#ffffff][b]Starting Hero Selection:[/b][/color] Choose your starting squad leader before entering the dungeon.
