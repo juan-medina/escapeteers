@@ -16,6 +16,8 @@ var _decorations: TileMapLayer = null
 var _light_manager: LightManager = null
 var _nav_window: NavWindow = null
 var _walkable_cells: Dictionary[Vector2i, bool] = {}
+var _loaded_spikes: Dictionary[Vector2i, int] = {}
+var _group_frames: Array[int] = []
 var _run_seed: int = 0
 
 var _loaded_chunks: Dictionary[Vector2i, Dictionary] = {}
@@ -36,6 +38,8 @@ func setup(
 	light_manager: LightManager,
 	nav_window: NavWindow,
 	walkable_cells: Dictionary[Vector2i, bool],
+	loaded_spikes: Dictionary[Vector2i, int],
+	group_frames: Array[int],
 	run_seed: int
 ) -> void:
 	_plan = plan
@@ -45,6 +49,8 @@ func setup(
 	_light_manager = light_manager
 	_nav_window = nav_window
 	_walkable_cells = walkable_cells
+	_loaded_spikes = loaded_spikes
+	_group_frames = group_frames
 	_run_seed = run_seed
 
 	_loaded_chunks.clear()
@@ -157,6 +163,7 @@ func _materialize_chunk(coord: Vector2i) -> void:
 	if not _raster.has_any_content():
 		_loaded_chunks[coord] = {
 			&"floors": [] as Array[Vector2i],
+			&"spikes": [] as Array[Vector2i],
 			&"walls": [] as Array[Vector2i],
 			&"torches": [] as Array[Vector2i],
 			&"lights": [] as Array[Vector2i],
@@ -166,6 +173,7 @@ func _materialize_chunk(coord: Vector2i) -> void:
 	var data: Dictionary = TileClassifier.classify_chunk(_raster, _run_seed, _plan)
 	var floors: Array[Vector2i] = data[&"floors"]
 	var floor_atlas: Array[Vector2i] = data[&"floor_atlas"]
+	var spikes: Array[Vector2i] = data[&"spikes"]
 	var walls: Array[Vector2i] = data[&"walls"]
 	var wall_atlas: Array[Vector2i] = data[&"wall_atlas"]
 	var wall_alt_ids: Array[int] = data[&"wall_alt_ids"]
@@ -176,6 +184,13 @@ func _materialize_chunk(coord: Vector2i) -> void:
 
 	for i: int in range(floors.size()):
 		_floor.set_cell(floors[i], TileClassifier.TILE_SET_SOURCE_ID, floor_atlas[i])
+
+	for spos: Vector2i in spikes:
+		var group_id: int = _plan.get_spike_group(spos)
+		_loaded_spikes[spos] = group_id
+		if group_id >= 0 and group_id < _group_frames.size():
+			var frame_idx: int = _group_frames[group_id]
+			_floor.set_cell(spos, TileClassifier.TILE_SET_SOURCE_ID, TileClassifier.SPIKE_FRAMES[frame_idx])
 
 	var wall_set: Dictionary[Vector2i, bool] = {}
 	for i: int in range(walls.size()):
@@ -201,6 +216,7 @@ func _materialize_chunk(coord: Vector2i) -> void:
 
 	_loaded_chunks[coord] = {
 		&"floors": floors,
+		&"spikes": spikes,
 		&"walls": walls,
 		&"torches": torches,
 		&"lights": spawned_lights,
@@ -220,8 +236,12 @@ func _evict_distant_chunks(center_chunk: Vector2i) -> void:
 func _evict_chunk(coord: Vector2i) -> void:
 	var chunk_data: Dictionary = _loaded_chunks[coord]
 	var floors: Array[Vector2i] = chunk_data[&"floors"]
+	var spikes: Array[Vector2i] = chunk_data[&"spikes"]
 	var walls: Array[Vector2i] = chunk_data[&"walls"]
 	var torches: Array[Vector2i] = chunk_data[&"torches"]
+
+	for spos: Vector2i in spikes:
+		_loaded_spikes.erase(spos)
 
 	for fpos: Vector2i in floors:
 		_floor.erase_cell(fpos)

@@ -31,6 +31,12 @@ const TORCH_BLOCK_MARGIN: int = 2
 const MIN_TORCH_DIST_SQ: int = 49
 const CANDLE_POST_TOP: Vector2i = Vector2i(10, 30)
 const CANDLE_POST_BOTTOM: Vector2i = Vector2i(10, 31)
+const SPIKE_FRAMES: Array[Vector2i] = [
+	Vector2i(0, 19),
+	Vector2i(1, 19),
+	Vector2i(2, 19),
+	Vector2i(3, 19),
+]
 
 
 static func cell_hash(run_seed: int, gx: int, gy: int) -> int:
@@ -53,6 +59,7 @@ static func get_floor_atlas(run_seed: int, gx: int, gy: int) -> Vector2i:
 static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan = null) -> Dictionary:
 	var out_floors: Array[Vector2i] = []
 	var out_floor_atlas: Array[Vector2i] = []
+	var out_spikes: Array[Vector2i] = []
 	var out_walls: Array[Vector2i] = []
 	var out_wall_atlas: Array[Vector2i] = []
 	var out_wall_alt_ids: Array[int] = []
@@ -81,10 +88,6 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan =
 
 			var gx: int = raster.origin.x + lx
 			var gpos: Vector2i = Vector2i(gx, gy)
-
-			if is_f:
-				out_floors.append(gpos)
-				out_floor_atlas.append(get_floor_atlas(run_seed, gx, gy))
 
 			var wall_coords: Vector2i = Vector2i(-1, -1)
 			if is_f:
@@ -119,6 +122,14 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan =
 				elif w:
 					var h: int = cell_hash(run_seed, gx, gy)
 					wall_coords = WALL_RIGHT_VARIANTS[h % WALL_RIGHT_VARIANTS.size()]
+
+			if is_f:
+				out_floors.append(gpos)
+				if wall_coords.x == -1 and plan != null and plan.is_spike_cell(gpos):
+					out_floor_atlas.append(SPIKE_FRAMES[0])
+					out_spikes.append(gpos)
+				else:
+					out_floor_atlas.append(get_floor_atlas(run_seed, gx, gy))
 
 			if wall_coords.x != -1:
 				out_walls.append(gpos)
@@ -169,7 +180,7 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan =
 							if adj_lx < ChunkRaster.CHUNK_SIZE and not wall_grid.has(Vector2i(adj_lx, ly)) and raster.is_floor_local(adj_lx, ly):
 								var cand_left: Vector2i = Vector2i(target_gx + 1, target_gy)
 								if (
-									(plan == null or not plan.has_candle_post_near(cand_left, 64))
+									(plan == null or (not plan.has_candle_post_near(cand_left, 64) and not plan.is_spike_cell(cand_left)))
 									and not _is_near_any(cand_left, out_lights, MIN_TORCH_DIST_SQ)
 								):
 									left_candidates.append(cand_left)
@@ -178,7 +189,7 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan =
 							if adj_lx >= 0 and not wall_grid.has(Vector2i(adj_lx, ly)) and raster.is_floor_local(adj_lx, ly):
 								var cand_right: Vector2i = Vector2i(target_gx - 1, target_gy)
 								if (
-									(plan == null or not plan.has_candle_post_near(cand_right, 64))
+									(plan == null or (not plan.has_candle_post_near(cand_right, 64) and not plan.is_spike_cell(cand_right)))
 									and not _is_near_any(cand_right, out_lights, MIN_TORCH_DIST_SQ)
 								):
 									right_candidates.append(cand_right)
@@ -227,6 +238,7 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan =
 	return {
 		&"floors": out_floors,
 		&"floor_atlas": out_floor_atlas,
+		&"spikes": out_spikes,
 		&"walls": out_walls,
 		&"wall_atlas": out_wall_atlas,
 		&"wall_alt_ids": out_wall_alt_ids,

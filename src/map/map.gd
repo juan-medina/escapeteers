@@ -15,6 +15,13 @@ const ROOM_PADDING: int = 8
 const EXPAND_TRIGGER_DISTANCE_TILES: float = 75.0
 const SECRET_TORCH_COUNT: int = 4
 const SECRET_TORCH_TRIGGER_DIST_SQ: float = 28.0 * 28.0
+const SPIKE_STAY_DOWN_TIME: float = 2.00
+const SPIKE_UP_1_TIME: float = 0.40
+const SPIKE_UP_2_TIME: float = 0.10
+const SPIKE_STAY_UP_TIME: float = 1.10
+const SPIKE_DOWN_2_TIME: float = 0.10
+const SPIKE_DOWN_1_TIME: float = 0.10
+const SPIKE_CYCLE_DURATION: float = 3.80
 
 @export var debug_seed: int = 0
 
@@ -26,6 +33,9 @@ var companion_rooms: Array[Rect2i] = []
 var nav_window: NavWindow = NavWindow.new()
 var light_manager: LightManager = LightManager.new()
 var _walkable_cells: Dictionary[Vector2i, bool] = {}
+var _loaded_spikes: Dictionary[Vector2i, int] = {}
+var _group_frames: Array[int] = [0, 0, 0, 0]
+var _spike_elapsed: float = 0.0
 var _expanded_rooms: Dictionary[Rect2i, bool] = {}
 var _decorated_rooms: Dictionary[Rect2i, bool] = {}
 var _secret_torch_cells: Array[Vector2i] = []
@@ -53,10 +63,6 @@ func _ready() -> void:
 		_lights.add_child(light_manager)
 
 
-func get_active_light_count() -> int:
-	return light_manager.get_active_light_count()
-
-
 func get_hero_spawn_position() -> Vector2:
 	return _floor.map_to_local(hero_room.get_center() + Vector2i(0, 1))
 
@@ -71,10 +77,6 @@ func local_to_map(world_pos: Vector2) -> Vector2i:
 
 func get_room_depth(room: Rect2i) -> int:
 	return plan.get_room_depth(room)
-
-
-func get_room_tier(room: Rect2i) -> int:
-	return plan.get_room_tier(room)
 
 
 func get_starter_companion_spawn_positions() -> Array[Vector2]:
@@ -170,6 +172,9 @@ func generate_map() -> void:
 	_clear_lights()
 	companion_rooms.clear()
 	_walkable_cells.clear()
+	_loaded_spikes.clear()
+	_group_frames = [0, 0, 0, 0]
+	_spike_elapsed = 0.0
 	_expanded_rooms.clear()
 	_decorated_rooms.clear()
 
@@ -187,7 +192,7 @@ func generate_map() -> void:
 	nav_window.update_center(hero_room.get_center())
 	light_manager.setup(debug_seed)
 	light_manager.set_focus(get_hero_spawn_position())
-	streamer.setup(plan, _floor, _walls, _decorations, light_manager, nav_window, _walkable_cells, debug_seed)
+	streamer.setup(plan, _floor, _walls, _decorations, light_manager, nav_window, _walkable_cells, _loaded_spikes, _group_frames, debug_seed)
 
 	generation_progress_updated.emit(0.70, &"Materializing starting chambers...")
 	await get_tree().process_frame
@@ -210,6 +215,53 @@ func update_streaming(player_world_pos: Vector2, player_velocity: Vector2) -> vo
 	streamer.update(player_world_pos, player_velocity)
 	light_manager.set_focus(player_world_pos)
 	_check_secret_torch_proximity(player_world_pos)
+
+
+func update_spikes(delta: float) -> void:
+	_spike_elapsed += delta
+	var changed_groups: Dictionary[int, int] = {}
+	var step_offset: float = SPIKE_CYCLE_DURATION / float(WorldPlan.SPIKE_PHASE_GROUPS)
+
+	for g: int in range(WorldPlan.SPIKE_PHASE_GROUPS):
+		var group_time: float = fmod(_spike_elapsed + float(g) * step_offset, SPIKE_CYCLE_DURATION)
+		var new_frame: int = _get_spike_frame_for_time(group_time)
+		if new_frame != _group_frames[g]:
+			_group_frames[g] = new_frame
+			changed_groups[g] = new_frame
+
+	if changed_groups.is_empty() or _loaded_spikes.is_empty():
+		return
+
+	for cell: Vector2i in _loaded_spikes:
+		var group_id: int = _loaded_spikes[cell]
+		if changed_groups.has(group_id):
+			var frame_idx: int = changed_groups[group_id]
+			_floor.set_cell(cell, TileClassifier.TILE_SET_SOURCE_ID, TileClassifier.SPIKE_FRAMES[frame_idx])
+
+
+func is_spike_active_at(cell: Vector2i) -> bool:
+	if not _loaded_spikes.has(cell):
+		return false
+	var group_id: int = _loaded_spikes[cell]
+	return group_id >= 0 and group_id < _group_frames.size() and _group_frames[group_id] == 3
+
+
+static func _get_spike_frame_for_time(t: float) -> int:
+	if t < SPIKE_STAY_DOWN_TIME:
+		return 0
+	var rem: float = t - SPIKE_STAY_DOWN_TIME
+	if rem < SPIKE_UP_1_TIME:
+		return 1
+	rem -= SPIKE_UP_1_TIME
+	if rem < SPIKE_UP_2_TIME:
+		return 2
+	rem -= SPIKE_UP_2_TIME
+	if rem < SPIKE_STAY_UP_TIME:
+		return 3
+	rem -= SPIKE_STAY_UP_TIME
+	if rem < SPIKE_DOWN_2_TIME:
+		return 2
+	return 1
 
 
 func cancel_secret_torches() -> void:
@@ -419,6 +471,8 @@ func _place_room_props_for_rooms(rooms: Array[Rect2i]) -> void:
 			for y: int in range(room.position.y, room.position.y + room.size.y):
 				var cell: Vector2i = Vector2i(x, y)
 				if _floor.get_cell_source_id(cell) == -1 or _walls.get_cell_source_id(cell) != -1:
+					continue
+				if plan.is_spike_cell(cell):
 					continue
 				if cell.distance_squared_to(center) <= 4:
 					continue

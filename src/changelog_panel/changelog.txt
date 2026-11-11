@@ -3,46 +3,47 @@
 [color=#ffffff][b]v0.4.0 - WIP[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
-- [color=#ffffff][b]Out-of-Combat Auto-Sprint:[/b][/color] The squad gradually builds up sprint speed while exploring cleared areas.
+- [color=#ffffff][b]Auto-Sprint:[/b][/color] The squad picks up the pace automatically when no monsters are around.
+- [color=#ffffff][b]Spike Traps:[/b][/color] Watch your step! Deadly floor spikes now pop up in rooms and hallways—take wide turns or your trailing buddies will pay the price.
 
 [color=#e0e0e0][b]Changed[/b][/color]
-- [color=#ffffff][b]Stat & Cooldown Scaling Curve:[/b][/color] Reworked hero and enemy stat scaling using compound growth for health and damage, and attack-speed divisor scaling for cooldown reduction.
-- [color=#ffffff][b]Dungeon Difficulty & Quotas:[/b][/color] Rebalanced room enemy quotas and level scaling so encounter pressure builds progressively through deeper sectors.
+- [color=#ffffff][b]Better Level-Up Scaling:[/b][/color] Heroes hit harder, survive longer, and attack faster as they level up.
+- [color=#ffffff][b]Deeper Dungeon Pacing:[/b][/color] Early rooms warm you up gently before the deeper floors throw giant hordes at you.
 
 [color=#ffffff][b]v0.3.0 - 2026-11-11[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
-- [color=#ffffff][b]Starting Hero Selection:[/b][/color] Choose your starting squad leader before entering the dungeon.
-- [color=#ffffff][b]Expanded Enemy Roster:[/b][/color]
-  • [b]Skeleton Rusher:[/b] Fast swarming melee attackers that charge past tanks to pressure backline heroes.
-  • [b]Skeleton Archer:[/b] Long-range snipers that fire arrows and retreat when approached.
-  • [b]Necromancer:[/b] Dark spellcasters that summon continuous waves of undead minions.
-- [color=#ffffff][b]Themed Dungeon Rooms:[/b][/color] Distinct encounter chambers with varied enemy groupings, including Slime Pits, Bone Swarms, Archer Garrisons, and Necromancer Crypts.
-- [color=#ffffff][b]Secret Hero (Torchero):[/b][/color] A mysterious torch-bearing hero capable of braving deep dark passages.
+- [color=#ffffff][b]Pick Your Leader:[/b][/color] Choose which hero leads the charge before entering the dungeon.
+- [color=#ffffff][b]New Undead Threats:[/b][/color]
+  • [b]Skeleton Rusher:[/b] Fast boneheads that sprint past your tanks to harass the backline.
+  • [b]Skeleton Archer:[/b] Pesky snipers that shoot and run away when you get close.
+  • [b]Necromancer:[/b] Creepy summoners that keep raising more skeletons until you take them down.
+- [color=#ffffff][b]Themed Dungeon Rooms:[/b][/color] Rooms now have their own flavor—Slime Pits, Bone Swarms, Archer Garrisons, and Necromancer Crypts.
+- [color=#ffffff][b]Secret Hero (Torchero):[/b][/color] A mysterious torch-bearing survivor hiding in the dark for clever explorers to find.
 
 [color=#e0e0e0][b]Changed[/b][/color]
-- [color=#ffffff][b]Squad Grid & UI Polish:[/b][/color] Refined squad health status grid, streamlined damage meter readout, and updated retro typography.
-- [color=#ffffff][b]Frontline Encounter Balance:[/b][/color] Rebalanced squad survival scaling against enemy swarm pressure.
+- [color=#ffffff][b]Cleaner HUD:[/b][/color] Tidied up the squad health grid, damage meter, and pixel fonts.
+- [color=#ffffff][b]Tougher Frontlines:[/b][/color] Tuned hero health and damage so your melee wall doesn't melt instantly.
 
 [color=#ffffff][b]v0.2.0 - 2026-11-04[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
-- [color=#ffffff][b]Original Soundtrack:[/b][/color] Added atmospheric background music across title screens, menus, and dungeon gameplay.
+- [color=#ffffff][b]Original Soundtrack:[/b][/color] Retro dungeon tunes for the menus and battles.
 
 [color=#e0e0e0][b]Changed[/b][/color]
-- [color=#ffffff][b]Unified Squad Movement:[/b][/color] Removed individual hero speed stats so companions march together cohesively at the party leader's pace.
-- [color=#ffffff][b]Combat Feel & Melee Rework:[/b][/color] Improved swing hit registration, attack reach, and recovery windows for all melee units.
-- [color=#ffffff][b]Priest Tuning:[/b][/color] Faster Holy Smite cooldown and longer Divine Heal intervals to encourage active combat participation.
-- [color=#ffffff][b]Tactical Map Overlay:[/b][/color] Smoother minimap scaling and improved visibility of explored vs. unexplored dungeon areas.
-- [color=#ffffff][b]Performance & Stability:[/b][/color] Monster spawning and entity pooling optimizations for smooth frame rates during large swarms.
+- [color=#ffffff][b]Nobody Left Behind:[/b][/color] The whole squad now marches at the same speed so stragglers don't get lost.
+- [color=#ffffff][b]Snappier Melee Combat:[/b][/color] Sword and axe swings connect more reliably and feel punchier.
+- [color=#ffffff][b]Feistier Priests:[/b][/color] Priests spend less time over-healing and more time smiting monsters.
+- [color=#ffffff][b]Clearer Minimap:[/b][/color] Easier to see where you've been and which rooms are still unexplored.
+- [color=#ffffff][b]Smoother Swarms:[/b][/color] Big monster waves run buttery smooth without frame drops.
 
 [color=#ffffff][b]v0.1.0 - 2026-11-04[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
-- [color=#ffffff][b]Procedural Dungeon Exploration:[/b][/color] Randomly generated dungeon chambers and corridors with dynamic torchlight and destructible objects.
-- [color=#ffffff][b]Fellowship Formation Movement:[/b][/color] Single-stick control scheme where recruited companions automatically navigate behind the leader in formation.
-- [color=#ffffff][b]8 Playable Hero Classes:[/b][/color] Archer, Armored Axeman, Knight, Knight Templar, Priest, Soldier, Swordsman, and Wizard.
-- [color=#ffffff][b]Survivor Recruitment & Leveling:[/b][/color] Rescue trapped companions to draft new party members and select class upgrade traits on level up.
-- [color=#ffffff][b]Lava Slime Enemies:[/b][/color] Slime monsters featuring close-quarters attacks and ranged fire projectiles.
-- [color=#ffffff][b]Tactical HUD & Retro Visuals:[/b][/color] Live party status, encounter damage meter, gamepad and keyboard (WASD) support, and toggleable CRT monitor filter.
+- [color=#ffffff][b]Procedural Dungeons:[/b][/color] Endless torch-lit rooms and corridors to explore.
+- [color=#ffffff][b]Single-Stick Squad Control:[/b][/color] You steer the leader; your fellowship follows in formation and fights automatically.
+- [color=#ffffff][b]8 Hero Classes:[/b][/color] Archer, Armored Axeman, Knight, Knight Templar, Priest, Soldier, Swordsman, and Wizard.
+- [color=#ffffff][b]Rescue & Level Up:[/b][/color] Bump into lost survivors to draft new heroes and upgrade your classes with XP.
+- [color=#ffffff][b]Lava Slimes:[/b][/color] Grumpy fire-spitting blobs guarding the dungeon.
+- [color=#ffffff][b]Retro Arcade Vibes:[/b][/color] Squad HUD, live damage meter, controller + WASD support, and an optional CRT filter.
 

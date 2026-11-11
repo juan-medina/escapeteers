@@ -16,6 +16,8 @@ const SPRINT_SQUAD_SPEED: float = 150.0
 const SPRINT_WARMUP_TIME: float = 0.4
 const SPRINT_ACCELERATION: float = 50.0
 const COMBAT_EXIT_DELAY: float = 1.25
+const SPIKE_DAMAGE_MAX_HP_RATIO: float = 0.15
+const SPIKE_HIT_COOLDOWN: float = 0.65
 
 const ARCHER_SCENE: PackedScene = preload("res://character/heroes/archer/archer.tscn")
 const ARMORED_AXEMAN_SCENE: PackedScene = preload("res://character/heroes/armored_axeman/armored_axeman.tscn")
@@ -71,6 +73,7 @@ var _character: Hero = null
 var _squad_speed: float = BASE_SQUAD_SPEED
 var _combat_cooldown_timer: float = 0.0
 var _continuous_move_timer: float = 0.0
+var _spike_hit_cooldowns: Dictionary[Hero, float] = {}
 
 @onready var _camera: Camera2D = $Camera2D
 @onready var _characters: Node2D = $Characters
@@ -187,8 +190,10 @@ func _process(delta: float) -> void:
 				_update_map_streaming()
 			_map.update_streaming(_character.global_position, _character.velocity)
 
+	_map.update_spikes(delta)
 	_update_squad_speed(delta)
 	_update_followers(delta)
+	_update_spike_hazards(delta)
 	_check_recruitment()
 	_update_enemies()
 	_process_pending_spawns()
@@ -199,6 +204,7 @@ func remove_member(hero: Hero) -> void:
 	if idx == -1 or hero == _character:
 		return
 
+	_spike_hit_cooldowns.erase(hero)
 	_squad.remove_at(idx)
 	hero.queue_free()
 	_rebalance_escort_slots()
@@ -571,6 +577,7 @@ func _get_best_squad_target(enemy: Enemy) -> Hero:
 
 
 func _on_hero_died(hero: Hero) -> void:
+	_spike_hit_cooldowns.erase(hero)
 	if hero == _character:
 		return
 
@@ -868,6 +875,21 @@ func _update_squad_speed(delta: float) -> void:
 	for member: Hero in _squad:
 		if is_instance_valid(member) and not member.is_dead:
 			member.speed = _squad_speed
+
+
+func _update_spike_hazards(delta: float) -> void:
+	for member: Hero in _squad:
+		if not is_instance_valid(member) or member.is_dead:
+			continue
+		var cd: float = _spike_hit_cooldowns.get(member, 0.0)
+		if cd > 0.0:
+			_spike_hit_cooldowns[member] = maxf(0.0, cd - delta)
+			continue
+		var foot_cell: Vector2i = _map.local_to_map(member.get_hurtbox_position())
+		if _map.is_spike_active_at(foot_cell):
+			_spike_hit_cooldowns[member] = SPIKE_HIT_COOLDOWN
+			var damage: float = maxf(1.0, roundf(member.max_health * SPIKE_DAMAGE_MAX_HP_RATIO))
+			member.take_damage(damage)
 
 
 func _on_window_resized() -> void:
