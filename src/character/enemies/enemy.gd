@@ -51,6 +51,7 @@ var target: Hero = null
 var attack_target: Hero = null
 var home_room: Rect2i = Rect2i()
 var is_on_screen: bool = false
+var active_telegraph: Telegraph = null
 
 var _navigator: SquadNavigator = SquadNavigator.new()
 var _patrol_destination: Vector2 = Vector2.ZERO
@@ -112,6 +113,7 @@ func _set_sleeping(sleeping: bool) -> void:
 	set_physics_process(not sleeping)
 	set_process(false)
 	if sleeping:
+		_cancel_telegraph()
 		_animated_sprite.pause()
 		disable_collisions()
 	else:
@@ -285,6 +287,7 @@ func apply_stun(duration: float) -> void:
 	_set_sleeping(false)
 	_stun_timer = maxf(_stun_timer, duration)
 	if combat_state == CombatState.ATTACKING:
+		_cancel_telegraph()
 		combat_state = CombatState.COOLDOWN
 		current_action = null
 		attack_target = null
@@ -631,7 +634,16 @@ func reset_for_pool() -> void:
 	_set_sleeping(true)
 
 
+func _cancel_telegraph() -> void:
+	if active_telegraph != null and is_instance_valid(active_telegraph):
+		active_telegraph.cancel()
+		active_telegraph = null
+	if current_action is RangedAction:
+		(current_action as RangedAction).cancel_telegraph()
+
+
 func _on_death() -> void:
+	_cancel_telegraph()
 	set_physics_process(false)
 	remove_from_group(_GROUP_ENEMIES)
 	_stun_timer = 0.0

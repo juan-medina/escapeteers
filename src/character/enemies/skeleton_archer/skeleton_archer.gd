@@ -25,4 +25,8 @@ func _setup_actions() -> void:
 		ranged.requires_horizontal_alignment = false
 		ranged.check_line_of_sight = true
 		ranged.leash_distance = 0.0
+		ranged.show_telegraph = true
+		ranged.telegraph_color = Color(1.0, 1.0, 1.0, 0.35)
+		ranged.telegraph_locked_color = Color(1.0, 1.0, 1.0, 0.85)
+		ranged.telegraph_lock_time = 0.25
 		combat_actions.append(ranged)

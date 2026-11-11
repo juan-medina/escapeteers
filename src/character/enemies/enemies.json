@@ -82,7 +82,7 @@
 			{
 				"name": "Raise Undead",
 				"type": "summon",
-				"cooldown": { "base": 4.5, "growth": -0.04 },
+				"cooldown": { "base": 2.0, "growth": -0.04 },
 				"range": { "base": 180.0, "growth": 0.0 },
 				"summon_count": 2
 			}

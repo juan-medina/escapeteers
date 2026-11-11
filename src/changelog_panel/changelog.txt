@@ -6,8 +6,10 @@
 - [color=#ffffff][b]Touch & Click Controls:[/b][/color] Steer your squad seamlessly with mouse clicks, drags, or touchscreen touches alongside keyboard and controller.
 - [color=#ffffff][b]Auto-Sprint:[/b][/color] The squad picks up the pace automatically when no monsters are around.
 - [color=#ffffff][b]Spike Traps:[/b][/color] Deadly floor spikes pop up in rooms and hallways to skewer heroes and monsters alike, with trap damage tracked in the DPS meter.
+- [color=#ffffff][b]Ranged Attack Telegraphs:[/b][/color] Skeleton archers and lava slimes now project dashed targeting lines before firing so you can dodge or block incoming shots.
 
 [color=#e0e0e0][b]Changed[/b][/color]
+- [color=#ffffff][b]Relentless Necromancers:[/b][/color] Necromancers now raise undead minions much faster during battle to keep the pressure on.
 - [color=#ffffff][b]Better Level-Up Scaling:[/b][/color] Heroes hit harder, survive longer, and attack faster as they level up.
 - [color=#ffffff][b]Fragile Undead Swarms:[/b][/color] Summoned skeletons are now fragile fodder that go down in a couple of hits, dealing half damage with no heavy swings.
 - [color=#ffffff][b]Necromancer Encounter Pacing:[/b][/color] Necromancers are tougher to withstand combat while their minions swarm, appearing solo on early floors before pairs emerge deeper in crypts.

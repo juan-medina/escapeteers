@@ -109,6 +109,18 @@ func play(anim_name: StringName = ANIM_IDLE) -> void:
 	_animated_sprite.play(anim_name)
 
 
+func get_animation_duration(anim_name: StringName) -> float:
+	if _animated_sprite == null or _animated_sprite.sprite_frames == null:
+		return 0.0
+	if not _animated_sprite.sprite_frames.has_animation(anim_name):
+		return 0.0
+	var anim_speed: float = _animated_sprite.sprite_frames.get_animation_speed(anim_name)
+	if anim_speed <= 0.0:
+		return 0.0
+	var frame_count: int = _animated_sprite.sprite_frames.get_frame_count(anim_name)
+	return float(frame_count) / anim_speed
+
+
 func disable_collisions() -> void:
 	if _collision_shape != null:
 		_collision_shape.set_deferred(&"disabled", true)
