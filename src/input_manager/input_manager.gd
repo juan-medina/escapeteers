@@ -15,10 +15,15 @@ enum DeviceType {
 const MOUSE_HIDE_TIME: float = 2.5
 const DEFAULT_DEADZONE: float = 0.2
 const MOUSE_MOVE_THRESHOLD_SQ: float = 4.0
+const POINTER_DEADZONE: float = 12.0
+const POINTER_MAX_RANGE: float = 64.0
 
 var current_device: DeviceType = DeviceType.KEYBOARD_AND_MOUSE
 var _notifications_enabled: bool = false
 var _mouse_hide_timer: Timer = null
+var _pointer_active: bool = false
+var _touch_active: bool = false
+var _pointer_pos: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
@@ -38,6 +43,12 @@ func _ready() -> void:
 		_set_device(DeviceType.KEYBOARD_AND_MOUSE)
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_pointer_active = false
+		_touch_active = false
+
+
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		var motion: InputEventMouseMotion = event as InputEventMouseMotion
@@ -45,7 +56,16 @@ func _input(event: InputEvent) -> void:
 			_set_device(DeviceType.KEYBOARD_AND_MOUSE)
 	elif event is InputEventMouseButton:
 		var mouse_btn: InputEventMouseButton = event as InputEventMouseButton
-		if mouse_btn.is_pressed():
+		if mouse_btn.button_index == MOUSE_BUTTON_LEFT and not mouse_btn.is_pressed():
+			_pointer_active = false
+		elif mouse_btn.is_pressed():
+			_set_device(DeviceType.KEYBOARD_AND_MOUSE)
+	elif event is InputEventScreenTouch:
+		var touch: InputEventScreenTouch = event as InputEventScreenTouch
+		if not touch.is_pressed():
+			_pointer_active = false
+			_touch_active = false
+		else:
 			_set_device(DeviceType.KEYBOARD_AND_MOUSE)
 	elif event is InputEventKey:
 		var key: InputEventKey = event as InputEventKey
@@ -59,6 +79,34 @@ func _input(event: InputEvent) -> void:
 		var joy_motion: InputEventJoypadMotion = event as InputEventJoypadMotion
 		if absf(joy_motion.axis_value) >= DEFAULT_DEADZONE:
 			_set_device(_detect_joypad_device(joy_motion.device))
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mouse_btn: InputEventMouseButton = event as InputEventMouseButton
+		if mouse_btn.button_index == MOUSE_BUTTON_LEFT:
+			if mouse_btn.is_pressed():
+				_pointer_active = true
+				_touch_active = false
+				_pointer_pos = mouse_btn.position
+	elif event is InputEventMouseMotion:
+		if _pointer_active and not _touch_active:
+			var motion: InputEventMouseMotion = event as InputEventMouseMotion
+			_pointer_pos = motion.position
+	elif event is InputEventScreenTouch:
+		var touch: InputEventScreenTouch = event as InputEventScreenTouch
+		if touch.is_pressed():
+			_pointer_active = true
+			_touch_active = true
+			_pointer_pos = touch.position
+		else:
+			_pointer_active = false
+			_touch_active = false
+	elif event is InputEventScreenDrag:
+		var drag: InputEventScreenDrag = event as InputEventScreenDrag
+		_pointer_active = true
+		_touch_active = true
+		_pointer_pos = drag.position
 
 
 func _on_mouse_hide_timer_timeout() -> void:
@@ -95,7 +143,7 @@ func is_controller_active() -> bool:
 	return current_device != DeviceType.KEYBOARD_AND_MOUSE
 
 
-func get_movement_vector(deadzone: float = DEFAULT_DEADZONE) -> Vector2:
+func get_movement_vector(origin_screen_pos: Vector2 = Vector2.ZERO, deadzone: float = DEFAULT_DEADZONE) -> Vector2:
 	for pad: int in Input.get_connected_joypads():
 		var raw_stick: Vector2 = Vector2(Input.get_joy_axis(pad, JOY_AXIS_LEFT_X), Input.get_joy_axis(pad, JOY_AXIS_LEFT_Y))
 		var mag: float = raw_stick.length()
@@ -106,9 +154,33 @@ func get_movement_vector(deadzone: float = DEFAULT_DEADZONE) -> Vector2:
 	var x: float = Input.get_action_strength(&"right") - Input.get_action_strength(&"left")
 	var y: float = Input.get_action_strength(&"down") - Input.get_action_strength(&"up")
 	var keys: Vector2 = Vector2(x, y)
-	if keys.length_squared() > 1.0:
-		return keys.normalized()
-	return keys
+	if keys.length_squared() > 0.01:
+		if keys.length_squared() > 1.0:
+			return keys.normalized()
+		return keys
+
+	if _pointer_active:
+		if not _touch_active and not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+			_pointer_active = false
+			return Vector2.ZERO
+		var target_pos: Vector2 = _pointer_pos
+		if not _touch_active:
+			var vp: Viewport = get_viewport()
+			if vp != null:
+				target_pos = vp.get_mouse_position()
+				_pointer_pos = target_pos
+		var origin: Vector2 = origin_screen_pos
+		if origin == Vector2.ZERO:
+			var vp_origin: Viewport = get_viewport()
+			if vp_origin != null:
+				origin = vp_origin.get_visible_rect().size * 0.5
+		var diff: Vector2 = target_pos - origin
+		var dist: float = diff.length()
+		if dist >= POINTER_DEADZONE:
+			var scaled: float = clampf((dist - POINTER_DEADZONE) / (POINTER_MAX_RANGE - POINTER_DEADZONE), 0.0, 1.0)
+			return diff.normalized() * scaled
+
+	return Vector2.ZERO
 
 
 func _set_device(new_device: DeviceType) -> void:

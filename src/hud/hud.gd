@@ -5,11 +5,14 @@ class_name Hud
 extends CanvasLayer
 
 const FILL_SPEED: float = 60.0
+const HINT_AUTO_DISMISS_DELAY: float = 8.0
+const HINT_FADE_DURATION: float = 0.8
 
 var _current_level: int = 1
 var _target_xp: float = 0.0
 var _display_xp: float = 0.0
 var _display_max_xp: float = 50.0
+var _movement_hint_dismissed: bool = false
 
 @onready var _damage_meter: DamageMeter = $DamageMeter
 @onready var _squad_grid: SquadGrid = $SquadGrid
@@ -18,12 +21,15 @@ var _display_max_xp: float = 50.0
 @onready var _xp_bar: ProgressBar = $Margin/HBox/XPBar
 @onready var _xp_text: Label = $Margin/HBox/XPText
 @onready var _map_hint: Label = $MapHint
+@onready var _movement_hint: Label = $MovementHint
 
 
 func _ready() -> void:
 	set_process(false)
 	InputManager.device_changed.connect(_on_device_changed)
 	_update_map_prompt(InputManager.current_device)
+	var hint_timer: SceneTreeTimer = get_tree().create_timer(HINT_AUTO_DISMISS_DELAY)
+	hint_timer.timeout.connect(dismiss_movement_hint)
 
 
 func _process(delta: float) -> void:
@@ -73,6 +79,17 @@ func record_damage(class_id: StringName, amount: float) -> void:
 
 func setup_map(plan: WorldPlan, target: Hero) -> void:
 	_map_overlay.setup(plan, target)
+
+
+func dismiss_movement_hint() -> void:
+	if _movement_hint_dismissed:
+		return
+	_movement_hint_dismissed = true
+	if _movement_hint == null or not is_instance_valid(_movement_hint):
+		return
+	var tween: Tween = create_tween()
+	tween.tween_property(_movement_hint, ^"modulate:a", 0.0, HINT_FADE_DURATION)
+	tween.tween_callback(_movement_hint.hide)
 
 
 func _on_device_changed(device: InputManager.DeviceType) -> void:

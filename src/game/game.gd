@@ -183,6 +183,8 @@ func _process(delta: float) -> void:
 	if is_instance_valid(_character):
 		_camera.position = _character.position
 		if not _character.is_dead:
+			if _character.is_moving and _hud != null:
+				_hud.dismiss_movement_hint()
 			_character.record_step(delta)
 			_stream_timer -= delta
 			if _stream_timer <= 0.0:
