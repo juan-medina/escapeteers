@@ -11,6 +11,11 @@ const ENEMY_ACTIVE_DIST_SQ: float = 480.0 * 480.0
 const ENEMY_DESPAWN_DIST_SQ: float = 1350.0 * 1350.0
 const ROOM_RESPAWN_DIST_SQ: float = 950.0 * 950.0
 const STREAM_CHECK_INTERVAL: float = 0.15
+const BASE_SQUAD_SPEED: float = 100.0
+const SPRINT_SQUAD_SPEED: float = 150.0
+const SPRINT_WARMUP_TIME: float = 0.4
+const SPRINT_ACCELERATION: float = 50.0
+const COMBAT_EXIT_DELAY: float = 1.25
 
 const ARCHER_SCENE: PackedScene = preload("res://character/heroes/archer/archer.tscn")
 const ARMORED_AXEMAN_SCENE: PackedScene = preload("res://character/heroes/armored_axeman/armored_axeman.tscn")
@@ -63,6 +68,9 @@ var _stream_timer: float = 0.0
 var _entity_pool: EntityPool = EntityPool.new()
 var _pending_spawns: Array[Dictionary] = []
 var _character: Hero = null
+var _squad_speed: float = BASE_SQUAD_SPEED
+var _combat_cooldown_timer: float = 0.0
+var _continuous_move_timer: float = 0.0
 
 @onready var _camera: Camera2D = $Camera2D
 @onready var _characters: Node2D = $Characters
@@ -90,6 +98,7 @@ func _ready() -> void:
 	_camera.position = _character.position
 	_character.y_sort_enabled = true
 	_character.is_player = true
+	_character.speed = _squad_speed
 	_character.move_direction = Vector2.UP
 	_character.record_step(0.0)
 	_character.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
@@ -142,6 +151,18 @@ func get_active_enemy_count() -> int:
 	return _enemies.size()
 
 
+func is_squad_in_combat() -> bool:
+	return _combat_cooldown_timer > 0.0 or _is_any_enemy_engaged() or _is_any_hero_engaged()
+
+
+func is_squad_sprinting() -> bool:
+	return _squad_speed > BASE_SQUAD_SPEED + 5.0
+
+
+func get_squad_speed() -> float:
+	return _squad_speed
+
+
 func _on_map_generation_progress(progress: float, stage_name: StringName) -> void:
 	Transition.set_loading_progress(progress, stage_name)
 
@@ -166,6 +187,7 @@ func _process(delta: float) -> void:
 				_update_map_streaming()
 			_map.update_streaming(_character.global_position, _character.velocity)
 
+	_update_squad_speed(delta)
 	_update_followers(delta)
 	_check_recruitment()
 	_update_enemies()
@@ -304,6 +326,8 @@ func _spawn_enemy_at(pos: Vector2, room: Rect2i, forced_scene: PackedScene = nul
 		enemy.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
 	if not enemy.minion_summon_requested.is_connected(_on_enemy_minion_summon_requested):
 		enemy.minion_summon_requested.connect(_on_enemy_minion_summon_requested)
+	if not enemy.attacked.is_connected(_on_enemy_attacked):
+		enemy.attacked.connect(_on_enemy_attacked)
 	if enemy.died.get_connections().is_empty():
 		enemy.died.connect(_on_enemy_died.bind(enemy))
 	if enemy.death_completed.get_connections().is_empty():
@@ -470,6 +494,9 @@ func _on_enemy_died(enemy: Enemy) -> void:
 		_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
 
 	_add_squad_xp(enemy.xp_value)
+	_combat_cooldown_timer = COMBAT_EXIT_DELAY
+	_continuous_move_timer = 0.0
+	_squad_speed = BASE_SQUAD_SPEED
 
 
 func _on_enemy_death_completed(enemy: Enemy) -> void:
@@ -613,6 +640,7 @@ func _on_hero_recruited(hero_data: HeroData) -> void:
 	new_hero.position = _pending_recruit_pos
 	new_hero.y_sort_enabled = true
 	new_hero.leader = _character
+	new_hero.speed = _squad_speed
 	new_hero.squad_member = SquadMember.new()
 	new_hero.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
 	new_hero.enemy_hit.connect(_on_hero_enemy_hit.bind(new_hero))
@@ -626,8 +654,13 @@ func _sync_hud_squad() -> void:
 	_hud.update_squad(_squad)
 
 
-func _on_hero_enemy_hit(_enemy: Enemy, damage: float, _is_heavy: bool, hero: Hero) -> void:
+func _on_hero_enemy_hit(enemy: Enemy, damage: float, _is_heavy: bool, hero: Hero) -> void:
 	_hud.record_damage(hero.hero_data.id, damage)
+	_combat_cooldown_timer = COMBAT_EXIT_DELAY
+	_continuous_move_timer = 0.0
+	_squad_speed = BASE_SQUAD_SPEED
+	if enemy != null and is_instance_valid(enemy) and not enemy.is_dead and enemy.target == null:
+		enemy.set_target_candidate(hero)
 
 
 func get_class_level(class_id: StringName) -> int:
@@ -784,6 +817,57 @@ func _rebalance_escort_slots() -> void:
 			total_assigned += 1
 
 		ring += 1
+
+
+func _on_enemy_attacked(_target: Hero, _damage_amount: float) -> void:
+	_combat_cooldown_timer = COMBAT_EXIT_DELAY
+	_continuous_move_timer = 0.0
+	_squad_speed = BASE_SQUAD_SPEED
+
+
+func _is_any_enemy_engaged() -> bool:
+	for enemy: Enemy in _enemies:
+		if not is_instance_valid(enemy) or enemy.is_dead or not enemy.visible:
+			continue
+		if enemy.is_engaged():
+			return true
+	return false
+
+
+func _is_any_hero_engaged() -> bool:
+	for member: Hero in _squad:
+		if not is_instance_valid(member) or member.is_dead:
+			continue
+		if member.is_engaged():
+			return true
+	return false
+
+
+func _update_squad_speed(delta: float) -> void:
+	var in_combat: bool = _is_any_enemy_engaged() or _is_any_hero_engaged()
+	if in_combat:
+		_combat_cooldown_timer = COMBAT_EXIT_DELAY
+		_continuous_move_timer = 0.0
+		_squad_speed = BASE_SQUAD_SPEED
+	elif _combat_cooldown_timer > 0.0:
+		_combat_cooldown_timer = maxf(0.0, _combat_cooldown_timer - delta)
+		_continuous_move_timer = 0.0
+		_squad_speed = BASE_SQUAD_SPEED
+	else:
+		var is_moving: bool = is_instance_valid(_character) and _character.is_moving
+		if is_moving:
+			_continuous_move_timer += delta
+			if _continuous_move_timer >= SPRINT_WARMUP_TIME:
+				_squad_speed = move_toward(_squad_speed, SPRINT_SQUAD_SPEED, SPRINT_ACCELERATION * delta)
+			else:
+				_squad_speed = BASE_SQUAD_SPEED
+		else:
+			_continuous_move_timer = 0.0
+			_squad_speed = BASE_SQUAD_SPEED
+
+	for member: Hero in _squad:
+		if is_instance_valid(member) and not member.is_dead:
+			member.speed = _squad_speed
 
 
 func _on_window_resized() -> void:

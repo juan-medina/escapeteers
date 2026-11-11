@@ -36,8 +36,10 @@ const ANIM_ATTACK_RANGED1: StringName = &"attack_ranged1"
 const ANIM_HEAL: StringName = &"heal"
 const ANIM_SUMMON: StringName = &"summon"
 
+const BASE_SPEED: float = 100.0
+
 var max_health: float = 100.0
-var speed: float = 100.0
+var speed: float = BASE_SPEED
 var can_melee: bool = false
 var melee_range: float = 20.0
 var can_ranged: bool = false
@@ -102,6 +104,8 @@ func _ready() -> void:
 
 
 func play(anim_name: StringName = ANIM_IDLE) -> void:
+	if anim_name != ANIM_RUN:
+		_animated_sprite.speed_scale = 1.0
 	_animated_sprite.play(anim_name)
 
 
@@ -143,9 +147,13 @@ func update_visuals(movement_vector: Vector2) -> void:
 			flip_h = movement_vector.x < 0.0
 		if combat_state != CombatState.ATTACKING and animation != ANIM_RUN:
 			play(ANIM_RUN)
+		if animation == ANIM_RUN:
+			var sprint_ratio: float = maxf(0.0, (speed - BASE_SPEED) / BASE_SPEED)
+			_animated_sprite.speed_scale = 1.0 + sprint_ratio * 1.5
 	else:
 		if combat_state != CombatState.ATTACKING and animation != ANIM_IDLE:
 			play(ANIM_IDLE)
+		_animated_sprite.speed_scale = 1.0
 
 
 func get_spawn_position() -> Vector2:

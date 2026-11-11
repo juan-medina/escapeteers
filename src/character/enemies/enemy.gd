@@ -294,6 +294,12 @@ func is_stunned() -> bool:
 	return _stun_timer > 0.0
 
 
+func is_engaged() -> bool:
+	if is_dead or not visible:
+		return false
+	return current_state == State.CHASE or current_state == State.ATTACK or (target != null and is_instance_valid(target) and not target.is_dead)
+
+
 func _update_status_visuals() -> void:
 	if is_stunned():
 		_base_modulate = STUN_MODULATE

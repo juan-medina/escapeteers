@@ -13,6 +13,7 @@ signal ally_healed(ally: Character, amount: float)
 const MAX_HISTORY_DURATION: float = 2.5
 const HISTORY_CAPACITY: int = 256
 const CRESCENT_BLEND_SPEED: float = 5.0
+const SPRINT_SPEED: float = 150.0
 const PLAYER_LIGHT_TEXTURE: Texture2D = preload("res://map/light_texture.tres")
 const PLAYER_LIGHT_BASE_ENERGY: float = 0.25
 const PLAYER_LIGHT_SCALE: float = 1.6
@@ -251,6 +252,16 @@ func can_reach_target(target_char: Character) -> bool:
 			continue
 		if action.can_reach(self, target_char):
 			return true
+	return false
+
+
+func is_engaged() -> bool:
+	if is_dead:
+		return false
+	if active_target is Enemy and is_instance_valid(active_target) and not active_target.is_dead:
+		return true
+	if combat_state == CombatState.ATTACKING and current_action != null and not (current_action is HealAction):
+		return true
 	return false
 
 

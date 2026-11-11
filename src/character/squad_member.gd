@@ -10,10 +10,10 @@ const RING_BASE_CAPACITY: int = 6
 const SEPARATION_RADIUS: float = 18.0
 const SEPARATION_SPEED: float = 65.0
 const PLAYER_CLEARANCE_RADIUS: float = 25.0
-const PLAYER_PUSH_SPEED: float = 145.0
+const PLAYER_PUSH_SPEED: float = 190.0
 const FOLLOW_ARRIVAL_RADIUS: float = 16.0
 const FOLLOW_STOP_DISTANCE: float = 1.5
-const FOLLOW_ACCELERATION: float = 520.0
+const FOLLOW_ACCELERATION: float = 600.0
 const REACTION_DELAY_BASE: float = 0.12
 const REACTION_DELAY_STEP: float = 0.06
 const REACTION_JITTER: float = 0.05
@@ -76,6 +76,8 @@ func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 		hero.velocity = Vector2.ZERO
 		hero.update_visuals(Vector2.ZERO)
 		return
+
+	hero.speed = leader.speed
 
 	var formation_pos: Vector2 = _compute_target_position(leader)
 	if map != null:
