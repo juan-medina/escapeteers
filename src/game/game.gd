@@ -73,7 +73,7 @@ var _character: Hero = null
 var _squad_speed: float = BASE_SQUAD_SPEED
 var _combat_cooldown_timer: float = 0.0
 var _continuous_move_timer: float = 0.0
-var _spike_hit_cooldowns: Dictionary[Hero, float] = {}
+var _spike_hit_cooldowns: Dictionary[Character, float] = {}
 
 @onready var _camera: Camera2D = $Camera2D
 @onready var _characters: Node2D = $Characters
@@ -425,6 +425,7 @@ func _reclaim_distant_enemies_for_room(target_room: Rect2i, target_room_dist_sq:
 			_room_spawned_enemies[h_room] = maxi(0, _room_spawned_enemies[h_room] - 1)
 		if enemy_to_evict is Necromancer and _room_spawned_necros.has(h_room):
 			_room_spawned_necros[h_room] = maxi(0, _room_spawned_necros[h_room] - 1)
+		_spike_hit_cooldowns.erase(enemy_to_evict)
 		_entity_pool.release(enemy_to_evict, _get_enemy_scene(enemy_to_evict))
 		var e_idx: int = _enemies.find(enemy_to_evict)
 		if e_idx != -1:
@@ -493,6 +494,7 @@ func _on_enemy_minion_summon_requested(pos: Vector2, room: Rect2i, enemy_level: 
 
 
 func _on_enemy_died(enemy: Enemy) -> void:
+	_spike_hit_cooldowns.erase(enemy)
 	var room: Rect2i = enemy.home_room
 	if _room_remaining_enemies.has(room):
 		_room_remaining_enemies[room] = maxi(0, _room_remaining_enemies[room] - 1)
@@ -506,6 +508,7 @@ func _on_enemy_died(enemy: Enemy) -> void:
 
 
 func _on_enemy_death_completed(enemy: Enemy) -> void:
+	_spike_hit_cooldowns.erase(enemy)
 	_entity_pool.release(enemy, _get_enemy_scene(enemy))
 
 
@@ -538,6 +541,7 @@ func _update_enemies() -> void:
 				_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
 			if enemy is Necromancer and _room_spawned_necros.has(room):
 				_room_spawned_necros[room] = maxi(0, _room_spawned_necros[room] - 1)
+			_spike_hit_cooldowns.erase(enemy)
 			_entity_pool.release(enemy, _get_enemy_scene(enemy))
 			_enemies.remove_at(i)
 			i -= 1
@@ -883,13 +887,35 @@ func _update_spike_hazards(delta: float) -> void:
 			continue
 		var cd: float = _spike_hit_cooldowns.get(member, 0.0)
 		if cd > 0.0:
-			_spike_hit_cooldowns[member] = maxf(0.0, cd - delta)
-			continue
+			var rem_cd: float = cd - delta
+			if rem_cd > 0.0:
+				_spike_hit_cooldowns[member] = rem_cd
+				continue
+			_spike_hit_cooldowns.erase(member)
 		var foot_cell: Vector2i = _map.local_to_map(member.get_hurtbox_position())
 		if _map.is_spike_active_at(foot_cell):
 			_spike_hit_cooldowns[member] = SPIKE_HIT_COOLDOWN
 			var damage: float = maxf(1.0, roundf(member.max_health * SPIKE_DAMAGE_MAX_HP_RATIO))
 			member.take_damage(damage)
+
+	for enemy: Enemy in _enemies:
+		if not is_instance_valid(enemy) or enemy.is_dead or not enemy.visible:
+			continue
+		if not enemy.is_physics_processing():
+			continue
+		var cd: float = _spike_hit_cooldowns.get(enemy, 0.0)
+		if cd > 0.0:
+			var rem_cd: float = cd - delta
+			if rem_cd > 0.0:
+				_spike_hit_cooldowns[enemy] = rem_cd
+				continue
+			_spike_hit_cooldowns.erase(enemy)
+		var foot_cell: Vector2i = _map.local_to_map(enemy.get_hurtbox_position())
+		if _map.is_spike_active_at(foot_cell):
+			_spike_hit_cooldowns[enemy] = SPIKE_HIT_COOLDOWN
+			var damage: float = maxf(1.0, roundf(enemy.max_health * SPIKE_DAMAGE_MAX_HP_RATIO))
+			enemy.take_damage(damage)
+			_hud.record_damage(&"spike", damage)
 
 
 func _on_window_resized() -> void:

@@ -4,17 +4,7 @@ This roadmap sequences upcoming gameplay milestones in priority order based on p
 
 ---
 
-## Priority 1: Localized Spike Traps
-**Goal:** Turn high-speed out-of-combat sprinting and combat positioning into active spatial dodging.
-
-1. **Spike Trap Hazard Scene & Tile Placement:**
-   - Place localized floor spike patches in corridor chokepoints, room corners, and key locations.
-2. **Trailing Squad Navigation Risk:**
-   - Deal damage to any hero or companion stepping on active spikes, rewarding wide turns (especially while sprinting out of combat) so the trailing crescent formation does not drag fragile backline units across hazards.
-
----
-
-## Priority 2: Combat Readability (Telegraphs, VFX & Throttled SFX)
+## Priority 1: Combat Readability (Telegraphs, VFX & Throttled SFX)
 **Goal:** Establish *Gauntlet*-style clarity in large horde battles before adding new enemies, bosses, and event rooms, and bundle Telegraphs/VFX/SFX into every subsequent feature.
 
 1. **Combat Telegraphs:**
@@ -26,7 +16,7 @@ This roadmap sequences upcoming gameplay milestones in priority order based on p
 
 ---
 
-## Priority 3: Zelda-Style Key Shortcuts & Locked Doors
+## Priority 2: Zelda-Style Key Shortcuts & Locked Doors
 **Goal:** Add macro-level exploration and route planning across lateral branches while preventing empty dead-end walkbacks.
 
 1. **Color-Coded Doors & Keys (with VFX/SFX):**
@@ -36,7 +26,7 @@ This roadmap sequences upcoming gameplay milestones in priority order based on p
 
 ---
 
-## Priority 4: Tier 2 Enemy Threat & Boss Encounters
+## Priority 3: Tier 2 Enemy Threat & Boss Encounters
 **Goal:** Expand combat variety, test formation knockback/perimeter strength, and provide a climactic win condition (with built-in Telegraphs, VFX, and SFX for each unit).
 
 1. **Tier 2 Threat — `Armored Orc` or `Hellhound`:**
@@ -48,7 +38,7 @@ This roadmap sequences upcoming gameplay milestones in priority order based on p
 
 ---
 
-## Priority 5: Special Event Rooms (Trap & Wave Mechanics)
+## Priority 4: Special Event Rooms (Trap & Wave Mechanics)
 **Goal:** Add distinct room-level gameplay mechanics beyond standard enemy quotas using traps, doors, and summoners.
 
 1. **Closing-Spike Perimeter Room:**
@@ -58,7 +48,7 @@ This roadmap sequences upcoming gameplay milestones in priority order based on p
 
 ---
 
-## Priority 6: Weighted Recruit & Level-Up Roll Percentages
+## Priority 5: Weighted Recruit & Level-Up Roll Percentages
 **Goal:** Nudge mid-run adaptation while preserving specialized build choices.
 
 1. **Diminishing Duplicate Weight in `RecruitPanel`:**

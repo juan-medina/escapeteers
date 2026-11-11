@@ -61,13 +61,20 @@ func setup(abbr: String, color: Color, count: int, total_dps: float, avg_dps: fl
 	if _last_abbr != abbr or _last_count != count:
 		_last_abbr = abbr
 		_last_count = count
-		_class_label.text = "%s x%d" % [abbr, count]
+		if count >= 0:
+			_class_label.text = "%s x%d" % [abbr, count]
+		else:
+			_class_label.text = abbr
 
 	_progress_bar.value = percentage
 
 	var total_str: String = DamageMeter.format_compact(total_dps)
-	var avg_str: String = DamageMeter.format_compact(avg_dps)
-	var new_stats_text: String = "%s (%s) %d%%" % [total_str, avg_str, int(roundf(percentage))]
+	var new_stats_text: String
+	if count >= 0:
+		var avg_str: String = DamageMeter.format_compact(avg_dps)
+		new_stats_text = "%s (%s) %d%%" % [total_str, avg_str, int(roundf(percentage))]
+	else:
+		new_stats_text = "%s (-) %d%%" % [total_str, int(roundf(percentage))]
 	if _last_stats_text != new_stats_text:
 		_last_stats_text = new_stats_text
 		_stats_label.text = new_stats_text

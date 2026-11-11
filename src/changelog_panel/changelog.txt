@@ -4,7 +4,7 @@
 
 [color=#e0e0e0][b]Added[/b][/color]
 - [color=#ffffff][b]Auto-Sprint:[/b][/color] The squad picks up the pace automatically when no monsters are around.
-- [color=#ffffff][b]Spike Traps:[/b][/color] Watch your step! Deadly floor spikes now pop up in rooms and hallways-take wide turns or your trailing buddies will pay the price.
+- [color=#ffffff][b]Spike Traps:[/b][/color] Deadly floor spikes pop up in rooms and hallways to skewer heroes and monsters alike, with trap damage tracked in the DPS meter.
 
 [color=#e0e0e0][b]Changed[/b][/color]
 - [color=#ffffff][b]Better Level-Up Scaling:[/b][/color] Heroes hit harder, survive longer, and attack faster as they level up.

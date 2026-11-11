@@ -19,6 +19,9 @@ class MeterEntry:
 const FONT_M3X6: FontFile = preload("res://data/assets/pixel_ui_theme/m3x6.ttf")
 const COMBAT_TIMEOUT: float = 4.0
 const REFRESH_INTERVAL: float = 0.2
+const SPIKE_ID: StringName = &"spike"
+const SPIKE_ABBR: String = "SPKE"
+const SPIKE_COLOR: Color = Color(0.72, 0.75, 0.82)
 
 var _in_combat: bool = false
 var _combat_duration: float = 0.0
@@ -128,9 +131,18 @@ func _refresh_display() -> void:
 			_entry_pool.append(entry)
 
 		entry.class_id = cid
-		entry.abbr = hero_data.abbr
-		entry.color = hero_data.color
-		entry.count = count
+		if hero_data != null:
+			entry.abbr = hero_data.abbr
+			entry.color = hero_data.color
+			entry.count = count
+		elif cid == SPIKE_ID:
+			entry.abbr = SPIKE_ABBR
+			entry.color = SPIKE_COLOR
+			entry.count = -1
+		else:
+			entry.abbr = String(cid).to_upper().substr(0, 4)
+			entry.color = Color.WHITE
+			entry.count = -1
 		entry.dps = dps
 		entry.avg_dps = avg_dps
 		entry.pct = pct
