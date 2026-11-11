@@ -1,10 +1,10 @@
-[center][color=#ffffff][b]Escapeteers — Changelog[/b][/color][/center]
+[center][color=#ffffff][b]Escapeteers - Changelog[/b][/color][/center]
 
 [color=#ffffff][b]v0.4.0 - WIP[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
 - [color=#ffffff][b]Auto-Sprint:[/b][/color] The squad picks up the pace automatically when no monsters are around.
-- [color=#ffffff][b]Spike Traps:[/b][/color] Watch your step! Deadly floor spikes now pop up in rooms and hallways—take wide turns or your trailing buddies will pay the price.
+- [color=#ffffff][b]Spike Traps:[/b][/color] Watch your step! Deadly floor spikes now pop up in rooms and hallways-take wide turns or your trailing buddies will pay the price.
 
 [color=#e0e0e0][b]Changed[/b][/color]
 - [color=#ffffff][b]Better Level-Up Scaling:[/b][/color] Heroes hit harder, survive longer, and attack faster as they level up.
@@ -20,7 +20,7 @@
   • [b]Skeleton Rusher:[/b] Fast boneheads that sprint past your tanks to harass the backline.
   • [b]Skeleton Archer:[/b] Pesky snipers that shoot and run away when you get close.
   • [b]Necromancer:[/b] Creepy summoners that keep raising more skeletons until you take them down.
-- [color=#ffffff][b]Themed Dungeon Rooms:[/b][/color] Rooms now have their own flavor—Slime Pits, Bone Swarms, Archer Garrisons, and Necromancer Crypts.
+- [color=#ffffff][b]Themed Dungeon Rooms:[/b][/color] Rooms now have their own flavor-Slime Pits, Bone Swarms, Archer Garrisons, and Necromancer Crypts.
 - [color=#ffffff][b]Secret Hero (Torchero):[/b][/color] A mysterious torch-bearing survivor hiding in the dark for clever explorers to find.
 
 [color=#e0e0e0][b]Changed[/b][/color]
