@@ -13,7 +13,10 @@
   - **Semantic API:** The Manager should expose simple semantic methods for the rest of the game to use. Callers should interact with the Manager's API and never need to cast or access the underlying UI nodes directly.
 - **Scope & Restraint (Strict):** Never overextend the scope of what the user asks. Never implement, wire up, or 'tidy up' unasked systems (e.g., adding damage logic, health reductions, death states, or cleanup routines ahead of time). If you find unhandled stubs or related work, ask the user first instead of implementing them on your own.
 - **Coroutines & Await:** In Godot 4, calling a coroutine without `await` triggers a `MISSING_AWAIT` warning, which fails our strict warning checks. Crucially, `Alerts.fatal_error()` and `Alerts.quit_game()` are coroutines. Always call them with `await` (e.g., `await Alerts.fatal_error(...)`).
-- **Changelog Updates:** Every time you work on a feature, the final step is to update `src/changelog_panel/changelog.txt` under the current WIP version section, maintaining its BBCode formatting style.
+- **Changelog Updates:** Every time you work on a feature, the final step is to update `src/changelog_panel/changelog.txt` under the current WIP version section, maintaining its BBCode formatting style:
+  - **Player-Facing Only:** Write for players, not developers. Focus on what changed in gameplay or visuals; omit internal code details, formulas, parameter names, and technical FPS/math numbers.
+  - **Concise & Punchy:** Exactly one short, clear sentence per bullet point. Avoid over-explaining.
+  - **Format:** `- [color=#ffffff][b]Feature Name:[/b][/color] Concise description of the user-visible change.` under the appropriate section (`Added`, `Changed`, `Fixed`).
 
 
 ## Git Commit Rules

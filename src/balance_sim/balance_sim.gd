@@ -293,18 +293,41 @@ func _load_json(path: String) -> Dictionary:
 
 
 ## Mirrors CharacterData.eval_stat. `growth_override` (NAN = none) lets us tune growth without touching the json files.
+static func _float_val(dict: Dictionary, key: Variant, default_val: float = 0.0) -> float:
+	var val: Variant = dict.get(key)
+	if val is float:
+		return val
+	if val is int:
+		var i: int = val
+		return float(i)
+	return default_val
+
+
+static func _int_val(dict: Dictionary, key: Variant, default_val: int = 0) -> int:
+	var val: Variant = dict.get(key)
+	if val is int:
+		return val
+	if val is float:
+		var f: float = val
+		return int(f)
+	return default_val
+
+
 func _eval(stat: Variant, level: int, default_base: float, growth_override: float) -> float:
 	if stat is Dictionary:
 		var d: Dictionary = stat
-		var base: float = float(d.get("base", default_base))
-		var growth: float = float(d.get("growth", 0.0))
+		var base: float = _float_val(d, "base", default_base)
+		var growth: float = _float_val(d, "growth", 0.0)
 		if not is_nan(growth_override):
 			growth = growth_override
 		if _args[&"scaling"] == "linear":
 			return _eval_linear(base, growth, level)
 		return _eval_proposed(base, growth, level)
-	if stat is float or stat is int:
-		return float(stat)
+	if stat is float:
+		return stat
+	if stat is int:
+		var i: int = stat
+		return float(i)
 	return default_base
 
 
@@ -325,9 +348,9 @@ static func _eval_proposed(base: float, growth: float, level: int) -> float:
 
 func _fill_attack(attack: Attack, skill: Dictionary, level: int, damage_key: String, growth: float, damage_mult: float, uptime: float) -> void:
 	attack.damage = _eval(skill.get(damage_key), level, 10.0, growth) * damage_mult
-	attack.hits = int(skill.get("hits", 1))
+	attack.hits = _int_val(skill, "hits", 1)
 	attack.cooldown = _eval(skill.get("cooldown"), level, 1.0, NAN) / uptime
-	attack.chance = float(skill.get("chance", 0.35))
+	attack.chance = _float_val(skill, "chance", 0.35)
 	attack.knockback = _eval(skill.get("knockback"), level, 0.0, NAN)
 	attack.stun = _eval(skill.get("stun_duration"), level, 0.0, NAN)
 
@@ -368,7 +391,7 @@ func _apply_skills(unit: Unit, skills: Array, level: int, growth: float, damage_
 			else:
 				_fill_attack(unit.heal, skill, level, "heal_amount", growth, 1.0, 1.0)
 		elif type == "summon":
-			unit.summon_count = int(skill.get("summon_count", 2))
+			unit.summon_count = _int_val(skill, "summon_count", 2)
 			unit.summon_cooldown = _eval(skill.get("cooldown"), level, 4.5, NAN) / uptime
 			if unit.summon_timer <= 0.0:
 				unit.summon_timer = _rng.randf() * unit.summon_cooldown
@@ -400,8 +423,8 @@ func _build_enemy(id: StringName, level: int) -> Unit:
 	unit.max_hp = _eval(data.get("health"), level, 100.0, _enemy_growth) * _enemy_hp_mult
 	unit.hp = unit.max_hp
 	var xp_dict: Dictionary = data.get("xp", {})
-	var xp_base: float = float(xp_dict.get("base", 10.0))
-	var xp_growth: float = float(xp_dict.get("growth", 0.0))
+	var xp_base: float = _float_val(xp_dict, "base", 10.0)
+	var xp_growth: float = _float_val(xp_dict, "growth", 0.0)
 	if not is_nan(_enemy_xp_growth):
 		xp_growth = _enemy_xp_growth
 	unit.xp = _eval_linear(xp_base, xp_growth, level)
@@ -449,7 +472,7 @@ func _pick_enemy_id(archetype: int, depth: int, necros_spawned: int) -> StringNa
 	if archetype == WorldPlan.RoomArchetype.ARCHER_GARRISON:
 		return &"skeleton_archer" if _rng.randf() < 0.65 else &"skeleton"
 	if archetype == WorldPlan.RoomArchetype.NECRO_CRYPT:
-		var max_necros: int = 1 if depth <= 2 else 2
+		var max_necros: int = 1 if depth <= 4 else 2
 		if necros_spawned < max_necros:
 			return &"necromancer"
 		return &"skeleton_archer" if _rng.randf() < 0.35 else &"skeleton"
@@ -692,6 +715,14 @@ func _summon_minions(necromancer: Unit) -> void:
 			return
 		var id: StringName = &"skeleton_archer" if _rng.randf() < NECRO_ARCHER_MINION_CHANCE else &"skeleton"
 		var minion: Unit = _build_enemy(id, necromancer.level)
+		# Minions are fragile fodder
+		minion.max_hp = maxf(15.0, roundf(minion.max_hp * 0.4))
+		minion.hp = minion.max_hp
+		if minion.melee != null:
+			minion.melee.damage = maxf(2.0, roundf(minion.melee.damage * 0.5))
+			minion.heavy = null
+		if minion.ranged != null:
+			minion.ranged.damage = maxf(2.0, roundf(minion.ranged.damage * 0.5))
 		minion.arrival = _now + _summon_delay
 		_cur_enemies.append(minion)
 
@@ -823,7 +854,7 @@ func _smart_recruit(run: Run, choices: Array[StringName], owns_priest: bool) -> 
 	var best: StringName = choices[0]
 	var best_score: float = -1.0
 	for id: StringName in choices:
-		var probe: Unit = _build_hero(id, run.class_levels.get(id, 1))
+		var probe: Unit = _build_hero(id, _int_val(run.class_levels, id, 1))
 		var score: float = sqrt(probe.max_hp * _unit_dps(probe))
 		if needs_front and not probe.backline:
 			score *= 1.3

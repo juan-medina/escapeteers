@@ -8,6 +8,8 @@
 
 [color=#e0e0e0][b]Changed[/b][/color]
 - [color=#ffffff][b]Better Level-Up Scaling:[/b][/color] Heroes hit harder, survive longer, and attack faster as they level up.
+- [color=#ffffff][b]Fragile Undead Swarms:[/b][/color] Summoned skeletons are now fragile fodder that go down in a couple of hits, dealing half damage with no heavy swings.
+- [color=#ffffff][b]Necromancer Encounter Pacing:[/b][/color] Necromancers are tougher to withstand combat while their minions swarm, appearing solo on early floors before pairs emerge deeper in crypts.
 - [color=#ffffff][b]Deeper Dungeon Pacing:[/b][/color] Early rooms warm you up gently before the deeper floors throw giant hordes at you.
 
 [color=#ffffff][b]v0.3.0 - 2026-11-11[/b][/color]

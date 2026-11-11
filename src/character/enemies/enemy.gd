@@ -41,6 +41,7 @@ var can_summon: bool = false
 var summon_range: float = 180.0
 var summon_count: int = 2
 var kite_distance: float = 0.0
+var is_minion: bool = false
 
 var combat_actions: Array[CombatAction] = []
 var current_action: CombatAction = null
@@ -206,8 +207,30 @@ func _on_screen_exited() -> void:
 func play_summon_intro() -> void:
 	if is_dead:
 		return
+	is_minion = true
 	_is_summoning_in = true
 	_set_sleeping(false)
+	scale = Vector2(0.85, 0.85)
+	_base_modulate = Color(0.85, 0.9, 1.1, 0.85)
+	if _animated_sprite != null:
+		_animated_sprite.modulate = _base_modulate
+	# Minions are fragile fodder: lower health and damage, disable heavy attacks
+	max_health = maxf(15.0, roundf(max_health * 0.4))
+	health = max_health
+	damage = maxf(2.0, roundf(damage * 0.5))
+	melee_damage = maxf(2.0, roundf(melee_damage * 0.5))
+	can_heavy_melee = false
+	xp_value = maxf(2.0, roundf(xp_value * 0.35))
+	for action: CombatAction in combat_actions:
+		if action is MeleeAction:
+			var melee: MeleeAction = action as MeleeAction
+			melee.damage = melee_damage
+			melee.can_heavy = false
+		elif action is RangedAction:
+			var ranged: RangedAction = action as RangedAction
+			ranged.damage = damage
+	if _health_bar != null:
+		_health_bar.update_health(health, max_health)
 	play(ANIM_SUMMON)
 
 
@@ -572,6 +595,8 @@ func deactivate_for_pool() -> void:
 
 
 func reset_for_pool() -> void:
+	scale = Vector2.ONE
+	is_minion = false
 	health = max_health
 	is_dead = false
 	_is_summoning_in = false

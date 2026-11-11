@@ -453,7 +453,7 @@ func _pick_enemy_scene_for_room(room: Rect2i, depth: int) -> PackedScene:
 		WorldPlan.RoomArchetype.ARCHER_GARRISON:
 			result = SKELETON_ARCHER_SCENE if randf() < 0.65 else SKELETON_SCENE
 		WorldPlan.RoomArchetype.NECRO_CRYPT:
-			var max_necros: int = 1 if depth <= 2 else 2
+			var max_necros: int = 1 if depth <= 4 else 2
 			var spawned_necros: int = _room_spawned_necros.get(room, 0)
 			if spawned_necros < max_necros:
 				_room_spawned_necros[room] = spawned_necros + 1

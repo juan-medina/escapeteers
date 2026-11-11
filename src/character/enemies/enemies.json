@@ -3,7 +3,7 @@
 		"id": "lava_slime",
 		"name": "Lava Slime",
 		"scene_path": "res://character/enemies/lava_slime/lava_slime.tscn",
-		"health": { "base": 160.0, "growth": 0.22 },
+		"health": { "base": 160.0, "growth": 0.16 },
 		"speed": { "base": 35.0, "growth": 0.03 },
 		"detection_range": { "base": 135.0, "growth": 0.0 },
 		"xp": { "base": 15.0, "growth": 0.25 },
@@ -11,14 +11,14 @@
 			{
 				"name": "Slime Melee",
 				"type": "melee",
-				"damage": { "base": 8.0, "growth": 0.22 },
+				"damage": { "base": 8.0, "growth": 0.16 },
 				"cooldown": { "base": 1.5, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 }
 			},
 			{
 				"name": "Lava Spike",
 				"type": "ranged",
-				"damage": { "base": 5.0, "growth": 0.22 },
+				"damage": { "base": 5.0, "growth": 0.16 },
 				"cooldown": { "base": 1.5, "growth": -0.03 },
 				"range": { "base": 135.0, "growth": 0.0 },
 				"min_range": 65.0
@@ -29,7 +29,7 @@
 		"id": "skeleton",
 		"name": "Skeleton",
 		"scene_path": "res://character/enemies/skeleton/skeleton.tscn",
-		"health": { "base": 95.0, "growth": 0.22 },
+		"health": { "base": 95.0, "growth": 0.16 },
 		"speed": { "base": 80.0, "growth": 0.03 },
 		"detection_range": { "base": 145.0, "growth": 0.0 },
 		"xp": { "base": 15.0, "growth": 0.25 },
@@ -37,14 +37,14 @@
 			{
 				"name": "Bone Slash",
 				"type": "melee",
-				"damage": { "base": 9.0, "growth": 0.22 },
+				"damage": { "base": 9.0, "growth": 0.16 },
 				"cooldown": { "base": 1.1, "growth": -0.03 },
 				"range": { "base": 22.0, "growth": 0.0 }
 			},
 			{
 				"name": "Bone Cleave",
 				"type": "melee",
-				"damage": { "base": 18.0, "growth": 0.22 },
+				"damage": { "base": 18.0, "growth": 0.16 },
 				"cooldown": { "base": 3.5, "growth": -0.05 },
 				"range": { "base": 22.0, "growth": 0.0 },
 				"chance": 0.35
@@ -55,7 +55,7 @@
 		"id": "skeleton_archer",
 		"name": "Skeleton Archer",
 		"scene_path": "res://character/enemies/skeleton_archer/skeleton_archer.tscn",
-		"health": { "base": 85.0, "growth": 0.22 },
+		"health": { "base": 85.0, "growth": 0.16 },
 		"speed": { "base": 45.0, "growth": 0.03 },
 		"detection_range": { "base": 175.0, "growth": 0.0 },
 		"xp": { "base": 18.0, "growth": 0.25 },
@@ -63,7 +63,7 @@
 			{
 				"name": "Bone Arrow",
 				"type": "ranged",
-				"damage": { "base": 7.0, "growth": 0.22 },
+				"damage": { "base": 7.0, "growth": 0.16 },
 				"cooldown": { "base": 1.4, "growth": -0.04 },
 				"range": { "base": 155.0, "growth": 0.0 },
 				"min_range": 0.0
@@ -74,7 +74,7 @@
 		"id": "necromancer",
 		"name": "Necromancer",
 		"scene_path": "res://character/enemies/necromancer/necromancer.tscn",
-		"health": { "base": 150.0, "growth": 0.22 },
+		"health": { "base": 175.0, "growth": 0.16 },
 		"speed": { "base": 42.0, "growth": 0.03 },
 		"detection_range": { "base": 190.0, "growth": 0.0 },
 		"xp": { "base": 35.0, "growth": 0.25 },
