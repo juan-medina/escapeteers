@@ -63,10 +63,10 @@ The submodule is private: without access, the clone succeeds but `src/data` stay
 
 ### Sound Effects
 
-#### Modern UI SFX
-* **Author:** [Leohpaz](https://www.patreon.com/cw/leohpaz)
-* **Source:** [Itch.io](https://leohpaz.itch.io/modern-ui-sfx)
-* **License:** Paid. Used under a purchased license (personal and commercial use allowed; the pack may not be resold or redistributed).
+#### Pixel Combat
+* **Author:** [Helton Yan](https://heltonyan.itch.io/)
+* **Source:** [Itch.io](https://heltonyan.itch.io/pixelcombat)
+* **License:** Paid. Used under a purchased license (personal and commercial use allowed; purchased to support the author).
 
 ### Fonts
 

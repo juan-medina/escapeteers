@@ -1,5 +1,8 @@
 {
   "peak_ceiling": -1.0,
+  "channels": 1,
+  "sample_rate": 22050,
+  "bit_depth": 16,
   "tiers": {
     "soft": {
       "target_level": -31
