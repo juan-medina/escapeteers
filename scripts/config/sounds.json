@@ -106,6 +106,46 @@
       "input": "src/data/raw/sounds/13_Impact_05.wav",
       "output": "src/data/assets/sounds/13_Impact_05.wav",
       "tier": "impact"
+    },
+    {
+      "input": "src/data/raw/sounds/Enemy_Death_01.wav",
+      "output": "src/data/assets/sounds/Enemy_Death_01.wav",
+      "tier": "impact"
+    },
+    {
+      "input": "src/data/raw/sounds/Enemy_Death_02.wav",
+      "output": "src/data/assets/sounds/Enemy_Death_02.wav",
+      "tier": "impact"
+    },
+    {
+      "input": "src/data/raw/sounds/Enemy_Death_03.wav",
+      "output": "src/data/assets/sounds/Enemy_Death_03.wav",
+      "tier": "impact"
+    },
+    {
+      "input": "src/data/raw/sounds/Level_Up.wav",
+      "output": "src/data/assets/sounds/Level_Up.wav",
+      "tier": "critical"
+    },
+    {
+      "input": "src/data/raw/sounds/Hero_Down.wav",
+      "output": "src/data/assets/sounds/Hero_Down.wav",
+      "tier": "critical"
+    },
+    {
+      "input": "src/data/raw/sounds/Hero_Recruited.wav",
+      "output": "src/data/assets/sounds/Hero_Recruited.wav",
+      "tier": "critical"
+    },
+    {
+      "input": "src/data/raw/sounds/Trap_Spike_01.wav",
+      "output": "src/data/assets/sounds/Trap_Spike_01.wav",
+      "tier": "heavy"
+    },
+    {
+      "input": "src/data/raw/sounds/Trap_Spike_02.wav",
+      "output": "src/data/assets/sounds/Trap_Spike_02.wav",
+      "tier": "heavy"
     }
   ]
 }

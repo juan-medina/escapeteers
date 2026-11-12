@@ -496,6 +496,7 @@ func _on_enemy_minion_summon_requested(pos: Vector2, room: Rect2i, enemy_level: 
 
 
 func _on_enemy_died(enemy: Enemy) -> void:
+	Audio.play_enemy_death()
 	_spike_hit_cooldowns.erase(enemy)
 	var room: Rect2i = enemy.home_room
 	if _room_remaining_enemies.has(room):
@@ -583,6 +584,7 @@ func _get_best_squad_target(enemy: Enemy) -> Hero:
 
 
 func _on_hero_died(hero: Hero) -> void:
+	Audio.play_hero_down()
 	_spike_hit_cooldowns.erase(hero)
 	if hero == _character:
 		return
@@ -600,6 +602,7 @@ func _on_hero_died(hero: Hero) -> void:
 
 
 func _on_player_died() -> void:
+	Audio.play_hero_down()
 	Audio.stop_music()
 	_sync_hud_squad()
 
@@ -644,6 +647,7 @@ func _open_recruit_panel(recruit_pos: Vector2, forced_hero_id: StringName = &"")
 
 
 func _on_hero_recruited(hero_data: HeroData) -> void:
+	Audio.play_hero_recruited()
 	get_tree().paused = false
 	var hero_level: int = get_class_level(hero_data.id)
 	var new_hero: Hero = hero_data.instantiate_hero(hero_level)
@@ -713,6 +717,7 @@ func _open_next_level_up() -> void:
 	if _pending_level_ups <= 0:
 		return
 
+	Audio.play_level_up()
 	_pending_level_ups -= 1
 	get_tree().paused = true
 	_level_up_panel.visible = true
@@ -898,6 +903,7 @@ func _update_spike_hazards(delta: float) -> void:
 			_spike_hit_cooldowns.erase(member)
 		var foot_cell: Vector2i = _map.local_to_map(member.get_hurtbox_position())
 		if _map.is_spike_active_at(foot_cell):
+			Audio.play_spike_trap()
 			_spike_hit_cooldowns[member] = SPIKE_HIT_COOLDOWN
 			var damage: float = maxf(1.0, roundf(member.max_health * SPIKE_DAMAGE_MAX_HP_RATIO))
 			member.take_damage(damage)
@@ -916,6 +922,7 @@ func _update_spike_hazards(delta: float) -> void:
 			_spike_hit_cooldowns.erase(enemy)
 		var foot_cell: Vector2i = _map.local_to_map(enemy.get_hurtbox_position())
 		if _map.is_spike_active_at(foot_cell):
+			Audio.play_spike_trap()
 			_spike_hit_cooldowns[enemy] = SPIKE_HIT_COOLDOWN
 			var damage: float = maxf(1.0, roundf(enemy.max_health * SPIKE_DAMAGE_MAX_HP_RATIO))
 			enemy.take_damage(damage)

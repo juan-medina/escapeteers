@@ -3,12 +3,10 @@
 [color=#ffffff][b]v0.5.0 - WIP[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
-- [color=#ffffff][b]Squad Footsteps:[/b][/color] Dynamic footstep sound effects synchronized to hero movement and sprint speed.
-- [color=#ffffff][b]Melee Swing SFX:[/b][/color] Punchy weapon swoosh sounds for sword and axe melee attacks with dynamic pitch and rate limiting.
-- [color=#ffffff][b]Hit Impact SFX:[/b][/color] Tactile physical impact sound effects when hero attacks connect with monsters, dynamically boosted for heavy strikes.
+- [color=#ffffff][b]Combat & World Audio:[/b][/color] Dynamic retro sound effects for squad movement, melee swings, impacts, monster defeats, traps, and squad milestones.
 
 [color=#e0e0e0][b]Changed[/b][/color]
-- [color=#ffffff][b]Retro Pixel Sound Effects:[/b][/color] Replaced all game and UI sound effects with Helton Yan's Pixel Combat sound pack for an authentic 8-bit retro arcade aesthetic.
+- [color=#ffffff][b]Pixel Sound Effects:[/b][/color] Switched all game and UI sound effects to Helton Yan's Pixel Combat pack with calibrated loudness balancing.
 
 [color=#ffffff][b]v0.4.0 - 2026-11-12[/b][/color]
 

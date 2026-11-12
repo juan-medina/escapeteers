@@ -23,9 +23,20 @@ const IMPACT_4: AudioStream = preload("res://data/assets/sounds/12_Impact_04.wav
 const IMPACT_5: AudioStream = preload("res://data/assets/sounds/13_Impact_05.wav")
 const IMPACTS: Array[AudioStream] = [IMPACT_1, IMPACT_2, IMPACT_3, IMPACT_4, IMPACT_5]
 
+const ENEMY_DEATH_1: AudioStream = preload("res://data/assets/sounds/Enemy_Death_01.wav")
+const ENEMY_DEATH_2: AudioStream = preload("res://data/assets/sounds/Enemy_Death_02.wav")
+const ENEMY_DEATH_3: AudioStream = preload("res://data/assets/sounds/Enemy_Death_03.wav")
+const ENEMY_DEATHS: Array[AudioStream] = [ENEMY_DEATH_1, ENEMY_DEATH_2, ENEMY_DEATH_3]
+
+const TRAP_SPIKE_1: AudioStream = preload("res://data/assets/sounds/Trap_Spike_01.wav")
+const TRAP_SPIKE_2: AudioStream = preload("res://data/assets/sounds/Trap_Spike_02.wav")
+const TRAP_SPIKES: Array[AudioStream] = [TRAP_SPIKE_1, TRAP_SPIKE_2]
+
 const SQUAD_STEP_THROTTLE_MSEC: int = 180
 const MELEE_SWOOSH_THROTTLE_MSEC: int = 90
 const IMPACT_THROTTLE_MSEC: int = 70
+const ENEMY_DEATH_THROTTLE_MSEC: int = 70
+const SPIKE_TRAP_THROTTLE_MSEC: int = 80
 
 var _suppress_hover: bool = false
 
@@ -34,6 +45,9 @@ var _click: AudioStreamPlayer
 var _return: AudioStreamPlayer
 var _start: AudioStreamPlayer
 var _pause: AudioStreamPlayer
+var _level_up: AudioStreamPlayer
+var _hero_down: AudioStreamPlayer
+var _hero_recruited: AudioStreamPlayer
 var _music_player: AudioStreamPlayer
 var _step_players: Array[AudioStreamPlayer] = []
 var _step_player_index: int = 0
@@ -44,6 +58,12 @@ var _last_swoosh_time_msec: int = 0
 var _impact_players: Array[AudioStreamPlayer] = []
 var _impact_player_index: int = 0
 var _last_impact_time_msec: int = 0
+var _enemy_death_players: Array[AudioStreamPlayer] = []
+var _enemy_death_player_index: int = 0
+var _last_enemy_death_time_msec: int = 0
+var _spike_trap_players: Array[AudioStreamPlayer] = []
+var _spike_trap_player_index: int = 0
+var _last_spike_trap_time_msec: int = 0
 
 
 func _ready() -> void:
@@ -53,6 +73,9 @@ func _ready() -> void:
 	_return = _create_player(preload("res://data/assets/sounds/Return.wav"), &"Return")
 	_start = _create_player(preload("res://data/assets/sounds/Start.wav"), &"Start")
 	_pause = _create_player(preload("res://data/assets/sounds/Pause.wav"), &"Pause")
+	_level_up = _create_player(preload("res://data/assets/sounds/Level_Up.wav"), &"LevelUp")
+	_hero_down = _create_player(preload("res://data/assets/sounds/Hero_Down.wav"), &"HeroDown")
+	_hero_recruited = _create_player(preload("res://data/assets/sounds/Hero_Recruited.wav"), &"HeroRecruited")
 	_music_player = _create_music_player(&"MusicPlayer")
 	for i: int in range(3):
 		var player: AudioStreamPlayer = _create_random_player(STEPS, 1.1, StringName("Footstep_%d" % i))
@@ -63,12 +86,174 @@ func _ready() -> void:
 	for i: int in range(3):
 		var player: AudioStreamPlayer = _create_random_player(IMPACTS, 1.15, StringName("HitImpact_%d" % i))
 		_impact_players.append(player)
+	for i: int in range(3):
+		var player: AudioStreamPlayer = _create_random_player(ENEMY_DEATHS, 1.15, StringName("EnemyDeath_%d" % i))
+		_enemy_death_players.append(player)
+	for i: int in range(2):
+		var player: AudioStreamPlayer = _create_random_player(TRAP_SPIKES, 1.15, StringName("SpikeTrap_%d" % i))
+		_spike_trap_players.append(player)
 
 
 func _exit_tree() -> void:
 	_step_players.clear()
 	_swoosh_players.clear()
 	_impact_players.clear()
+	_enemy_death_players.clear()
+	_spike_trap_players.clear()
+
+
+func play_footstep() -> void:
+	var now: int = Time.get_ticks_msec()
+	if now - _last_step_time_msec < SQUAD_STEP_THROTTLE_MSEC:
+		return
+	_last_step_time_msec = now
+
+	if _step_players.is_empty():
+		return
+
+	var player: AudioStreamPlayer = _step_players[_step_player_index]
+	_step_player_index = (_step_player_index + 1) % _step_players.size()
+	player.play()
+
+
+func play_melee_swoosh() -> void:
+	var now: int = Time.get_ticks_msec()
+	if now - _last_swoosh_time_msec < MELEE_SWOOSH_THROTTLE_MSEC:
+		return
+	_last_swoosh_time_msec = now
+
+	if _swoosh_players.is_empty():
+		return
+
+	var player: AudioStreamPlayer = _swoosh_players[_swoosh_player_index]
+	_swoosh_player_index = (_swoosh_player_index + 1) % _swoosh_players.size()
+	player.play()
+
+
+func play_hit_impact(is_heavy: bool = false) -> void:
+	var now: int = Time.get_ticks_msec()
+	if now - _last_impact_time_msec < IMPACT_THROTTLE_MSEC:
+		return
+	_last_impact_time_msec = now
+
+	if _impact_players.is_empty():
+		return
+
+	var player: AudioStreamPlayer = _impact_players[_impact_player_index]
+	_impact_player_index = (_impact_player_index + 1) % _impact_players.size()
+	player.volume_db = 2.0 if is_heavy else 0.0
+	player.play()
+
+
+func play_enemy_death() -> void:
+	var now: int = Time.get_ticks_msec()
+	if now - _last_enemy_death_time_msec < ENEMY_DEATH_THROTTLE_MSEC:
+		return
+	_last_enemy_death_time_msec = now
+
+	if _enemy_death_players.is_empty():
+		return
+
+	var player: AudioStreamPlayer = _enemy_death_players[_enemy_death_player_index]
+	_enemy_death_player_index = (_enemy_death_player_index + 1) % _enemy_death_players.size()
+	player.play()
+
+
+func play_spike_trap() -> void:
+	var now: int = Time.get_ticks_msec()
+	if now - _last_spike_trap_time_msec < SPIKE_TRAP_THROTTLE_MSEC:
+		return
+	_last_spike_trap_time_msec = now
+
+	if _spike_trap_players.is_empty():
+		return
+
+	var player: AudioStreamPlayer = _spike_trap_players[_spike_trap_player_index]
+	_spike_trap_player_index = (_spike_trap_player_index + 1) % _spike_trap_players.size()
+	player.play()
+
+
+func play_level_up() -> void:
+	if _level_up != null:
+		_level_up.play()
+
+
+func play_hero_down() -> void:
+	if _hero_down != null:
+		_hero_down.play()
+
+
+func play_hero_recruited() -> void:
+	if _hero_recruited != null:
+		_hero_recruited.play()
+
+
+func play_menu_music() -> void:
+	_play_music(MENU_MUSIC)
+
+
+func play_game_music() -> void:
+	_play_music(GAME_MUSIC)
+
+
+func stop_music() -> void:
+	_music_player.stop()
+
+
+func play_hover() -> void:
+	if _suppress_hover:
+		return
+	_hover.play()
+
+
+func play_click() -> void:
+	_click.play()
+
+
+func play_pause() -> void:
+	_pause.play()
+
+
+func grab_focus_silent(control: Control) -> void:
+	# Focus without the hover sound. focus_entered still fires synchronously,
+	# so focus-driven visuals react normally — only the sound is skipped.
+	_suppress_hover = true
+	control.grab_focus()
+	_suppress_hover = false
+
+
+func connect_menu_sounds(root: Node) -> void:
+	for child: Node in root.get_children():
+		var control: Control = child as Control
+		if control:
+			_connect_sound(control)
+			connect_menu_sounds(control)
+
+
+func set_master_volume_db(db: float) -> void:
+	var master_index: int = AudioServer.get_bus_index(&"Master")
+	AudioServer.set_bus_volume_db(master_index, db)
+
+
+func stop_all_players(node: Node) -> void:
+	_stop_footsteps()
+	for player: AudioStreamPlayer in _swoosh_players:
+		player.stop()
+	for player: AudioStreamPlayer in _impact_players:
+		player.stop()
+	for player: AudioStreamPlayer in _enemy_death_players:
+		player.stop()
+	for player: AudioStreamPlayer in _spike_trap_players:
+		player.stop()
+	# Stops every player before a quit, so Godot logs no audio error at exit.
+	var stereo: AudioStreamPlayer = node as AudioStreamPlayer
+	if stereo:
+		stereo.stop()
+	var positional: AudioStreamPlayer2D = node as AudioStreamPlayer2D
+	if positional:
+		positional.stop()
+	for child: Node in node.get_children():
+		stop_all_players(child)
 
 
 func _create_player(stream: AudioStream, node_name: StringName) -> AudioStreamPlayer:
@@ -102,66 +287,6 @@ func _create_random_player(streams: Array[AudioStream], pitch: float, node_name:
 	return player
 
 
-func play_footstep() -> void:
-	var now: int = Time.get_ticks_msec()
-	if now - _last_step_time_msec < SQUAD_STEP_THROTTLE_MSEC:
-		return
-	_last_step_time_msec = now
-
-	if _step_players.is_empty():
-		return
-
-	var player: AudioStreamPlayer = _step_players[_step_player_index]
-	_step_player_index = (_step_player_index + 1) % _step_players.size()
-	player.play()
-
-
-func stop_footsteps() -> void:
-	for player: AudioStreamPlayer in _step_players:
-		player.stop()
-
-
-func play_melee_swoosh() -> void:
-	var now: int = Time.get_ticks_msec()
-	if now - _last_swoosh_time_msec < MELEE_SWOOSH_THROTTLE_MSEC:
-		return
-	_last_swoosh_time_msec = now
-
-	if _swoosh_players.is_empty():
-		return
-
-	var player: AudioStreamPlayer = _swoosh_players[_swoosh_player_index]
-	_swoosh_player_index = (_swoosh_player_index + 1) % _swoosh_players.size()
-	player.play()
-
-
-func play_hit_impact(is_heavy: bool = false) -> void:
-	var now: int = Time.get_ticks_msec()
-	if now - _last_impact_time_msec < IMPACT_THROTTLE_MSEC:
-		return
-	_last_impact_time_msec = now
-
-	if _impact_players.is_empty():
-		return
-
-	var player: AudioStreamPlayer = _impact_players[_impact_player_index]
-	_impact_player_index = (_impact_player_index + 1) % _impact_players.size()
-	player.volume_db = 2.0 if is_heavy else 0.0
-	player.play()
-
-
-func play_menu_music() -> void:
-	_play_music(MENU_MUSIC)
-
-
-func play_game_music() -> void:
-	_play_music(GAME_MUSIC)
-
-
-func stop_music() -> void:
-	_music_player.stop()
-
-
 func _play_music(stream: AudioStreamOggVorbis) -> void:
 	if stream == null:
 		return
@@ -172,49 +297,24 @@ func _play_music(stream: AudioStreamOggVorbis) -> void:
 	_music_player.play()
 
 
-func play_hover() -> void:
-	if _suppress_hover:
-		return
-	_hover.play()
+func _stop_footsteps() -> void:
+	for player: AudioStreamPlayer in _step_players:
+		player.stop()
 
 
-func play_click() -> void:
-	_click.play()
-
-
-func slider_change(_value: float) -> void:
-	_click.play()
-
-
-func play_return() -> void:
+func _play_return() -> void:
 	_return.play()
 
 
-func play_start() -> void:
+func _play_start() -> void:
 	_start.play()
 
 
-func play_pause() -> void:
-	_pause.play()
+func _slider_change(_value: float) -> void:
+	_click.play()
 
 
-func grab_focus_silent(control: Control) -> void:
-	# Focus without the hover sound. focus_entered still fires synchronously,
-	# so focus-driven visuals react normally — only the sound is skipped.
-	_suppress_hover = true
-	control.grab_focus()
-	_suppress_hover = false
-
-
-func connect_menu_sounds(root: Node) -> void:
-	for child: Node in root.get_children():
-		var control: Control = child as Control
-		if control:
-			connect_sound(control)
-			connect_menu_sounds(control)
-
-
-func connect_sound(control: Control) -> void:
+func _connect_sound(control: Control) -> void:
 	var button: BaseButton = control as BaseButton
 	if button:
 		_connect_button(button)
@@ -241,9 +341,9 @@ func _connect_button(button: BaseButton) -> void:
 	_connect_focus(button)
 
 	if button.is_in_group(&"ui_return"):
-		button.pressed.connect(play_return)
+		button.pressed.connect(_play_return)
 	elif button.is_in_group(&"ui_start"):
-		button.pressed.connect(play_start)
+		button.pressed.connect(_play_start)
 	else:
 		button.pressed.connect(play_click)
 
@@ -251,32 +351,10 @@ func _connect_button(button: BaseButton) -> void:
 func _connect_slider(slider: Slider) -> void:
 	slider.mouse_entered.connect(slider.grab_focus)
 	slider.focus_entered.connect(play_hover)
-	slider.value_changed.connect(slider_change)
+	slider.value_changed.connect(_slider_change)
 
 
 func _connect_focus(control: Control) -> void:
 	if control.focus_mode != Control.FOCUS_NONE:
 		control.mouse_entered.connect(control.grab_focus)
 	control.focus_entered.connect(play_hover)
-
-
-func set_master_volume_db(db: float) -> void:
-	var master_index: int = AudioServer.get_bus_index(&"Master")
-	AudioServer.set_bus_volume_db(master_index, db)
-
-
-func stop_all_players(node: Node) -> void:
-	stop_footsteps()
-	for player: AudioStreamPlayer in _swoosh_players:
-		player.stop()
-	for player: AudioStreamPlayer in _impact_players:
-		player.stop()
-	# Stops every player before a quit, so Godot logs no audio error at exit.
-	var stereo: AudioStreamPlayer = node as AudioStreamPlayer
-	if stereo:
-		stereo.stop()
-	var positional: AudioStreamPlayer2D = node as AudioStreamPlayer2D
-	if positional:
-		positional.stop()
-	for child: Node in node.get_children():
-		stop_all_players(child)
