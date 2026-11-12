@@ -147,7 +147,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	set_process(true)
 	await Transition.hide_loading()
-	Audio.play_game_music()
+	Audio.play_music(true)
 
 
 func get_active_enemy_count() -> int:

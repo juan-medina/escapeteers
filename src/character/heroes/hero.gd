@@ -469,6 +469,8 @@ func _on_frame_changed() -> void:
 			var proj: Projectile = ranged.spawn_projectile(self, active_target)
 			if proj != null:
 				spawn_projectile(proj)
+				var is_magic: bool = hero_data != null and hero_data.id != &"archer"
+				Audio.play_ranged_attack(is_magic)
 	elif current_action is HealAction and active_target != null and not _hit_applied_this_attack:
 		var heal_act: HealAction = current_action as HealAction
 		if frame >= heal_act.cast_frame:
@@ -477,6 +479,7 @@ func _on_frame_changed() -> void:
 			var effect: Projectile = heal_act.spawn_heal_effect(self, active_target)
 			if effect != null:
 				spawn_projectile(effect)
+			Audio.play_ranged_attack(true)
 			ally_healed.emit(active_target, heal_act.heal_amount)
 
 

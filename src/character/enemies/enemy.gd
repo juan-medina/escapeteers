@@ -372,6 +372,7 @@ func apply_melee_damage(hit_hero: Hero, damage_amount: float) -> void:
 	if hit_hero != null and is_instance_valid(hit_hero):
 		hit_hero.take_damage(damage_amount)
 		attacked.emit(hit_hero, damage_amount)
+		Audio.play_enemy_attack(false)
 
 
 func _process_patrol(delta: float) -> void:
@@ -702,8 +703,10 @@ func _on_animation_finished() -> void:
 		if melee.apply_hit(self, hit_target):
 			var applied_dmg: float = melee.heavy_damage if melee.current_is_heavy else melee.damage
 			attacked.emit(hit_target, applied_dmg)
+			Audio.play_enemy_attack(false)
 	elif current_action is RangedAction and hit_target != null:
 		var ranged: RangedAction = current_action as RangedAction
 		var proj: Projectile = ranged.spawn_projectile(self, hit_target)
 		if proj != null:
 			spawn_projectile(proj)
+			Audio.play_enemy_attack(true)

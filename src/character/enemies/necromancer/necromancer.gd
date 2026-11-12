@@ -47,6 +47,7 @@ func _on_animation_finished() -> void:
 
 
 func _emit_summons() -> void:
+	Audio.play_necromancer_summon()
 	var base_angle: float = randf() * TAU
 	var count: int = maxi(1, summon_count)
 	var step_angle: float = TAU / float(count)

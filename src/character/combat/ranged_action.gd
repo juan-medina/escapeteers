@@ -75,6 +75,7 @@ func _on_telegraph_locked(telegraph: Telegraph) -> void:
 	var line: TelegraphLine = telegraph as TelegraphLine
 	if line != null:
 		locked_fire_direction = line.locked_direction
+		Audio.play_telegraph_warning()
 
 
 func cancel_telegraph() -> void:

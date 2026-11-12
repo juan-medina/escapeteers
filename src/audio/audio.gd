@@ -32,10 +32,21 @@ const TRAP_SPIKE_1: AudioStream = preload("res://data/assets/sounds/Trap_Spike_0
 const TRAP_SPIKE_2: AudioStream = preload("res://data/assets/sounds/Trap_Spike_02.wav")
 const TRAP_SPIKES: Array[AudioStream] = [TRAP_SPIKE_1, TRAP_SPIKE_2]
 
+const BOW_SHOOT: AudioStream = preload("res://data/assets/sounds/Bow_Shoot.wav")
+const MAGIC_CAST: AudioStream = preload("res://data/assets/sounds/Magic_Cast.wav")
+const ENEMY_MELEE: AudioStream = preload("res://data/assets/sounds/Enemy_Melee.wav")
+const ENEMY_RANGED: AudioStream = preload("res://data/assets/sounds/Enemy_Ranged.wav")
+const TELEGRAPH_WARNING: AudioStream = preload("res://data/assets/sounds/Telegraph_Warning.wav")
+const NECROMANCER_SUMMON: AudioStream = preload("res://data/assets/sounds/Necromancer_Summon.wav")
+
 const SQUAD_STEP_THROTTLE_MSEC: int = 180
 const MELEE_SWOOSH_THROTTLE_MSEC: int = 90
+const RANGED_ATTACK_THROTTLE_MSEC: int = 80
 const IMPACT_THROTTLE_MSEC: int = 70
+const ENEMY_ATTACK_THROTTLE_MSEC: int = 80
 const ENEMY_DEATH_THROTTLE_MSEC: int = 70
+const TELEGRAPH_THROTTLE_MSEC: int = 120
+const NECROMANCER_SUMMON_THROTTLE_MSEC: int = 200
 const SPIKE_TRAP_THROTTLE_MSEC: int = 80
 
 var _suppress_hover: bool = false
@@ -55,12 +66,30 @@ var _last_step_time_msec: int = 0
 var _swoosh_players: Array[AudioStreamPlayer] = []
 var _swoosh_player_index: int = 0
 var _last_swoosh_time_msec: int = 0
+var _bow_players: Array[AudioStreamPlayer] = []
+var _bow_player_index: int = 0
+var _last_bow_time_msec: int = 0
+var _magic_players: Array[AudioStreamPlayer] = []
+var _magic_player_index: int = 0
+var _last_magic_time_msec: int = 0
 var _impact_players: Array[AudioStreamPlayer] = []
 var _impact_player_index: int = 0
 var _last_impact_time_msec: int = 0
+var _enemy_melee_players: Array[AudioStreamPlayer] = []
+var _enemy_melee_player_index: int = 0
+var _last_enemy_melee_time_msec: int = 0
+var _enemy_ranged_players: Array[AudioStreamPlayer] = []
+var _enemy_ranged_player_index: int = 0
+var _last_enemy_ranged_time_msec: int = 0
 var _enemy_death_players: Array[AudioStreamPlayer] = []
 var _enemy_death_player_index: int = 0
 var _last_enemy_death_time_msec: int = 0
+var _telegraph_players: Array[AudioStreamPlayer] = []
+var _telegraph_player_index: int = 0
+var _last_telegraph_time_msec: int = 0
+var _summon_players: Array[AudioStreamPlayer] = []
+var _summon_player_index: int = 0
+var _last_summon_time_msec: int = 0
 var _spike_trap_players: Array[AudioStreamPlayer] = []
 var _spike_trap_player_index: int = 0
 var _last_spike_trap_time_msec: int = 0
@@ -83,12 +112,30 @@ func _ready() -> void:
 	for i: int in range(2):
 		var player: AudioStreamPlayer = _create_random_player(SWOOSHES, 1.15, StringName("MeleeSwoosh_%d" % i))
 		_swoosh_players.append(player)
+	for i: int in range(2):
+		var player: AudioStreamPlayer = _create_single_random_player(BOW_SHOOT, 1.15, StringName("BowShoot_%d" % i))
+		_bow_players.append(player)
+	for i: int in range(2):
+		var player: AudioStreamPlayer = _create_single_random_player(MAGIC_CAST, 1.15, StringName("MagicCast_%d" % i))
+		_magic_players.append(player)
 	for i: int in range(3):
 		var player: AudioStreamPlayer = _create_random_player(IMPACTS, 1.15, StringName("HitImpact_%d" % i))
 		_impact_players.append(player)
+	for i: int in range(2):
+		var player: AudioStreamPlayer = _create_single_random_player(ENEMY_MELEE, 1.15, StringName("EnemyMelee_%d" % i))
+		_enemy_melee_players.append(player)
+	for i: int in range(2):
+		var player: AudioStreamPlayer = _create_single_random_player(ENEMY_RANGED, 1.15, StringName("EnemyRanged_%d" % i))
+		_enemy_ranged_players.append(player)
 	for i: int in range(3):
 		var player: AudioStreamPlayer = _create_random_player(ENEMY_DEATHS, 1.15, StringName("EnemyDeath_%d" % i))
 		_enemy_death_players.append(player)
+	for i: int in range(2):
+		var player: AudioStreamPlayer = _create_single_random_player(TELEGRAPH_WARNING, 1.1, StringName("TelegraphWarning_%d" % i))
+		_telegraph_players.append(player)
+	for i: int in range(2):
+		var player: AudioStreamPlayer = _create_single_random_player(NECROMANCER_SUMMON, 1.1, StringName("NecroSummon_%d" % i))
+		_summon_players.append(player)
 	for i: int in range(2):
 		var player: AudioStreamPlayer = _create_random_player(TRAP_SPIKES, 1.15, StringName("SpikeTrap_%d" % i))
 		_spike_trap_players.append(player)
@@ -97,8 +144,14 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	_step_players.clear()
 	_swoosh_players.clear()
+	_bow_players.clear()
+	_magic_players.clear()
 	_impact_players.clear()
+	_enemy_melee_players.clear()
+	_enemy_ranged_players.clear()
 	_enemy_death_players.clear()
+	_telegraph_players.clear()
+	_summon_players.clear()
 	_spike_trap_players.clear()
 
 
@@ -130,6 +183,24 @@ func play_melee_swoosh() -> void:
 	player.play()
 
 
+func play_ranged_attack(is_magic: bool = false) -> void:
+	var now: int = Time.get_ticks_msec()
+	if is_magic:
+		if now - _last_magic_time_msec < RANGED_ATTACK_THROTTLE_MSEC or _magic_players.is_empty():
+			return
+		_last_magic_time_msec = now
+		var player: AudioStreamPlayer = _magic_players[_magic_player_index]
+		_magic_player_index = (_magic_player_index + 1) % _magic_players.size()
+		player.play()
+	else:
+		if now - _last_bow_time_msec < RANGED_ATTACK_THROTTLE_MSEC or _bow_players.is_empty():
+			return
+		_last_bow_time_msec = now
+		var player: AudioStreamPlayer = _bow_players[_bow_player_index]
+		_bow_player_index = (_bow_player_index + 1) % _bow_players.size()
+		player.play()
+
+
 func play_hit_impact(is_heavy: bool = false) -> void:
 	var now: int = Time.get_ticks_msec()
 	if now - _last_impact_time_msec < IMPACT_THROTTLE_MSEC:
@@ -145,6 +216,24 @@ func play_hit_impact(is_heavy: bool = false) -> void:
 	player.play()
 
 
+func play_enemy_attack(is_ranged: bool = false) -> void:
+	var now: int = Time.get_ticks_msec()
+	if is_ranged:
+		if now - _last_enemy_ranged_time_msec < ENEMY_ATTACK_THROTTLE_MSEC or _enemy_ranged_players.is_empty():
+			return
+		_last_enemy_ranged_time_msec = now
+		var player: AudioStreamPlayer = _enemy_ranged_players[_enemy_ranged_player_index]
+		_enemy_ranged_player_index = (_enemy_ranged_player_index + 1) % _enemy_ranged_players.size()
+		player.play()
+	else:
+		if now - _last_enemy_melee_time_msec < ENEMY_ATTACK_THROTTLE_MSEC or _enemy_melee_players.is_empty():
+			return
+		_last_enemy_melee_time_msec = now
+		var player: AudioStreamPlayer = _enemy_melee_players[_enemy_melee_player_index]
+		_enemy_melee_player_index = (_enemy_melee_player_index + 1) % _enemy_melee_players.size()
+		player.play()
+
+
 func play_enemy_death() -> void:
 	var now: int = Time.get_ticks_msec()
 	if now - _last_enemy_death_time_msec < ENEMY_DEATH_THROTTLE_MSEC:
@@ -156,6 +245,28 @@ func play_enemy_death() -> void:
 
 	var player: AudioStreamPlayer = _enemy_death_players[_enemy_death_player_index]
 	_enemy_death_player_index = (_enemy_death_player_index + 1) % _enemy_death_players.size()
+	player.play()
+
+
+func play_telegraph_warning() -> void:
+	var now: int = Time.get_ticks_msec()
+	if now - _last_telegraph_time_msec < TELEGRAPH_THROTTLE_MSEC or _telegraph_players.is_empty():
+		return
+	_last_telegraph_time_msec = now
+
+	var player: AudioStreamPlayer = _telegraph_players[_telegraph_player_index]
+	_telegraph_player_index = (_telegraph_player_index + 1) % _telegraph_players.size()
+	player.play()
+
+
+func play_necromancer_summon() -> void:
+	var now: int = Time.get_ticks_msec()
+	if now - _last_summon_time_msec < NECROMANCER_SUMMON_THROTTLE_MSEC or _summon_players.is_empty():
+		return
+	_last_summon_time_msec = now
+
+	var player: AudioStreamPlayer = _summon_players[_summon_player_index]
+	_summon_player_index = (_summon_player_index + 1) % _summon_players.size()
 	player.play()
 
 
@@ -188,22 +299,12 @@ func play_hero_recruited() -> void:
 		_hero_recruited.play()
 
 
-func play_menu_music() -> void:
-	_play_music(MENU_MUSIC)
-
-
-func play_game_music() -> void:
-	_play_music(GAME_MUSIC)
+func play_music(is_game: bool = true) -> void:
+	_play_music(GAME_MUSIC if is_game else MENU_MUSIC)
 
 
 func stop_music() -> void:
 	_music_player.stop()
-
-
-func play_hover() -> void:
-	if _suppress_hover:
-		return
-	_hover.play()
 
 
 func play_click() -> void:
@@ -215,8 +316,6 @@ func play_pause() -> void:
 
 
 func grab_focus_silent(control: Control) -> void:
-	# Focus without the hover sound. focus_entered still fires synchronously,
-	# so focus-driven visuals react normally — only the sound is skipped.
 	_suppress_hover = true
 	control.grab_focus()
 	_suppress_hover = false
@@ -239,13 +338,24 @@ func stop_all_players(node: Node) -> void:
 	_stop_footsteps()
 	for player: AudioStreamPlayer in _swoosh_players:
 		player.stop()
+	for player: AudioStreamPlayer in _bow_players:
+		player.stop()
+	for player: AudioStreamPlayer in _magic_players:
+		player.stop()
 	for player: AudioStreamPlayer in _impact_players:
+		player.stop()
+	for player: AudioStreamPlayer in _enemy_melee_players:
+		player.stop()
+	for player: AudioStreamPlayer in _enemy_ranged_players:
 		player.stop()
 	for player: AudioStreamPlayer in _enemy_death_players:
 		player.stop()
+	for player: AudioStreamPlayer in _telegraph_players:
+		player.stop()
+	for player: AudioStreamPlayer in _summon_players:
+		player.stop()
 	for player: AudioStreamPlayer in _spike_trap_players:
 		player.stop()
-	# Stops every player before a quit, so Godot logs no audio error at exit.
 	var stereo: AudioStreamPlayer = node as AudioStreamPlayer
 	if stereo:
 		stereo.stop()
@@ -287,6 +397,19 @@ func _create_random_player(streams: Array[AudioStream], pitch: float, node_name:
 	return player
 
 
+func _create_single_random_player(stream: AudioStream, pitch: float, node_name: StringName) -> AudioStreamPlayer:
+	var player: AudioStreamPlayer = AudioStreamPlayer.new()
+	player.name = node_name
+	var randomizer: AudioStreamRandomizer = AudioStreamRandomizer.new()
+	randomizer.add_stream(-1, stream)
+	randomizer.playback_mode = AudioStreamRandomizer.PLAYBACK_RANDOM_NO_REPEATS
+	randomizer.random_pitch = pitch
+	player.stream = randomizer
+	player.bus = &"Sfx"
+	add_child(player)
+	return player
+
+
 func _play_music(stream: AudioStreamOggVorbis) -> void:
 	if stream == null:
 		return
@@ -295,6 +418,12 @@ func _play_music(stream: AudioStreamOggVorbis) -> void:
 		return
 	_music_player.stream = stream
 	_music_player.play()
+
+
+func _play_hover() -> void:
+	if _suppress_hover:
+		return
+	_hover.play()
 
 
 func _stop_footsteps() -> void:
@@ -350,11 +479,11 @@ func _connect_button(button: BaseButton) -> void:
 
 func _connect_slider(slider: Slider) -> void:
 	slider.mouse_entered.connect(slider.grab_focus)
-	slider.focus_entered.connect(play_hover)
+	slider.focus_entered.connect(_play_hover)
 	slider.value_changed.connect(_slider_change)
 
 
 func _connect_focus(control: Control) -> void:
 	if control.focus_mode != Control.FOCUS_NONE:
 		control.mouse_entered.connect(control.grab_focus)
-	control.focus_entered.connect(play_hover)
+	control.focus_entered.connect(_play_hover)

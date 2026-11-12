@@ -22,7 +22,7 @@ func _ready() -> void:
 		_changelog_panel.is_boot = true
 		_show_first(_changelog_panel)
 	else:
-		Audio.play_menu_music()
+		Audio.play_music(false)
 		_show_first(_main_menu_panel)
 
 
@@ -52,5 +52,5 @@ func _on_exit_requested() -> void:
 
 
 func _on_panel_back_requested() -> void:
-	Audio.play_menu_music()
+	Audio.play_music(false)
 	show_panel(_main_menu_panel)

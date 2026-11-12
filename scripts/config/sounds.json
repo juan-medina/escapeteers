@@ -146,6 +146,36 @@
       "input": "src/data/raw/sounds/Trap_Spike_02.wav",
       "output": "src/data/assets/sounds/Trap_Spike_02.wav",
       "tier": "heavy"
+    },
+    {
+      "input": "src/data/raw/sounds/Bow_Shoot.wav",
+      "output": "src/data/assets/sounds/Bow_Shoot.wav",
+      "tier": "frequent"
+    },
+    {
+      "input": "src/data/raw/sounds/Magic_Cast.wav",
+      "output": "src/data/assets/sounds/Magic_Cast.wav",
+      "tier": "frequent"
+    },
+    {
+      "input": "src/data/raw/sounds/Enemy_Melee.wav",
+      "output": "src/data/assets/sounds/Enemy_Melee.wav",
+      "tier": "frequent"
+    },
+    {
+      "input": "src/data/raw/sounds/Enemy_Ranged.wav",
+      "output": "src/data/assets/sounds/Enemy_Ranged.wav",
+      "tier": "frequent"
+    },
+    {
+      "input": "src/data/raw/sounds/Telegraph_Warning.wav",
+      "output": "src/data/assets/sounds/Telegraph_Warning.wav",
+      "tier": "impact"
+    },
+    {
+      "input": "src/data/raw/sounds/Necromancer_Summon.wav",
+      "output": "src/data/assets/sounds/Necromancer_Summon.wav",
+      "tier": "heavy"
     }
   ]
 }
