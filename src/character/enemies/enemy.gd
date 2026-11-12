@@ -20,8 +20,7 @@ const WAYPOINT_ARRIVE_DIST_SQ: float = 64.0
 const PATROL_TIMEOUT: float = 10.0
 const KNOCKBACK_DECAY: float = 600.0
 const SLOW_MODULATE: Color = Color(0.45, 0.75, 1.35, 1.0)
-const STUN_MODULATE: Color = Color(1.4, 1.3, 0.5, 1.0)
-const BURN_MODULATE: Color = Color(1.5, 0.55, 0.2, 1.0)
+const MINION_MODULATE: Color = Color(0.85, 0.9, 1.1, 0.85)
 const BURN_TICK_INTERVAL: float = 0.5
 const ENEMY_HURTBOX_RADIUS: float = 10.0
 
@@ -59,6 +58,7 @@ var _patrol_timer: float = 0.0
 var _idle_wait_timer: float = 0.0
 var _knockback_velocity: Vector2 = Vector2.ZERO
 var _notifier: VisibleOnScreenNotifier2D = null
+var _status_vfx: StatusVfx = null
 var _slow_timer: float = 0.0
 var _slow_multiplier: float = 1.0
 var _stun_timer: float = 0.0
@@ -88,6 +88,11 @@ func _ready() -> void:
 	hurtbox.collision_mask = 0
 	add_child(hurtbox)
 
+	_status_vfx = StatusVfx.new()
+	if _health_bar != null:
+		_status_vfx.head_y = _health_bar.position.y + 3.0
+	add_child(_status_vfx)
+
 	_notifier = VisibleOnScreenNotifier2D.new()
 	_notifier.rect = Rect2(-64.0, -64.0, 128.0, 128.0)
 	_notifier.screen_entered.connect(_on_screen_entered)
@@ -115,10 +120,14 @@ func _set_sleeping(sleeping: bool) -> void:
 	if sleeping:
 		_cancel_telegraph()
 		_animated_sprite.pause()
+		if _status_vfx != null:
+			_status_vfx.set_process(false)
 		disable_collisions()
 	else:
-		if not _animated_sprite.is_playing():
+		if not is_stunned() and not _animated_sprite.is_playing():
 			_animated_sprite.play()
+		if _status_vfx != null:
+			_status_vfx.set_statuses(is_stunned(), is_burning(), is_slowed())
 		if not is_dead:
 			enable_collisions()
 
@@ -165,7 +174,9 @@ func _physics_process(delta: float) -> void:
 			var tick_dmg: float = _burn_dps * BURN_TICK_INTERVAL
 			if tick_dmg > 0.0 and not is_dead:
 				var src: Hero = _burn_source
-				take_damage(tick_dmg)
+				if _status_vfx != null:
+					_status_vfx.trigger_burn_pulse()
+				take_damage(tick_dmg, false)
 				if src != null and is_instance_valid(src):
 					src.enemy_hit.emit(self, tick_dmg, false)
 				if is_dead:
@@ -183,7 +194,6 @@ func _physics_process(delta: float) -> void:
 	if is_stunned():
 		velocity = _knockback_velocity
 		move_and_slide()
-		update_visuals(Vector2.ZERO)
 		return
 
 	_check_combat_actions()
@@ -270,6 +280,8 @@ func apply_knockback(force: Vector2) -> void:
 		return
 	_set_sleeping(false)
 	_knockback_velocity = force
+	if _status_vfx != null:
+		_status_vfx.trigger_knockback(force)
 
 
 func apply_slow(factor: float, duration: float) -> void:
@@ -327,25 +339,29 @@ func is_engaged() -> bool:
 
 
 func _update_status_visuals() -> void:
+	if _status_vfx != null:
+		_status_vfx.set_statuses(is_stunned(), is_burning(), is_slowed())
 	if is_stunned():
-		_base_modulate = STUN_MODULATE
-		_animated_sprite.modulate = STUN_MODULATE
-	elif is_burning():
-		_base_modulate = BURN_MODULATE
-		_animated_sprite.modulate = BURN_MODULATE
-	elif is_slowed():
+		_animated_sprite.pause()
+	elif not _animated_sprite.is_playing() and not is_dead:
+		_animated_sprite.play()
+
+	if is_slowed():
 		_base_modulate = SLOW_MODULATE
 		_animated_sprite.modulate = SLOW_MODULATE
+	elif is_minion:
+		_base_modulate = MINION_MODULATE
+		_animated_sprite.modulate = MINION_MODULATE
 	else:
 		_base_modulate = Color.WHITE
 		_animated_sprite.modulate = Color.WHITE
 
 
-func take_damage(amount: float) -> void:
+func take_damage(amount: float, flash_hurt: bool = true) -> void:
 	if is_dead or not visible:
 		return
 	_set_sleeping(false)
-	super.take_damage(amount)
+	super.take_damage(amount, flash_hurt)
 
 
 func apply_melee_damage(hit_hero: Hero, damage_amount: float) -> void:
@@ -622,6 +638,8 @@ func reset_for_pool() -> void:
 	_knockback_velocity = Vector2.ZERO
 	_navigator.reset()
 	_base_modulate = Color.WHITE
+	if _status_vfx != null:
+		_status_vfx.clear()
 	if _animated_sprite != null:
 		_animated_sprite.modulate = Color.WHITE
 		_animated_sprite.play(ANIM_IDLE)
@@ -653,6 +671,8 @@ func _on_death() -> void:
 	_burn_dps = 0.0
 	_burn_tick_timer = 0.0
 	_burn_source = null
+	if _status_vfx != null:
+		_status_vfx.clear()
 	_base_modulate = Color.WHITE
 	_animated_sprite.modulate = Color.WHITE
 	super._on_death()

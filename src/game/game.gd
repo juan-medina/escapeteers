@@ -727,6 +727,7 @@ func _on_class_leveled_up(hero_data: HeroData) -> void:
 			if member.hero_data != null and member.hero_data.id == hero_data.id:
 				hero_data.apply_to_hero(member, new_level)
 				member.health = member.max_health
+				member.play_level_up_vfx()
 
 	_sync_hud_squad()
 

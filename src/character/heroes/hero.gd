@@ -87,6 +87,7 @@ var _player_light: PointLight2D = null
 var _hit_applied_this_attack: bool = false
 var _hits_applied_frames: Array[int] = []
 var _notifier: VisibleOnScreenNotifier2D = null
+var _hero_vfx: HeroVfx = null
 var _is_on_screen: bool = false
 
 @onready var _ground_indicator: GroundIndicator = get_node_or_null(^"GroundIndicator") as GroundIndicator
@@ -102,6 +103,11 @@ func _ready() -> void:
 	hurtbox.collision_layer = 64
 	hurtbox.collision_mask = 0
 	add_child(hurtbox)
+
+	_hero_vfx = HeroVfx.new()
+	if _health_bar != null:
+		_hero_vfx.head_y = _health_bar.position.y + 2.0
+	add_child(_hero_vfx)
 
 	_notifier = VisibleOnScreenNotifier2D.new()
 	_notifier.rect = Rect2(-64.0, -64.0, 128.0, 128.0)
@@ -208,6 +214,20 @@ func _setup_actions() -> void:
 		heal_act.leash_distance = 0.0
 		heal_act.check_line_of_sight = true
 		combat_actions.append(heal_act)
+
+
+func update_visuals(movement_vector: Vector2) -> void:
+	super.update_visuals(movement_vector)
+	if _hero_vfx != null:
+		var sprinting: bool = not is_dead and movement_vector.length_squared() > MIN_MOVEMENT_THRESHOLD_SQUARED and speed > BASE_SPEED + 5.0
+		_hero_vfx.set_sprinting(sprinting, movement_vector)
+
+
+func play_level_up_vfx() -> void:
+	if _health_bar != null:
+		_health_bar.update_health(health, max_health)
+	if _hero_vfx != null and not is_dead:
+		_hero_vfx.trigger_level_up()
 
 
 func refresh_combat_actions() -> void:
@@ -419,6 +439,12 @@ func _on_frame_changed() -> void:
 			should_hit = true
 
 		if should_hit:
+			var applied_kb: float = melee.heavy_knockback if is_heavy else melee.knockback
+			if _hero_vfx != null and (is_heavy or applied_kb >= 140.0):
+				var strike_dir: Vector2 = (active_target.global_position - global_position).normalized()
+				if strike_dir.length_squared() < 0.01:
+					strike_dir = Vector2.LEFT if flip_h else Vector2.RIGHT
+				_hero_vfx.trigger_knockback_strike(strike_dir, is_heavy)
 			for node: Node in get_tree().get_nodes_in_group(_GROUP_ENEMIES):
 				var enemy: Enemy = node as Enemy
 				if not _is_valid_enemy_target(enemy):
@@ -434,6 +460,11 @@ func _on_frame_changed() -> void:
 		var ranged: RangedAction = current_action as RangedAction
 		if frame >= ranged.projectile_frame:
 			_hit_applied_this_attack = true
+			if _hero_vfx != null and ranged.knockback >= 140.0:
+				var shot_dir: Vector2 = (active_target.global_position - global_position).normalized()
+				if shot_dir.length_squared() < 0.01:
+					shot_dir = Vector2.LEFT if flip_h else Vector2.RIGHT
+				_hero_vfx.trigger_knockback_strike(shot_dir, false)
 			var proj: Projectile = ranged.spawn_projectile(self, active_target)
 			if proj != null:
 				spawn_projectile(proj)
@@ -450,6 +481,8 @@ func _on_frame_changed() -> void:
 
 func _on_death() -> void:
 	super._on_death()
+	if _hero_vfx != null:
+		_hero_vfx.trigger_death()
 	if _player_light != null:
 		_player_light.visible = false
 	if _ground_indicator != null:

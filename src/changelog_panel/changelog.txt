@@ -1,12 +1,16 @@
 [center][color=#ffffff][b]Escapeteers - Changelog[/b][/color][/center]
 
-[color=#ffffff][b]v0.4.0 - WIP[/b][/color]
+[color=#ffffff][b]v0.5.0 - WIP[/b][/color]
+
+[color=#ffffff][b]v0.4.0 - 2026-11-12[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
 - [color=#ffffff][b]Touch & Click Controls:[/b][/color] Steer your squad seamlessly with mouse clicks, drags, or touchscreen touches alongside keyboard and controller.
 - [color=#ffffff][b]Auto-Sprint:[/b][/color] The squad picks up the pace automatically when no monsters are around.
 - [color=#ffffff][b]Spike Traps:[/b][/color] Deadly floor spikes pop up in rooms and hallways to skewer heroes and monsters alike, with trap damage tracked in the DPS meter.
 - [color=#ffffff][b]Ranged Attack Telegraphs:[/b][/color] Skeleton archers and lava slimes now project dashed targeting lines before firing so you can dodge or block incoming shots.
+- [color=#ffffff][b]Clearer Status Effects:[/b][/color] Stunned, burning, and slowed monsters now display orbiting stars, rising embers, and icy frost so stacked debuffs are easy to read at a glance.
+- [color=#ffffff][b]Squad Action & State VFX:[/b][/color] Heroes now kick up dust while sprinting, unleash shockwave arcs on heavy and knockback strikes, shine with golden sparkles when leveling up, and release a rising soul burst when falling in battle.
 
 [color=#e0e0e0][b]Changed[/b][/color]
 - [color=#ffffff][b]Relentless Necromancers:[/b][/color] Necromancers now raise undead minions much faster during battle to keep the pressure on.

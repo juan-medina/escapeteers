@@ -196,7 +196,7 @@ func heal(amount: float) -> void:
 		_health_bar.update_health(health, max_health)
 
 
-func take_damage(amount: float) -> void:
+func take_damage(amount: float, flash_hurt: bool = true) -> void:
 	if is_dead:
 		return
 
@@ -210,7 +210,7 @@ func take_damage(amount: float) -> void:
 		combat_state = CombatState.READY
 		died.emit()
 		_on_death()
-	else:
+	elif flash_hurt:
 		_flash_hurt()
 
 

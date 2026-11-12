@@ -4,14 +4,8 @@ This roadmap sequences upcoming gameplay milestones in priority order based on p
 
 ---
 
-## Priority 1: Combat Readability (Telegraphs, VFX & Throttled SFX)
-**Goal:** Establish *Gauntlet*-style clarity in large horde battles before adding new enemies, bosses, and event rooms, and bundle Telegraphs/VFX/SFX into every subsequent feature.
-
-1. **Combat Telegraphs:**
-   - Add clear visual warnings before enemy ranged volleys, Necromancer summons, and spike hazard activations.
-2. **Combat & Death VFX:**
-   - Add distinct visual feedback for companion deaths, `SquadGridCell` damage/loss alerts, and hero heavy strikes.
-3. **Throttled Combat SFX:**
+## Priority 1: Combat Readability (Throttled SFX)
+1. **Throttled Combat SFX:**
    - Implement a 3-tier rate-limited sound hierarchy in `Audio` where Tier 1 alerts (companion death, leader hurt, telegraphs, trap triggers) always play clearly, Tier 2 combat impacts (heavy strikes, ranged volleys, enemy deaths) are cooldown-throttled, and Tier 3 background chatter never clutters the mix.
 
 ---
