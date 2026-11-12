@@ -343,6 +343,7 @@ func _check_auto_attack() -> void:
 		selected_action.execute(self, active_target)
 		if selected_action is MeleeAction:
 			melee_attack_started.emit(animation)
+			Audio.play_melee_swoosh()
 		elif selected_action is RangedAction:
 			ranged_attack_started.emit(animation)
 		elif selected_action is HealAction:
@@ -624,6 +625,10 @@ func _update_active_mode() -> void:
 				_animated_sprite.play()
 		else:
 			_animated_sprite.pause()
+
+
+func is_visible_on_screen() -> bool:
+	return is_player or _is_on_screen
 
 
 func _update_level_display() -> void:

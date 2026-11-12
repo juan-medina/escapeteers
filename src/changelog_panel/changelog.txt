@@ -2,6 +2,11 @@
 
 [color=#ffffff][b]v0.5.0 - WIP[/b][/color]
 
+[color=#e0e0e0][b]Added[/b][/color]
+- [color=#ffffff][b]Squad Footsteps:[/b][/color] Dynamic footstep sound effects synchronized to hero movement and sprint speed.
+- [color=#ffffff][b]Melee Swing SFX:[/b][/color] Punchy weapon swoosh sounds for sword and axe melee attacks with dynamic pitch and rate limiting.
+- [color=#ffffff][b]Hit Impact SFX:[/b][/color] Tactile physical impact sound effects when hero attacks connect with monsters, dynamically boosted for heavy strikes.
+
 [color=#ffffff][b]v0.4.0 - 2026-11-12[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]

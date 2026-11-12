@@ -216,6 +216,10 @@ func _on_screen_exited() -> void:
 		_set_sleeping(true)
 
 
+func is_visible_on_screen() -> bool:
+	return is_on_screen
+
+
 func play_summon_intro() -> void:
 	if is_dead:
 		return

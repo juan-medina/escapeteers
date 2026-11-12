@@ -6,6 +6,27 @@ extends Node
 const MENU_MUSIC: AudioStreamOggVorbis = preload("res://data/assets/music/Three Red Hearts - Three Red Hearts.ogg")
 const GAME_MUSIC: AudioStreamOggVorbis = preload("res://data/assets/music/Three Red Hearts - Box Jump.ogg")
 
+const STEP_1: AudioStream = preload("res://data/assets/sounds/07_Step_rock_01.wav")
+const STEP_2: AudioStream = preload("res://data/assets/sounds/08_Step_rock_02.wav")
+const STEP_3: AudioStream = preload("res://data/assets/sounds/09_Step_rock_03.wav")
+const STEPS: Array[AudioStream] = [STEP_1, STEP_2, STEP_3]
+
+const SWOOSH_1: AudioStream = preload("res://data/assets/sounds/31_swoosh_sword_1.wav")
+const SWOOSH_2: AudioStream = preload("res://data/assets/sounds/32_Swoosh_sword_2.wav")
+const SWOOSH_3: AudioStream = preload("res://data/assets/sounds/33_Swoosh_Sword_3.wav")
+const SWOOSHES: Array[AudioStream] = [SWOOSH_1, SWOOSH_2, SWOOSH_3]
+
+const IMPACT_1: AudioStream = preload("res://data/assets/sounds/09_Impact_01.wav")
+const IMPACT_2: AudioStream = preload("res://data/assets/sounds/10_Impact_02.wav")
+const IMPACT_3: AudioStream = preload("res://data/assets/sounds/11_Impact_03.wav")
+const IMPACT_4: AudioStream = preload("res://data/assets/sounds/12_Impact_04.wav")
+const IMPACT_5: AudioStream = preload("res://data/assets/sounds/13_Impact_05.wav")
+const IMPACTS: Array[AudioStream] = [IMPACT_1, IMPACT_2, IMPACT_3, IMPACT_4, IMPACT_5]
+
+const SQUAD_STEP_THROTTLE_MSEC: int = 180
+const MELEE_SWOOSH_THROTTLE_MSEC: int = 90
+const IMPACT_THROTTLE_MSEC: int = 70
+
 var _suppress_hover: bool = false
 
 var _hover: AudioStreamPlayer
@@ -14,6 +35,15 @@ var _return: AudioStreamPlayer
 var _start: AudioStreamPlayer
 var _pause: AudioStreamPlayer
 var _music_player: AudioStreamPlayer
+var _step_players: Array[AudioStreamPlayer] = []
+var _step_player_index: int = 0
+var _last_step_time_msec: int = 0
+var _swoosh_players: Array[AudioStreamPlayer] = []
+var _swoosh_player_index: int = 0
+var _last_swoosh_time_msec: int = 0
+var _impact_players: Array[AudioStreamPlayer] = []
+var _impact_player_index: int = 0
+var _last_impact_time_msec: int = 0
 
 
 func _ready() -> void:
@@ -24,6 +54,21 @@ func _ready() -> void:
 	_start = _create_player(preload("res://data/assets/sounds/Start.wav"), &"Start")
 	_pause = _create_player(preload("res://data/assets/sounds/Pause.wav"), &"Pause")
 	_music_player = _create_music_player(&"MusicPlayer")
+	for i: int in range(3):
+		var player: AudioStreamPlayer = _create_random_player(STEPS, 1.1, StringName("Footstep_%d" % i))
+		_step_players.append(player)
+	for i: int in range(2):
+		var player: AudioStreamPlayer = _create_random_player(SWOOSHES, 1.15, StringName("MeleeSwoosh_%d" % i))
+		_swoosh_players.append(player)
+	for i: int in range(3):
+		var player: AudioStreamPlayer = _create_random_player(IMPACTS, 1.15, StringName("HitImpact_%d" % i))
+		_impact_players.append(player)
+
+
+func _exit_tree() -> void:
+	_step_players.clear()
+	_swoosh_players.clear()
+	_impact_players.clear()
 
 
 func _create_player(stream: AudioStream, node_name: StringName) -> AudioStreamPlayer:
@@ -41,6 +86,68 @@ func _create_music_player(node_name: StringName) -> AudioStreamPlayer:
 	player.bus = &"Music"
 	add_child(player)
 	return player
+
+
+func _create_random_player(streams: Array[AudioStream], pitch: float, node_name: StringName) -> AudioStreamPlayer:
+	var player: AudioStreamPlayer = AudioStreamPlayer.new()
+	player.name = node_name
+	var randomizer: AudioStreamRandomizer = AudioStreamRandomizer.new()
+	for stream: AudioStream in streams:
+		randomizer.add_stream(-1, stream)
+	randomizer.playback_mode = AudioStreamRandomizer.PLAYBACK_RANDOM_NO_REPEATS
+	randomizer.random_pitch = pitch
+	player.stream = randomizer
+	player.bus = &"Sfx"
+	add_child(player)
+	return player
+
+
+func play_footstep() -> void:
+	var now: int = Time.get_ticks_msec()
+	if now - _last_step_time_msec < SQUAD_STEP_THROTTLE_MSEC:
+		return
+	_last_step_time_msec = now
+
+	if _step_players.is_empty():
+		return
+
+	var player: AudioStreamPlayer = _step_players[_step_player_index]
+	_step_player_index = (_step_player_index + 1) % _step_players.size()
+	player.play()
+
+
+func stop_footsteps() -> void:
+	for player: AudioStreamPlayer in _step_players:
+		player.stop()
+
+
+func play_melee_swoosh() -> void:
+	var now: int = Time.get_ticks_msec()
+	if now - _last_swoosh_time_msec < MELEE_SWOOSH_THROTTLE_MSEC:
+		return
+	_last_swoosh_time_msec = now
+
+	if _swoosh_players.is_empty():
+		return
+
+	var player: AudioStreamPlayer = _swoosh_players[_swoosh_player_index]
+	_swoosh_player_index = (_swoosh_player_index + 1) % _swoosh_players.size()
+	player.play()
+
+
+func play_hit_impact(is_heavy: bool = false) -> void:
+	var now: int = Time.get_ticks_msec()
+	if now - _last_impact_time_msec < IMPACT_THROTTLE_MSEC:
+		return
+	_last_impact_time_msec = now
+
+	if _impact_players.is_empty():
+		return
+
+	var player: AudioStreamPlayer = _impact_players[_impact_player_index]
+	_impact_player_index = (_impact_player_index + 1) % _impact_players.size()
+	player.volume_db = 2.0 if is_heavy else 0.0
+	player.play()
 
 
 func play_menu_music() -> void:
@@ -159,6 +266,11 @@ func set_master_volume_db(db: float) -> void:
 
 
 func stop_all_players(node: Node) -> void:
+	stop_footsteps()
+	for player: AudioStreamPlayer in _swoosh_players:
+		player.stop()
+	for player: AudioStreamPlayer in _impact_players:
+		player.stop()
 	# Stops every player before a quit, so Godot logs no audio error at exit.
 	var stereo: AudioStreamPlayer = node as AudioStreamPlayer
 	if stereo:

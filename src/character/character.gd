@@ -25,6 +25,7 @@ enum CombatState {
 const FLIP_THRESHOLD_X: float = 0.35
 const MIN_MOVEMENT_THRESHOLD_SQUARED: float = 0.04
 const RECRUIT_DISTANCE: float = 20.0
+const STRIDE_DISTANCE: float = 38.0
 
 const ANIM_IDLE: StringName = &"idle"
 const ANIM_RUN: StringName = &"run"
@@ -50,6 +51,7 @@ var heal_range: float = 140.0
 
 var health: float = 100.0
 var is_dead: bool = false
+var has_footsteps: bool = true
 var movement_state: MovementState = MovementState.IDLE
 var combat_state: CombatState = CombatState.READY
 var hurtbox: Hurtbox = null
@@ -87,6 +89,7 @@ var sprite_frames: SpriteFrames:
 		_animated_sprite.sprite_frames = value
 
 var _base_modulate: Color = Color.WHITE
+var _stride_accumulator: float = 0.0
 
 @onready var _animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var _collision_shape: CollisionShape2D = $CollisionShape2D
@@ -153,6 +156,7 @@ func is_touching(other: Character) -> bool:
 
 func update_visuals(movement_vector: Vector2) -> void:
 	if is_dead:
+		_stride_accumulator = 0.0
 		return
 	if movement_vector.length_squared() > MIN_MOVEMENT_THRESHOLD_SQUARED:
 		if absf(movement_vector.x) > FLIP_THRESHOLD_X:
@@ -162,10 +166,28 @@ func update_visuals(movement_vector: Vector2) -> void:
 		if animation == ANIM_RUN:
 			var sprint_ratio: float = maxf(0.0, (speed - BASE_SPEED) / BASE_SPEED)
 			_animated_sprite.speed_scale = 1.0 + sprint_ratio * 1.5
+		if has_footsteps:
+			_stride_accumulator += movement_vector.length()
+			if _stride_accumulator >= STRIDE_DISTANCE:
+				_stride_accumulator = 0.0
+				_trigger_footstep()
 	else:
 		if combat_state != CombatState.ATTACKING and animation != ANIM_IDLE:
 			play(ANIM_IDLE)
 		_animated_sprite.speed_scale = 1.0
+		_stride_accumulator = 0.0
+
+
+func is_visible_on_screen() -> bool:
+	return true
+
+
+func _trigger_footstep() -> void:
+	if not is_in_group(&"heroes"):
+		return
+	if not is_visible_on_screen():
+		return
+	Audio.play_footstep()
 
 
 func get_spawn_position() -> Vector2:

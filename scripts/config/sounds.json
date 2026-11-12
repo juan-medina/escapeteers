@@ -2,13 +2,25 @@
   "peak_ceiling": -1.0,
   "tiers": {
     "soft": {
-      "target_level": -30
+      "target_level": -31
+    },
+    "frequent": {
+      "target_level": -27
+    },
+    "impact": {
+      "target_level": -21
+    },
+    "heavy": {
+      "target_level": -16
+    },
+    "critical": {
+      "target_level": -12
     },
     "normal": {
-      "target_level": -22
+      "target_level": -21
     },
     "important": {
-      "target_level": -18
+      "target_level": -12
     }
   },
   "sounds": [
@@ -20,22 +32,77 @@
     {
       "input": "src/data/raw/sounds/Click.wav",
       "output": "src/data/assets/sounds/Click.wav",
-      "tier": "normal"
+      "tier": "impact"
     },
     {
       "input": "src/data/raw/sounds/Return.wav",
       "output": "src/data/assets/sounds/Return.wav",
-      "tier": "normal"
+      "tier": "impact"
     },
     {
       "input": "src/data/raw/sounds/Start.wav",
       "output": "src/data/assets/sounds/Start.wav",
-      "tier": "important"
+      "tier": "critical"
     },
     {
       "input": "src/data/raw/sounds/Pause.wav",
       "output": "src/data/assets/sounds/Pause.wav",
-      "tier": "important"
+      "tier": "critical"
+    },
+    {
+      "input": "src/data/raw/sounds/07_Step_rock_01.wav",
+      "output": "src/data/assets/sounds/07_Step_rock_01.wav",
+      "tier": "soft"
+    },
+    {
+      "input": "src/data/raw/sounds/08_Step_rock_02.wav",
+      "output": "src/data/assets/sounds/08_Step_rock_02.wav",
+      "tier": "soft"
+    },
+    {
+      "input": "src/data/raw/sounds/09_Step_rock_03.wav",
+      "output": "src/data/assets/sounds/09_Step_rock_03.wav",
+      "tier": "soft"
+    },
+    {
+      "input": "src/data/raw/sounds/31_swoosh_sword_1.wav",
+      "output": "src/data/assets/sounds/31_swoosh_sword_1.wav",
+      "tier": "frequent"
+    },
+    {
+      "input": "src/data/raw/sounds/32_Swoosh_sword_2.wav",
+      "output": "src/data/assets/sounds/32_Swoosh_sword_2.wav",
+      "tier": "frequent"
+    },
+    {
+      "input": "src/data/raw/sounds/33_Swoosh_Sword_3.wav",
+      "output": "src/data/assets/sounds/33_Swoosh_Sword_3.wav",
+      "tier": "frequent"
+    },
+    {
+      "input": "src/data/raw/sounds/09_Impact_01.wav",
+      "output": "src/data/assets/sounds/09_Impact_01.wav",
+      "tier": "impact"
+    },
+    {
+      "input": "src/data/raw/sounds/10_Impact_02.wav",
+      "output": "src/data/assets/sounds/10_Impact_02.wav",
+      "tier": "impact"
+    },
+    {
+      "input": "src/data/raw/sounds/11_Impact_03.wav",
+      "output": "src/data/assets/sounds/11_Impact_03.wav",
+      "tier": "impact"
+    },
+    {
+      "input": "src/data/raw/sounds/12_Impact_04.wav",
+      "output": "src/data/assets/sounds/12_Impact_04.wav",
+      "tier": "impact"
+    },
+    {
+      "input": "src/data/raw/sounds/13_Impact_05.wav",
+      "output": "src/data/assets/sounds/13_Impact_05.wav",
+      "tier": "impact"
     }
   ]
 }

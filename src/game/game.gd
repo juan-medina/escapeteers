@@ -667,11 +667,12 @@ func _sync_hud_squad() -> void:
 	_hud.update_squad(_squad)
 
 
-func _on_hero_enemy_hit(enemy: Enemy, damage: float, _is_heavy: bool, hero: Hero) -> void:
+func _on_hero_enemy_hit(enemy: Enemy, damage: float, is_heavy: bool, hero: Hero) -> void:
 	_hud.record_damage(hero.hero_data.id, damage)
 	_combat_cooldown_timer = COMBAT_EXIT_DELAY
 	_continuous_move_timer = 0.0
 	_squad_speed = BASE_SQUAD_SPEED
+	Audio.play_hit_impact(is_heavy)
 	if enemy != null and is_instance_valid(enemy) and not enemy.is_dead and enemy.target == null:
 		enemy.set_target_candidate(hero)
 
