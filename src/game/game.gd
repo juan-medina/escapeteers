@@ -584,7 +584,7 @@ func _get_best_squad_target(enemy: Enemy) -> Hero:
 
 
 func _on_hero_died(hero: Hero) -> void:
-	Audio.play_hero_down()
+	Audio.play_defeat(false)
 	_spike_hit_cooldowns.erase(hero)
 	if hero == _character:
 		return
@@ -602,12 +602,13 @@ func _on_hero_died(hero: Hero) -> void:
 
 
 func _on_player_died() -> void:
-	Audio.play_hero_down()
+	Audio.play_defeat(false)
 	Audio.stop_music()
 	_sync_hud_squad()
 
 
 func _on_player_death_completed() -> void:
+	Audio.play_defeat(true)
 	Audio.stop_music()
 	var dialog: GameOverDialog = GAME_OVER_DIALOG_SCENE.instantiate() as GameOverDialog
 	add_child(dialog)

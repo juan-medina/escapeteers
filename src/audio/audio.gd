@@ -59,6 +59,7 @@ var _pause: AudioStreamPlayer
 var _level_up: AudioStreamPlayer
 var _hero_down: AudioStreamPlayer
 var _hero_recruited: AudioStreamPlayer
+var _game_over: AudioStreamPlayer
 var _music_player: AudioStreamPlayer
 var _step_players: Array[AudioStreamPlayer] = []
 var _step_player_index: int = 0
@@ -105,6 +106,7 @@ func _ready() -> void:
 	_level_up = _create_player(preload("res://data/assets/sounds/Level_Up.wav"), &"LevelUp")
 	_hero_down = _create_player(preload("res://data/assets/sounds/Hero_Down.wav"), &"HeroDown")
 	_hero_recruited = _create_player(preload("res://data/assets/sounds/Hero_Recruited.wav"), &"HeroRecruited")
+	_game_over = _create_player(preload("res://data/assets/sounds/Game_Over.wav"), &"GameOver")
 	_music_player = _create_music_player(&"MusicPlayer")
 	for i: int in range(3):
 		var player: AudioStreamPlayer = _create_random_player(STEPS, 1.1, StringName("Footstep_%d" % i))
@@ -289,9 +291,13 @@ func play_level_up() -> void:
 		_level_up.play()
 
 
-func play_hero_down() -> void:
-	if _hero_down != null:
-		_hero_down.play()
+func play_defeat(is_game_over: bool = false) -> void:
+	if is_game_over:
+		if _game_over != null:
+			_game_over.play()
+	else:
+		if _hero_down != null:
+			_hero_down.play()
 
 
 func play_hero_recruited() -> void:

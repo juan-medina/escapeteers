@@ -176,6 +176,11 @@
       "input": "src/data/raw/sounds/Necromancer_Summon.wav",
       "output": "src/data/assets/sounds/Necromancer_Summon.wav",
       "tier": "heavy"
+    },
+    {
+      "input": "src/data/raw/sounds/Game_Over.wav",
+      "output": "src/data/assets/sounds/Game_Over.wav",
+      "tier": "critical"
     }
   ]
 }
