@@ -15,9 +15,8 @@ var _cards: Array[HeroSelectCard] = []
 
 
 func _ready() -> void:
-	super._ready()
 	_build_cards()
-	Audio.connect_menu_sounds(_grid)
+	super._ready()
 
 
 func _build_cards() -> void:

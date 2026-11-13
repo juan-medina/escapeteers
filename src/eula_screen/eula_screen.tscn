@@ -3,8 +3,15 @@
 [ext_resource type="Script" uid="uid://gwq7a7unt21t" path="res://eula_screen/eula_screen.gd" id="1_eula"]
 [ext_resource type="Script" uid="uid://cn7pp7ar1abmh" path="res://big_text_panel/big_text_panel.gd" id="2_bigtext"]
 
-[node name="EulaScreen" type="CanvasLayer" unique_id=1064547657]
+[node name="EulaScreen" type="Control" unique_id=1064547657 node_paths=PackedStringArray("first_focus")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("1_eula")
+first_focus = NodePath("Center/EulaPanel/VBox/Buttons/Accept")
 
 [node name="ColorRect" type="ColorRect" parent="." unique_id=1073566882]
 anchors_preset = 15

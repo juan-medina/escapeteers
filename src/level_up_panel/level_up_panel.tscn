@@ -2,9 +2,14 @@
 
 [ext_resource type="Script" path="res://level_up_panel/level_up_panel.gd" id="1_panel"]
 
-[node name="LevelUpPanel" type="CanvasLayer"]
+[node name="LevelUpPanel" type="Control"]
 process_mode = 3
-layer = 1000
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("1_panel")
 
 [node name="DimOverlay" type="ColorRect" parent="."]

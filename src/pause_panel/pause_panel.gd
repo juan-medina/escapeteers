@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 class_name PausePanel
-extends MenuPanel
+extends UiPanel
 
 signal resume_requested
 signal settings_requested

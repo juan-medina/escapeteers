@@ -6,11 +6,11 @@ extends CanvasLayer
 
 const CROSSFADE: float = 0.12
 
-var _current: MenuPanel = null
+var _current: UiPanel = null
 var _busy: bool = false
 
 
-func _show_first(panel: MenuPanel) -> void:
+func _show_first(panel: UiPanel) -> void:
 	_hide_all_panels(self)
 	_current = panel
 	panel.modulate.a = 1.0
@@ -21,13 +21,13 @@ func _show_first(panel: MenuPanel) -> void:
 
 func _hide_all_panels(from: Node) -> void:
 	for child: Node in from.get_children():
-		var panel: MenuPanel = child as MenuPanel
+		var panel: UiPanel = child as UiPanel
 		if panel != null:
 			panel.visible = false
 		_hide_all_panels(child)
 
 
-func show_panel(next: MenuPanel) -> void:
+func show_panel(next: UiPanel) -> void:
 	if _busy or next == _current:
 		return
 	_busy = true
@@ -36,7 +36,7 @@ func show_panel(next: MenuPanel) -> void:
 	# _on_swap_finished re-grabs focus on the incoming panel.
 	get_viewport().gui_release_focus()
 
-	var previous: MenuPanel = _current
+	var previous: UiPanel = _current
 	_current = next
 
 	next.modulate.a = 0.0
@@ -51,7 +51,7 @@ func show_panel(next: MenuPanel) -> void:
 	tween.finished.connect(_on_swap_finished.bind(previous, next))
 
 
-func _on_swap_finished(previous: MenuPanel, next: MenuPanel) -> void:
+func _on_swap_finished(previous: UiPanel, next: UiPanel) -> void:
 	if previous != null:
 		previous.visible = false
 	next.process_mode = Node.PROCESS_MODE_INHERIT

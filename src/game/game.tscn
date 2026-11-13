@@ -10,6 +10,10 @@ script = ExtResource("1_game")
 
 [node name="PauseOverlay" parent="." instance=ExtResource("5_pause")]
 
+[node name="Overlays" type="CanvasLayer" parent="."]
+process_mode = 3
+layer = 1000
+
 [node name="Map" parent="." instance=ExtResource("2_map")]
 
 [node name="Characters" type="Node2D" parent="." unique_id=1481928371]

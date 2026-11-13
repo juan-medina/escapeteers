@@ -2,14 +2,10 @@
 # SPDX-License-Identifier: MIT
 
 class_name ErrorDialog
-extends CanvasLayer
+extends UiPanel
 
 @onready var _detail: Label = $Center/Panel/VBox/Detail
 @onready var _action: Button = $Center/Panel/VBox/Action
-
-
-func _ready() -> void:
-	Audio.connect_menu_sounds(self)
 
 
 func setup(message: StringName) -> void:
@@ -17,7 +13,6 @@ func setup(message: StringName) -> void:
 	var platform: String = OS.get_name()
 	_detail.text = &"%s · %s · %s" % [message, build, platform]
 	_action.text = &"Reload" if OS.has_feature(&"web") else &"Exit"
-	Audio.grab_focus_silent(_action)
 
 
 func _on_action_pressed() -> void:

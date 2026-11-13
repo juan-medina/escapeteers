@@ -12,7 +12,7 @@ func _open_pause() -> void:
 	_open(_pause_panel)
 
 
-func _open(panel: MenuPanel) -> void:
+func _open(panel: UiPanel) -> void:
 	get_tree().paused = true
 	set_host_alpha(0.0)
 	_show_first(panel)

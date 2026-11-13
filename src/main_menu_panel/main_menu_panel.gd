@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 class_name MainMenuPanel
-extends MenuPanel
+extends UiPanel
 
 signal play_requested
 signal settings_requested

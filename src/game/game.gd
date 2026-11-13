@@ -78,6 +78,7 @@ var _spike_hit_cooldowns: Dictionary[Character, float] = {}
 @onready var _camera: Camera2D = $Camera2D
 @onready var _characters: Node2D = $Characters
 @onready var _map: Map = $Map
+@onready var _overlays: CanvasLayer = $Overlays
 @onready var _projectiles: Node2D = $Projectiles
 
 
@@ -121,12 +122,12 @@ func _ready() -> void:
 	_recruit_panel = RECRUIT_PANEL_SCENE.instantiate() as RecruitPanel
 	_recruit_panel.visible = false
 	_recruit_panel.hero_selected.connect(_on_hero_recruited)
-	add_child(_recruit_panel)
+	_overlays.add_child(_recruit_panel)
 
 	_level_up_panel = LEVEL_UP_PANEL_SCENE.instantiate() as LevelUpPanel
 	_level_up_panel.visible = false
 	_level_up_panel.class_leveled_up.connect(_on_class_leveled_up)
-	add_child(_level_up_panel)
+	_overlays.add_child(_level_up_panel)
 
 	Transition.set_loading_progress(0.92, &"Assembling the fellowship...")
 	await get_tree().process_frame
@@ -611,7 +612,7 @@ func _on_player_death_completed() -> void:
 	Audio.play_defeat(true)
 	Audio.stop_music()
 	var dialog: GameOverDialog = GAME_OVER_DIALOG_SCENE.instantiate() as GameOverDialog
-	add_child(dialog)
+	_overlays.add_child(dialog)
 	get_tree().paused = true
 
 

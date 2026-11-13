@@ -2,9 +2,14 @@
 
 [ext_resource type="Script" path="res://recruit_panel/recruit_panel.gd" id="1_panel"]
 
-[node name="RecruitPanel" type="CanvasLayer"]
+[node name="RecruitPanel" type="Control"]
 process_mode = 3
-layer = 1000
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("1_panel")
 
 [node name="DimOverlay" type="ColorRect" parent="."]

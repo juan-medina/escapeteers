@@ -13,9 +13,15 @@ action = &"back"
 [sub_resource type="Shortcut" id="Shortcut_back"]
 events = [SubResource("InputEventAction_pause"), SubResource("InputEventAction_back")]
 
-[node name="ErrorDialog" type="CanvasLayer"]
-layer = 10000
+[node name="ErrorDialog" type="Control" node_paths=PackedStringArray("first_focus")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("1_err")
+first_focus = NodePath("Center/Panel/VBox/Action")
 
 [node name="Center" type="CenterContainer" parent="."]
 layout_mode = 1

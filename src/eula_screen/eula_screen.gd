@@ -2,17 +2,15 @@
 # SPDX-License-Identifier: MIT
 
 class_name EulaScreen
-extends CanvasLayer
+extends UiPanel
 
 const EULA_PATH: StringName = &"res://eula_screen/eula.txt"
 const NOTIFICATION_DELAY: float = 2.0
 
 @onready var _eula_text: BigTextPanel = $Center/EulaPanel/VBox/EulaText
-@onready var _accept_button: Button = $Center/EulaPanel/VBox/Buttons/Accept
 
 
 func _ready() -> void:
-	Audio.connect_menu_sounds(self)
 	var current_hash: StringName = _eula_hash()
 	if Options.is_eula_accepted(current_hash):
 		Transition.go_to_menu_instant()
@@ -20,7 +18,7 @@ func _ready() -> void:
 
 	get_tree().create_timer(NOTIFICATION_DELAY).timeout.connect(InputManager.enable_notifications)
 	await _eula_text.load_file(EULA_PATH)
-	Audio.grab_focus_silent(_accept_button)
+	super._ready()
 
 
 func _eula_hash() -> StringName:

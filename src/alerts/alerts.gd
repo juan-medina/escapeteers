@@ -91,6 +91,9 @@ func _terminate(is_error: bool, message: StringName) -> void:
 
 func _show_error_dialog(message: StringName) -> void:
 	_error_dialog_shown = true
-	var dialog: ErrorDialog = ERROR_DIALOG_SCENE.instantiate()
-	add_child(dialog)
+	var layer: CanvasLayer = CanvasLayer.new()
+	layer.layer = 10000
+	add_child(layer)
+	var dialog: ErrorDialog = ERROR_DIALOG_SCENE.instantiate() as ErrorDialog
+	layer.add_child(dialog)
 	dialog.setup(message)

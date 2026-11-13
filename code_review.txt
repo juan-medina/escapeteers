@@ -2,14 +2,17 @@
 # Grouped by subfolder, sorted smallest to largest.
 # Status: [ ] Pending | [x] Reviewed
 
+## 0. src/ui_panel (18 lines)
+[x] src/ui_panel/ui_panel.gd (18 lines, 344 B)
+
 ## 1. src/crt (19 lines)
 [x] src/crt/crt.gd (19 lines, 468 B)
 
-## 2. src/menu_panel (24 lines)
-[x] src/menu_panel/menu_panel.gd (24 lines, 456 B)
+## 2. src/menu_panel (11 lines)
+[x] src/menu_panel/menu_panel.gd (11 lines, 179 B)
 
-## 3. src/game_over_dialog (25 lines)
-[ ] src/game_over_dialog/game_over_dialog.gd (25 lines, 634 B)
+## 3. src/game_over_dialog (14 lines)
+[x] src/game_over_dialog/game_over_dialog.gd (14 lines, 286 B)
 
 ## 4. src/pause_panel (26 lines)
 [ ] src/pause_panel/pause_panel.gd (26 lines, 515 B)

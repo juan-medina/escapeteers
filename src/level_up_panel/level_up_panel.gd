@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 class_name LevelUpPanel
-extends CanvasLayer
+extends UiPanel
 
 signal class_leveled_up(hero_data: HeroData)
 
@@ -15,8 +15,8 @@ var _cards: Array[UnitCard] = []
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	Audio.connect_menu_sounds(self)
 	_ensure_cards()
+	super._ready()
 
 
 func _ensure_cards() -> void:
@@ -42,8 +42,7 @@ func _ensure_focus() -> void:
 	var focus_owner: Control = get_viewport().gui_get_focus_owner()
 	if focus_owner != null and is_ancestor_of(focus_owner):
 		return
-	if not _cards.is_empty() and _cards[0].visible:
-		_cards[0].grab_recruit_focus()
+	grab_first_focus()
 
 
 func setup_choices(squad: Array[Hero], class_levels: Dictionary[StringName, int]) -> void:
@@ -80,7 +79,8 @@ func setup_choices(squad: Array[Hero], class_levels: Dictionary[StringName, int]
 			card.visible = false
 
 	if first_card != null:
-		first_card.grab_recruit_focus()
+		first_focus = first_card.get_recruit_button()
+		grab_first_focus()
 
 
 func _on_card_chosen(hero_data: HeroData) -> void:

@@ -57,18 +57,12 @@ var button_text: String = "Recruit":
 
 
 func _ready() -> void:
-	Audio.connect_menu_sounds(self)
-
 	_recruit_button.text = button_text
 
 	if hero_data == null:
 		hero_data = HeroData.get_hero(&"knight")
 	else:
 		_update_display()
-
-
-func grab_recruit_focus() -> void:
-	Audio.grab_focus_silent(_recruit_button)
 
 
 func get_recruit_button() -> Button:
