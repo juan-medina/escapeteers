@@ -235,6 +235,18 @@ func refresh_combat_actions() -> void:
 	_setup_actions()
 
 
+func heal(amount: float) -> void:
+	super.heal(amount)
+	if not is_dead:
+		Audio.play_hero_health(true)
+
+
+func take_damage(amount: float, flash_hurt: bool = true) -> void:
+	super.take_damage(amount, flash_hurt)
+	if not is_dead and health > 0.0:
+		Audio.play_hero_health(false)
+
+
 func get_anchor_position() -> Vector2:
 	if is_player or squad_member == null or leader == null:
 		return global_position

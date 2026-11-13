@@ -88,6 +88,8 @@ func _on_hit(target: Node2D) -> void:
 	var character: Character = target as Character
 	if character != null:
 		character.take_damage(damage)
+	else:
+		Audio.play_environment(&"wall")
 
 	var enemy: Enemy = target as Enemy
 	if knockback > 0.0 and enemy != null:

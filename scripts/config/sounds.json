@@ -181,6 +181,26 @@
       "input": "src/data/raw/sounds/Game_Over.wav",
       "output": "src/data/assets/sounds/Game_Over.wav",
       "tier": "critical"
+    },
+    {
+      "input": "src/data/raw/sounds/Hero_Hurt.wav",
+      "output": "src/data/assets/sounds/Hero_Hurt.wav",
+      "tier": "impact"
+    },
+    {
+      "input": "src/data/raw/sounds/Heal_Received.wav",
+      "output": "src/data/assets/sounds/Heal_Received.wav",
+      "tier": "frequent"
+    },
+    {
+      "input": "src/data/raw/sounds/Secret_Torch.wav",
+      "output": "src/data/assets/sounds/Secret_Torch.wav",
+      "tier": "heavy"
+    },
+    {
+      "input": "src/data/raw/sounds/Wall_Impact.wav",
+      "output": "src/data/assets/sounds/Wall_Impact.wav",
+      "tier": "soft"
     }
   ]
 }

@@ -641,6 +641,7 @@ func _check_recruitment() -> void:
 
 
 func _open_recruit_panel(recruit_pos: Vector2, forced_hero_id: StringName = &"") -> void:
+	Audio.play_hero_recruited()
 	get_tree().paused = true
 	_pending_recruit_pos = recruit_pos
 	_recruit_panel.visible = true
@@ -904,7 +905,7 @@ func _update_spike_hazards(delta: float) -> void:
 			_spike_hit_cooldowns.erase(member)
 		var foot_cell: Vector2i = _map.local_to_map(member.get_hurtbox_position())
 		if _map.is_spike_active_at(foot_cell):
-			Audio.play_spike_trap()
+			Audio.play_environment(&"spike")
 			_spike_hit_cooldowns[member] = SPIKE_HIT_COOLDOWN
 			var damage: float = maxf(1.0, roundf(member.max_health * SPIKE_DAMAGE_MAX_HP_RATIO))
 			member.take_damage(damage)
@@ -923,7 +924,7 @@ func _update_spike_hazards(delta: float) -> void:
 			_spike_hit_cooldowns.erase(enemy)
 		var foot_cell: Vector2i = _map.local_to_map(enemy.get_hurtbox_position())
 		if _map.is_spike_active_at(foot_cell):
-			Audio.play_spike_trap()
+			Audio.play_environment(&"spike")
 			_spike_hit_cooldowns[enemy] = SPIKE_HIT_COOLDOWN
 			var damage: float = maxf(1.0, roundf(enemy.max_health * SPIKE_DAMAGE_MAX_HP_RATIO))
 			enemy.take_damage(damage)

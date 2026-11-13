@@ -3,7 +3,7 @@
 [color=#ffffff][b]v0.5.0 - WIP[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
-- [color=#ffffff][b]Combat & World Audio:[/b][/color] Dynamic retro sound effects for squad movement, melee swings, impacts, monster defeats, traps, and squad milestones.
+- [color=#ffffff][b]Combat & World Audio:[/b][/color] Dynamic retro sound effects for squad combat, recruitment, healing, environmental events, and milestones.
 
 [color=#e0e0e0][b]Changed[/b][/color]
 - [color=#ffffff][b]Pixel Sound Effects:[/b][/color] Switched all game and UI sound effects to Helton Yan's Pixel Combat pack with calibrated loudness balancing.

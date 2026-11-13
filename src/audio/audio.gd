@@ -38,6 +38,10 @@ const ENEMY_MELEE: AudioStream = preload("res://data/assets/sounds/Enemy_Melee.w
 const ENEMY_RANGED: AudioStream = preload("res://data/assets/sounds/Enemy_Ranged.wav")
 const TELEGRAPH_WARNING: AudioStream = preload("res://data/assets/sounds/Telegraph_Warning.wav")
 const NECROMANCER_SUMMON: AudioStream = preload("res://data/assets/sounds/Necromancer_Summon.wav")
+const HERO_HURT: AudioStream = preload("res://data/assets/sounds/Hero_Hurt.wav")
+const HEAL_RECEIVED: AudioStream = preload("res://data/assets/sounds/Heal_Received.wav")
+const SECRET_TORCH: AudioStream = preload("res://data/assets/sounds/Secret_Torch.wav")
+const WALL_IMPACT: AudioStream = preload("res://data/assets/sounds/Wall_Impact.wav")
 
 const SQUAD_STEP_THROTTLE_MSEC: int = 180
 const MELEE_SWOOSH_THROTTLE_MSEC: int = 90
@@ -48,6 +52,9 @@ const ENEMY_DEATH_THROTTLE_MSEC: int = 70
 const TELEGRAPH_THROTTLE_MSEC: int = 120
 const NECROMANCER_SUMMON_THROTTLE_MSEC: int = 200
 const SPIKE_TRAP_THROTTLE_MSEC: int = 80
+const HERO_HURT_THROTTLE_MSEC: int = 100
+const HEAL_RECEIVED_THROTTLE_MSEC: int = 80
+const WALL_IMPACT_THROTTLE_MSEC: int = 60
 
 var _suppress_hover: bool = false
 
@@ -60,6 +67,7 @@ var _level_up: AudioStreamPlayer
 var _hero_down: AudioStreamPlayer
 var _hero_recruited: AudioStreamPlayer
 var _game_over: AudioStreamPlayer
+var _secret_torch: AudioStreamPlayer
 var _music_player: AudioStreamPlayer
 var _step_players: Array[AudioStreamPlayer] = []
 var _step_player_index: int = 0
@@ -94,6 +102,15 @@ var _last_summon_time_msec: int = 0
 var _spike_trap_players: Array[AudioStreamPlayer] = []
 var _spike_trap_player_index: int = 0
 var _last_spike_trap_time_msec: int = 0
+var _hero_hurt_players: Array[AudioStreamPlayer] = []
+var _hero_hurt_player_index: int = 0
+var _last_hero_hurt_time_msec: int = 0
+var _heal_players: Array[AudioStreamPlayer] = []
+var _heal_player_index: int = 0
+var _last_heal_time_msec: int = 0
+var _wall_players: Array[AudioStreamPlayer] = []
+var _wall_player_index: int = 0
+var _last_wall_time_msec: int = 0
 
 
 func _ready() -> void:
@@ -141,6 +158,16 @@ func _ready() -> void:
 	for i: int in range(2):
 		var player: AudioStreamPlayer = _create_random_player(TRAP_SPIKES, 1.15, StringName("SpikeTrap_%d" % i))
 		_spike_trap_players.append(player)
+	_secret_torch = _create_player(SECRET_TORCH, &"SecretTorch")
+	for i: int in range(2):
+		var player: AudioStreamPlayer = _create_single_random_player(HERO_HURT, 1.15, StringName("HeroHurt_%d" % i))
+		_hero_hurt_players.append(player)
+	for i: int in range(2):
+		var player: AudioStreamPlayer = _create_single_random_player(HEAL_RECEIVED, 1.1, StringName("HealReceived_%d" % i))
+		_heal_players.append(player)
+	for i: int in range(2):
+		var player: AudioStreamPlayer = _create_single_random_player(WALL_IMPACT, 1.2, StringName("WallImpact_%d" % i))
+		_wall_players.append(player)
 
 
 func _exit_tree() -> void:
@@ -155,6 +182,9 @@ func _exit_tree() -> void:
 	_telegraph_players.clear()
 	_summon_players.clear()
 	_spike_trap_players.clear()
+	_hero_hurt_players.clear()
+	_heal_players.clear()
+	_wall_players.clear()
 
 
 func play_footstep() -> void:
@@ -250,40 +280,62 @@ func play_enemy_death() -> void:
 	player.play()
 
 
-func play_telegraph_warning() -> void:
+func play_enemy_special(is_summon: bool = false) -> void:
 	var now: int = Time.get_ticks_msec()
-	if now - _last_telegraph_time_msec < TELEGRAPH_THROTTLE_MSEC or _telegraph_players.is_empty():
-		return
-	_last_telegraph_time_msec = now
+	if is_summon:
+		if now - _last_summon_time_msec < NECROMANCER_SUMMON_THROTTLE_MSEC or _summon_players.is_empty():
+			return
+		_last_summon_time_msec = now
+		var player: AudioStreamPlayer = _summon_players[_summon_player_index]
+		_summon_player_index = (_summon_player_index + 1) % _summon_players.size()
+		player.play()
+	else:
+		if now - _last_telegraph_time_msec < TELEGRAPH_THROTTLE_MSEC or _telegraph_players.is_empty():
+			return
+		_last_telegraph_time_msec = now
+		var player: AudioStreamPlayer = _telegraph_players[_telegraph_player_index]
+		_telegraph_player_index = (_telegraph_player_index + 1) % _telegraph_players.size()
+		player.play()
 
-	var player: AudioStreamPlayer = _telegraph_players[_telegraph_player_index]
-	_telegraph_player_index = (_telegraph_player_index + 1) % _telegraph_players.size()
-	player.play()
 
-
-func play_necromancer_summon() -> void:
+func play_environment(cue: StringName) -> void:
 	var now: int = Time.get_ticks_msec()
-	if now - _last_summon_time_msec < NECROMANCER_SUMMON_THROTTLE_MSEC or _summon_players.is_empty():
-		return
-	_last_summon_time_msec = now
+	match cue:
+		&"spike":
+			if now - _last_spike_trap_time_msec < SPIKE_TRAP_THROTTLE_MSEC or _spike_trap_players.is_empty():
+				return
+			_last_spike_trap_time_msec = now
+			var player: AudioStreamPlayer = _spike_trap_players[_spike_trap_player_index]
+			_spike_trap_player_index = (_spike_trap_player_index + 1) % _spike_trap_players.size()
+			player.play()
+		&"torch":
+			if _secret_torch != null:
+				_secret_torch.play()
+		&"wall":
+			if now - _last_wall_time_msec < WALL_IMPACT_THROTTLE_MSEC or _wall_players.is_empty():
+				return
+			_last_wall_time_msec = now
+			var player: AudioStreamPlayer = _wall_players[_wall_player_index]
+			_wall_player_index = (_wall_player_index + 1) % _wall_players.size()
+			player.play()
 
-	var player: AudioStreamPlayer = _summon_players[_summon_player_index]
-	_summon_player_index = (_summon_player_index + 1) % _summon_players.size()
-	player.play()
 
-
-func play_spike_trap() -> void:
+func play_hero_health(is_heal: bool = false) -> void:
 	var now: int = Time.get_ticks_msec()
-	if now - _last_spike_trap_time_msec < SPIKE_TRAP_THROTTLE_MSEC:
-		return
-	_last_spike_trap_time_msec = now
-
-	if _spike_trap_players.is_empty():
-		return
-
-	var player: AudioStreamPlayer = _spike_trap_players[_spike_trap_player_index]
-	_spike_trap_player_index = (_spike_trap_player_index + 1) % _spike_trap_players.size()
-	player.play()
+	if is_heal:
+		if now - _last_heal_time_msec < HEAL_RECEIVED_THROTTLE_MSEC or _heal_players.is_empty():
+			return
+		_last_heal_time_msec = now
+		var player: AudioStreamPlayer = _heal_players[_heal_player_index]
+		_heal_player_index = (_heal_player_index + 1) % _heal_players.size()
+		player.play()
+	else:
+		if now - _last_hero_hurt_time_msec < HERO_HURT_THROTTLE_MSEC or _hero_hurt_players.is_empty():
+			return
+		_last_hero_hurt_time_msec = now
+		var player: AudioStreamPlayer = _hero_hurt_players[_hero_hurt_player_index]
+		_hero_hurt_player_index = (_hero_hurt_player_index + 1) % _hero_hurt_players.size()
+		player.play()
 
 
 func play_level_up() -> void:
@@ -362,6 +414,14 @@ func stop_all_players(node: Node) -> void:
 		player.stop()
 	for player: AudioStreamPlayer in _spike_trap_players:
 		player.stop()
+	for player: AudioStreamPlayer in _hero_hurt_players:
+		player.stop()
+	for player: AudioStreamPlayer in _heal_players:
+		player.stop()
+	for player: AudioStreamPlayer in _wall_players:
+		player.stop()
+	if _secret_torch != null:
+		_secret_torch.stop()
 	var stereo: AudioStreamPlayer = node as AudioStreamPlayer
 	if stereo:
 		stereo.stop()

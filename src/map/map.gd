@@ -331,6 +331,7 @@ func _check_secret_torch_proximity(player_world_pos: Vector2) -> void:
 
 	_decorations.erase_cell(target_cell)
 	light_manager.remove_light_at(target_cell)
+	Audio.play_environment(&"torch")
 	_secret_torch_index += 1
 
 	if _secret_torch_index < _secret_torch_cells.size():
