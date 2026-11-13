@@ -649,7 +649,6 @@ func _open_recruit_panel(recruit_pos: Vector2, forced_hero_id: StringName = &"")
 
 
 func _on_hero_recruited(hero_data: HeroData) -> void:
-	Audio.play_hero_recruited()
 	get_tree().paused = false
 	var hero_level: int = get_class_level(hero_data.id)
 	var new_hero: Hero = hero_data.instantiate_hero(hero_level)
