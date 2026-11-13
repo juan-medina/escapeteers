@@ -4,21 +4,18 @@
 class_name MenuPanel
 extends PanelContainer
 
-@warning_ignore("unused_signal")
 signal back_requested
-@warning_ignore("unused_signal")
-signal busy_changed(is_busy: bool)
 
-var busy: bool = false:
-	set(value):
-		if busy != value:
-			busy = value
-			busy_changed.emit(busy)
+@export var first_focus: Control = null
 
 
 func _ready() -> void:
 	Audio.connect_menu_sounds(self)
 
 
-func first_focus_control() -> Control:
-	return null
+func grab_first_focus() -> void:
+	Audio.grab_focus_silent(first_focus)
+
+
+func _on_back_pressed() -> void:
+	back_requested.emit()

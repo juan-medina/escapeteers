@@ -7,12 +7,6 @@ extends MenuPanel
 signal resume_requested
 signal settings_requested
 
-@onready var _resume_button: Button = $VBox/Resume
-
-
-func first_focus_control() -> Control:
-	return _resume_button
-
 
 func _on_resume_pressed() -> void:
 	resume_requested.emit()

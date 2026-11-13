@@ -37,17 +37,8 @@ func _build_cards() -> void:
 		_cards[i].focus_neighbor_bottom = _back_button.get_path()
 	if not _cards.is_empty():
 		_back_button.focus_neighbor_top = _cards[mini(2, _cards.size() - 1)].get_path()
-
-
-func first_focus_control() -> Control:
-	if not _cards.is_empty():
-		return _cards[0]
-	return _back_button
+		first_focus = _cards[0]
 
 
 func _on_card_chosen(hero: HeroData) -> void:
 	hero_selected.emit(hero)
-
-
-func _on_back_pressed() -> void:
-	back_requested.emit()

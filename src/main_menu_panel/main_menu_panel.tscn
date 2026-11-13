@@ -15,9 +15,10 @@ events = [SubResource("InputEventAction_pause"), SubResource("InputEventAction_b
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_root"]
 
-[node name="MainMenuPanel" type="PanelContainer"]
+[node name="MainMenuPanel" type="PanelContainer" node_paths=PackedStringArray("first_focus")]
 theme_override_styles/panel = SubResource("StyleBoxEmpty_root")
 script = ExtResource("1_main")
+first_focus = NodePath("VBox/MenuBox/ButtonsVBox/Play")
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 2

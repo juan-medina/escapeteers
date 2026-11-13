@@ -32,10 +32,6 @@ func _exit_tree() -> void:
 	Options.fullscreen_changed.disconnect(_on_fullscreen_changed)
 
 
-func first_focus_control() -> Control:
-	return _fullscreen_check
-
-
 func _on_fullscreen_changed(is_on: bool) -> void:
 	_fullscreen_check.button_pressed = is_on
 
@@ -57,10 +53,6 @@ func _on_music_volume_changed(value: float) -> void:
 func _on_sfx_volume_changed(value: float) -> void:
 	Options.sfx_volume = value
 	_sfx_percent.text = _format_percent(value)
-
-
-func _on_back_pressed() -> void:
-	back_requested.emit()
 
 
 func _init_slider(slider: HSlider, percent: Label, volume: float) -> void:

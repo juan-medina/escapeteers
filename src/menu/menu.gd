@@ -14,7 +14,6 @@ const NOTIFICATION_DELAY: float = 2.0
 
 
 func _ready() -> void:
-	super._ready()
 	get_tree().create_timer(NOTIFICATION_DELAY).timeout.connect(InputManager.enable_notifications)
 	var changelog_hash: StringName = StringName(FileAccess.get_sha256(str(ChangelogPanel.CHANGELOG_PATH)))
 	if not Options.is_changelog_seen(changelog_hash):

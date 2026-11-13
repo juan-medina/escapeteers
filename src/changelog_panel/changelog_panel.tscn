@@ -14,8 +14,9 @@ action = &"back"
 [sub_resource type="Shortcut" id="Shortcut_back"]
 events = [SubResource("InputEventAction_pause"), SubResource("InputEventAction_back")]
 
-[node name="ChangelogPanel" type="PanelContainer"]
+[node name="ChangelogPanel" type="PanelContainer" node_paths=PackedStringArray("first_focus")]
 script = ExtResource("1_changelog")
+first_focus = NodePath("VBox/Buttons/Back")
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 2

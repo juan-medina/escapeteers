@@ -1,0 +1,178 @@
+# Escapeteers Code Review Tracker (92 files)
+# Grouped by subfolder, sorted smallest to largest.
+# Status: [ ] Pending | [x] Reviewed
+
+## 1. src/crt (19 lines)
+[x] src/crt/crt.gd (19 lines, 468 B)
+
+## 2. src/menu_panel (24 lines)
+[x] src/menu_panel/menu_panel.gd (24 lines, 456 B)
+
+## 3. src/game_over_dialog (25 lines)
+[ ] src/game_over_dialog/game_over_dialog.gd (25 lines, 634 B)
+
+## 4. src/pause_panel (26 lines)
+[ ] src/pause_panel/pause_panel.gd (26 lines, 515 B)
+
+## 5. src/error_dialog (27 lines)
+[ ] src/error_dialog/error_dialog.gd (27 lines, 754 B)
+
+## 6. src/about_panel (28 lines)
+[ ] src/about_panel/about_panel.gd (28 lines, 637 B)
+
+## 7. src/changelog_panel (30 lines)
+[ ] src/changelog_panel/changelog_panel.gd (30 lines, 753 B)
+
+## 8. src/eula_screen (36 lines)
+[ ] src/eula_screen/eula_screen.gd (36 lines, 1,031 B)
+
+## 9. src/animated_texture_button (39 lines)
+[ ] src/animated_texture_button/animated_texture_button.gd (39 lines, 836 B)
+
+## 10. src/main_menu_panel (44 lines)
+[ ] src/main_menu_panel/main_menu_panel.gd (44 lines, 846 B)
+
+## 11. src/big_text_panel (49 lines)
+[ ] src/big_text_panel/big_text_panel.gd (49 lines, 1,498 B)
+
+## 12. src/addons/crt_shader (54 lines)
+[ ] src/addons/crt_shader/crt_shader.gd (20 lines, 404 B)
+[ ] src/addons/crt_shader/crt_screen.gd (34 lines, 973 B)
+
+## 13. src/pause_overlay (54 lines)
+[ ] src/pause_overlay/pause_overlay.gd (54 lines, 1,076 B)
+
+## 14. src/menu (56 lines)
+[ ] src/menu/menu.gd (56 lines, 1,520 B)
+
+## 15. src/build_info (63 lines)
+[ ] src/build_info/build_info.gd (63 lines, 2,084 B)
+
+## 16. src/toast (82 lines)
+[ ] src/toast/toast.gd (82 lines, 2,031 B)
+
+## 17. src/settings_panel (84 lines)
+[ ] src/settings_panel/settings_panel.gd (84 lines, 2,592 B)
+
+## 18. src/level_up_panel (88 lines)
+[ ] src/level_up_panel/level_up_panel.gd (88 lines, 2,510 B)
+
+## 19. src/recruit_panel (94 lines)
+[ ] src/recruit_panel/recruit_panel.gd (94 lines, 2,680 B)
+
+## 20. src/alerts (96 lines)
+[ ] src/alerts/alerts.gd (96 lines, 2,201 B)
+
+## 21. src/hero_select_panel (104 lines)
+[ ] src/hero_select_panel/hero_select_card.gd (51 lines, 1,297 B)
+[ ] src/hero_select_panel/hero_select_panel.gd (53 lines, 1,396 B)
+
+## 22. src/telegraph (118 lines)
+[ ] src/telegraph/telegraph_line.gd (49 lines, 1,858 B)
+[ ] src/telegraph/telegraph.gd (69 lines, 1,517 B)
+
+## 23. src/transition (125 lines)
+[ ] src/transition/transition.gd (125 lines, 3,361 B)
+
+## 24. src/panel_host (141 lines)
+[ ] src/panel_host/panel_host.gd (141 lines, 3,820 B)
+
+## 25. src/input_manager (213 lines)
+[ ] src/input_manager/input_manager.gd (213 lines, 7,099 B)
+
+## 26. src/unit_card (244 lines)
+[ ] src/unit_card/unit_card.gd (244 lines, 8,253 B)
+
+## 27. src/options (262 lines)
+[ ] src/options/options.gd (262 lines, 7,690 B)
+
+## 28. src/projectile (304 lines)
+### src/projectile (base)
+[ ] src/projectile/projectile.gd (105 lines, 2,394 B)
+### src/projectile/* (each projectile, smallest to largest)
+[ ] src/projectile/arrow/arrow.gd (13 lines, 218 B)
+[ ] src/projectile/bone_arrow/bone_arrow.gd (16 lines, 261 B)
+[ ] src/projectile/lava_spike/lava_spike.gd (17 lines, 274 B)
+[ ] src/projectile/heal/heal_effect.gd (23 lines, 449 B)
+[ ] src/projectile/smite/smite_effect.gd (23 lines, 473 B)
+[ ] src/projectile/summon_pentagram/summon_pentagram.gd (25 lines, 469 B)
+[ ] src/projectile/ice/ice.gd (82 lines, 2,043 B)
+
+## 29. src/loading_screen (321 lines)
+[ ] src/loading_screen/loading_screen.gd (321 lines, 10,596 B)
+
+## 30. src/benchmark (408 lines)
+[ ] src/benchmark/benchmark.gd (408 lines, 15,157 B)
+
+## 31. src/audio (555 lines)
+[ ] src/audio/audio.gd (555 lines, 20,321 B)
+
+## 32. src/hud (952 lines)
+### src/hud (base)
+[ ] src/hud/hud.gd (108 lines, 3,205 B)
+### src/hud/squad_grid (145 lines)
+[ ] src/hud/squad_grid/squad_grid.gd (28 lines, 632 B)
+[ ] src/hud/squad_grid/squad_grid_cell.gd (117 lines, 3,297 B)
+### src/hud/damage_meter (262 lines)
+[ ] src/hud/damage_meter/damage_meter_row.gd (80 lines, 2,666 B)
+[ ] src/hud/damage_meter/damage_meter.gd (182 lines, 5,132 B)
+### src/hud/map_overlay (437 lines)
+[ ] src/hud/map_overlay/player_marker.gd (31 lines, 686 B)
+[ ] src/hud/map_overlay/map_overlay.gd (406 lines, 14,500 B)
+
+## 33. src/game (1,015 lines)
+[ ] src/game/entity_pool.gd (78 lines, 1,792 B)
+[ ] src/game/game.gd (937 lines, 31,879 B)
+
+## 34. src/balance_sim (1,196 lines)
+[ ] src/balance_sim/balance_sim.gd (1,196 lines, 40,421 B)
+
+## 35. src/map (2,304 lines)
+[ ] src/map/torch_light.gd (34 lines, 971 B)
+[ ] src/map/chunk_raster.gd (71 lines, 1,924 B)
+[ ] src/map/spatial_grid.gd (78 lines, 2,370 B)
+[ ] src/map/nav_window.gd (119 lines, 3,619 B)
+[ ] src/map/light_manager.gd (178 lines, 5,077 B)
+[ ] src/map/tile_classifier.gd (256 lines, 10,061 B)
+[ ] src/map/map_streamer.gd (261 lines, 8,035 B)
+[ ] src/map/map.gd (506 lines, 17,057 B)
+[ ] src/map/world_plan.gd (801 lines, 27,041 B)
+
+## 36. src/character (4,003 lines)
+### src/character (base)
+[ ] src/character/hurtbox.gd (42 lines, 1,056 B)
+[ ] src/character/squad_navigator.gd (85 lines, 2,568 B)
+[ ] src/character/character_data.gd (127 lines, 3,894 B)
+[ ] src/character/ground_indicator.gd (132 lines, 3,928 B)
+[ ] src/character/health_bar.gd (192 lines, 5,874 B)
+[ ] src/character/squad_member.gd (207 lines, 8,112 B)
+[ ] src/character/status_vfx.gd (216 lines, 7,582 B)
+[ ] src/character/character.gd (263 lines, 6,759 B)
+### src/character/combat (345 lines)
+[ ] src/character/combat/summon_action.gd (28 lines, 668 B)
+[ ] src/character/combat/combat_action.gd (37 lines, 943 B)
+[ ] src/character/combat/heal_action.gd (50 lines, 1,479 B)
+[ ] src/character/combat/melee_action.gd (103 lines, 3,199 B)
+[ ] src/character/combat/ranged_action.gd (127 lines, 4,252 B)
+### src/character/enemies (1,004 lines)
+[ ] src/character/enemies/enemy_data.gd (106 lines, 3,251 B)
+[ ] src/character/enemies/enemy.gd (713 lines, 20,942 B)
+[ ] src/character/enemies/skeleton_archer/skeleton_archer.gd (32 lines, 994 B)
+[ ] src/character/enemies/skeleton/skeleton.gd (38 lines, 1,081 B)
+[ ] src/character/enemies/lava_slime/lava_slime.gd (44 lines, 1,416 B)
+[ ] src/character/enemies/necromancer/necromancer.gd (71 lines, 2,083 B)
+### src/character/heroes (1,390 lines)
+[ ] src/character/heroes/hero_data.gd (200 lines, 6,155 B)
+[ ] src/character/heroes/hero_vfx.gd (252 lines, 9,847 B)
+[ ] src/character/heroes/hero.gd (652 lines, 21,744 B)
+[ ] src/character/heroes/archer/archer.gd (5 lines, 106 B)
+[ ] src/character/heroes/knight/knight.gd (5 lines, 106 B)
+[ ] src/character/heroes/priest/priest.gd (5 lines, 106 B)
+[ ] src/character/heroes/soldier/soldier.gd (5 lines, 107 B)
+[ ] src/character/heroes/swordsman/swordsman.gd (5 lines, 109 B)
+[ ] src/character/heroes/armored_axeman/armored_axeman.gd (5 lines, 113 B)
+[ ] src/character/heroes/knight_templar/knight_templar.gd (5 lines, 113 B)
+[ ] src/character/heroes/wizard/wizard.gd (36 lines, 1,043 B)
+[ ] src/character/heroes/unknown/unknown.gd (47 lines, 1,269 B)
+[ ] src/character/heroes/torchero/torchero.gd (69 lines, 1,984 B)
+

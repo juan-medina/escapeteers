@@ -20,11 +20,3 @@ func _ready() -> void:
 	super._ready()
 	_back_button.text = "Continue" if is_boot else "Back"
 	await _changelog_text.load_file(CHANGELOG_PATH)
-
-
-func first_focus_control() -> Control:
-	return _back_button
-
-
-func _on_back_pressed() -> void:
-	back_requested.emit()

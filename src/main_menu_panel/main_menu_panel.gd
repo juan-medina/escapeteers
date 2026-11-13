@@ -10,7 +10,6 @@ signal about_requested
 signal changelog_requested
 signal exit_requested
 
-@onready var _play_button: Button = $VBox/MenuBox/ButtonsVBox/Play
 @onready var _exit_button: Button = $VBox/MenuBox/ButtonsVBox/Exit
 
 
@@ -18,10 +17,6 @@ func _ready() -> void:
 	super._ready()
 	if OS.has_feature(&"web"):
 		_exit_button.visible = false
-
-
-func first_focus_control() -> Control:
-	return _play_button
 
 
 func _on_play_pressed() -> void:
