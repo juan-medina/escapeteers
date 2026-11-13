@@ -55,18 +55,18 @@
 		"id": "skeleton_archer",
 		"name": "Skeleton Archer",
 		"scene_path": "res://character/enemies/skeleton_archer/skeleton_archer.tscn",
-		"health": { "base": 85.0, "growth": 0.16 },
+		"health": { "base": 55.0, "growth": 0.12 },
 		"speed": { "base": 45.0, "growth": 0.03 },
-		"detection_range": { "base": 175.0, "growth": 0.0 },
+		"detection_range": { "base": 160.0, "growth": 0.0 },
 		"xp": { "base": 18.0, "growth": 0.25 },
 		"skills": [
 			{
 				"name": "Bone Arrow",
 				"type": "ranged",
-				"damage": { "base": 7.0, "growth": 0.16 },
-				"cooldown": { "base": 1.4, "growth": -0.04 },
-				"range": { "base": 155.0, "growth": 0.0 },
-				"min_range": 0.0
+				"damage": { "base": 5.0, "growth": 0.12 },
+				"cooldown": { "base": 1.8, "growth": -0.03 },
+				"range": { "base": 130.0, "growth": 0.0 },
+				"min_range": 45.0
 			}
 		]
 	},

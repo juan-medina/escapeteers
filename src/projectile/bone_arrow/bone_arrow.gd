@@ -6,7 +6,7 @@ extends Projectile
 
 
 func _init() -> void:
-	damage = 7.0
+	damage = 5.0
 
 
 func _ready() -> void:
@@ -14,4 +14,3 @@ func _ready() -> void:
 	lifetime = 3.5
 	auto_rotate = true
 	super._ready()
-

@@ -459,7 +459,8 @@ func _process_chase(delta: float) -> void:
 
 
 func _try_kite_away(dist_to_target: float, delta: float) -> bool:
-	if kite_distance <= 0.0 or combat_state != CombatState.COOLDOWN or dist_to_target >= kite_distance:
+	var too_close_to_shoot: bool = can_ranged and not can_melee and dist_to_target < ranged_min_range
+	if kite_distance <= 0.0 or (combat_state != CombatState.COOLDOWN and not too_close_to_shoot) or dist_to_target >= kite_distance:
 		return false
 	var diff_x: float = target.global_position.x - global_position.x
 	if absf(diff_x) > 2.0:
