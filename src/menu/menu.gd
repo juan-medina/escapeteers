@@ -18,23 +18,20 @@ func _ready() -> void:
 	get_tree().create_timer(NOTIFICATION_DELAY).timeout.connect(InputManager.enable_notifications)
 	if not _eula_screen.is_accepted():
 		_show_first(_eula_screen)
-	elif not _changelog_panel.is_seen():
-		_changelog_panel.mark_seen()
-		_changelog_panel.back_button_text = &"Continue"
-		_show_first(_changelog_panel)
 	else:
-		Audio.play_music(false)
-		_show_first(_main_menu_panel)
+		_show_first(_get_start_panel())
 
 
-func _on_eula_accepted() -> void:
-	Audio.play_music(false)
+func _get_start_panel() -> UiPanel:
 	if not _changelog_panel.is_seen():
 		_changelog_panel.mark_seen()
 		_changelog_panel.back_button_text = &"Continue"
-		show_panel(_changelog_panel)
-	else:
-		show_panel(_main_menu_panel)
+		return _changelog_panel
+	return _main_menu_panel
+
+
+func _on_eula_accepted() -> void:
+	show_panel(_get_start_panel())
 
 
 func _on_eula_back_requested() -> void:
@@ -71,5 +68,4 @@ func _on_exit_requested() -> void:
 
 
 func _on_panel_back_requested() -> void:
-	Audio.play_music(false)
 	show_panel(_main_menu_panel)

@@ -43,10 +43,10 @@
 [x] src/addons/crt_shader/crt_screen.gd (34 lines, 973 B)
 
 ## 13. src/pause_overlay (54 lines)
-[ ] src/pause_overlay/pause_overlay.gd (54 lines, 1,076 B)
+[x] src/pause_overlay/pause_overlay.gd (54 lines, 1,076 B)
 
 ## 14. src/menu (56 lines)
-[ ] src/menu/menu.gd (56 lines, 1,520 B)
+[x] src/menu/menu.gd (56 lines, 1,520 B)
 
 ## 15. src/build_info (63 lines)
 [ ] src/build_info/build_info.gd (63 lines, 2,084 B)

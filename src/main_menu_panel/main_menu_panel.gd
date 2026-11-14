@@ -21,6 +21,11 @@ func _ready() -> void:
 		_exit_button.visible = false
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and is_visible_in_tree():
+		Audio.play_music(false)
+
+
 func _on_play_pressed() -> void:
 	play_requested.emit()
 

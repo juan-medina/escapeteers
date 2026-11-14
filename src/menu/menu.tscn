@@ -8,7 +8,7 @@
 [ext_resource type="PackedScene" path="res://changelog_panel/changelog_panel.tscn" id="6_changelog"]
 [ext_resource type="PackedScene" path="res://eula_screen/eula_screen.tscn" id="7_eula"]
 
-[node name="MenuOverlay" type="CanvasLayer"]
+[node name="Menu" type="CanvasLayer"]
 script = ExtResource("1_g18jx")
 
 [node name="ColorRect" type="ColorRect" parent="."]
@@ -27,6 +27,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="MainMenuPanel" parent="Center" instance=ExtResource("2_main")]
+visible = false
 layout_mode = 2
 
 [node name="HeroSelectPanel" parent="Center" instance=ExtResource("3_hero_select")]
