@@ -8,19 +8,23 @@ extends PanelHost
 @onready var _settings_panel: SettingsPanel = $Center/SettingsPanel
 
 
-func _open_pause() -> void:
-	_open(_pause_panel)
+func _unhandled_input(event: InputEvent) -> void:
+	if visible or get_tree().paused or not event.is_action_pressed(&"pause"):
+		return
+	Audio.play_pause()
+	_open()
 
 
-func _open(panel: UiPanel) -> void:
+func _open() -> void:
 	get_tree().paused = true
 	set_host_alpha(0.0)
-	_show_first(panel)
+	_show_first(_pause_panel)
 	visible = true
 	fade_host(1.0)
 
 
 func _close() -> void:
+	get_viewport().gui_release_focus()
 	fade_host(0.0).finished.connect(_on_close_finished)
 
 
@@ -30,16 +34,6 @@ func _on_close_finished() -> void:
 		_current = null
 	visible = false
 	get_tree().paused = false
-
-
-func _unhandled_input(event: InputEvent) -> void:
-	if not event.is_action_pressed(&"pause"):
-		return
-	if get_tree().paused and not visible:
-		return
-	if not visible:
-		Audio.play_pause()
-		_open_pause()
 
 
 func _on_resume_requested() -> void:
