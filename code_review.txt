@@ -33,7 +33,7 @@
 [x] src/animated_texture_button/animated_texture_button.gd (39 lines, 836 B)
 
 ## 10. src/main_menu_panel (44 lines)
-[ ] src/main_menu_panel/main_menu_panel.gd (44 lines, 846 B)
+[x] src/main_menu_panel/main_menu_panel.gd (44 lines, 846 B)
 
 ## 11. src/big_text_panel (49 lines)
 [x] src/big_text_panel/big_text_panel.gd (49 lines, 1,498 B)

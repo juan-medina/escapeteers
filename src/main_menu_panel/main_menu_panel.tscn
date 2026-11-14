@@ -67,7 +67,7 @@ text = "Changelog"
 [node name="HSeparator" type="HSeparator" parent="VBox/MenuBox/ButtonsVBox"]
 layout_mode = 2
 
-[node name="Exit" type="Button" parent="VBox/MenuBox/ButtonsVBox"]
+[node name="Exit" type="Button" parent="VBox/MenuBox/ButtonsVBox" groups=["ui_return"]]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 4

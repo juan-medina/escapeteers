@@ -10,12 +10,14 @@ signal about_requested
 signal changelog_requested
 signal exit_requested
 
+@onready var _exit_separator: HSeparator = $VBox/MenuBox/ButtonsVBox/HSeparator
 @onready var _exit_button: Button = $VBox/MenuBox/ButtonsVBox/Exit
 
 
 func _ready() -> void:
 	super._ready()
 	if OS.has_feature(&"web"):
+		_exit_separator.visible = false
 		_exit_button.visible = false
 
 
