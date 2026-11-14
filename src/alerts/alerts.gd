@@ -6,7 +6,7 @@ extends Node
 const TOAST_SCENE: PackedScene = preload("res://toast/toast.tscn")
 const ERROR_DIALOG_SCENE: PackedScene = preload("res://error_dialog/error_dialog.tscn")
 
-var _toast: ToastScene
+var _toast: Toast
 
 var _terminating: bool = false
 var _error_dialog_shown: bool = false
@@ -18,7 +18,7 @@ func _ready() -> void:
 	# Intercept the window-close request so termination fades gracefully.
 	get_tree().set_auto_accept_quit(false)
 
-	_toast = TOAST_SCENE.instantiate() as ToastScene
+	_toast = TOAST_SCENE.instantiate() as Toast
 	add_child(_toast)
 
 

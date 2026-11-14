@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Juan Medina
 # SPDX-License-Identifier: MIT
 
-class_name ToastScene
+class_name Toast
 extends CanvasLayer
 
 const APPEAR_TIME: float = 1.0
@@ -35,9 +35,7 @@ func _process_next_toast() -> void:
 func _display_message(message: StringName) -> void:
 	_message.text = message
 	_container.modulate.a = 0.0
-	if _tween and _tween.is_valid():
-		_tween.kill()
-		_tween = null
+	_kill_tween()
 	_tween = _container.create_tween()
 	_tween.tween_property(_container, ^"modulate:a", 1.0, APPEAR_TIME)
 	_tween.tween_interval(VISIBLE_TIME)
@@ -46,17 +44,15 @@ func _display_message(message: StringName) -> void:
 	show()
 
 
-func _on_message_button_down() -> void:
-	if visible:
-		Audio.play_click()
-	_hide()
+func _kill_tween() -> void:
+	if _tween and _tween.is_valid():
+		_tween.kill()
+	_tween = null
 
 
 func _hide() -> void:
 	hide()
-	if _tween and _tween.is_valid():
-		_tween.kill()
-	_tween = null
+	_kill_tween()
 
 	if not _toast_queue.is_empty():
 		get_tree().create_timer(DELAY_BETWEEN_TOASTS).timeout.connect(_process_next_toast)
@@ -64,18 +60,23 @@ func _hide() -> void:
 		_is_showing_message = false
 
 
+func _on_message_button_down() -> void:
+	if visible:
+		Audio.play_click()
+	_hide()
+
+
 func _on_message_mouse_entered() -> void:
-	if _tween and _tween.is_valid():
-		_tween.kill()
-	_tween = null
+	if not visible:
+		return
+	_kill_tween()
 	_container.modulate.a = 1.0
 
 
 func _on_message_mouse_exited() -> void:
-	if _container.modulate.a < 1.0:
+	if not visible or _container.modulate.a < 1.0:
 		return
-	if _tween and _tween.is_valid():
-		_tween.kill()
+	_kill_tween()
 	_tween = _container.create_tween()
 	_tween.tween_interval(VISIBLE_TIME)
 	_tween.tween_property(_container, ^"modulate:a", 0.0, DISAPPEAR_AFTER_HOVER)

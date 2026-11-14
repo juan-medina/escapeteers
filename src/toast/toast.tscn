@@ -23,6 +23,7 @@ grow_vertical = 0
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 8
+focus_mode = 0
 mouse_default_cursor_shape = 2
 text = "This is a long text for a message"
 

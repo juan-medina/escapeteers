@@ -49,10 +49,10 @@
 [x] src/menu/menu.gd (56 lines, 1,520 B)
 
 ## 15. src/build_info (63 lines)
-[ ] src/build_info/build_info.gd (63 lines, 2,084 B)
+[x] src/build_info/build_info.gd (63 lines, 2,084 B)
 
 ## 16. src/toast (82 lines)
-[ ] src/toast/toast.gd (82 lines, 2,031 B)
+[x] src/toast/toast.gd (82 lines, 2,031 B)
 
 ## 17. src/settings_panel (84 lines)
 [ ] src/settings_panel/settings_panel.gd (84 lines, 2,592 B)
