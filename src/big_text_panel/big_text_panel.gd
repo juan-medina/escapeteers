@@ -18,7 +18,6 @@ var file_hash: StringName = &""
 
 func _ready() -> void:
 	_title_label.text = title
-	file_hash = StringName(FileAccess.get_sha256(text_file))
 	set_process(is_visible_in_tree())
 	super._ready()
 	await _load_file()
@@ -26,7 +25,10 @@ func _ready() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_VISIBILITY_CHANGED:
-		set_process(is_visible_in_tree())
+		var visible_in_tree: bool = is_visible_in_tree()
+		set_process(visible_in_tree)
+		if visible_in_tree and is_node_ready():
+			_text_label.get_v_scroll_bar().value = 0.0
 
 
 func _process(delta: float) -> void:
@@ -41,6 +43,8 @@ func _load_file() -> void:
 		printerr(&"BigTextPanel: Failed to open %s !" % text_file)
 		await Alerts.fatal_error(&"Could not load game data")
 		return
+
+	file_hash = StringName(FileAccess.get_sha256(text_file))
 
 	# {build} is a placeholder in the text files, filled with the build stamp.
 	var content: String = file.get_as_text().replace(&"{build}", BuildInfo.display_string())
