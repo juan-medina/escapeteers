@@ -7,21 +7,11 @@ extends RefCounted
 const INFO_PATH: StringName = &"res://build_info/build_info.json"
 const DEV_BUILD: StringName = &"dev"
 
-static var name: StringName = &""
-static var version: StringName = &""
-static var version_simple: StringName = &""
-static var commit: StringName = &""
-static var built_at: StringName = &""
+static var _display_string: String = ""
 
 
 static func initialize() -> void:
-	name = str(ProjectSettings.get_setting(&"application/config/name", &"unknown"))
-	version = str(ProjectSettings.get_setting(&"application/config/version", &"0.0.0"))
-	var parts: PackedStringArray = version.split(&".")
-	if parts.size() >= 2:
-		version_simple = StringName(&"%s.%s" % [parts[0], parts[1]])
-	else:
-		version_simple = version
+	var version: String = str(ProjectSettings.get_setting(&"application/config/version", &"0.0.0"))
 
 	var file: FileAccess = FileAccess.open(INFO_PATH, FileAccess.READ)
 	if file == null:
@@ -40,24 +30,16 @@ static func initialize() -> void:
 		return
 
 	var data: Dictionary = json.data
-	commit = _read_string(data, &"commit")
-	built_at = _read_string(data, &"built_at")
+	var commit: String = str(data.get(&"commit", &""))
+	var built_at: String = str(data.get(&"built_at", &""))
 
-
-# A build is identified by the commit it was made from, so the stamp is written
-# at build time by scripts/gen_build_info.py and is empty in a working tree.
-static func display_string() -> String:
+	# A build is identified by the commit it was made from, so the stamp is written
+	# at build time by scripts/gen_build_info.py and is empty in a working tree.
 	if commit.is_empty() or built_at.is_empty():
-		return &"v%s (%s)" % [version, DEV_BUILD]
-	return &"v%s+%s.%s" % [version, built_at, commit]
+		_display_string = &"v%s (%s)" % [version, DEV_BUILD]
+	else:
+		_display_string = &"v%s+%s.%s" % [version, built_at, commit]
 
 
-static func _read_string(data: Dictionary, key: StringName) -> StringName:
-	var value: Variant = data.get(key, &"")
-	if value is StringName:
-		@warning_ignore("unsafe_cast")
-		return value as StringName
-	if value is String:
-		@warning_ignore("unsafe_cast")
-		return StringName(value as String)
-	return &""
+static func display_string() -> String:
+	return _display_string
