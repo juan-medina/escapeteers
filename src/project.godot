@@ -55,10 +55,6 @@ window/size/window_height_override=720
 window/stretch/mode="viewport"
 window/stretch/aspect="expand"
 
-[editor_plugins]
-
-enabled=PackedStringArray("res://addons/crt_shader/plugin.cfg")
-
 [gui]
 
 theme/default_font_antialiasing=0
