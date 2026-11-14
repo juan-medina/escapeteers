@@ -55,7 +55,8 @@
 [x] src/toast/toast.gd (82 lines, 2,031 B)
 
 ## 17. src/settings_panel (84 lines)
-[ ] src/settings_panel/settings_panel.gd (84 lines, 2,592 B)
+[x] src/settings_panel/volume_slider.gd (30 lines)
+[x] src/settings_panel/settings_panel.gd (84 lines, 2,592 B)
 
 ## 18. src/level_up_panel (88 lines)
 [ ] src/level_up_panel/level_up_panel.gd (88 lines, 2,510 B)

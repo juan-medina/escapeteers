@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://settings_panel/settings_panel.gd" id="1_enujn"]
+[ext_resource type="PackedScene" path="res://settings_panel/volume_slider.tscn" id="2_slider"]
 
 [sub_resource type="InputEventAction" id="InputEventAction_pause"]
 device = -1
@@ -47,89 +48,17 @@ text = "Scanlines"
 layout_mode = 2
 text = "Curvature"
 
-[node name="MasterVolume" type="MarginContainer" parent="VBox"]
+[node name="MasterVolume" parent="VBox" instance=ExtResource("2_slider")]
 layout_mode = 2
-theme_override_constants/margin_left = 6
+label_text = "Master Volume"
 
-[node name="VBox" type="VBoxContainer" parent="VBox/MasterVolume"]
+[node name="MusicVolume" parent="VBox" instance=ExtResource("2_slider")]
 layout_mode = 2
-theme_override_constants/separation = 2
+label_text = "Music Volume"
 
-[node name="Label" type="Label" parent="VBox/MasterVolume/VBox"]
+[node name="SfxVolume" parent="VBox" instance=ExtResource("2_slider")]
 layout_mode = 2
-text = "Master Volume"
-
-[node name="HBox" type="HBoxContainer" parent="VBox/MasterVolume/VBox"]
-layout_mode = 2
-
-[node name="HSlider" type="HSlider" parent="VBox/MasterVolume/VBox/HBox"]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-max_value = 1.0
-step = 0.05
-value = 1.0
-
-[node name="Label" type="Label" parent="VBox/MasterVolume/VBox/HBox"]
-custom_minimum_size = Vector2(30, 0)
-layout_mode = 2
-text = "100 %"
-horizontal_alignment = 2
-
-[node name="MusicVolume" type="MarginContainer" parent="VBox"]
-layout_mode = 2
-theme_override_constants/margin_left = 6
-
-[node name="VBox" type="VBoxContainer" parent="VBox/MusicVolume"]
-layout_mode = 2
-theme_override_constants/separation = 2
-
-[node name="Label" type="Label" parent="VBox/MusicVolume/VBox"]
-layout_mode = 2
-text = "Music Volume"
-
-[node name="HBox" type="HBoxContainer" parent="VBox/MusicVolume/VBox"]
-layout_mode = 2
-
-[node name="HSlider" type="HSlider" parent="VBox/MusicVolume/VBox/HBox"]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-max_value = 1.0
-step = 0.05
-value = 0.5
-
-[node name="Label" type="Label" parent="VBox/MusicVolume/VBox/HBox"]
-custom_minimum_size = Vector2(30, 0)
-layout_mode = 2
-text = "50 %"
-horizontal_alignment = 2
-
-[node name="SfxVolume" type="MarginContainer" parent="VBox"]
-layout_mode = 2
-theme_override_constants/margin_left = 6
-
-[node name="VBox" type="VBoxContainer" parent="VBox/SfxVolume"]
-layout_mode = 2
-theme_override_constants/separation = 2
-
-[node name="Label" type="Label" parent="VBox/SfxVolume/VBox"]
-layout_mode = 2
-text = "Sound Volume"
-
-[node name="HBox" type="HBoxContainer" parent="VBox/SfxVolume/VBox"]
-layout_mode = 2
-
-[node name="HSlider" type="HSlider" parent="VBox/SfxVolume/VBox/HBox"]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-max_value = 1.0
-step = 0.05
-value = 0.5
-
-[node name="Label" type="Label" parent="VBox/SfxVolume/VBox/HBox"]
-custom_minimum_size = Vector2(30, 0)
-layout_mode = 2
-text = "50 %"
-horizontal_alignment = 2
+label_text = "Sound Volume"
 
 [node name="HSeparator" type="HSeparator" parent="VBox"]
 layout_mode = 2
@@ -143,7 +72,7 @@ text = "Back"
 [connection signal="toggled" from="VBox/CrtBorder" to="." method="_on_crt_border_toggled"]
 [connection signal="toggled" from="VBox/Scanlines" to="." method="_on_scanlines_toggled"]
 [connection signal="toggled" from="VBox/Curvature" to="." method="_on_curvature_toggled"]
-[connection signal="value_changed" from="VBox/MasterVolume/VBox/HBox/HSlider" to="." method="_on_master_volume_changed"]
-[connection signal="value_changed" from="VBox/MusicVolume/VBox/HBox/HSlider" to="." method="_on_music_volume_changed"]
-[connection signal="value_changed" from="VBox/SfxVolume/VBox/HBox/HSlider" to="." method="_on_sfx_volume_changed"]
+[connection signal="value_changed" from="VBox/MasterVolume" to="." method="_on_master_volume_changed"]
+[connection signal="value_changed" from="VBox/MusicVolume" to="." method="_on_music_volume_changed"]
+[connection signal="value_changed" from="VBox/SfxVolume" to="." method="_on_sfx_volume_changed"]
 [connection signal="pressed" from="VBox/Back" to="." method="_on_back_pressed"]
