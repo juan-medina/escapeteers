@@ -14,20 +14,20 @@
 ## 3. src/game_over_dialog (14 lines)
 [x] src/game_over_dialog/game_over_dialog.gd (14 lines, 286 B)
 
-## 4. src/pause_panel (26 lines)
-[ ] src/pause_panel/pause_panel.gd (26 lines, 515 B)
+## 4. src/pause_panel (20 lines)
+[x] src/pause_panel/pause_panel.gd (20 lines, 368 B)
 
-## 5. src/error_dialog (27 lines)
-[ ] src/error_dialog/error_dialog.gd (27 lines, 754 B)
+## 5. src/error_dialog (22 lines)
+[x] src/error_dialog/error_dialog.gd (22 lines, 520 B)
 
-## 6. src/about_panel (28 lines)
-[ ] src/about_panel/about_panel.gd (28 lines, 637 B)
+## 6. src/about_panel (19 lines)
+[x] src/about_panel/about_panel.gd (19 lines, 456 B)
 
-## 7. src/changelog_panel (30 lines)
-[ ] src/changelog_panel/changelog_panel.gd (30 lines, 753 B)
+## 7. src/changelog_panel (20 lines)
+[x] src/changelog_panel/changelog_panel.gd (20 lines, 474 B)
 
-## 8. src/eula_screen (36 lines)
-[ ] src/eula_screen/eula_screen.gd (36 lines, 1,031 B)
+## 8. src/eula_screen (44 lines)
+[x] src/eula_screen/eula_screen.gd (44 lines, 962 B)
 
 ## 9. src/animated_texture_button (39 lines)
 [ ] src/animated_texture_button/animated_texture_button.gd (39 lines, 836 B)
@@ -36,7 +36,7 @@
 [ ] src/main_menu_panel/main_menu_panel.gd (44 lines, 846 B)
 
 ## 11. src/big_text_panel (49 lines)
-[ ] src/big_text_panel/big_text_panel.gd (49 lines, 1,498 B)
+[x] src/big_text_panel/big_text_panel.gd (49 lines, 1,498 B)
 
 ## 12. src/addons/crt_shader (54 lines)
 [ ] src/addons/crt_shader/crt_shader.gd (20 lines, 404 B)

@@ -2,17 +2,13 @@
 # SPDX-License-Identifier: MIT
 
 class_name AboutPanel
-extends MenuPanel
+extends BigTextPanel
 
-const ABOUT_PATH: StringName = &"res://about_panel/about.txt"
-const WEBSITE_URL: StringName = &"https://github.com/juan-medina/escapeteers"
-
-@onready var _about_text: BigTextPanel = $VBox/AboutText
+signal license_requested
 
 
-func _ready() -> void:
-	super._ready()
-	await _about_text.load_file(ABOUT_PATH)
+func _on_license_pressed() -> void:
+	license_requested.emit()
 
 
 func _on_website_pressed() -> void:

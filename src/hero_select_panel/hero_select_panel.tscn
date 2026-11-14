@@ -13,9 +13,10 @@ action = &"back"
 [sub_resource type="Shortcut" id="Shortcut_back"]
 events = [SubResource("InputEventAction_pause"), SubResource("InputEventAction_back")]
 
-[node name="HeroSelectPanel" type="PanelContainer" node_paths=PackedStringArray("first_focus")]
+[node name="HeroSelectPanel" type="PanelContainer" node_paths=PackedStringArray("first_focus", "back_button")]
 script = ExtResource("1_panel")
 first_focus = NodePath("VBox/Buttons/Back")
+back_button = NodePath("VBox/Buttons/Back")
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 2

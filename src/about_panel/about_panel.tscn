@@ -1,56 +1,22 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://about_panel/about_panel.gd" id="1_about"]
-[ext_resource type="Script" path="res://big_text_panel/big_text_panel.gd" id="2_bigtext"]
+[ext_resource type="PackedScene" path="res://big_text_panel/big_text_panel.tscn" id="1_base"]
+[ext_resource type="Script" path="res://about_panel/about_panel.gd" id="2_about"]
 
-[sub_resource type="InputEventAction" id="InputEventAction_pause"]
-device = -1
-action = &"pause"
+[node name="AboutPanel" instance=ExtResource("1_base")]
+script = ExtResource("2_about")
+title = "About"
+text_file = "res://about_panel/about.txt"
 
-[sub_resource type="InputEventAction" id="InputEventAction_back"]
-device = -1
-action = &"back"
-
-[sub_resource type="Shortcut" id="Shortcut_back"]
-events = [SubResource("InputEventAction_pause"), SubResource("InputEventAction_back")]
-
-[node name="AboutPanel" type="PanelContainer" node_paths=PackedStringArray("first_focus")]
-script = ExtResource("1_about")
-first_focus = NodePath("VBox/Buttons/Back")
-
-[node name="VBox" type="VBoxContainer" parent="."]
-layout_mode = 2
-theme_override_constants/separation = 8
-alignment = 1
-
-[node name="Title" type="Label" parent="VBox"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 24
-text = "About"
-horizontal_alignment = 1
-
-[node name="AboutText" type="RichTextLabel" parent="VBox"]
-custom_minimum_size = Vector2(550, 250)
-layout_mode = 2
-bbcode_enabled = true
-script = ExtResource("2_bigtext")
-
-[node name="Buttons" type="HBoxContainer" parent="VBox"]
-layout_mode = 2
-size_flags_horizontal = 4
-theme_override_constants/separation = 8
-
-[node name="Back" type="Button" parent="VBox/Buttons" groups=["ui_return"]]
+[node name="License" type="Button" parent="VBox/Buttons" index="1"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-shortcut = SubResource("Shortcut_back")
-text = "Back"
+text = "License"
 
-[node name="Website" type="Button" parent="VBox/Buttons"]
+[node name="Website" type="Button" parent="VBox/Buttons" index="2"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 text = "Website"
 
-[connection signal="meta_clicked" from="VBox/AboutText" to="VBox/AboutText" method="_on_meta_clicked"]
+[connection signal="pressed" from="VBox/Buttons/License" to="." method="_on_license_pressed"]
 [connection signal="pressed" from="VBox/Buttons/Website" to="." method="_on_website_pressed"]
-[connection signal="pressed" from="VBox/Buttons/Back" to="." method="_on_back_pressed"]

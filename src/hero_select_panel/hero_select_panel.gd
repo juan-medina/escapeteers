@@ -11,7 +11,6 @@ const HERO_CARD_SCENE: PackedScene = preload("res://hero_select_panel/hero_selec
 var _cards: Array[HeroSelectCard] = []
 
 @onready var _grid: GridContainer = $VBox/GridMargin/Grid
-@onready var _back_button: Button = $VBox/Buttons/Back
 
 
 func _ready() -> void:
@@ -33,9 +32,9 @@ func _build_cards() -> void:
 		_cards.append(card)
 
 	for i: int in range(4, _cards.size()):
-		_cards[i].focus_neighbor_bottom = _back_button.get_path()
+		_cards[i].focus_neighbor_bottom = back_button.get_path()
 	if not _cards.is_empty():
-		_back_button.focus_neighbor_top = _cards[mini(2, _cards.size() - 1)].get_path()
+		back_button.focus_neighbor_top = _cards[mini(2, _cards.size() - 1)].get_path()
 		first_focus = _cards[0]
 
 

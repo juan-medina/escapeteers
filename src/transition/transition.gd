@@ -95,10 +95,6 @@ func go_to_menu(target: MenuTarget = MenuTarget.MAIN_MENU) -> void:
 	in_transition = false
 
 
-func go_to_menu_instant() -> void:
-	get_tree().change_scene_to_packed.call_deferred(MENU_SCENE)
-
-
 func _go_to_game_scene() -> void:
 	if in_transition:
 		return

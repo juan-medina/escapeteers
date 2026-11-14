@@ -2,32 +2,37 @@
 # SPDX-License-Identifier: MIT
 
 class_name EulaScreen
-extends UiPanel
+extends BigTextPanel
 
-const EULA_PATH: StringName = &"res://eula_screen/eula.txt"
-const NOTIFICATION_DELAY: float = 2.0
+signal accepted
 
-@onready var _eula_text: BigTextPanel = $Center/EulaPanel/VBox/EulaText
+@onready var _decline_button: Button = $VBox/Buttons/Decline
+@onready var _accept_button: Button = $VBox/Buttons/Accept
 
 
 func _ready() -> void:
-	var current_hash: StringName = _eula_hash()
-	if Options.is_eula_accepted(current_hash):
-		Transition.go_to_menu_instant()
-		return
-
-	get_tree().create_timer(NOTIFICATION_DELAY).timeout.connect(InputManager.enable_notifications)
-	await _eula_text.load_file(EULA_PATH)
-	super._ready()
+	await super._ready()
+	_update_buttons()
 
 
-func _eula_hash() -> StringName:
-	return StringName(FileAccess.get_sha256(str(EULA_PATH)))
+func is_accepted() -> bool:
+	return Options.is_eula_accepted(file_hash)
+
+
+func _update_buttons() -> void:
+	var accepted_state: bool = is_accepted()
+	back_button.visible = accepted_state
+	_decline_button.visible = not accepted_state
+	_accept_button.visible = not accepted_state
+	first_focus = back_button if accepted_state else _accept_button
+	if is_visible_in_tree():
+		grab_first_focus()
 
 
 func _on_accept_pressed() -> void:
-	Options.eula_accepted_hash = _eula_hash()
-	await Transition.go_to_menu(Transition.MenuTarget.MAIN_MENU)
+	Options.eula_accepted_hash = file_hash
+	_update_buttons()
+	accepted.emit()
 
 
 func _on_decline_pressed() -> void:

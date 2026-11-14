@@ -2,21 +2,12 @@
 # SPDX-License-Identifier: MIT
 
 class_name ChangelogPanel
-extends MenuPanel
-
-const CHANGELOG_PATH: StringName = &"res://changelog_panel/changelog.txt"
-
-var is_boot: bool = false:
-	set(value):
-		is_boot = value
-		if _back_button != null:
-			_back_button.text = "Continue" if is_boot else "Back"
-
-@onready var _back_button: Button = $VBox/Buttons/Back
-@onready var _changelog_text: BigTextPanel = $VBox/ChangelogText
+extends BigTextPanel
 
 
-func _ready() -> void:
-	super._ready()
-	_back_button.text = "Continue" if is_boot else "Back"
-	await _changelog_text.load_file(CHANGELOG_PATH)
+func is_seen() -> bool:
+	return Options.is_changelog_seen(file_hash)
+
+
+func mark_seen() -> void:
+	Options.changelog_seen_hash = file_hash

@@ -1,68 +1,22 @@
 [gd_scene format=3 uid="uid://brfganlrf5bin"]
 
-[ext_resource type="Script" uid="uid://gwq7a7unt21t" path="res://eula_screen/eula_screen.gd" id="1_eula"]
-[ext_resource type="Script" uid="uid://cn7pp7ar1abmh" path="res://big_text_panel/big_text_panel.gd" id="2_bigtext"]
+[ext_resource type="PackedScene" path="res://big_text_panel/big_text_panel.tscn" id="1_base"]
+[ext_resource type="Script" uid="uid://gwq7a7unt21t" path="res://eula_screen/eula_screen.gd" id="2_eula"]
 
-[node name="EulaScreen" type="Control" unique_id=1064547657 node_paths=PackedStringArray("first_focus")]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("1_eula")
-first_focus = NodePath("Center/EulaPanel/VBox/Buttons/Accept")
+[node name="EulaScreen" instance=ExtResource("1_base")]
+script = ExtResource("2_eula")
+title = "End-User License Agreement"
+text_file = "res://eula_screen/eula.txt"
 
-[node name="ColorRect" type="ColorRect" parent="." unique_id=1073566882]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.05, 0.05, 0.05, 1)
-
-[node name="Center" type="CenterContainer" parent="." unique_id=636881551]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="EulaPanel" type="PanelContainer" parent="Center" unique_id=800011745]
-layout_mode = 2
-
-[node name="VBox" type="VBoxContainer" parent="Center/EulaPanel" unique_id=311224301]
-layout_mode = 2
-theme_override_constants/separation = 8
-alignment = 1
-
-[node name="Title" type="Label" parent="Center/EulaPanel/VBox" unique_id=619577801]
-layout_mode = 2
-theme_override_font_sizes/font_size = 24
-text = "End-User License Agreement"
-horizontal_alignment = 1
-
-[node name="EulaText" type="RichTextLabel" parent="Center/EulaPanel/VBox" unique_id=2139939846]
-custom_minimum_size = Vector2(550, 250)
-layout_mode = 2
-bbcode_enabled = true
-script = ExtResource("2_bigtext")
-
-[node name="Buttons" type="HBoxContainer" parent="Center/EulaPanel/VBox" unique_id=510811390]
-layout_mode = 2
-theme_override_constants/separation = 8
-alignment = 1
-
-[node name="Decline" type="Button" parent="Center/EulaPanel/VBox/Buttons" unique_id=180944894 groups=["ui_return"]]
+[node name="Decline" type="Button" parent="VBox/Buttons" index="1" groups=["ui_return"]]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 text = "Decline"
 
-[node name="Accept" type="Button" parent="Center/EulaPanel/VBox/Buttons" unique_id=861793425]
+[node name="Accept" type="Button" parent="VBox/Buttons" index="2"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 text = "Accept"
 
-[connection signal="meta_clicked" from="Center/EulaPanel/VBox/EulaText" to="Center/EulaPanel/VBox/EulaText" method="_on_meta_clicked"]
-[connection signal="pressed" from="Center/EulaPanel/VBox/Buttons/Decline" to="." method="_on_decline_pressed"]
-[connection signal="pressed" from="Center/EulaPanel/VBox/Buttons/Accept" to="." method="_on_accept_pressed"]
+[connection signal="pressed" from="VBox/Buttons/Decline" to="." method="_on_decline_pressed"]
+[connection signal="pressed" from="VBox/Buttons/Accept" to="." method="_on_accept_pressed"]

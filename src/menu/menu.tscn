@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://settings_panel/settings_panel.tscn" id="4_settings"]
 [ext_resource type="PackedScene" path="res://about_panel/about_panel.tscn" id="5_about"]
 [ext_resource type="PackedScene" path="res://changelog_panel/changelog_panel.tscn" id="6_changelog"]
+[ext_resource type="PackedScene" path="res://eula_screen/eula_screen.tscn" id="7_eula"]
 
 [node name="MenuOverlay" type="CanvasLayer"]
 script = ExtResource("1_g18jx")
@@ -44,6 +45,10 @@ layout_mode = 2
 visible = false
 layout_mode = 2
 
+[node name="EulaScreen" parent="Center" instance=ExtResource("7_eula")]
+visible = false
+layout_mode = 2
+
 [connection signal="about_requested" from="Center/MainMenuPanel" to="." method="_on_about_requested"]
 [connection signal="changelog_requested" from="Center/MainMenuPanel" to="." method="_on_changelog_requested"]
 [connection signal="exit_requested" from="Center/MainMenuPanel" to="." method="_on_exit_requested"]
@@ -53,4 +58,7 @@ layout_mode = 2
 [connection signal="hero_selected" from="Center/HeroSelectPanel" to="." method="_on_hero_selected"]
 [connection signal="back_requested" from="Center/SettingsPanel" to="." method="_on_panel_back_requested"]
 [connection signal="back_requested" from="Center/AboutPanel" to="." method="_on_panel_back_requested"]
+[connection signal="license_requested" from="Center/AboutPanel" to="." method="_on_license_requested"]
 [connection signal="back_requested" from="Center/ChangelogPanel" to="." method="_on_panel_back_requested"]
+[connection signal="accepted" from="Center/EulaScreen" to="." method="_on_eula_accepted"]
+[connection signal="back_requested" from="Center/EulaScreen" to="." method="_on_eula_back_requested"]
