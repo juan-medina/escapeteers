@@ -19,6 +19,10 @@
   - **Format:** `- [color=#ffffff][b]Feature Name:[/b][/color] Concise description of the user-visible change.` under the appropriate section (`Added`, `Changed`, `Fixed`).
 
 
+## GitHub Issues
+When instructed to review, edit, or modify GitHub issues (e.g., reviewing a specific issue number), use the GitHub CLI tool (`gh`) directly instead of manually querying the GitHub API or scraping web pages (e.g., `gh issue view <number>`, `gh issue edit <number>`, `gh issue comment <number>`).
+
+
 ## Git Commit Rules
 When generating git commit messages, strictly follow these constraints:
 - Must be exactly 1 line (no multi-line body or bullet points).
