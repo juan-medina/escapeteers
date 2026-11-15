@@ -17,8 +17,9 @@ var show_telegraph: bool = false
 var telegraph_color: Color = Color(1.0, 0.35, 0.2, 0.35)
 var telegraph_locked_color: Color = Color(1.0, 0.15, 0.1, 0.85)
 var telegraph_lock_time: float = 0.25
-var active_telegraph: TelegraphLine = null
 var locked_fire_direction: Vector2 = Vector2.ZERO
+
+var _telegraph_line: TelegraphLine = null
 
 
 func can_reach(user: Character, target: Character) -> bool:
@@ -50,25 +51,22 @@ func execute(user: Character, target: Character) -> void:
 
 
 func _start_telegraph(enemy: Enemy, target: Character) -> void:
-	if active_telegraph != null and is_instance_valid(active_telegraph):
-		active_telegraph.cancel()
-		active_telegraph = null
+	if _telegraph_line == null:
+		_telegraph_line = TelegraphLine.new()
+		_telegraph_line.horizontal_only = requires_horizontal_alignment
+		_telegraph_line.base_color = telegraph_color
+		_telegraph_line.locked_color = telegraph_locked_color
+		_telegraph_line.telegraph_locked.connect(_on_telegraph_locked)
+		enemy.add_child(_telegraph_line)
 
 	var anim_duration: float = enemy.get_animation_duration(animation_name)
 	if anim_duration <= 0.0:
 		anim_duration = 0.9
 
-	var line: TelegraphLine = TelegraphLine.new()
-	line.line_length = range_distance
-	line.horizontal_only = requires_horizontal_alignment
-	line.base_color = telegraph_color
-	line.locked_color = telegraph_locked_color
-	line.target = target
-	line.telegraph_locked.connect(_on_telegraph_locked)
-	enemy.add_child(line)
-	line.start(anim_duration, telegraph_lock_time)
-	active_telegraph = line
-	enemy.active_telegraph = line
+	_telegraph_line.line_length = range_distance
+	_telegraph_line.target = target
+	_telegraph_line.start(anim_duration, telegraph_lock_time)
+	enemy.active_telegraph = _telegraph_line
 
 
 func _on_telegraph_locked(telegraph: Telegraph) -> void:
@@ -79,9 +77,8 @@ func _on_telegraph_locked(telegraph: Telegraph) -> void:
 
 
 func cancel_telegraph() -> void:
-	if active_telegraph != null and is_instance_valid(active_telegraph):
-		active_telegraph.cancel()
-		active_telegraph = null
+	if _telegraph_line != null:
+		_telegraph_line.cancel()
 	locked_fire_direction = Vector2.ZERO
 
 
@@ -120,8 +117,7 @@ func spawn_projectile(user: Character, target: Character) -> Projectile:
 			projectile.damage = damage
 			projectile.knockback = knockback
 
-	if active_telegraph != null and is_instance_valid(active_telegraph):
-		active_telegraph.finish()
-		active_telegraph = null
+	if _telegraph_line != null:
+		_telegraph_line.finish()
 	locked_fire_direction = Vector2.ZERO
 	return projectile

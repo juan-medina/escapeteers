@@ -659,7 +659,7 @@ func reset_for_pool() -> void:
 
 
 func _cancel_telegraph() -> void:
-	if active_telegraph != null and is_instance_valid(active_telegraph):
+	if active_telegraph != null:
 		active_telegraph.cancel()
 		active_telegraph = null
 	if current_action is RangedAction:
