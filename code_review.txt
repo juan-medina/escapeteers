@@ -65,7 +65,7 @@
 [x] src/recruit_panel/recruit_panel.gd (94 lines, 2,680 B)
 
 ## 20. src/alerts (96 lines)
-[ ] src/alerts/alerts.gd (96 lines, 2,201 B)
+[x] src/alerts/alerts.gd (96 lines, 2,201 B)
 
 ## 21. src/hero_select_panel (104 lines)
 [ ] src/hero_select_panel/hero_select_card.gd (51 lines, 1,297 B)
