@@ -6,81 +6,39 @@ extends UiPanel
 
 signal class_leveled_up(hero_data: HeroData)
 
-const UNIT_CARD_SCENE: PackedScene = preload("res://unit_card/unit_card.tscn")
-
-var _cards: Array[UnitCard] = []
-
-@onready var _cards_container: VBoxContainer = $Center/Panel/VBox/CardsContainer
+@onready var _cards: Array[UnitCard] = [
+	$Center/Panel/VBox/CardsContainer/Card1,
+	$Center/Panel/VBox/CardsContainer/Card2,
+	$Center/Panel/VBox/CardsContainer/Card3,
+]
 
 
 func _ready() -> void:
-	process_mode = Node.PROCESS_MODE_ALWAYS
-	_ensure_cards()
+	first_focus = _cards[0].get_recruit_button()
 	super._ready()
 
 
-func _ensure_cards() -> void:
-	if not _cards.is_empty():
-		return
-	for _i: int in range(3):
-		var card: UnitCard = UNIT_CARD_SCENE.instantiate() as UnitCard
-		card.button_text = "Level Up"
-		card.chosen.connect(_on_card_chosen)
-		_cards_container.add_child(card)
-		_cards.append(card)
+func setup_choices(class_levels: Dictionary[StringName, int], unit_counts: Dictionary[StringName, int]) -> void:
+	var candidates: Array[HeroData] = []
+	for id: StringName in unit_counts:
+		var hero_data: HeroData = HeroData.get_hero(id)
+		if hero_data != null:
+			candidates.append(hero_data)
 
-
-func _unhandled_input(event: InputEvent) -> void:
-	if not visible:
-		return
-	if event.is_action_pressed(&"pause") or event.is_action_pressed(&"back"):
-		get_viewport().set_input_as_handled()
-		_ensure_focus()
-
-
-func _ensure_focus() -> void:
-	var focus_owner: Control = get_viewport().gui_get_focus_owner()
-	if focus_owner != null and is_ancestor_of(focus_owner):
-		return
-	grab_first_focus()
-
-
-func setup_choices(squad: Array[Hero], class_levels: Dictionary[StringName, int]) -> void:
-	_ensure_cards()
-	var unique_classes: Dictionary[StringName, HeroData] = {}
-	var class_counts: Dictionary[StringName, int] = {}
-	for h: Hero in squad:
-		if is_instance_valid(h) and not h.is_dead and h.hero_data != null:
-			var id: StringName = h.hero_data.id
-			unique_classes[id] = h.hero_data
-			class_counts[id] = class_counts.get(id, 0) + 1
-
-	var candidate_list: Array[HeroData] = []
-	for hero_data: HeroData in unique_classes.values():
-		candidate_list.append(hero_data)
-
-	candidate_list.shuffle()
-	var pick_count: int = mini(3, candidate_list.size())
-	var first_card: UnitCard = null
+	candidates.shuffle()
 
 	for i: int in range(_cards.size()):
 		var card: UnitCard = _cards[i]
-		if i < pick_count:
-			var hero_data: HeroData = candidate_list[i]
-			var cur_lvl: int = class_levels.get(hero_data.id, 1)
+		if i < candidates.size():
+			var data: HeroData = candidates[i]
+			var cur_lvl: int = class_levels.get(data.id, 1)
+			var count: int = unit_counts.get(data.id, 0)
 			card.visible = true
-			card.hero_data = hero_data
-			card.previous_level = cur_lvl
-			card.level = cur_lvl + 1
-			card.unit_count = class_counts.get(hero_data.id, 0)
-			if first_card == null:
-				first_card = card
+			card.setup(data, cur_lvl + 1, count, cur_lvl)
 		else:
 			card.visible = false
 
-	if first_card != null:
-		first_focus = first_card.get_recruit_button()
-		grab_first_focus()
+	grab_first_focus()
 
 
 func _on_card_chosen(hero_data: HeroData) -> void:

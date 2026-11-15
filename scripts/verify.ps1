@@ -38,6 +38,12 @@ try {
             exit $LASTEXITCODE
         }
 
+        $fullPath = (Resolve-Path $file).Path
+        $content = [System.IO.File]::ReadAllText($fullPath)
+        if ($content.Contains("`r`n")) {
+            [System.IO.File]::WriteAllText($fullPath, $content.Replace("`r`n", "`n"), [System.Text.UTF8Encoding]::new($false))
+        }
+
         # 2. Lint
         & $python -m gdtoolkit.linter $file
         if ($LASTEXITCODE -ne 0) {

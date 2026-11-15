@@ -723,7 +723,7 @@ func _open_next_level_up() -> void:
 	_pending_level_ups -= 1
 	get_tree().paused = true
 	_level_up_panel.visible = true
-	_level_up_panel.setup_choices(_squad, _class_levels)
+	_level_up_panel.setup_choices(_class_levels, _get_squad_unit_counts())
 
 
 func _on_class_leveled_up(hero_data: HeroData) -> void:

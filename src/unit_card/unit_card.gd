@@ -15,35 +15,16 @@ const COLOR_KB: Color = Color(0.90, 0.60, 1.0)
 const COLOR_CD: Color = Color(1.0, 0.90, 0.50)
 const COLOR_SKILL_NAME: Color = Color(1.0, 0.85, 0.40)
 
-var hero_data: HeroData = null:
-	set(value):
-		hero_data = value
-		if is_inside_tree():
-			_update_display()
-
-var level: int = 1:
-	set(value):
-		level = value
-		if is_inside_tree():
-			_update_display()
-
-var previous_level: int = 0:
-	set(value):
-		previous_level = value
-		if is_inside_tree():
-			_update_display()
-
-var unit_count: int = 0:
-	set(value):
-		unit_count = value
-		if is_inside_tree():
-			_update_display()
-
-var button_text: String = "Recruit":
+@export var button_text: StringName = &"Recruit":
 	set(value):
 		button_text = value
 		if _recruit_button != null:
 			_recruit_button.text = button_text
+
+var hero_data: HeroData = null
+var level: int = 1
+var previous_level: int = 0
+var unit_count: int = 0
 
 @onready var _name_label: Label = $Margin/HBox/UnitColumn/VBox/NameRow/NameLabel
 @onready var _level_label: Label = $Margin/HBox/UnitColumn/VBox/NameRow/LevelLabel
@@ -59,10 +40,16 @@ var button_text: String = "Recruit":
 func _ready() -> void:
 	_recruit_button.text = button_text
 
-	if hero_data == null:
-		hero_data = HeroData.get_hero(&"knight")
-	else:
+	if hero_data != null:
 		_update_display()
+
+
+func setup(data: HeroData, target_level: int, count: int, prev_level: int = 0) -> void:
+	hero_data = data
+	level = target_level
+	unit_count = count
+	previous_level = prev_level
+	_update_display()
 
 
 func get_recruit_button() -> Button:

@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://recruit_panel/recruit_panel.gd" id="1_panel"]
+[ext_resource type="PackedScene" path="res://unit_card/unit_card.tscn" id="2_card"]
 
 [node name="RecruitPanel" type="Control"]
 process_mode = 3
@@ -45,3 +46,16 @@ horizontal_alignment = 1
 layout_mode = 2
 theme_override_constants/separation = 6
 alignment = 1
+
+[node name="Card1" parent="Center/Panel/VBox/CardsContainer" instance=ExtResource("2_card")]
+layout_mode = 2
+
+[node name="Card2" parent="Center/Panel/VBox/CardsContainer" instance=ExtResource("2_card")]
+layout_mode = 2
+
+[node name="Card3" parent="Center/Panel/VBox/CardsContainer" instance=ExtResource("2_card")]
+layout_mode = 2
+
+[connection signal="chosen" from="Center/Panel/VBox/CardsContainer/Card1" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="Center/Panel/VBox/CardsContainer/Card2" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="Center/Panel/VBox/CardsContainer/Card3" to="." method="_on_card_chosen"]

@@ -59,10 +59,10 @@
 [x] src/settings_panel/settings_panel.gd (84 lines, 2,592 B)
 
 ## 18. src/level_up_panel (88 lines)
-[ ] src/level_up_panel/level_up_panel.gd (88 lines, 2,510 B)
+[x] src/level_up_panel/level_up_panel.gd (88 lines, 2,510 B)
 
 ## 19. src/recruit_panel (94 lines)
-[ ] src/recruit_panel/recruit_panel.gd (94 lines, 2,680 B)
+[x] src/recruit_panel/recruit_panel.gd (94 lines, 2,680 B)
 
 ## 20. src/alerts (96 lines)
 [ ] src/alerts/alerts.gd (96 lines, 2,201 B)
