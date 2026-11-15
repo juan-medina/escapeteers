@@ -49,18 +49,24 @@ var can_heavy_melee: bool = false
 var melee_leash_distance: float = 96.0
 var melee1_cooldown: float = 0.5
 var melee2_cooldown: float = 3.5
+var melee1_chance: float = 0.35
 var melee2_chance: float = 0.35
 var melee1_damage: float = 10.0
 var melee2_damage: float = 25.0
 var melee1_knockback: float = 85.0
 var melee2_knockback: float = 260.0
 var melee1_stun_duration: float = 0.0
+var melee2_stun_duration: float = 0.0
 var melee1_burn_dps: float = 0.0
+var melee2_burn_dps: float = 0.0
 var melee1_burn_duration: float = 0.0
+var melee2_burn_duration: float = 0.0
 var ranged_cooldown: float = 1.0
 var ranged_damage: float = 10.0
 var ranged_knockback: float = 0.0
 var ranged_stun_duration: float = 0.0
+var ranged_burn_dps: float = 0.0
+var ranged_burn_duration: float = 0.0
 var heal_cooldown: float = 2.4
 var heal_amount: float = 20.0
 
@@ -185,6 +191,9 @@ func _setup_actions() -> void:
 		melee.heavy_damage = melee2_damage
 		melee.heavy_chance = melee2_chance
 		melee.heavy_knockback = melee2_knockback
+		melee.heavy_stun_duration = melee2_stun_duration
+		melee.heavy_burn_dps = melee2_burn_dps
+		melee.heavy_burn_duration = melee2_burn_duration
 		melee.leash_distance = melee_leash_distance
 		combat_actions.append(melee)
 

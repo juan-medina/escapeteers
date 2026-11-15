@@ -94,7 +94,8 @@ func _ready() -> void:
 	await _map.generate_map()
 
 	var starting_data: HeroData = HeroData.get_hero(Transition.starting_hero_id)
-	_character = starting_data.instantiate_hero(1)
+	_character = starting_data.scene.instantiate() as Hero
+	starting_data.apply_to_hero(_character, 1)
 	_character.name = &"Character"
 	_characters.add_child(_character)
 
@@ -652,7 +653,8 @@ func _open_recruit_panel(recruit_pos: Vector2, forced_hero_id: StringName = &"")
 func _on_hero_recruited(hero_data: HeroData) -> void:
 	get_tree().paused = false
 	var hero_level: int = get_class_level(hero_data.id)
-	var new_hero: Hero = hero_data.instantiate_hero(hero_level)
+	var new_hero: Hero = hero_data.scene.instantiate() as Hero
+	hero_data.apply_to_hero(new_hero, hero_level)
 
 	_characters.add_child(new_hero)
 	new_hero.is_player = false
@@ -745,17 +747,20 @@ func _on_class_leveled_up(hero_data: HeroData) -> void:
 
 
 static func _is_backline_hero(hero: Hero) -> bool:
-	return hero.can_heal or (hero.can_ranged and not hero.can_melee)
+	var role: HeroData.Role = hero.hero_data.role
+	return role == HeroData.Role.HEALER or role == HeroData.Role.RANGED
 
 
 static func _get_hero_formation_priority(hero: Hero) -> int:
-	if hero.can_heal:
-		return 0
-	if hero.can_ranged and not hero.can_melee:
-		return 1
-	if hero.can_melee and hero.can_ranged:
-		return 2
-	return 3
+	match hero.hero_data.role:
+		HeroData.Role.HEALER:
+			return 0
+		HeroData.Role.RANGED:
+			return 1
+		HeroData.Role.HYBRID:
+			return 2
+		_:
+			return 3
 
 
 static func _compare_hero_formation_priority(a: Hero, b: Hero) -> bool:

@@ -13,8 +13,11 @@ var knockback: float = 85.0
 var heavy_knockback: float = 260.0
 var vertical_tolerance: float = 18.0
 var stun_duration: float = 0.0
+var heavy_stun_duration: float = 0.0
 var burn_dps: float = 0.0
+var heavy_burn_dps: float = 0.0
 var burn_duration: float = 0.0
+var heavy_burn_duration: float = 0.0
 var hit_effect_scene: PackedScene = null
 
 var fast_attacks_done: int = 0
@@ -86,6 +89,9 @@ func apply_hit(user: Character, target: Character) -> bool:
 
 	var applied_damage: float = heavy_damage if current_is_heavy else damage
 	var applied_knockback: float = heavy_knockback if current_is_heavy else knockback
+	var applied_stun: float = heavy_stun_duration if current_is_heavy else stun_duration
+	var applied_burn_dps: float = heavy_burn_dps if current_is_heavy else burn_dps
+	var applied_burn_duration: float = heavy_burn_duration if current_is_heavy else burn_duration
 
 	var push_dir: Vector2 = (target.global_position - user.global_position).normalized()
 	if push_dir.length_squared() < 0.01:
@@ -94,10 +100,10 @@ func apply_hit(user: Character, target: Character) -> bool:
 	if target is Enemy:
 		var enemy: Enemy = target as Enemy
 		enemy.apply_knockback(push_dir * applied_knockback)
-		if stun_duration > 0.0:
-			enemy.apply_stun(stun_duration)
-		if burn_dps > 0.0 and burn_duration > 0.0:
-			enemy.apply_burn(burn_dps, burn_duration, user as Hero)
+		if applied_stun > 0.0:
+			enemy.apply_stun(applied_stun)
+		if applied_burn_dps > 0.0 and applied_burn_duration > 0.0:
+			enemy.apply_burn(applied_burn_dps, applied_burn_duration, user as Hero)
 
 	target.take_damage(applied_damage)
 	return true

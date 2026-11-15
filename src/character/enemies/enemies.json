@@ -10,15 +10,15 @@
 		"skills": [
 			{
 				"name": "Slime Melee",
-				"type": "melee",
-				"damage": { "base": 8.0, "growth": 0.16 },
+				"type": "MELEE",
+				"amount": { "base": 8.0, "growth": 0.16 },
 				"cooldown": { "base": 1.5, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 }
 			},
 			{
 				"name": "Lava Spike",
-				"type": "ranged",
-				"damage": { "base": 5.0, "growth": 0.16 },
+				"type": "RANGED",
+				"amount": { "base": 5.0, "growth": 0.16 },
 				"cooldown": { "base": 1.5, "growth": -0.03 },
 				"range": { "base": 135.0, "growth": 0.0 },
 				"min_range": 65.0
@@ -36,15 +36,15 @@
 		"skills": [
 			{
 				"name": "Bone Slash",
-				"type": "melee",
-				"damage": { "base": 9.0, "growth": 0.16 },
+				"type": "MELEE",
+				"amount": { "base": 9.0, "growth": 0.16 },
 				"cooldown": { "base": 1.1, "growth": -0.03 },
 				"range": { "base": 22.0, "growth": 0.0 }
 			},
 			{
 				"name": "Bone Cleave",
-				"type": "melee",
-				"damage": { "base": 18.0, "growth": 0.16 },
+				"type": "MELEE",
+				"amount": { "base": 18.0, "growth": 0.16 },
 				"cooldown": { "base": 3.5, "growth": -0.05 },
 				"range": { "base": 22.0, "growth": 0.0 },
 				"chance": 0.35
@@ -62,8 +62,8 @@
 		"skills": [
 			{
 				"name": "Bone Arrow",
-				"type": "ranged",
-				"damage": { "base": 5.0, "growth": 0.12 },
+				"type": "RANGED",
+				"amount": { "base": 5.0, "growth": 0.12 },
 				"cooldown": { "base": 1.8, "growth": -0.03 },
 				"range": { "base": 130.0, "growth": 0.0 },
 				"min_range": 45.0
@@ -81,12 +81,11 @@
 		"skills": [
 			{
 				"name": "Raise Undead",
-				"type": "summon",
+				"type": "SUMMON",
+				"amount": 2,
 				"cooldown": { "base": 2.0, "growth": -0.04 },
-				"range": { "base": 180.0, "growth": 0.0 },
-				"summon_count": 2
+				"range": { "base": 180.0, "growth": 0.0 }
 			}
 		]
 	}
 }
-

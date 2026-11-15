@@ -16,11 +16,13 @@ func _ready() -> void:
 
 func get_effective_target_dist_sq(hero_candidate: Hero) -> float:
 	var dist_sq: float = global_position.distance_squared_to(hero_candidate.global_position)
-	if hero_candidate.can_heal:
-		return dist_sq * HEALER_WEIGHT
-	if hero_candidate.can_ranged and not hero_candidate.can_melee:
-		return dist_sq * RANGED_WEIGHT
-	return dist_sq
+	match hero_candidate.hero_data.role:
+		HeroData.Role.HEALER:
+			return dist_sq * HEALER_WEIGHT
+		HeroData.Role.RANGED:
+			return dist_sq * RANGED_WEIGHT
+		_:
+			return dist_sq
 
 
 func _setup_actions() -> void:

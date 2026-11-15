@@ -346,18 +346,26 @@ static func _eval_proposed(base: float, growth: float, level: int) -> float:
 	return base
 
 
-func _fill_attack(attack: Attack, skill: Dictionary, level: int, damage_key: String, growth: float, damage_mult: float, uptime: float) -> void:
-	attack.damage = _eval(skill.get(damage_key), level, 10.0, growth) * damage_mult
+func _fill_attack(attack: Attack, skill: Dictionary, level: int, growth: float, damage_mult: float, uptime: float) -> void:
+	attack.damage = _eval(skill.get("amount"), level, 10.0, growth) * damage_mult
 	attack.hits = _int_val(skill, "hits", 1)
 	attack.cooldown = _eval(skill.get("cooldown"), level, 1.0, NAN) / uptime
 	attack.chance = _float_val(skill, "chance", 0.35)
-	attack.knockback = _eval(skill.get("knockback"), level, 0.0, NAN)
-	attack.stun = _eval(skill.get("stun_duration"), level, 0.0, NAN)
+	attack.knockback = 0.0
+	attack.stun = 0.0
+	var effect_val: Variant = skill.get("effect")
+	if effect_val is Dictionary:
+		var effect: Dictionary = effect_val
+		var effect_type: String = str(effect.get("type", ""))
+		if effect_type == "KNOCKBACK":
+			attack.knockback = _eval(effect.get("amount"), level, 0.0, NAN)
+		elif effect_type == "STUN":
+			attack.stun = _eval(effect.get("duration"), level, 0.0, NAN)
 
 
-func _new_attack(skill: Dictionary, level: int, damage_key: String, growth: float, damage_mult: float, uptime: float) -> Attack:
+func _new_attack(skill: Dictionary, level: int, growth: float, damage_mult: float, uptime: float) -> Attack:
 	var attack: Attack = Attack.new()
-	_fill_attack(attack, skill, level, damage_key, growth, damage_mult, uptime)
+	_fill_attack(attack, skill, level, growth, damage_mult, uptime)
 	attack.timer = _rng.randf() * attack.cooldown
 	return attack
 
@@ -367,31 +375,31 @@ func _apply_skills(unit: Unit, skills: Array, level: int, growth: float, damage_
 	for item: Variant in skills:
 		var skill: Dictionary = item
 		var type: String = skill["type"]
-		if type == "melee":
+		if type == "MELEE":
 			if melee_idx == 0:
 				if unit.melee == null:
-					unit.melee = _new_attack(skill, level, "damage", growth, damage_mult, uptime)
+					unit.melee = _new_attack(skill, level, growth, damage_mult, uptime)
 				else:
-					_fill_attack(unit.melee, skill, level, "damage", growth, damage_mult, uptime)
+					_fill_attack(unit.melee, skill, level, growth, damage_mult, uptime)
 			else:
 				if unit.heavy == null:
-					unit.heavy = _new_attack(skill, level, "damage", growth, damage_mult, uptime)
+					unit.heavy = _new_attack(skill, level, growth, damage_mult, uptime)
 				else:
-					_fill_attack(unit.heavy, skill, level, "damage", growth, damage_mult, uptime)
+					_fill_attack(unit.heavy, skill, level, growth, damage_mult, uptime)
 			melee_idx += 1
-		elif type == "ranged":
+		elif type == "RANGED":
 			unit.attack_range = float(_eval(skill.get("range"), level, 140.0, NAN))
 			if unit.ranged == null:
-				unit.ranged = _new_attack(skill, level, "damage", growth, damage_mult, uptime)
+				unit.ranged = _new_attack(skill, level, growth, damage_mult, uptime)
 			else:
-				_fill_attack(unit.ranged, skill, level, "damage", growth, damage_mult, uptime)
-		elif type == "heal":
+				_fill_attack(unit.ranged, skill, level, growth, damage_mult, uptime)
+		elif type == "HEAL":
 			if unit.heal == null:
-				unit.heal = _new_attack(skill, level, "heal_amount", growth, 1.0, 1.0)
+				unit.heal = _new_attack(skill, level, growth, 1.0, 1.0)
 			else:
-				_fill_attack(unit.heal, skill, level, "heal_amount", growth, 1.0, 1.0)
-		elif type == "summon":
-			unit.summon_count = _int_val(skill, "summon_count", 2)
+				_fill_attack(unit.heal, skill, level, growth, 1.0, 1.0)
+		elif type == "SUMMON":
+			unit.summon_count = _int_val(skill, "amount", 2)
 			unit.summon_cooldown = _eval(skill.get("cooldown"), level, 4.5, NAN) / uptime
 			if unit.summon_timer <= 0.0:
 				unit.summon_timer = _rng.randf() * unit.summon_cooldown

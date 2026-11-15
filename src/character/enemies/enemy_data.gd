@@ -65,42 +65,34 @@ func apply_to_enemy(enemy: Enemy, level: int = 1) -> void:
 
 	var melee_idx: int = 0
 	for skill: Dictionary in skills:
-		var type: String = _str_val(skill, &"type")
-		var cd: float = eval_stat(skill.get(&"cooldown"), level, 1.2)
-		var rng: float = eval_stat(skill.get(&"range"), level, 20.0)
+		var s: Dictionary = eval_skill(skill, level)
+		var type: CharacterData.SkillType = s[&"type"]
+		var amount: float = s[&"amount"]
+		var cd: float = s[&"cooldown"]
+		var rng: float = s[&"range"]
 
-		if type == "melee":
-			var dmg: float = eval_stat(skill.get(&"damage"), level, 8.0)
-			enemy.can_melee = true
-			if melee_idx == 0:
-				enemy.melee_range = rng
+		match type:
+			CharacterData.SkillType.MELEE:
+				enemy.can_melee = true
+				if melee_idx == 0:
+					enemy.melee_range = rng
+					enemy.attack_cooldown = cd
+					enemy.melee_damage = amount
+					melee_idx += 1
+				elif melee_idx == 1:
+					enemy.can_heavy_melee = true
+					enemy.melee2_damage = amount
+					enemy.melee2_cooldown = cd
+					enemy.melee2_chance = s[&"chance"]
+					melee_idx += 1
+			CharacterData.SkillType.RANGED:
+				enemy.can_ranged = true
+				enemy.damage = amount
+				enemy.ranged_range = rng
+				enemy.ranged_min_range = s[&"min_range"]
 				enemy.attack_cooldown = cd
-				enemy.melee_damage = dmg
-				melee_idx += 1
-			elif melee_idx == 1:
-				var chance: float = _float_val(skill, &"chance", 0.35)
-				enemy.can_heavy_melee = true
-				enemy.melee2_damage = dmg
-				enemy.melee2_cooldown = cd
-				enemy.melee2_chance = chance
-				melee_idx += 1
-		elif type == "ranged":
-			var dmg: float = eval_stat(skill.get(&"damage"), level, 5.0)
-			var min_rng: float = _float_val(skill, &"min_range", 65.0)
-			enemy.can_ranged = true
-			enemy.damage = dmg
-			enemy.ranged_range = rng
-			enemy.ranged_min_range = min_rng
-			enemy.attack_cooldown = cd
-		elif type == "summon":
-			var count: int = int(_float_val(skill, &"summon_count", 2.0))
-			enemy.can_summon = true
-			enemy.summon_range = rng
-			enemy.summon_count = count
-			enemy.attack_cooldown = cd
-
-
-func instantiate_enemy(level: int = 1) -> Enemy:
-	var enemy: Enemy = scene.instantiate() as Enemy
-	apply_to_enemy(enemy, level)
-	return enemy
+			CharacterData.SkillType.SUMMON:
+				enemy.can_summon = true
+				enemy.summon_range = rng
+				enemy.summon_count = int(amount)
+				enemy.attack_cooldown = cd

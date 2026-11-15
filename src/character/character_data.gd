@@ -4,6 +4,20 @@
 class_name CharacterData
 extends RefCounted
 
+enum SkillType {
+	MELEE,
+	RANGED,
+	HEAL,
+	SUMMON,
+}
+
+enum EffectType {
+	NONE,
+	KNOCKBACK,
+	STUN,
+	BURN,
+}
+
 var id: StringName = &""
 var name: String = ""
 var scene_path: String = ""
@@ -55,6 +69,29 @@ static func eval_stat(stat_val: Variant, level: int = 1, default_base: float = 0
 		var i: int = stat_val
 		return float(i)
 	return default_base
+
+
+static func eval_skill(skill: Dictionary, level: int) -> Dictionary:
+	var effect: Dictionary = _dict_val(skill, &"effect")
+	var effect_type: EffectType = EffectType.NONE
+	var effect_amount: float = 0.0
+	var effect_duration: float = 0.0
+	if not effect.is_empty():
+		effect_type = effect[&"type"]
+		effect_amount = eval_stat(effect.get(&"amount"), level, 0.0)
+		effect_duration = eval_stat(effect.get(&"duration"), level, 0.0)
+	return {
+		&"type": skill[&"type"],
+		&"amount": eval_stat(skill.get(&"amount"), level, 10.0),
+		&"cooldown": eval_stat(skill.get(&"cooldown"), level, 1.0),
+		&"range": eval_stat(skill.get(&"range"), level, 20.0),
+		&"min_range": _float_val(skill, &"min_range", 65.0),
+		&"leash": _float_val(skill, &"leash", 96.0),
+		&"chance": _float_val(skill, &"chance", 0.35),
+		&"effect_type": effect_type,
+		&"effect_amount": effect_amount,
+		&"effect_duration": effect_duration,
+	}
 
 
 static func load_json_file(file_path: StringName) -> Dictionary:
@@ -115,7 +152,13 @@ func parse_base_fields(dict: Dictionary) -> void:
 		var arr: Array = raw_skills
 		for item: Variant in arr:
 			if item is Dictionary:
-				var s: Dictionary = item
+				var item_dict: Dictionary = item
+				var s: Dictionary = item_dict.duplicate()
+				s[&"type"] = SkillType[_str_val(s, &"type")]
+				if s.has(&"effect"):
+					var eff_dict: Dictionary = _dict_val(s, &"effect").duplicate()
+					eff_dict[&"type"] = EffectType[_str_val(eff_dict, &"type")]
+					s[&"effect"] = eff_dict
 				skills.append(s)
 
 

@@ -15,6 +15,13 @@ const COLOR_KB: Color = Color(0.90, 0.60, 1.0)
 const COLOR_CD: Color = Color(1.0, 0.90, 0.50)
 const COLOR_SKILL_NAME: Color = Color(1.0, 0.85, 0.40)
 
+const SKILL_TYPE_NAMES: Dictionary[CharacterData.SkillType, String] = {
+	CharacterData.SkillType.MELEE: "Melee",
+	CharacterData.SkillType.RANGED: "Ranged",
+	CharacterData.SkillType.HEAL: "Heal",
+	CharacterData.SkillType.SUMMON: "Summon",
+}
+
 @export var button_text: StringName = &"Recruit":
 	set(value):
 		button_text = value
@@ -103,10 +110,10 @@ func _render_skill_column(container: VBoxContainer, skill: Dictionary) -> void:
 		child.queue_free()
 
 	var skill_name: String = CharacterData._str_val(skill, &"name")
-	var skill_type: String = CharacterData._str_val(skill, &"type").capitalize()
+	var skill_type: CharacterData.SkillType = skill[&"type"]
 
 	var header: Label = Label.new()
-	header.text = "%s [%s]" % [skill_name, skill_type]
+	header.text = "%s [%s]" % [skill_name, SKILL_TYPE_NAMES[skill_type]]
 	header.add_theme_color_override(&"font_color", COLOR_SKILL_NAME)
 	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	container.add_child(header)
@@ -117,77 +124,59 @@ func _render_skill_column(container: VBoxContainer, skill: Dictionary) -> void:
 	grid.add_theme_constant_override(&"v_separation", 2)
 	grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	if skill_type.to_lower() == "heal":
-		var heal_val: float = CharacterData.eval_stat(skill.get(&"heal_amount"), level, 20.0)
-		var heal_str: String = "%d" % int(heal_val)
-		if previous_level > 0:
-			var prev_heal: float = CharacterData.eval_stat(skill.get(&"heal_amount"), previous_level, 20.0)
-			var d_heal: int = int(heal_val) - int(prev_heal)
-			if d_heal > 0:
-				heal_str = "%d (+%d)" % [int(heal_val), d_heal]
+	var amount_val: float = CharacterData.eval_stat(skill.get(&"amount"), level, 10.0)
+	var hits: int = int(CharacterData._float_val(skill, &"hits", 1.0))
+	var amount_str: String = "%dx%d" % [int(amount_val), hits] if hits > 1 else "%d" % int(amount_val)
+	if previous_level > 0:
+		var prev_amount: float = CharacterData.eval_stat(skill.get(&"amount"), previous_level, 10.0)
+		var d_amount: int = int(amount_val) - int(prev_amount)
+		if d_amount > 0:
+			amount_str = "%s (+%d)" % [amount_str, d_amount * hits]
 
-		var cd: float = CharacterData.eval_stat(skill.get(&"cooldown"), level, 2.4)
-		var cd_str: String = "%.1fs" % cd
-		if previous_level > 0:
-			var prev_cd: float = CharacterData.eval_stat(skill.get(&"cooldown"), previous_level, 2.4)
-			var d_cd: float = cd - prev_cd
-			if d_cd < -0.01:
-				cd_str = "%.1fs (%.1fs)" % [cd, d_cd]
+	var cd: float = CharacterData.eval_stat(skill.get(&"cooldown"), level, 1.0)
+	var cd_str: String = "%.1fs" % cd
+	if previous_level > 0:
+		var prev_cd: float = CharacterData.eval_stat(skill.get(&"cooldown"), previous_level, 1.0)
+		var d_cd: float = cd - prev_cd
+		if d_cd < -0.01:
+			cd_str = "%.1fs (%.1fs)" % [cd, d_cd]
 
-		var rng: float = CharacterData.eval_stat(skill.get(&"range"), level, 140.0)
-		_add_stat_pair(grid, "HEAL", heal_str, COLOR_HP)
-		_add_stat_pair(grid, "CD", cd_str, COLOR_CD)
-		_add_stat_pair(grid, "RNG", "%d" % int(rng), COLOR_RNG)
-	else:
-		var dmg_val: float = CharacterData.eval_stat(skill.get(&"damage"), level, 10.0)
-		var hits: int = int(CharacterData._float_val(skill, &"hits", 1.0))
-		var dmg_str: String = "%d" % int(dmg_val)
-		if hits > 1:
-			dmg_str = "%dx%d" % [int(dmg_val), hits]
-
-		if previous_level > 0:
-			var prev_dmg: float = CharacterData.eval_stat(skill.get(&"damage"), previous_level, 10.0)
-			var d_dmg: int = int(dmg_val) - int(prev_dmg)
-			if d_dmg > 0:
-				if hits > 1:
-					dmg_str = "%dx%d (+%d)" % [int(dmg_val), hits, d_dmg * hits]
-				else:
-					dmg_str = "%d (+%d)" % [int(dmg_val), d_dmg]
-
-		var cd: float = CharacterData.eval_stat(skill.get(&"cooldown"), level, 1.0)
-		var cd_str: String = "%.1fs" % cd
-		if previous_level > 0:
-			var prev_cd: float = CharacterData.eval_stat(skill.get(&"cooldown"), previous_level, 1.0)
-			var d_cd: float = cd - prev_cd
-			if d_cd < -0.01:
-				cd_str = "%.1fs (%.1fs)" % [cd, d_cd]
-
-		var rng: float = CharacterData.eval_stat(skill.get(&"range"), level, 28.0)
-		var kb: float = CharacterData.eval_stat(skill.get(&"knockback"), level, 0.0)
-		var kb_str: String = "%d" % int(kb)
-		if previous_level > 0:
-			var prev_kb: float = CharacterData.eval_stat(skill.get(&"knockback"), previous_level, 0.0)
-			var d_kb: int = int(kb) - int(prev_kb)
-			if d_kb > 0:
-				kb_str = "%d (+%d)" % [int(kb), d_kb]
-
-		_add_stat_pair(grid, "DMG", dmg_str, COLOR_DMG)
-		var burn_val: float = CharacterData.eval_stat(skill.get(&"burn_damage"), level, 0.0)
-		var burn_dur: float = CharacterData.eval_stat(skill.get(&"burn_duration"), level, 0.0)
-		if burn_val > 0.0 and burn_dur > 0.0:
-			var burn_str: String = "%d/s (%ds)" % [int(burn_val), int(burn_dur)]
-			if previous_level > 0:
-				var prev_burn: float = CharacterData.eval_stat(skill.get(&"burn_damage"), previous_level, 0.0)
-				var d_burn: int = int(burn_val) - int(prev_burn)
-				if d_burn > 0:
-					burn_str = "%d/s (+%d)" % [int(burn_val), d_burn]
-			_add_stat_pair(grid, "BURN", burn_str, COLOR_BURN)
-		_add_stat_pair(grid, "CD", cd_str, COLOR_CD)
-		_add_stat_pair(grid, "RNG", "%d" % int(rng), COLOR_RNG)
-		if kb > 0.0:
-			_add_stat_pair(grid, "KB", kb_str, COLOR_KB)
+	var rng: float = CharacterData.eval_stat(skill.get(&"range"), level, 20.0)
+	var amount_label: String = "HEAL" if skill_type == CharacterData.SkillType.HEAL else "DMG"
+	var amount_color: Color = COLOR_HP if skill_type == CharacterData.SkillType.HEAL else COLOR_DMG
+	_add_stat_pair(grid, amount_label, amount_str, amount_color)
+	_render_skill_effect(grid, CharacterData._dict_val(skill, &"effect"))
+	_add_stat_pair(grid, "CD", cd_str, COLOR_CD)
+	_add_stat_pair(grid, "RNG", "%d" % int(rng), COLOR_RNG)
 
 	container.add_child(grid)
+
+
+func _render_skill_effect(grid: GridContainer, effect: Dictionary) -> void:
+	if effect.is_empty():
+		return
+	var effect_type: CharacterData.EffectType = effect[&"type"]
+	var eff_amount: float = CharacterData.eval_stat(effect.get(&"amount"), level, 0.0)
+	var eff_dur: float = CharacterData.eval_stat(effect.get(&"duration"), level, 0.0)
+	match effect_type:
+		CharacterData.EffectType.KNOCKBACK:
+			var kb_str: String = "%d" % int(eff_amount)
+			if previous_level > 0:
+				var prev_kb: float = CharacterData.eval_stat(effect.get(&"amount"), previous_level, 0.0)
+				var d_kb: int = int(eff_amount) - int(prev_kb)
+				if d_kb > 0:
+					kb_str = "%d (+%d)" % [int(eff_amount), d_kb]
+			_add_stat_pair(grid, "KB", kb_str, COLOR_KB)
+		CharacterData.EffectType.STUN:
+			_add_stat_pair(grid, "STUN", "%.1fs" % eff_dur, COLOR_KB)
+		CharacterData.EffectType.BURN:
+			var burn_str: String = "%d/s (%ds)" % [int(eff_amount), int(eff_dur)]
+			if previous_level > 0:
+				var prev_burn: float = CharacterData.eval_stat(effect.get(&"amount"), previous_level, 0.0)
+				var d_burn: int = int(eff_amount) - int(prev_burn)
+				if d_burn > 0:
+					burn_str = "%d/s (+%d)" % [int(eff_amount), d_burn]
+			_add_stat_pair(grid, "BURN", burn_str, COLOR_BURN)
 
 
 func _add_stat_pair(container: Control, label_text: String, value_text: String, value_color: Color) -> void:
@@ -213,7 +202,7 @@ func _add_stat_pair(container: Control, label_text: String, value_text: String, 
 func _setup_preview_sprite() -> void:
 	if hero_data == null or _preview_sprite == null:
 		return
-	var frames: SpriteFrames = hero_data.get_sprite_frames()
+	var frames: SpriteFrames = hero_data.sprite_frames
 	if frames != null:
 		_preview_sprite.sprite_frames = frames
 		if frames.has_animation(Character.ANIM_IDLE):
