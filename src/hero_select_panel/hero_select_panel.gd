@@ -6,36 +6,28 @@ extends MenuPanel
 
 signal hero_selected(hero: HeroData)
 
-const HERO_CARD_SCENE: PackedScene = preload("res://hero_select_panel/hero_select_card.tscn")
-
-var _cards: Array[HeroSelectCard] = []
-
-@onready var _grid: GridContainer = $VBox/GridMargin/Grid
+@onready var _cards: Array[HeroSelectCard] = [
+	$VBox/GridMargin/Grid/Card1,
+	$VBox/GridMargin/Grid/Card2,
+	$VBox/GridMargin/Grid/Card3,
+	$VBox/GridMargin/Grid/Card4,
+	$VBox/GridMargin/Grid/Card5,
+	$VBox/GridMargin/Grid/Card6,
+	$VBox/GridMargin/Grid/Card7,
+	$VBox/GridMargin/Grid/Card8,
+]
 
 
 func _ready() -> void:
-	_build_cards()
-	super._ready()
-
-
-func _build_cards() -> void:
-	for child: Node in _grid.get_children():
-		child.queue_free()
-	_cards.clear()
-
 	var heroes: Array[HeroData] = HeroData.get_heroes_by_role_order()
-	for hero: HeroData in heroes:
-		var card: HeroSelectCard = HERO_CARD_SCENE.instantiate() as HeroSelectCard
-		card.hero_data = hero
-		card.chosen.connect(_on_card_chosen)
-		_grid.add_child(card)
-		_cards.append(card)
-
-	for i: int in range(4, _cards.size()):
-		_cards[i].focus_neighbor_bottom = back_button.get_path()
-	if not _cards.is_empty():
-		back_button.focus_neighbor_top = _cards[mini(2, _cards.size() - 1)].get_path()
-		first_focus = _cards[0]
+	for i: int in range(_cards.size()):
+		var card: HeroSelectCard = _cards[i]
+		if i < heroes.size():
+			card.visible = true
+			card.setup(heroes[i])
+		else:
+			card.visible = false
+	super._ready()
 
 
 func _on_card_chosen(hero: HeroData) -> void:

@@ -6,11 +6,7 @@ extends Button
 
 signal chosen(hero: HeroData)
 
-var hero_data: HeroData = null:
-	set(value):
-		hero_data = value
-		if is_node_ready():
-			_update_display()
+var _hero_data: HeroData = null
 
 @onready var _preview_sprite: AnimatedSprite2D = $Margin/VBox/PreviewContainer/PreviewSprite
 @onready var _name_label: Label = $Margin/VBox/NameLabel
@@ -18,34 +14,19 @@ var hero_data: HeroData = null:
 @onready var _hp_value_label: Label = $Margin/VBox/HPRow/HPValue
 
 
-func _ready() -> void:
-	if hero_data != null:
-		_update_display()
+func setup(data: HeroData) -> void:
+	_hero_data = data
+	_name_label.text = _hero_data.name
+	_name_label.add_theme_color_override(&"font_color", _hero_data.color)
 
+	_role_label.text = _hero_data.role
+	_role_label.add_theme_color_override(&"font_color", _hero_data.role_color)
 
-func _update_display() -> void:
-	if hero_data == null:
-		return
+	_hp_value_label.text = &"%d" % int(_hero_data.get_health(1))
 
-	_name_label.text = hero_data.name
-	_name_label.add_theme_color_override(&"font_color", hero_data.color)
-
-	_role_label.text = hero_data.role
-	_role_label.add_theme_color_override(&"font_color", hero_data.role_color)
-
-	_hp_value_label.text = "%d" % int(hero_data.get_health(1))
-
-	_setup_preview_sprite()
-
-
-func _setup_preview_sprite() -> void:
-	var frames: SpriteFrames = hero_data.get_sprite_frames()
-	if frames != null:
-		_preview_sprite.sprite_frames = frames
-		if frames.has_animation(Character.ANIM_IDLE):
-			_preview_sprite.play(Character.ANIM_IDLE)
+	_preview_sprite.sprite_frames = _hero_data.get_sprite_frames()
+	_preview_sprite.play(Character.ANIM_IDLE)
 
 
 func _on_pressed() -> void:
-	if hero_data != null:
-		chosen.emit(hero_data)
+	chosen.emit(_hero_data)

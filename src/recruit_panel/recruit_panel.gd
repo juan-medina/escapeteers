@@ -40,22 +40,18 @@ func setup_choices(class_levels: Dictionary[StringName, int], unit_counts: Dicti
 
 func _roll_choices(unit_counts: Dictionary[StringName, int], forced_hero_id: StringName) -> Array[HeroData]:
 	if forced_hero_id != &"":
-		var forced_data: HeroData = HeroData.get_hero(forced_hero_id)
-		if forced_data != null:
-			return [forced_data]
-		return []
+		return [HeroData.get_hero(forced_hero_id)]
 
 	_recruit_roll_count += 1
 	var choices: Array[HeroData] = HeroData.get_random_choices(_cards.size())
 	var priest_data: HeroData = HeroData.get_hero(&"priest")
-	if priest_data != null:
-		if choices.has(priest_data):
+	if choices.has(priest_data):
+		_healer_offered_early = true
+	elif _recruit_roll_count <= 2 and not _healer_offered_early and unit_counts.get(&"priest", 0) == 0:
+		if _recruit_roll_count == 2 or randf() < 0.5:
+			var replace_idx: int = randi_range(0, choices.size() - 1)
+			choices[replace_idx] = priest_data
 			_healer_offered_early = true
-		elif _recruit_roll_count <= 2 and not _healer_offered_early and unit_counts.get(&"priest", 0) == 0:
-			if _recruit_roll_count == 2 or randf() < 0.5:
-				var replace_idx: int = randi_range(0, choices.size() - 1)
-				choices[replace_idx] = priest_data
-				_healer_offered_early = true
 	return choices
 
 

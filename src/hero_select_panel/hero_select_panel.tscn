@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://hero_select_panel/hero_select_panel.gd" id="1_panel"]
+[ext_resource type="PackedScene" path="res://hero_select_panel/hero_select_card.tscn" id="2_card"]
 
 [sub_resource type="InputEventAction" id="InputEventAction_pause"]
 device = -1
@@ -15,7 +16,7 @@ events = [SubResource("InputEventAction_pause"), SubResource("InputEventAction_b
 
 [node name="HeroSelectPanel" type="PanelContainer" node_paths=PackedStringArray("first_focus", "back_button")]
 script = ExtResource("1_panel")
-first_focus = NodePath("VBox/Buttons/Back")
+first_focus = NodePath("VBox/GridMargin/Grid/Card1")
 back_button = NodePath("VBox/Buttons/Back")
 
 [node name="VBox" type="VBoxContainer" parent="."]
@@ -39,6 +40,34 @@ theme_override_constants/h_separation = 8
 theme_override_constants/v_separation = 8
 columns = 4
 
+[node name="Card1" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+
+[node name="Card2" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+
+[node name="Card3" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+
+[node name="Card4" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+
+[node name="Card5" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+focus_neighbor_bottom = NodePath("../../../Buttons/Back")
+
+[node name="Card6" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+focus_neighbor_bottom = NodePath("../../../Buttons/Back")
+
+[node name="Card7" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+focus_neighbor_bottom = NodePath("../../../Buttons/Back")
+
+[node name="Card8" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+focus_neighbor_bottom = NodePath("../../../Buttons/Back")
+
 [node name="Buttons" type="HBoxContainer" parent="VBox"]
 layout_mode = 2
 size_flags_horizontal = 4
@@ -47,8 +76,16 @@ theme_override_constants/separation = 8
 [node name="Back" type="Button" parent="VBox/Buttons" groups=["ui_return"]]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
+focus_neighbor_top = NodePath("../../GridMargin/Grid/Card6")
 shortcut = SubResource("Shortcut_back")
 text = "Back"
 
+[connection signal="chosen" from="VBox/GridMargin/Grid/Card1" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="VBox/GridMargin/Grid/Card2" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="VBox/GridMargin/Grid/Card3" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="VBox/GridMargin/Grid/Card4" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="VBox/GridMargin/Grid/Card5" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="VBox/GridMargin/Grid/Card6" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="VBox/GridMargin/Grid/Card7" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="VBox/GridMargin/Grid/Card8" to="." method="_on_card_chosen"]
 [connection signal="pressed" from="VBox/Buttons/Back" to="." method="_on_back_pressed"]
-

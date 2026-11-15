@@ -21,9 +21,7 @@ func _ready() -> void:
 func setup_choices(class_levels: Dictionary[StringName, int], unit_counts: Dictionary[StringName, int]) -> void:
 	var candidates: Array[HeroData] = []
 	for id: StringName in unit_counts:
-		var hero_data: HeroData = HeroData.get_hero(id)
-		if hero_data != null:
-			candidates.append(hero_data)
+		candidates.append(HeroData.get_hero(id))
 
 	candidates.shuffle()
 
