@@ -98,3 +98,8 @@ Welcome to the project! This document outlines the coding conventions and philos
 - **Instantiating Overlays & Type Safety:** The Manager Autoload should preload the `PackedScene` for its UI elements, instantiate them, and strictly cast them to their custom type once in its `_ready()` function (e.g., `_toast = TOAST_SCENE.instantiate() as Toast`). By centralizing the instantiation and the cast inside the manager, the rest of the codebase can interact with global UI safely without ever needing to cast nodes or worry about the underlying hierarchy.
 - **Semantic API:** The rest of the game should never manipulate global UI nodes directly. The Manager should expose clear, semantic methods (e.g., `Alerts.controller_detected()`, `Alerts.show_epic_login_overlay()`) that internally control the UI.
 - **Process Mode:** UI nodes added as children of an Autoload will inherit its `process_mode`. For instance, if the manager is set to `Node.PROCESS_MODE_ALWAYS`, its child dialogs will continue to animate and function even when `get_tree().paused = true`.
+
+## 10. Git Commits
+
+- **Single line, lowercase start:** Commit messages must be 1 line (max 150 characters), start with a lowercase letter, and avoid Conventional Commits prefixes (`feat:`, `fix:`, etc.).
+- **Reference active issues:** When working on a GitHub issue, append the issue number at the end with a single hash (e.g., `fix enemy pathing #3`).

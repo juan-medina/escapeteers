@@ -30,3 +30,4 @@ When generating git commit messages, strictly follow these constraints:
 - Maximum length is 150 characters.
 - Do NOT use Conventional Commits prefixes (e.g., do not use `feat:`, `fix:`, `feat(scope):`).
 - Keep it concise, descriptive, and focused on the key change.
+- When working on a GitHub issue, reference the issue number at the end of the commit message with a single hash (e.g., `refactor level up and recruit panels #7`).
