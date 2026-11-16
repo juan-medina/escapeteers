@@ -114,10 +114,6 @@ func _ready() -> void:
 	print(&"Options: Initializing...")
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
-	await BuildInfo.initialize()
-	await HeroData.initialize()
-	await EnemyData.initialize()
-
 	# Cache bus indices and default decibel levels from the audio bus layout.
 	for bus_name: StringName in [BUS_MASTER, BUS_MUSIC, BUS_SFX]:
 		var bus_index: int = AudioServer.get_bus_index(bus_name)

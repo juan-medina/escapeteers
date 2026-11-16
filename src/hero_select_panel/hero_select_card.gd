@@ -29,7 +29,7 @@ var _hero_data: HeroData = null
 @onready var _hp_value_label: Label = $Margin/VBox/HPRow/HPValue
 
 
-func _ready() -> void:
+func initialize() -> void:
 	_hero_data = HeroData.get_hero(hero_id)
 	_name_label.text = _hero_data.name
 	_name_label.add_theme_color_override(&"font_color", _hero_data.color)
@@ -49,7 +49,7 @@ func _notification(what: int) -> void:
 
 
 func _sync_sprite_playback() -> void:
-	if not is_node_ready():
+	if _hero_data == null:
 		return
 	if is_visible_in_tree():
 		_preview_sprite.play(Character.ANIM_IDLE)

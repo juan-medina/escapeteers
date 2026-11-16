@@ -89,6 +89,9 @@ func _ready() -> void:
 	y_sort_enabled = true
 	set_process(false)
 
+	await HeroData.initialize()
+	await EnemyData.initialize()
+
 	_map.generation_progress_updated.connect(_on_map_generation_progress)
 	_map.secret_torches_completed.connect(_on_secret_torches_completed)
 	await _map.generate_map()

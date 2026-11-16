@@ -15,6 +15,8 @@ const NOTIFICATION_DELAY: float = 2.0
 
 
 func _ready() -> void:
+	await HeroData.initialize()
+	_hero_select_panel.initialize()
 	get_tree().create_timer(NOTIFICATION_DELAY).timeout.connect(InputManager.enable_notifications)
 	if not _eula_screen.is_accepted():
 		_show_first(_eula_screen)

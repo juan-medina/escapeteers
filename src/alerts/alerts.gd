@@ -26,6 +26,8 @@ func _ready() -> void:
 	_error_dialog.visible = false
 	add_child(_error_dialog)
 
+	await BuildInfo.initialize()
+
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:

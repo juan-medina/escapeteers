@@ -11,6 +11,9 @@ static var _display_string: String = ""
 
 
 static func initialize() -> void:
+	if not _display_string.is_empty():
+		return
+
 	var version: String = str(ProjectSettings.get_setting(&"application/config/version", &"0.0.0"))
 
 	var file: FileAccess = FileAccess.open(INFO_PATH, FileAccess.READ)

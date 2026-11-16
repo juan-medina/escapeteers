@@ -24,6 +24,9 @@ var sprite_frames: SpriteFrames = null
 
 
 static func initialize() -> void:
+	if not _heroes.is_empty():
+		return
+
 	var root: Dictionary = await load_json_file(HEROES_JSON_PATH)
 	for entry: Dictionary in root.values():
 		var hero_data: HeroData = _from_dict(entry)
