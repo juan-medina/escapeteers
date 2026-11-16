@@ -26,8 +26,8 @@ var _movement_hint_dismissed: bool = false
 
 func _ready() -> void:
 	set_process(false)
-	InputManager.device_changed.connect(_on_device_changed)
-	_update_map_prompt(InputManager.current_device)
+	InputManager.input_mode_changed.connect(_on_input_mode_changed)
+	_update_map_prompt(InputManager.current_mode)
 	var hint_timer: SceneTreeTimer = get_tree().create_timer(HINT_AUTO_DISMISS_DELAY)
 	hint_timer.timeout.connect(dismiss_movement_hint)
 
@@ -92,17 +92,17 @@ func dismiss_movement_hint() -> void:
 	tween.tween_callback(_movement_hint.hide)
 
 
-func _on_device_changed(device: InputManager.DeviceType) -> void:
-	_update_map_prompt(device)
+func _on_input_mode_changed(mode: InputManager.InputMode) -> void:
+	_update_map_prompt(mode)
 
 
-func _update_map_prompt(device: InputManager.DeviceType) -> void:
-	match device:
-		InputManager.DeviceType.XBOX:
+func _update_map_prompt(mode: InputManager.InputMode) -> void:
+	match mode:
+		InputManager.InputMode.XBOX:
 			_map_hint.text = "Press VIEW / BACK for map"
-		InputManager.DeviceType.PLAYSTATION:
+		InputManager.InputMode.PLAYSTATION:
 			_map_hint.text = "Press SHARE / SELECT for map"
-		InputManager.DeviceType.GENERIC_GAMEPAD:
+		InputManager.InputMode.GENERIC_GAMEPAD:
 			_map_hint.text = "Press SELECT / BACK for map"
 		_:
 			_map_hint.text = "Press TAB / M for map"
