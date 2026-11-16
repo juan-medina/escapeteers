@@ -1,19 +1,7 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://projectile/ice/ice.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://cf075fvn8p2ld" path="res://projectile/projectile.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://dkvyw5j8tuhry" path="res://data/assets/projectile/ice/ice.png" id="2_tex"]
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_i0"]
-atlas = ExtResource("2_tex")
-region = Rect2(0, 0, 100, 100)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_i1"]
-atlas = ExtResource("2_tex")
-region = Rect2(100, 0, 100, 100)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_i2"]
-atlas = ExtResource("2_tex")
-region = Rect2(200, 0, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_i3"]
 atlas = ExtResource("2_tex")
@@ -61,20 +49,6 @@ animations = [{
 }, {
 "frames": [{
 "duration": 1.0,
-"texture": SubResource("AtlasTexture_i0")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_i1")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_i2")
-}],
-"loop": false,
-"name": &"form",
-"speed": 8.0
-}, {
-"frames": [{
-"duration": 1.0,
 "texture": SubResource("AtlasTexture_i6")
 }, {
 "duration": 1.0,
@@ -103,11 +77,15 @@ speed = 160.0
 damage = 8.0
 lifetime = 3.5
 auto_rotate = false
+slow_factor = 0.4
+slow_duration = 4.0
+max_pierce_count = 0
+has_impact_anim = true
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 scale = Vector2(0.5, 0.5)
 sprite_frames = SubResource("SpriteFrames_ice")
-animation = &"form"
+animation = &"fly"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_ice")

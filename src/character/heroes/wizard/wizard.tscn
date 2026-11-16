@@ -7,27 +7,35 @@
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_c2b6x"]
 atlas = ExtResource("3_tex")
-region = Rect2(0, 300, 100, 100)
+region = Rect2(0, 200, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_mddxa"]
 atlas = ExtResource("3_tex")
-region = Rect2(100, 300, 100, 100)
+region = Rect2(100, 200, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_g8ixr"]
 atlas = ExtResource("3_tex")
-region = Rect2(200, 300, 100, 100)
+region = Rect2(200, 200, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_41k30"]
 atlas = ExtResource("3_tex")
-region = Rect2(300, 300, 100, 100)
+region = Rect2(300, 200, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_y0hll"]
 atlas = ExtResource("3_tex")
-region = Rect2(400, 300, 100, 100)
+region = Rect2(400, 200, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_lmvj5"]
 atlas = ExtResource("3_tex")
-region = Rect2(500, 300, 100, 100)
+region = Rect2(500, 200, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_f6"]
+atlas = ExtResource("3_tex")
+region = Rect2(600, 200, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_f7"]
+atlas = ExtResource("3_tex")
+region = Rect2(700, 200, 100, 100)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_w25wn"]
 atlas = ExtResource("3_tex")
@@ -137,10 +145,16 @@ animations = [{
 }, {
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_lmvj5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_f6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_f7")
 }],
 "loop": 0,
 "name": &"attack_ranged1",
-"speed": 5.0
+"speed": 8.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -232,7 +246,7 @@ animations = [{
 [node name="Wizard" unique_id=1787024550 instance=ExtResource("1_base")]
 script = ExtResource("2_script")
 is_player = false
-ranged_frame = 3
+ranged_frame = 7
 ranged_projectile_scene = ExtResource("4_ice")
 
 [node name="AnimatedSprite2D" parent="." index="0" unique_id=546467996]

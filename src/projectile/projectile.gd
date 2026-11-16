@@ -17,12 +17,17 @@ static var _pool: EntityPool = null
 @export var auto_rotate: bool = true
 @export var is_effect: bool = false
 @export var destroy_on_anim_finish: bool = false
+@export var slow_factor: float = 0.0
+@export var slow_duration: float = 0.0
+@export var max_pierce_count: int = 1
+@export var has_impact_anim: bool = false
 
 var direction: Vector2 = Vector2.RIGHT
 var source_hero: Hero = null
 
 var _elapsed: float = 0.0
 var _is_dying: bool = false
+var _hit_targets: Array[Node2D] = []
 
 @onready var _animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var _collision_shape: CollisionShape2D = $CollisionShape2D
@@ -57,6 +62,7 @@ func _physics_process(delta: float) -> void:
 func launch() -> void:
 	_elapsed = 0.0
 	_is_dying = false
+	_hit_targets.clear()
 	if is_effect:
 		set_physics_process(false)
 		_animated_sprite.flip_h = false
@@ -81,6 +87,7 @@ func reset_for_pool() -> void:
 	knockback = 0.0
 	_elapsed = 0.0
 	_is_dying = false
+	_hit_targets.clear()
 	rotation = 0.0
 	_animated_sprite.flip_h = false
 	set_physics_process(false)
@@ -101,7 +108,10 @@ func _destroy() -> void:
 		return
 	_is_dying = true
 	_disable_collisions()
-	_finish_destroy()
+	if has_impact_anim:
+		_animated_sprite.play(ANIM_IMPACT)
+	else:
+		_finish_destroy()
 
 
 func _finish_destroy() -> void:
@@ -112,13 +122,16 @@ func _finish_destroy() -> void:
 
 
 func _apply_character_hit(target: Node2D) -> void:
+	var enemy: Enemy = target as Enemy
+	if enemy != null and slow_duration > 0.0 and slow_factor > 0.0:
+		enemy.apply_slow(slow_factor, slow_duration)
+
 	var character: Character = target as Character
 	if character != null:
 		character.take_damage(damage)
 	else:
 		Audio.play_environment(&"wall")
 
-	var enemy: Enemy = target as Enemy
 	if knockback > 0.0 and enemy != null:
 		enemy.apply_knockback(direction * knockback)
 
@@ -138,8 +151,14 @@ func _on_area_entered(area: Area2D) -> void:
 
 	if area is Hurtbox:
 		var hurtbox: Hurtbox = area as Hurtbox
-		if hurtbox.owner_character != null and is_instance_valid(hurtbox.owner_character) and not hurtbox.owner_character.is_dead:
-			_on_hit(hurtbox.owner_character)
+		var target: Character = hurtbox.owner_character
+		if target != null and is_instance_valid(target) and not target.is_dead:
+			if _hit_targets.has(target):
+				return
+			_hit_targets.append(target)
+			_apply_character_hit(target)
+			if max_pierce_count > 0 and _hit_targets.size() >= max_pierce_count:
+				_destroy()
 
 
 func _on_hit(target: Node2D) -> void:
@@ -150,3 +169,5 @@ func _on_hit(target: Node2D) -> void:
 func _on_animation_finished() -> void:
 	if is_effect or destroy_on_anim_finish:
 		_destroy()
+	elif has_impact_anim and _animated_sprite.animation == ANIM_IMPACT:
+		_finish_destroy()
