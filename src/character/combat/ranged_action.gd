@@ -88,7 +88,7 @@ func spawn_projectile(user: Character, target: Character) -> Projectile:
 		return null
 
 	var dir_x: float = -1.0 if target.global_position.x < user.global_position.x else 1.0
-	var projectile: Projectile = projectile_scene.instantiate() as Projectile
+	var projectile: Projectile = Projectile.acquire(projectile_scene)
 	if projectile != null:
 		if user is Hero:
 			projectile.source_hero = user as Hero

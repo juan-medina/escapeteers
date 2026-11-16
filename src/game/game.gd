@@ -32,6 +32,12 @@ const LAVA_SLIME_SCENE: PackedScene = preload("res://character/enemies/lava_slim
 const SKELETON_SCENE: PackedScene = preload("res://character/enemies/skeleton/skeleton.tscn")
 const SKELETON_ARCHER_SCENE: PackedScene = preload("res://character/enemies/skeleton_archer/skeleton_archer.tscn")
 const NECROMANCER_SCENE: PackedScene = preload("res://character/enemies/necromancer/necromancer.tscn")
+const ARROW_SCENE: PackedScene = preload("res://projectile/arrow/arrow.tscn")
+const BONE_ARROW_SCENE: PackedScene = preload("res://projectile/bone_arrow/bone_arrow.tscn")
+const LAVA_SPIKE_SCENE: PackedScene = preload("res://projectile/lava_spike/lava_spike.tscn")
+const ICE_SCENE: PackedScene = preload("res://projectile/ice/ice.tscn")
+const HEAL_EFFECT_SCENE: PackedScene = preload("res://projectile/heal/heal_effect.tscn")
+const SMITE_EFFECT_SCENE: PackedScene = preload("res://projectile/smite/smite_effect.tscn")
 const SUMMON_PENTAGRAM_SCENE: PackedScene = preload("res://projectile/summon_pentagram/summon_pentagram.tscn")
 const GAME_OVER_DIALOG_SCENE: PackedScene = preload("res://game_over_dialog/game_over_dialog.tscn")
 const RECRUIT_PANEL_SCENE: PackedScene = preload("res://recruit_panel/recruit_panel.tscn")
@@ -68,6 +74,7 @@ var _room_spawned_enemies: Dictionary[Rect2i, int] = {}
 var _room_spawned_necros: Dictionary[Rect2i, int] = {}
 var _stream_timer: float = 0.0
 var _entity_pool: EntityPool = EntityPool.new()
+var _projectile_pool: EntityPool = EntityPool.new()
 var _pending_spawns: Array[Dictionary] = []
 var _character: Hero = null
 var _squad_speed: float = BASE_SQUAD_SPEED
@@ -140,6 +147,15 @@ func _ready() -> void:
 	_entity_pool.prewarm(SKELETON_SCENE, 30)
 	_entity_pool.prewarm(SKELETON_ARCHER_SCENE, 15)
 	_entity_pool.prewarm(NECROMANCER_SCENE, 10)
+	_projectile_pool.setup(_projectiles)
+	Projectile.set_pool(_projectile_pool)
+	_projectile_pool.prewarm(ARROW_SCENE, 30)
+	_projectile_pool.prewarm(BONE_ARROW_SCENE, 30)
+	_projectile_pool.prewarm(LAVA_SPIKE_SCENE, 20)
+	_projectile_pool.prewarm(ICE_SCENE, 15)
+	_projectile_pool.prewarm(HEAL_EFFECT_SCENE, 15)
+	_projectile_pool.prewarm(SMITE_EFFECT_SCENE, 15)
+	_projectile_pool.prewarm(SUMMON_PENTAGRAM_SCENE, 15)
 	_spawn_initial_characters()
 	_check_recruitment()
 	_register_and_populate_rooms(_map.companion_rooms)
@@ -153,6 +169,10 @@ func _ready() -> void:
 	set_process(true)
 	await Transition.hide_loading()
 	Audio.play_music(true)
+
+
+func _exit_tree() -> void:
+	Projectile.set_pool(null)
 
 
 func get_active_enemy_count() -> int:
@@ -433,7 +453,7 @@ func _reclaim_distant_enemies_for_room(target_room: Rect2i, target_room_dist_sq:
 		if enemy_to_evict is Necromancer and _room_spawned_necros.has(h_room):
 			_room_spawned_necros[h_room] = maxi(0, _room_spawned_necros[h_room] - 1)
 		_spike_hit_cooldowns.erase(enemy_to_evict)
-		_entity_pool.release(enemy_to_evict, _get_enemy_scene(enemy_to_evict))
+		_entity_pool.release(enemy_to_evict)
 		var e_idx: int = _enemies.find(enemy_to_evict)
 		if e_idx != -1:
 			_enemies.remove_at(e_idx)
@@ -471,25 +491,15 @@ func _pick_enemy_scene_for_room(room: Rect2i, depth: int) -> PackedScene:
 	return result
 
 
-func _get_enemy_scene(enemy: Enemy) -> PackedScene:
-	if enemy is Skeleton:
-		return SKELETON_SCENE
-	if enemy is SkeletonArcher:
-		return SKELETON_ARCHER_SCENE
-	if enemy is Necromancer:
-		return NECROMANCER_SCENE
-	return LAVA_SLIME_SCENE
-
-
 func _on_enemy_minion_summon_requested(pos: Vector2, room: Rect2i, enemy_level: int) -> void:
 	if _enemies.size() >= MAX_ENEMIES:
 		return
 	var cell: Vector2i = _map.local_to_map(pos)
 	if not _map.is_cell_walkable(cell):
 		return
-	var pentagram: Projectile = SUMMON_PENTAGRAM_SCENE.instantiate() as Projectile
+	var pentagram: Projectile = Projectile.acquire(SUMMON_PENTAGRAM_SCENE)
 	pentagram.global_position = pos
-	_projectiles.add_child(pentagram)
+	pentagram.launch()
 
 	if _room_remaining_enemies.has(room):
 		_room_remaining_enemies[room] += 1
@@ -517,11 +527,13 @@ func _on_enemy_died(enemy: Enemy) -> void:
 
 func _on_enemy_death_completed(enemy: Enemy) -> void:
 	_spike_hit_cooldowns.erase(enemy)
-	_entity_pool.release(enemy, _get_enemy_scene(enemy))
+	_entity_pool.release(enemy)
 
 
 func _on_projectile_spawn_requested(projectile: Projectile) -> void:
-	_projectiles.add_child(projectile)
+	if projectile.get_parent() == null:
+		_projectiles.add_child(projectile)
+	projectile.launch()
 
 
 func _update_followers(delta: float) -> void:
@@ -550,7 +562,7 @@ func _update_enemies() -> void:
 			if enemy is Necromancer and _room_spawned_necros.has(room):
 				_room_spawned_necros[room] = maxi(0, _room_spawned_necros[room] - 1)
 			_spike_hit_cooldowns.erase(enemy)
-			_entity_pool.release(enemy, _get_enemy_scene(enemy))
+			_entity_pool.release(enemy)
 			_enemies.remove_at(i)
 			i -= 1
 			continue

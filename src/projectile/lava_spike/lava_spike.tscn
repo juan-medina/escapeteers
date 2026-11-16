@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bthn14yvu0m66"]
 
-[ext_resource type="Script" path="res://projectile/lava_spike/lava_spike.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://cf075fvn8p2ld" path="res://projectile/projectile.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://bdc3uv5qwnw62" path="res://data/assets/projectile/lava_spike/lava_spike.png" id="2_tex"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_s0"]
@@ -54,6 +54,11 @@ y_sort_enabled = true
 collision_layer = 32
 collision_mask = 65
 script = ExtResource("1_script")
+speed = 95.0
+damage = 6.0
+lifetime = 2.5
+auto_rotate = false
+destroy_on_anim_finish = true
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 sprite_frames = SubResource("SpriteFrames_spike")

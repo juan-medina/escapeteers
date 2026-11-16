@@ -4,16 +4,19 @@
 class_name Projectile
 extends Area2D
 
-signal hit_target(target: Node2D, damage_dealt: float)
-
 const ANIM_FLY: StringName = &"fly"
 const ANIM_IMPACT: StringName = &"impact"
+const ANIM_DEFAULT: StringName = &"default"
+
+static var _pool: EntityPool = null
 
 @export var speed: float = 140.0
 @export var damage: float = 5.0
 @export var knockback: float = 0.0
 @export var lifetime: float = 3.0
 @export var auto_rotate: bool = true
+@export var is_effect: bool = false
+@export var destroy_on_anim_finish: bool = false
 
 var direction: Vector2 = Vector2.RIGHT
 var source_hero: Hero = null
@@ -25,27 +28,20 @@ var _is_dying: bool = false
 @onready var _collision_shape: CollisionShape2D = $CollisionShape2D
 
 
+static func set_pool(pool: EntityPool) -> void:
+	_pool = pool
+
+
+static func acquire(scene: PackedScene) -> Projectile:
+	if _pool != null:
+		return _pool.acquire(scene) as Projectile
+	return scene.instantiate() as Projectile
+
+
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 	area_entered.connect(_on_area_entered)
 	_animated_sprite.animation_finished.connect(_on_animation_finished)
-	if auto_rotate:
-		rotation = direction.angle()
-	else:
-		rotation = 0.0
-		if direction.x < 0.0:
-			_animated_sprite.flip_h = true
-
-	play(ANIM_FLY)
-
-
-func play(anim_name: StringName = ANIM_FLY) -> void:
-	_animated_sprite.play(anim_name)
-
-
-func disable_collisions() -> void:
-	if _collision_shape != null:
-		_collision_shape.set_deferred(&"disabled", true)
 
 
 func _physics_process(delta: float) -> void:
@@ -58,19 +54,81 @@ func _physics_process(delta: float) -> void:
 		_destroy()
 
 
+func launch() -> void:
+	_elapsed = 0.0
+	_is_dying = false
+	if is_effect:
+		set_physics_process(false)
+		_animated_sprite.flip_h = false
+		rotation = 0.0
+		_animated_sprite.play(ANIM_DEFAULT)
+		return
+
+	set_physics_process(true)
+	if auto_rotate:
+		rotation = direction.angle()
+		_animated_sprite.flip_h = false
+	else:
+		rotation = 0.0
+		_animated_sprite.flip_h = direction.x < 0.0
+	_collision_shape.set_deferred(&"disabled", false)
+	_animated_sprite.play(ANIM_FLY)
+
+
+func reset_for_pool() -> void:
+	source_hero = null
+	direction = Vector2.RIGHT
+	knockback = 0.0
+	_elapsed = 0.0
+	_is_dying = false
+	rotation = 0.0
+	_animated_sprite.flip_h = false
+	set_physics_process(false)
+
+
+func deactivate_for_pool() -> void:
+	_is_dying = true
+	_disable_collisions()
+	_animated_sprite.stop()
+
+
+func _disable_collisions() -> void:
+	_collision_shape.set_deferred(&"disabled", true)
+
+
 func _destroy() -> void:
 	if _is_dying:
 		return
 	_is_dying = true
+	_disable_collisions()
+	_finish_destroy()
 
-	disable_collisions()
-	queue_free()
+
+func _finish_destroy() -> void:
+	if _pool != null:
+		_pool.release(self)
+	else:
+		queue_free()
+
+
+func _apply_character_hit(target: Node2D) -> void:
+	var character: Character = target as Character
+	if character != null:
+		character.take_damage(damage)
+	else:
+		Audio.play_environment(&"wall")
+
+	var enemy: Enemy = target as Enemy
+	if knockback > 0.0 and enemy != null:
+		enemy.apply_knockback(direction * knockback)
+
+	if source_hero != null and is_instance_valid(source_hero) and enemy != null:
+		source_hero.enemy_hit.emit(enemy, damage, false)
 
 
 func _on_body_entered(body: Node2D) -> void:
 	if _is_dying:
 		return
-
 	_on_hit(body)
 
 
@@ -85,21 +143,10 @@ func _on_area_entered(area: Area2D) -> void:
 
 
 func _on_hit(target: Node2D) -> void:
-	var character: Character = target as Character
-	if character != null:
-		character.take_damage(damage)
-	else:
-		Audio.play_environment(&"wall")
-
-	var enemy: Enemy = target as Enemy
-	if knockback > 0.0 and enemy != null:
-		enemy.apply_knockback(direction * knockback)
-
-	hit_target.emit(target, damage)
-	if source_hero != null and is_instance_valid(source_hero) and enemy != null:
-		source_hero.enemy_hit.emit(enemy, damage, false)
+	_apply_character_hit(target)
 	_destroy()
 
 
 func _on_animation_finished() -> void:
-	pass
+	if is_effect or destroy_on_anim_finish:
+		_destroy()

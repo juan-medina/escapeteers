@@ -44,7 +44,7 @@ func spawn_heal_effect(_user: Character, target: Character) -> Projectile:
 	if heal_effect_scene == null or target == null or not is_instance_valid(target):
 		return null
 
-	var effect: Projectile = heal_effect_scene.instantiate() as Projectile
+	var effect: Projectile = Projectile.acquire(heal_effect_scene)
 	if effect != null:
 		effect.global_position = target.global_position
 	return effect

@@ -474,10 +474,9 @@ func _on_frame_changed() -> void:
 				if melee.apply_hit(self, enemy):
 					enemy_hit.emit(enemy, hit_damage, is_heavy)
 					if melee.hit_effect_scene != null:
-						var effect: Projectile = melee.hit_effect_scene.instantiate() as Projectile
-						if effect != null:
-							effect.global_position = enemy.global_position
-							spawn_projectile(effect)
+						var effect: Projectile = Projectile.acquire(melee.hit_effect_scene)
+						effect.global_position = enemy.global_position
+						spawn_projectile(effect)
 	elif current_action is RangedAction and active_target != null and not _hit_applied_this_attack:
 		var ranged: RangedAction = current_action as RangedAction
 		if frame >= ranged.projectile_frame:

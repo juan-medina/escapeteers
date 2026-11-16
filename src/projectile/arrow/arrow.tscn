@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://df7h2kwl40v5r"]
 
-[ext_resource type="Script" path="res://projectile/arrow/arrow.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://cf075fvn8p2ld" path="res://projectile/projectile.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://8t2ekehdnaay" path="res://data/assets/projectile/arrow/arrow.png" id="2_tex"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_arrow"]
@@ -26,6 +26,9 @@ y_sort_enabled = true
 collision_layer = 16
 collision_mask = 129
 script = ExtResource("1_script")
+speed = 220.0
+damage = 10.0
+lifetime = 4.0
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 sprite_frames = SubResource("SpriteFrames_arrow")
