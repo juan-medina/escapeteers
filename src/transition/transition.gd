@@ -32,7 +32,6 @@ func _ready() -> void:
 	add_child(_filler)
 
 	_loading_screen = LOADING_SCREEN_SCENE.instantiate() as LoadingScreen
-	_loading_screen.visible = false
 	add_child(_loading_screen)
 
 
@@ -41,7 +40,7 @@ func fade_to_black(duration: float = FADE_PHASE) -> void:
 	await _filler.create_tween().tween_property(_filler, ^"color:a", 1.0, duration).finished
 
 
-func set_loading_progress(progress: float, message: StringName = &"") -> void:
+func set_loading_progress(progress: float, message: StringName) -> void:
 	_loading_screen.set_progress(progress, message)
 
 

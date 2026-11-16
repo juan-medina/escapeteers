@@ -1,6 +1,333 @@
 [gd_scene format=3 uid="uid://c7k0y3w6x1v4q"]
 
 [ext_resource type="Script" uid="uid://bn7ve1fthbi2w" path="res://loading_screen/loading_screen.gd" id="1_load"]
+[ext_resource type="Texture2D" uid="uid://d3l2t53rjfh7i" path="res://data/assets/character/enemies/lava_slime/lava_slime.png" id="2_slime"]
+[ext_resource type="Texture2D" uid="uid://cdl6qisapglcu" path="res://data/assets/character/heroes/armored_axeman/armored_axeman.png" id="3_axeman"]
+[ext_resource type="Texture2D" uid="uid://dp1ruav0a3eyf" path="res://data/assets/character/heroes/archer/archer.png" id="4_archer"]
+[ext_resource type="Texture2D" uid="uid://bic67xjm1dhfl" path="res://data/assets/character/heroes/priest/priest.png" id="5_priest"]
+[ext_resource type="Texture2D" uid="uid://bi02ie18e72m7" path="res://data/assets/character/heroes/swordsman/swordsman.png" id="6_swordsman"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_slime_0"]
+atlas = ExtResource("2_slime")
+region = Rect2(0, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_slime_1"]
+atlas = ExtResource("2_slime")
+region = Rect2(100, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_slime_2"]
+atlas = ExtResource("2_slime")
+region = Rect2(200, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_slime_3"]
+atlas = ExtResource("2_slime")
+region = Rect2(300, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_slime_4"]
+atlas = ExtResource("2_slime")
+region = Rect2(400, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_slime_5"]
+atlas = ExtResource("2_slime")
+region = Rect2(500, 100, 100, 100)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_slime"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_slime_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_slime_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_slime_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_slime_3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_slime_4")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_slime_5")
+}],
+"loop": true,
+"name": &"run",
+"speed": 10.0
+}]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_axeman_0"]
+atlas = ExtResource("3_axeman")
+region = Rect2(0, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_axeman_1"]
+atlas = ExtResource("3_axeman")
+region = Rect2(100, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_axeman_2"]
+atlas = ExtResource("3_axeman")
+region = Rect2(200, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_axeman_3"]
+atlas = ExtResource("3_axeman")
+region = Rect2(300, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_axeman_4"]
+atlas = ExtResource("3_axeman")
+region = Rect2(400, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_axeman_5"]
+atlas = ExtResource("3_axeman")
+region = Rect2(500, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_axeman_6"]
+atlas = ExtResource("3_axeman")
+region = Rect2(600, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_axeman_7"]
+atlas = ExtResource("3_axeman")
+region = Rect2(700, 100, 100, 100)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_axeman"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_axeman_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_axeman_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_axeman_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_axeman_3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_axeman_4")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_axeman_5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_axeman_6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_axeman_7")
+}],
+"loop": true,
+"name": &"run",
+"speed": 10.0
+}]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_archer_0"]
+atlas = ExtResource("4_archer")
+region = Rect2(0, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_archer_1"]
+atlas = ExtResource("4_archer")
+region = Rect2(100, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_archer_2"]
+atlas = ExtResource("4_archer")
+region = Rect2(200, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_archer_3"]
+atlas = ExtResource("4_archer")
+region = Rect2(300, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_archer_4"]
+atlas = ExtResource("4_archer")
+region = Rect2(400, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_archer_5"]
+atlas = ExtResource("4_archer")
+region = Rect2(500, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_archer_6"]
+atlas = ExtResource("4_archer")
+region = Rect2(600, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_archer_7"]
+atlas = ExtResource("4_archer")
+region = Rect2(700, 100, 100, 100)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_archer"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_archer_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_archer_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_archer_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_archer_3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_archer_4")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_archer_5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_archer_6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_archer_7")
+}],
+"loop": true,
+"name": &"run",
+"speed": 10.0
+}]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_priest_0"]
+atlas = ExtResource("5_priest")
+region = Rect2(0, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_priest_1"]
+atlas = ExtResource("5_priest")
+region = Rect2(100, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_priest_2"]
+atlas = ExtResource("5_priest")
+region = Rect2(200, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_priest_3"]
+atlas = ExtResource("5_priest")
+region = Rect2(300, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_priest_4"]
+atlas = ExtResource("5_priest")
+region = Rect2(400, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_priest_5"]
+atlas = ExtResource("5_priest")
+region = Rect2(500, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_priest_6"]
+atlas = ExtResource("5_priest")
+region = Rect2(600, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_priest_7"]
+atlas = ExtResource("5_priest")
+region = Rect2(700, 100, 100, 100)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_priest"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_priest_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_priest_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_priest_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_priest_3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_priest_4")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_priest_5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_priest_6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_priest_7")
+}],
+"loop": true,
+"name": &"run",
+"speed": 10.0
+}]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_swordsman_0"]
+atlas = ExtResource("6_swordsman")
+region = Rect2(0, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_swordsman_1"]
+atlas = ExtResource("6_swordsman")
+region = Rect2(100, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_swordsman_2"]
+atlas = ExtResource("6_swordsman")
+region = Rect2(200, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_swordsman_3"]
+atlas = ExtResource("6_swordsman")
+region = Rect2(300, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_swordsman_4"]
+atlas = ExtResource("6_swordsman")
+region = Rect2(400, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_swordsman_5"]
+atlas = ExtResource("6_swordsman")
+region = Rect2(500, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_swordsman_6"]
+atlas = ExtResource("6_swordsman")
+region = Rect2(600, 100, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_swordsman_7"]
+atlas = ExtResource("6_swordsman")
+region = Rect2(700, 100, 100, 100)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_swordsman"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_swordsman_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_swordsman_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_swordsman_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_swordsman_3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_swordsman_4")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_swordsman_5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_swordsman_6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_swordsman_7")
+}],
+"loop": true,
+"name": &"run",
+"speed": 10.0
+}]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar_bg"]
+bg_color = Color(0.06, 0.05, 0.09, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.18, 0.14, 0.24, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar_fill"]
+bg_color = Color(1, 0.72, 0.24, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0, 0, 0)
 
 [node name="LoadingScreen" type="Control" unique_id=837140813]
 process_mode = 3
@@ -12,8 +339,98 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_load")
 
+[node name="Background" type="ColorRect" parent="." unique_id=1019283745]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.04, 0.08, 1)
+
+[node name="GroundBase" type="ColorRect" parent="." unique_id=1019283746]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 210.0
+offset_right = 600.0
+offset_bottom = 226.0
+color = Color(0.11, 0.09, 0.15, 1)
+
+[node name="GroundLine" type="ColorRect" parent="." unique_id=1019283747]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 207.0
+offset_right = 600.0
+offset_bottom = 210.0
+color = Color(0.24, 0.2, 0.32, 1)
+
+[node name="DustParticles" type="CPUParticles2D" parent="." unique_id=1019283748]
+position = Vector2(310, 206)
+amount = 12
+lifetime = 0.5
+emission_shape = 3
+emission_rect_extents = Vector2(100, 1)
+direction = Vector2(-1, -0.1)
+spread = 10.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 25.0
+initial_velocity_max = 45.0
+scale_amount_min = 2.0
+scale_amount_max = 2.0
+color = Color(0.38, 0.32, 0.42, 0.6)
+
 [node name="Squad" type="Node2D" parent="." unique_id=421352798]
 position = Vector2(320, 195)
+
+[node name="Slime" type="AnimatedSprite2D" parent="Squad" unique_id=1019283749]
+position = Vector2(-105, 0)
+sprite_frames = SubResource("SpriteFrames_slime")
+animation = &"run"
+speed_scale = 2.2
+
+[node name="Axeman" type="AnimatedSprite2D" parent="Squad" unique_id=1019283750]
+position = Vector2(-55, 0)
+sprite_frames = SubResource("SpriteFrames_axeman")
+animation = &"run"
+frame = 2
+speed_scale = 1.8
+
+[node name="Archer" type="AnimatedSprite2D" parent="Squad" unique_id=1019283751]
+position = Vector2(-10, 0)
+sprite_frames = SubResource("SpriteFrames_archer")
+animation = &"run"
+frame = 4
+speed_scale = 1.9
+
+[node name="Priest" type="AnimatedSprite2D" parent="Squad" unique_id=1019283752]
+position = Vector2(35, 0)
+sprite_frames = SubResource("SpriteFrames_priest")
+animation = &"run"
+frame = 1
+speed_scale = 1.85
+
+[node name="Swordsman" type="AnimatedSprite2D" parent="Squad" unique_id=1019283753]
+position = Vector2(80, 0)
+sprite_frames = SubResource("SpriteFrames_swordsman")
+animation = &"run"
+frame = 3
+speed_scale = 2.0
+
+[node name="EmberParticles" type="CPUParticles2D" parent="." unique_id=1019283754]
+position = Vector2(320, 295)
+amount = 24
+lifetime = 4.0
+preprocess = 2.0
+emission_shape = 3
+emission_rect_extents = Vector2(180, 15)
+direction = Vector2(0, -1)
+spread = 15.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 20.0
+initial_velocity_max = 45.0
+scale_amount_min = 1.0
+scale_amount_max = 2.0
+color = Color(1, 0.72, 0.24, 0.85)
 
 [node name="UI" type="Control" parent="." unique_id=1296565826]
 layout_mode = 1
@@ -61,6 +478,18 @@ theme_override_colors/font_color = Color(0.870588, 0.85098, 0.909804, 1)
 theme_override_font_sizes/font_size = 16
 text = "Carving ancient chambers..."
 horizontal_alignment = 1
+
+[node name="ProgressBar" type="ProgressBar" parent="UI" unique_id=1019283755]
+layout_mode = 0
+offset_left = 180.0
+offset_top = 276.0
+offset_right = 460.0
+offset_bottom = 288.0
+theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_bar_fill")
+max_value = 1.0
+step = 0.001
+show_percentage = false
 
 [node name="Percentage" type="Label" parent="UI" unique_id=706824036]
 layout_mode = 1
