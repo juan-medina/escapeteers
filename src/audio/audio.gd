@@ -6,6 +6,16 @@ extends Node
 const MENU_MUSIC: AudioStreamOggVorbis = preload("res://data/assets/music/Three Red Hearts - Three Red Hearts.ogg")
 const GAME_MUSIC: AudioStreamOggVorbis = preload("res://data/assets/music/Three Red Hearts - Box Jump.ogg")
 
+const HOVER_SOUND: AudioStream = preload("res://data/assets/sounds/Hover.wav")
+const CLICK_SOUND: AudioStream = preload("res://data/assets/sounds/Click.wav")
+const RETURN_SOUND: AudioStream = preload("res://data/assets/sounds/Return.wav")
+const START_SOUND: AudioStream = preload("res://data/assets/sounds/Start.wav")
+const PAUSE_SOUND: AudioStream = preload("res://data/assets/sounds/Pause.wav")
+const LEVEL_UP_SOUND: AudioStream = preload("res://data/assets/sounds/Level_Up.wav")
+const HERO_DOWN_SOUND: AudioStream = preload("res://data/assets/sounds/Hero_Down.wav")
+const HERO_RECRUITED_SOUND: AudioStream = preload("res://data/assets/sounds/Hero_Recruited.wav")
+const GAME_OVER_SOUND: AudioStream = preload("res://data/assets/sounds/Game_Over.wav")
+
 const STEP_1: AudioStream = preload("res://data/assets/sounds/07_Step_rock_01.wav")
 const STEP_2: AudioStream = preload("res://data/assets/sounds/08_Step_rock_02.wav")
 const STEP_3: AudioStream = preload("res://data/assets/sounds/09_Step_rock_03.wav")
@@ -43,6 +53,8 @@ const HEAL_RECEIVED: AudioStream = preload("res://data/assets/sounds/Heal_Receiv
 const SECRET_TORCH: AudioStream = preload("res://data/assets/sounds/Secret_Torch.wav")
 const WALL_IMPACT: AudioStream = preload("res://data/assets/sounds/Wall_Impact.wav")
 
+const HEAVY_IMPACT_VOLUME_DB: float = 2.0
+
 const SQUAD_STEP_THROTTLE_MSEC: int = 180
 const MELEE_SWOOSH_THROTTLE_MSEC: int = 90
 const RANGED_ATTACK_THROTTLE_MSEC: int = 80
@@ -57,6 +69,7 @@ const HEAL_RECEIVED_THROTTLE_MSEC: int = 80
 const WALL_IMPACT_THROTTLE_MSEC: int = 60
 
 var _suppress_hover: bool = false
+var _last_play_times_msec: Dictionary[AudioStreamPlayer, int] = {}
 
 var _hover: AudioStreamPlayer
 var _click: AudioStreamPlayer
@@ -69,292 +82,116 @@ var _hero_recruited: AudioStreamPlayer
 var _game_over: AudioStreamPlayer
 var _secret_torch: AudioStreamPlayer
 var _music_player: AudioStreamPlayer
-var _step_players: Array[AudioStreamPlayer] = []
-var _step_player_index: int = 0
-var _last_step_time_msec: int = 0
-var _swoosh_players: Array[AudioStreamPlayer] = []
-var _swoosh_player_index: int = 0
-var _last_swoosh_time_msec: int = 0
-var _bow_players: Array[AudioStreamPlayer] = []
-var _bow_player_index: int = 0
-var _last_bow_time_msec: int = 0
-var _magic_players: Array[AudioStreamPlayer] = []
-var _magic_player_index: int = 0
-var _last_magic_time_msec: int = 0
-var _impact_players: Array[AudioStreamPlayer] = []
-var _impact_player_index: int = 0
-var _last_impact_time_msec: int = 0
-var _enemy_melee_players: Array[AudioStreamPlayer] = []
-var _enemy_melee_player_index: int = 0
-var _last_enemy_melee_time_msec: int = 0
-var _enemy_ranged_players: Array[AudioStreamPlayer] = []
-var _enemy_ranged_player_index: int = 0
-var _last_enemy_ranged_time_msec: int = 0
-var _enemy_death_players: Array[AudioStreamPlayer] = []
-var _enemy_death_player_index: int = 0
-var _last_enemy_death_time_msec: int = 0
-var _telegraph_players: Array[AudioStreamPlayer] = []
-var _telegraph_player_index: int = 0
-var _last_telegraph_time_msec: int = 0
-var _summon_players: Array[AudioStreamPlayer] = []
-var _summon_player_index: int = 0
-var _last_summon_time_msec: int = 0
-var _spike_trap_players: Array[AudioStreamPlayer] = []
-var _spike_trap_player_index: int = 0
-var _last_spike_trap_time_msec: int = 0
-var _hero_hurt_players: Array[AudioStreamPlayer] = []
-var _hero_hurt_player_index: int = 0
-var _last_hero_hurt_time_msec: int = 0
-var _heal_players: Array[AudioStreamPlayer] = []
-var _heal_player_index: int = 0
-var _last_heal_time_msec: int = 0
-var _wall_players: Array[AudioStreamPlayer] = []
-var _wall_player_index: int = 0
-var _last_wall_time_msec: int = 0
+var _step: AudioStreamPlayer
+var _swoosh: AudioStreamPlayer
+var _bow: AudioStreamPlayer
+var _magic: AudioStreamPlayer
+var _impact: AudioStreamPlayer
+var _enemy_melee: AudioStreamPlayer
+var _enemy_ranged: AudioStreamPlayer
+var _enemy_death: AudioStreamPlayer
+var _telegraph: AudioStreamPlayer
+var _summon: AudioStreamPlayer
+var _spike_trap: AudioStreamPlayer
+var _hero_hurt: AudioStreamPlayer
+var _heal: AudioStreamPlayer
+var _wall: AudioStreamPlayer
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	_hover = _create_player(preload("res://data/assets/sounds/Hover.wav"), &"Hover")
-	_click = _create_player(preload("res://data/assets/sounds/Click.wav"), &"Click")
-	_return = _create_player(preload("res://data/assets/sounds/Return.wav"), &"Return")
-	_start = _create_player(preload("res://data/assets/sounds/Start.wav"), &"Start")
-	_pause = _create_player(preload("res://data/assets/sounds/Pause.wav"), &"Pause")
-	_level_up = _create_player(preload("res://data/assets/sounds/Level_Up.wav"), &"LevelUp")
-	_hero_down = _create_player(preload("res://data/assets/sounds/Hero_Down.wav"), &"HeroDown")
-	_hero_recruited = _create_player(preload("res://data/assets/sounds/Hero_Recruited.wav"), &"HeroRecruited")
-	_game_over = _create_player(preload("res://data/assets/sounds/Game_Over.wav"), &"GameOver")
-	_music_player = _create_music_player(&"MusicPlayer")
-	for i: int in range(3):
-		var player: AudioStreamPlayer = _create_random_player(STEPS, 1.1, StringName("Footstep_%d" % i))
-		_step_players.append(player)
-	for i: int in range(2):
-		var player: AudioStreamPlayer = _create_random_player(SWOOSHES, 1.15, StringName("MeleeSwoosh_%d" % i))
-		_swoosh_players.append(player)
-	for i: int in range(2):
-		var player: AudioStreamPlayer = _create_single_random_player(BOW_SHOOT, 1.15, StringName("BowShoot_%d" % i))
-		_bow_players.append(player)
-	for i: int in range(2):
-		var player: AudioStreamPlayer = _create_single_random_player(MAGIC_CAST, 1.15, StringName("MagicCast_%d" % i))
-		_magic_players.append(player)
-	for i: int in range(3):
-		var player: AudioStreamPlayer = _create_random_player(IMPACTS, 1.15, StringName("HitImpact_%d" % i))
-		_impact_players.append(player)
-	for i: int in range(2):
-		var player: AudioStreamPlayer = _create_single_random_player(ENEMY_MELEE, 1.15, StringName("EnemyMelee_%d" % i))
-		_enemy_melee_players.append(player)
-	for i: int in range(2):
-		var player: AudioStreamPlayer = _create_single_random_player(ENEMY_RANGED, 1.15, StringName("EnemyRanged_%d" % i))
-		_enemy_ranged_players.append(player)
-	for i: int in range(3):
-		var player: AudioStreamPlayer = _create_random_player(ENEMY_DEATHS, 1.15, StringName("EnemyDeath_%d" % i))
-		_enemy_death_players.append(player)
-	for i: int in range(2):
-		var player: AudioStreamPlayer = _create_single_random_player(TELEGRAPH_WARNING, 1.1, StringName("TelegraphWarning_%d" % i))
-		_telegraph_players.append(player)
-	for i: int in range(2):
-		var player: AudioStreamPlayer = _create_single_random_player(NECROMANCER_SUMMON, 1.1, StringName("NecroSummon_%d" % i))
-		_summon_players.append(player)
-	for i: int in range(2):
-		var player: AudioStreamPlayer = _create_random_player(TRAP_SPIKES, 1.15, StringName("SpikeTrap_%d" % i))
-		_spike_trap_players.append(player)
-	_secret_torch = _create_player(SECRET_TORCH, &"SecretTorch")
-	for i: int in range(2):
-		var player: AudioStreamPlayer = _create_single_random_player(HERO_HURT, 1.15, StringName("HeroHurt_%d" % i))
-		_hero_hurt_players.append(player)
-	for i: int in range(2):
-		var player: AudioStreamPlayer = _create_single_random_player(HEAL_RECEIVED, 1.1, StringName("HealReceived_%d" % i))
-		_heal_players.append(player)
-	for i: int in range(2):
-		var player: AudioStreamPlayer = _create_single_random_player(WALL_IMPACT, 1.2, StringName("WallImpact_%d" % i))
-		_wall_players.append(player)
+	_hover = _create_player(&"Hover", HOVER_SOUND)
+	_click = _create_player(&"Click", CLICK_SOUND)
+	_return = _create_player(&"Return", RETURN_SOUND)
+	_start = _create_player(&"Start", START_SOUND)
+	_pause = _create_player(&"Pause", PAUSE_SOUND)
+	_level_up = _create_player(&"LevelUp", LEVEL_UP_SOUND)
+	_hero_down = _create_player(&"HeroDown", HERO_DOWN_SOUND)
+	_hero_recruited = _create_player(&"HeroRecruited", HERO_RECRUITED_SOUND)
+	_game_over = _create_player(&"GameOver", GAME_OVER_SOUND)
+	_secret_torch = _create_player(&"SecretTorch", SECRET_TORCH)
+	_music_player = _create_player(&"MusicPlayer", null, &"Music")
 
-
-func _exit_tree() -> void:
-	_step_players.clear()
-	_swoosh_players.clear()
-	_bow_players.clear()
-	_magic_players.clear()
-	_impact_players.clear()
-	_enemy_melee_players.clear()
-	_enemy_ranged_players.clear()
-	_enemy_death_players.clear()
-	_telegraph_players.clear()
-	_summon_players.clear()
-	_spike_trap_players.clear()
-	_hero_hurt_players.clear()
-	_heal_players.clear()
-	_wall_players.clear()
+	_step = _create_random_player(STEPS, 1.1, 3, &"Footstep")
+	_swoosh = _create_random_player(SWOOSHES, 1.15, 2, &"MeleeSwoosh")
+	_bow = _create_random_player([BOW_SHOOT], 1.15, 2, &"BowShoot")
+	_magic = _create_random_player([MAGIC_CAST], 1.15, 2, &"MagicCast")
+	_impact = _create_random_player(IMPACTS, 1.15, 3, &"HitImpact")
+	_enemy_melee = _create_random_player([ENEMY_MELEE], 1.15, 2, &"EnemyMelee")
+	_enemy_ranged = _create_random_player([ENEMY_RANGED], 1.15, 2, &"EnemyRanged")
+	_enemy_death = _create_random_player(ENEMY_DEATHS, 1.15, 3, &"EnemyDeath")
+	_telegraph = _create_random_player([TELEGRAPH_WARNING], 1.1, 2, &"TelegraphWarning")
+	_summon = _create_random_player([NECROMANCER_SUMMON], 1.1, 2, &"NecroSummon")
+	_spike_trap = _create_random_player(TRAP_SPIKES, 1.15, 2, &"SpikeTrap")
+	_hero_hurt = _create_random_player([HERO_HURT], 1.15, 2, &"HeroHurt")
+	_heal = _create_random_player([HEAL_RECEIVED], 1.1, 2, &"HealReceived")
+	_wall = _create_random_player([WALL_IMPACT], 1.2, 2, &"WallImpact")
 
 
 func play_footstep() -> void:
-	var now: int = Time.get_ticks_msec()
-	if now - _last_step_time_msec < SQUAD_STEP_THROTTLE_MSEC:
-		return
-	_last_step_time_msec = now
-
-	if _step_players.is_empty():
-		return
-
-	var player: AudioStreamPlayer = _step_players[_step_player_index]
-	_step_player_index = (_step_player_index + 1) % _step_players.size()
-	player.play()
+	_play_throttled(_step, SQUAD_STEP_THROTTLE_MSEC)
 
 
 func play_melee_swoosh() -> void:
-	var now: int = Time.get_ticks_msec()
-	if now - _last_swoosh_time_msec < MELEE_SWOOSH_THROTTLE_MSEC:
-		return
-	_last_swoosh_time_msec = now
-
-	if _swoosh_players.is_empty():
-		return
-
-	var player: AudioStreamPlayer = _swoosh_players[_swoosh_player_index]
-	_swoosh_player_index = (_swoosh_player_index + 1) % _swoosh_players.size()
-	player.play()
+	_play_throttled(_swoosh, MELEE_SWOOSH_THROTTLE_MSEC)
 
 
 func play_ranged_attack(is_magic: bool = false) -> void:
-	var now: int = Time.get_ticks_msec()
-	if is_magic:
-		if now - _last_magic_time_msec < RANGED_ATTACK_THROTTLE_MSEC or _magic_players.is_empty():
-			return
-		_last_magic_time_msec = now
-		var player: AudioStreamPlayer = _magic_players[_magic_player_index]
-		_magic_player_index = (_magic_player_index + 1) % _magic_players.size()
-		player.play()
-	else:
-		if now - _last_bow_time_msec < RANGED_ATTACK_THROTTLE_MSEC or _bow_players.is_empty():
-			return
-		_last_bow_time_msec = now
-		var player: AudioStreamPlayer = _bow_players[_bow_player_index]
-		_bow_player_index = (_bow_player_index + 1) % _bow_players.size()
-		player.play()
+	_play_throttled(_magic if is_magic else _bow, RANGED_ATTACK_THROTTLE_MSEC)
 
 
 func play_hit_impact(is_heavy: bool = false) -> void:
-	var now: int = Time.get_ticks_msec()
-	if now - _last_impact_time_msec < IMPACT_THROTTLE_MSEC:
+	if not _can_play_throttled(_impact, IMPACT_THROTTLE_MSEC):
 		return
-	_last_impact_time_msec = now
-
-	if _impact_players.is_empty():
-		return
-
-	var player: AudioStreamPlayer = _impact_players[_impact_player_index]
-	_impact_player_index = (_impact_player_index + 1) % _impact_players.size()
-	player.volume_db = 2.0 if is_heavy else 0.0
-	player.play()
+	_impact.volume_db = HEAVY_IMPACT_VOLUME_DB if is_heavy else 0.0
+	_impact.play()
 
 
 func play_enemy_attack(is_ranged: bool = false) -> void:
-	var now: int = Time.get_ticks_msec()
-	if is_ranged:
-		if now - _last_enemy_ranged_time_msec < ENEMY_ATTACK_THROTTLE_MSEC or _enemy_ranged_players.is_empty():
-			return
-		_last_enemy_ranged_time_msec = now
-		var player: AudioStreamPlayer = _enemy_ranged_players[_enemy_ranged_player_index]
-		_enemy_ranged_player_index = (_enemy_ranged_player_index + 1) % _enemy_ranged_players.size()
-		player.play()
-	else:
-		if now - _last_enemy_melee_time_msec < ENEMY_ATTACK_THROTTLE_MSEC or _enemy_melee_players.is_empty():
-			return
-		_last_enemy_melee_time_msec = now
-		var player: AudioStreamPlayer = _enemy_melee_players[_enemy_melee_player_index]
-		_enemy_melee_player_index = (_enemy_melee_player_index + 1) % _enemy_melee_players.size()
-		player.play()
+	_play_throttled(_enemy_ranged if is_ranged else _enemy_melee, ENEMY_ATTACK_THROTTLE_MSEC)
 
 
 func play_enemy_death() -> void:
-	var now: int = Time.get_ticks_msec()
-	if now - _last_enemy_death_time_msec < ENEMY_DEATH_THROTTLE_MSEC:
-		return
-	_last_enemy_death_time_msec = now
-
-	if _enemy_death_players.is_empty():
-		return
-
-	var player: AudioStreamPlayer = _enemy_death_players[_enemy_death_player_index]
-	_enemy_death_player_index = (_enemy_death_player_index + 1) % _enemy_death_players.size()
-	player.play()
+	_play_throttled(_enemy_death, ENEMY_DEATH_THROTTLE_MSEC)
 
 
 func play_enemy_special(is_summon: bool = false) -> void:
-	var now: int = Time.get_ticks_msec()
 	if is_summon:
-		if now - _last_summon_time_msec < NECROMANCER_SUMMON_THROTTLE_MSEC or _summon_players.is_empty():
-			return
-		_last_summon_time_msec = now
-		var player: AudioStreamPlayer = _summon_players[_summon_player_index]
-		_summon_player_index = (_summon_player_index + 1) % _summon_players.size()
-		player.play()
+		_play_throttled(_summon, NECROMANCER_SUMMON_THROTTLE_MSEC)
 	else:
-		if now - _last_telegraph_time_msec < TELEGRAPH_THROTTLE_MSEC or _telegraph_players.is_empty():
-			return
-		_last_telegraph_time_msec = now
-		var player: AudioStreamPlayer = _telegraph_players[_telegraph_player_index]
-		_telegraph_player_index = (_telegraph_player_index + 1) % _telegraph_players.size()
-		player.play()
+		_play_throttled(_telegraph, TELEGRAPH_THROTTLE_MSEC)
 
 
 func play_environment(cue: StringName) -> void:
-	var now: int = Time.get_ticks_msec()
 	match cue:
 		&"spike":
-			if now - _last_spike_trap_time_msec < SPIKE_TRAP_THROTTLE_MSEC or _spike_trap_players.is_empty():
-				return
-			_last_spike_trap_time_msec = now
-			var player: AudioStreamPlayer = _spike_trap_players[_spike_trap_player_index]
-			_spike_trap_player_index = (_spike_trap_player_index + 1) % _spike_trap_players.size()
-			player.play()
+			_play_throttled(_spike_trap, SPIKE_TRAP_THROTTLE_MSEC)
 		&"torch":
-			if _secret_torch != null:
-				_secret_torch.play()
+			_secret_torch.play()
 		&"wall":
-			if now - _last_wall_time_msec < WALL_IMPACT_THROTTLE_MSEC or _wall_players.is_empty():
-				return
-			_last_wall_time_msec = now
-			var player: AudioStreamPlayer = _wall_players[_wall_player_index]
-			_wall_player_index = (_wall_player_index + 1) % _wall_players.size()
-			player.play()
+			_play_throttled(_wall, WALL_IMPACT_THROTTLE_MSEC)
 
 
 func play_hero_health(is_heal: bool = false) -> void:
-	var now: int = Time.get_ticks_msec()
 	if is_heal:
-		if now - _last_heal_time_msec < HEAL_RECEIVED_THROTTLE_MSEC or _heal_players.is_empty():
-			return
-		_last_heal_time_msec = now
-		var player: AudioStreamPlayer = _heal_players[_heal_player_index]
-		_heal_player_index = (_heal_player_index + 1) % _heal_players.size()
-		player.play()
+		_play_throttled(_heal, HEAL_RECEIVED_THROTTLE_MSEC)
 	else:
-		if now - _last_hero_hurt_time_msec < HERO_HURT_THROTTLE_MSEC or _hero_hurt_players.is_empty():
-			return
-		_last_hero_hurt_time_msec = now
-		var player: AudioStreamPlayer = _hero_hurt_players[_hero_hurt_player_index]
-		_hero_hurt_player_index = (_hero_hurt_player_index + 1) % _hero_hurt_players.size()
-		player.play()
+		_play_throttled(_hero_hurt, HERO_HURT_THROTTLE_MSEC)
 
 
 func play_level_up() -> void:
-	if _level_up != null:
-		_level_up.play()
+	_level_up.play()
 
 
 func play_defeat(is_game_over: bool = false) -> void:
 	if is_game_over:
-		if _game_over != null:
-			_game_over.play()
+		_game_over.play()
 	else:
-		if _hero_down != null:
-			_hero_down.play()
+		_hero_down.play()
 
 
 func play_hero_recruited() -> void:
-	if _hero_recruited != null:
-		_hero_recruited.play()
+	_hero_recruited.play()
 
 
 func play_music(is_game: bool = true) -> void:
@@ -393,35 +230,6 @@ func set_master_volume_db(db: float) -> void:
 
 
 func stop_all_players(node: Node) -> void:
-	_stop_footsteps()
-	for player: AudioStreamPlayer in _swoosh_players:
-		player.stop()
-	for player: AudioStreamPlayer in _bow_players:
-		player.stop()
-	for player: AudioStreamPlayer in _magic_players:
-		player.stop()
-	for player: AudioStreamPlayer in _impact_players:
-		player.stop()
-	for player: AudioStreamPlayer in _enemy_melee_players:
-		player.stop()
-	for player: AudioStreamPlayer in _enemy_ranged_players:
-		player.stop()
-	for player: AudioStreamPlayer in _enemy_death_players:
-		player.stop()
-	for player: AudioStreamPlayer in _telegraph_players:
-		player.stop()
-	for player: AudioStreamPlayer in _summon_players:
-		player.stop()
-	for player: AudioStreamPlayer in _spike_trap_players:
-		player.stop()
-	for player: AudioStreamPlayer in _hero_hurt_players:
-		player.stop()
-	for player: AudioStreamPlayer in _heal_players:
-		player.stop()
-	for player: AudioStreamPlayer in _wall_players:
-		player.stop()
-	if _secret_torch != null:
-		_secret_torch.stop()
 	var stereo: AudioStreamPlayer = node as AudioStreamPlayer
 	if stereo:
 		stereo.stop()
@@ -432,53 +240,40 @@ func stop_all_players(node: Node) -> void:
 		stop_all_players(child)
 
 
-func _create_player(stream: AudioStream, node_name: StringName) -> AudioStreamPlayer:
+func _create_player(node_name: StringName, stream: AudioStream = null, bus: StringName = &"Sfx") -> AudioStreamPlayer:
 	var player: AudioStreamPlayer = AudioStreamPlayer.new()
 	player.name = node_name
 	player.stream = stream
-	player.bus = &"Sfx"
+	player.bus = bus
 	add_child(player)
 	return player
 
 
-func _create_music_player(node_name: StringName) -> AudioStreamPlayer:
-	var player: AudioStreamPlayer = AudioStreamPlayer.new()
-	player.name = node_name
-	player.bus = &"Music"
-	add_child(player)
-	return player
-
-
-func _create_random_player(streams: Array[AudioStream], pitch: float, node_name: StringName) -> AudioStreamPlayer:
-	var player: AudioStreamPlayer = AudioStreamPlayer.new()
-	player.name = node_name
+func _create_random_player(streams: Array[AudioStream], pitch: float, polyphony: int, node_name: StringName) -> AudioStreamPlayer:
 	var randomizer: AudioStreamRandomizer = AudioStreamRandomizer.new()
 	for stream: AudioStream in streams:
 		randomizer.add_stream(-1, stream)
 	randomizer.playback_mode = AudioStreamRandomizer.PLAYBACK_RANDOM_NO_REPEATS
 	randomizer.random_pitch = pitch
-	player.stream = randomizer
-	player.bus = &"Sfx"
-	add_child(player)
+	var player: AudioStreamPlayer = _create_player(node_name, randomizer)
+	player.max_polyphony = polyphony
 	return player
 
 
-func _create_single_random_player(stream: AudioStream, pitch: float, node_name: StringName) -> AudioStreamPlayer:
-	var player: AudioStreamPlayer = AudioStreamPlayer.new()
-	player.name = node_name
-	var randomizer: AudioStreamRandomizer = AudioStreamRandomizer.new()
-	randomizer.add_stream(-1, stream)
-	randomizer.playback_mode = AudioStreamRandomizer.PLAYBACK_RANDOM_NO_REPEATS
-	randomizer.random_pitch = pitch
-	player.stream = randomizer
-	player.bus = &"Sfx"
-	add_child(player)
-	return player
+func _can_play_throttled(player: AudioStreamPlayer, throttle_msec: int) -> bool:
+	var now: int = Time.get_ticks_msec()
+	if _last_play_times_msec.has(player) and now - _last_play_times_msec[player] < throttle_msec:
+		return false
+	_last_play_times_msec[player] = now
+	return true
+
+
+func _play_throttled(player: AudioStreamPlayer, throttle_msec: int) -> void:
+	if _can_play_throttled(player, throttle_msec):
+		player.play()
 
 
 func _play_music(stream: AudioStreamOggVorbis) -> void:
-	if stream == null:
-		return
 	stream.loop = true
 	if _music_player.stream == stream and _music_player.playing:
 		return
@@ -490,11 +285,6 @@ func _play_hover() -> void:
 	if _suppress_hover:
 		return
 	_hover.play()
-
-
-func _stop_footsteps() -> void:
-	for player: AudioStreamPlayer in _step_players:
-		player.stop()
 
 
 func _play_return() -> void:
@@ -544,8 +334,7 @@ func _connect_button(button: BaseButton) -> void:
 
 
 func _connect_slider(slider: Slider) -> void:
-	slider.mouse_entered.connect(slider.grab_focus)
-	slider.focus_entered.connect(_play_hover)
+	_connect_focus(slider)
 	slider.value_changed.connect(_slider_change)
 
 
