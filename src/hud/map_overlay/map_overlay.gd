@@ -7,9 +7,6 @@ extends Control
 const TILE_SIZE: float = 16.0
 const CHUNK_SIZE_TILES: int = 2
 const CHUNK_SIZE_PX: float = float(CHUNK_SIZE_TILES) * TILE_SIZE
-const WALL_COLOR: Color = Color(0.85, 0.72, 0.38, 0.65)
-const EXPLORED_FLOOR_COLOR: Color = Color(0.22, 0.48, 0.68, 0.38)
-const UNEXPLORED_FLOOR_COLOR: Color = Color(0.55, 0.25, 0.30, 0.28)
 const DEADZONE_HALF_EXTENT: Vector2 = Vector2(220.0, 130.0)
 const DAMAGE_METER_SAFE_MARGIN: float = 192.0
 const RECENTER_SPEED: float = 420.0
@@ -31,31 +28,17 @@ var _has_anchor: bool = false
 var _is_recentering: bool = false
 var _dirty: bool = false
 
-var _unexplored_floor_mesh: MeshInstance2D = null
-var _explored_floor_mesh: MeshInstance2D = null
-var _walls_mesh: MeshInstance2D = null
-
 @onready var _chunks_container: Node2D = $Chunks
-@onready var _player_marker: PlayerMarker = $PlayerMarker
+@onready var _unexplored_floor_mesh: MeshInstance2D = $Chunks/UnexploredFloorMesh
+@onready var _explored_floor_mesh: MeshInstance2D = $Chunks/ExploredFloorMesh
+@onready var _walls_mesh: MeshInstance2D = $Chunks/WallsMesh
+@onready var _player_marker: Node2D = $PlayerMarker
 
 
 func _ready() -> void:
 	visible = false
 	set_process(false)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_player_marker.rotation = -PI * 0.5
-
-	_unexplored_floor_mesh = MeshInstance2D.new()
-	_unexplored_floor_mesh.self_modulate = UNEXPLORED_FLOOR_COLOR
-	_chunks_container.add_child(_unexplored_floor_mesh)
-
-	_explored_floor_mesh = MeshInstance2D.new()
-	_explored_floor_mesh.self_modulate = EXPLORED_FLOOR_COLOR
-	_chunks_container.add_child(_explored_floor_mesh)
-
-	_walls_mesh = MeshInstance2D.new()
-	_walls_mesh.self_modulate = WALL_COLOR
-	_chunks_container.add_child(_walls_mesh)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -194,12 +177,9 @@ static func _create_simple_mesh(vertices: PackedVector2Array, primitive: Mesh.Pr
 
 
 func _build_chunks(plan: WorldPlan) -> void:
-	if _unexplored_floor_mesh != null:
-		_unexplored_floor_mesh.mesh = null
-	if _explored_floor_mesh != null:
-		_explored_floor_mesh.mesh = null
-	if _walls_mesh != null:
-		_walls_mesh.mesh = null
+	_unexplored_floor_mesh.mesh = null
+	_explored_floor_mesh.mesh = null
+	_walls_mesh.mesh = null
 	_dirty = false
 	_revealed_chunks.clear()
 	_explored_chunks.clear()
@@ -207,7 +187,7 @@ func _build_chunks(plan: WorldPlan) -> void:
 	_chunk_floor_vertices.clear()
 	_last_revealed_chunk = Vector2i(2147483647, 2147483647)
 
-	if plan == null or plan.carve_rects.is_empty():
+	if plan.carve_rects.is_empty():
 		return
 
 	map_scale = float(pixels_per_tile) / TILE_SIZE
@@ -257,87 +237,44 @@ func _extract_chunked_wall_segments(plan: WorldPlan) -> void:
 	var grid: SpatialGrid = plan.spatial_grid
 
 	for r: Rect2i in rects:
-		# 1. Top Edge: at y = r.position.y, x in [r.position.x, r.end.x]
-		# Outside neighbor is y = r.position.y - 1
-		var y_top: int = r.position.y
-		var y_top_out: int = y_top - 1
-		var top_blockers: Array[Vector2i] = []
-		var query_top: Rect2i = Rect2i(r.position.x, y_top_out, r.size.x, 1)
-		var cand_top: Array[int] = grid.get_candidate_ids_for_rect(query_top)
-		for idx: int in cand_top:
-			var other: Rect2i = rects[idx]
-			if other == r:
-				continue
-			if other.position.y <= y_top_out and other.end.y > y_top_out:
-				var ox1: int = maxi(r.position.x, other.position.x)
-				var ox2: int = mini(r.end.x, other.end.x)
-				if ox2 > ox1:
-					top_blockers.append(Vector2i(ox1, ox2))
+		_extract_horizontal_edge(r, r.position.y, r.position.y - 1, rects, grid)
+		_extract_horizontal_edge(r, r.end.y, r.end.y, rects, grid)
+		_extract_vertical_edge(r, r.position.x, r.position.x - 1, rects, grid)
+		_extract_vertical_edge(r, r.end.x, r.end.x, rects, grid)
 
-		var top_walls: Array[Vector2i] = _subtract_intervals(r.position.x, r.end.x, top_blockers)
-		for w: Vector2i in top_walls:
-			_split_horizontal(w.x, w.y, y_top)
 
-		# 2. Bottom Edge: at y = r.end.y, x in [r.position.x, r.end.x]
-		# Outside neighbor is y = r.end.y
-		var y_bot: int = r.end.y
-		var bot_blockers: Array[Vector2i] = []
-		var query_bot: Rect2i = Rect2i(r.position.x, y_bot, r.size.x, 1)
-		var cand_bot: Array[int] = grid.get_candidate_ids_for_rect(query_bot)
-		for idx: int in cand_bot:
-			var other: Rect2i = rects[idx]
-			if other == r:
-				continue
-			if other.position.y <= y_bot and other.end.y > y_bot:
-				var ox1: int = maxi(r.position.x, other.position.x)
-				var ox2: int = mini(r.end.x, other.end.x)
-				if ox2 > ox1:
-					bot_blockers.append(Vector2i(ox1, ox2))
+func _extract_horizontal_edge(r: Rect2i, y_line: int, y_outside: int, rects: Array[Rect2i], grid: SpatialGrid) -> void:
+	var blockers: Array[Vector2i] = []
+	var query: Rect2i = Rect2i(r.position.x, y_outside, r.size.x, 1)
+	for idx: int in grid.get_candidate_ids_for_rect(query):
+		var other: Rect2i = rects[idx]
+		if other == r:
+			continue
+		if other.position.y <= y_outside and other.end.y > y_outside:
+			var ox1: int = maxi(r.position.x, other.position.x)
+			var ox2: int = mini(r.end.x, other.end.x)
+			if ox2 > ox1:
+				blockers.append(Vector2i(ox1, ox2))
 
-		var bot_walls: Array[Vector2i] = _subtract_intervals(r.position.x, r.end.x, bot_blockers)
-		for w: Vector2i in bot_walls:
-			_split_horizontal(w.x, w.y, y_bot)
+	for w: Vector2i in _subtract_intervals(r.position.x, r.end.x, blockers):
+		_split_horizontal(w.x, w.y, y_line)
 
-		# 3. Left Edge: at x = r.position.x, y in [r.position.y, r.end.y]
-		# Outside neighbor is x = r.position.x - 1
-		var x_left: int = r.position.x
-		var x_left_out: int = x_left - 1
-		var left_blockers: Array[Vector2i] = []
-		var query_left: Rect2i = Rect2i(x_left_out, r.position.y, 1, r.size.y)
-		var cand_left: Array[int] = grid.get_candidate_ids_for_rect(query_left)
-		for idx: int in cand_left:
-			var other: Rect2i = rects[idx]
-			if other == r:
-				continue
-			if other.position.x <= x_left_out and other.end.x > x_left_out:
-				var oy1: int = maxi(r.position.y, other.position.y)
-				var oy2: int = mini(r.end.y, other.end.y)
-				if oy2 > oy1:
-					left_blockers.append(Vector2i(oy1, oy2))
 
-		var left_walls: Array[Vector2i] = _subtract_intervals(r.position.y, r.end.y, left_blockers)
-		for w: Vector2i in left_walls:
-			_split_vertical(w.x, w.y, x_left)
+func _extract_vertical_edge(r: Rect2i, x_line: int, x_outside: int, rects: Array[Rect2i], grid: SpatialGrid) -> void:
+	var blockers: Array[Vector2i] = []
+	var query: Rect2i = Rect2i(x_outside, r.position.y, 1, r.size.y)
+	for idx: int in grid.get_candidate_ids_for_rect(query):
+		var other: Rect2i = rects[idx]
+		if other == r:
+			continue
+		if other.position.x <= x_outside and other.end.x > x_outside:
+			var oy1: int = maxi(r.position.y, other.position.y)
+			var oy2: int = mini(r.end.y, other.end.y)
+			if oy2 > oy1:
+				blockers.append(Vector2i(oy1, oy2))
 
-		# 4. Right Edge: at x = r.end.x, y in [r.position.y, r.end.y]
-		# Outside neighbor is x = r.end.x
-		var x_right: int = r.end.x
-		var right_blockers: Array[Vector2i] = []
-		var query_right: Rect2i = Rect2i(x_right, r.position.y, 1, r.size.y)
-		var cand_right: Array[int] = grid.get_candidate_ids_for_rect(query_right)
-		for idx: int in cand_right:
-			var other: Rect2i = rects[idx]
-			if other == r:
-				continue
-			if other.position.x <= x_right and other.end.x > x_right:
-				var oy1: int = maxi(r.position.y, other.position.y)
-				var oy2: int = mini(r.end.y, other.end.y)
-				if oy2 > oy1:
-					right_blockers.append(Vector2i(oy1, oy2))
-
-		var right_walls: Array[Vector2i] = _subtract_intervals(r.position.y, r.end.y, right_blockers)
-		for w: Vector2i in right_walls:
-			_split_vertical(w.x, w.y, x_right)
+	for w: Vector2i in _subtract_intervals(r.position.y, r.end.y, blockers):
+		_split_vertical(w.x, w.y, x_line)
 
 
 func _split_horizontal(min_x: int, max_x: int, y: int) -> void:

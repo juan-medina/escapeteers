@@ -4,6 +4,8 @@
 class_name SquadGrid
 extends GridContainer
 
+const CELL_SCENE: PackedScene = preload("res://hud/squad_grid/squad_grid_cell.tscn")
+
 var _cell_pool: Array[SquadGridCell] = []
 
 
@@ -17,7 +19,7 @@ func update_squad(squad: Array[Hero]) -> void:
 		if active_count < _cell_pool.size():
 			cell = _cell_pool[active_count]
 		else:
-			cell = SquadGridCell.new()
+			cell = CELL_SCENE.instantiate() as SquadGridCell
 			_cell_pool.append(cell)
 			add_child(cell)
 

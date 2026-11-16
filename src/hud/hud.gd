@@ -48,11 +48,11 @@ func _process(delta: float) -> void:
 			_display_xp = maxf(_target_xp, _display_xp - step)
 
 	_xp_bar.value = _display_xp
-	_xp_text.text = "%d / %d" % [int(_display_xp), int(_display_max_xp)]
+	_xp_text.text = &"%d / %d" % [int(_display_xp), int(_display_max_xp)]
 
 
 func update_xp(current_xp: float, xp_required: float, squad_level: int) -> void:
-	_level_badge.text = "Lv. %d" % squad_level
+	_level_badge.text = &"Lv. %d" % squad_level
 
 	if squad_level > _current_level:
 		_current_level = squad_level
@@ -85,8 +85,6 @@ func dismiss_movement_hint() -> void:
 	if _movement_hint_dismissed:
 		return
 	_movement_hint_dismissed = true
-	if _movement_hint == null or not is_instance_valid(_movement_hint):
-		return
 	var tween: Tween = create_tween()
 	tween.tween_property(_movement_hint, ^"modulate:a", 0.0, HINT_FADE_DURATION)
 	tween.tween_callback(_movement_hint.hide)
@@ -99,10 +97,10 @@ func _on_input_mode_changed(mode: InputManager.InputMode) -> void:
 func _update_map_prompt(mode: InputManager.InputMode) -> void:
 	match mode:
 		InputManager.InputMode.XBOX:
-			_map_hint.text = "Press VIEW / BACK for map"
+			_map_hint.text = &"Press VIEW / BACK for map"
 		InputManager.InputMode.PLAYSTATION:
-			_map_hint.text = "Press SHARE / SELECT for map"
+			_map_hint.text = &"Press SHARE / SELECT for map"
 		InputManager.InputMode.GENERIC_GAMEPAD:
-			_map_hint.text = "Press SELECT / BACK for map"
+			_map_hint.text = &"Press SELECT / BACK for map"
 		_:
-			_map_hint.text = "Press TAB / M for map"
+			_map_hint.text = &"Press TAB / M for map"

@@ -16,7 +16,7 @@ class MeterEntry:
 	var pct: float = 0.0
 
 
-const FONT_M3X6: FontFile = preload("res://data/assets/pixel_ui_theme/m3x6.ttf")
+const ROW_SCENE: PackedScene = preload("res://hud/damage_meter/damage_meter_row.tscn")
 const COMBAT_TIMEOUT: float = 4.0
 const REFRESH_INTERVAL: float = 0.2
 const SPIKE_ID: StringName = &"spike"
@@ -34,13 +34,10 @@ var _row_pool: Array[DamageMeterRow] = []
 var _entry_pool: Array[MeterEntry] = []
 
 @onready var _title_label: Label = $Margin/VBox/Header/TitleLabel
-@onready var _columns_label: Label = $Margin/VBox/Header/ColumnsLabel
 @onready var _rows_container: VBoxContainer = $Margin/VBox/RowsContainer
 
 
 func _ready() -> void:
-	_title_label.add_theme_font_override(&"font", FONT_M3X6)
-	_columns_label.add_theme_font_override(&"font", FONT_M3X6)
 	_update_header()
 
 
@@ -156,7 +153,7 @@ func _refresh_display() -> void:
 		if i < _row_pool.size():
 			row = _row_pool[i]
 		else:
-			row = DamageMeterRow.new()
+			row = ROW_SCENE.instantiate() as DamageMeterRow
 			_row_pool.append(row)
 			_rows_container.add_child(row)
 
