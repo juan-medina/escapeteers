@@ -4,27 +4,10 @@
 class_name PanelHost
 extends CanvasLayer
 
-const CROSSFADE: float = 0.12
+const CROSSFADE_DURATION: float = 0.12
 
 var _current: UiPanel = null
 var _busy: bool = false
-
-
-func _show_first(panel: UiPanel) -> void:
-	_hide_all_panels(self)
-	_current = panel
-	panel.modulate.a = 1.0
-	panel.process_mode = Node.PROCESS_MODE_INHERIT
-	panel.visible = true
-	panel.grab_first_focus()
-
-
-func _hide_all_panels(from: Node) -> void:
-	for child: Node in from.get_children():
-		var panel: UiPanel = child as UiPanel
-		if panel != null:
-			panel.visible = false
-		_hide_all_panels(child)
 
 
 func show_panel(next: UiPanel) -> void:
@@ -46,9 +29,45 @@ func show_panel(next: UiPanel) -> void:
 	var tween: Tween = create_tween().set_parallel(true)
 	if previous != null:
 		previous.process_mode = Node.PROCESS_MODE_DISABLED
-		tween.tween_property(previous, ^"modulate:a", 0.0, CROSSFADE)
-	tween.tween_property(next, ^"modulate:a", 1.0, CROSSFADE)
+		tween.tween_property(previous, ^"modulate:a", 0.0, CROSSFADE_DURATION)
+	tween.tween_property(next, ^"modulate:a", 1.0, CROSSFADE_DURATION)
 	tween.finished.connect(_on_swap_finished.bind(previous, next))
+
+
+func hide_current() -> void:
+	if _current != null:
+		_current.visible = false
+		_current = null
+
+
+func set_host_alpha(alpha: float) -> void:
+	for control: Control in _get_control_children():
+		control.modulate.a = alpha
+
+
+func fade_host(target_alpha: float) -> Tween:
+	var tween: Tween = create_tween().set_parallel(true)
+	for control: Control in _get_control_children():
+		tween.tween_property(control, ^"modulate:a", target_alpha, CROSSFADE_DURATION)
+	return tween
+
+
+func _show_first(panel: UiPanel) -> void:
+	_hide_all_panels(self)
+	_current = panel
+	panel.modulate.a = 1.0
+	panel.process_mode = Node.PROCESS_MODE_INHERIT
+	panel.visible = true
+	panel.grab_first_focus()
+
+
+func _hide_all_panels(from: Node) -> void:
+	for child: Node in from.get_children():
+		var panel: UiPanel = child as UiPanel
+		if panel != null:
+			panel.visible = false
+		else:
+			_hide_all_panels(child)
 
 
 func _on_swap_finished(previous: UiPanel, next: UiPanel) -> void:
@@ -59,17 +78,11 @@ func _on_swap_finished(previous: UiPanel, next: UiPanel) -> void:
 	_busy = false
 
 
-func set_host_alpha(alpha: float) -> void:
+func _get_control_children() -> Array[Control]:
+	# CanvasLayer has no modulate property, so host fades iterate its top-level Control children.
+	var controls: Array[Control] = []
 	for child: Node in get_children():
 		var control: Control = child as Control
 		if control != null:
-			control.modulate.a = alpha
-
-
-func fade_host(target_alpha: float) -> Tween:
-	var tween: Tween = create_tween().set_parallel(true)
-	for child: Node in get_children():
-		var control: Control = child as Control
-		if control != null:
-			tween.tween_property(control, ^"modulate:a", target_alpha, CROSSFADE)
-	return tween
+			controls.append(control)
+	return controls

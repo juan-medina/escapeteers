@@ -29,9 +29,7 @@ func _close() -> void:
 
 
 func _on_close_finished() -> void:
-	if _current != null:
-		_current.visible = false
-		_current = null
+	hide_current()
 	visible = false
 	get_tree().paused = false
 
