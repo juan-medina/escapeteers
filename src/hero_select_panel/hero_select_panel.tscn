@@ -42,31 +42,39 @@ columns = 4
 
 [node name="Card1" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
 layout_mode = 2
+hero_id = &"armored_axeman"
 
 [node name="Card2" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
 layout_mode = 2
+hero_id = &"knight"
 
 [node name="Card3" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
 layout_mode = 2
+hero_id = &"knight_templar"
 
 [node name="Card4" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
 layout_mode = 2
+hero_id = &"swordsman"
 
 [node name="Card5" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
 layout_mode = 2
 focus_neighbor_bottom = NodePath("../../../Buttons/Back")
+hero_id = &"archer"
 
 [node name="Card6" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
 layout_mode = 2
 focus_neighbor_bottom = NodePath("../../../Buttons/Back")
+hero_id = &"wizard"
 
 [node name="Card7" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
 layout_mode = 2
 focus_neighbor_bottom = NodePath("../../../Buttons/Back")
+hero_id = &"priest"
 
 [node name="Card8" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
 layout_mode = 2
 focus_neighbor_bottom = NodePath("../../../Buttons/Back")
+hero_id = &"soldier"
 
 [node name="Buttons" type="HBoxContainer" parent="VBox"]
 layout_mode = 2

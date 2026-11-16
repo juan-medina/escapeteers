@@ -81,7 +81,9 @@ static func eval_skill(skill: Dictionary, level: int) -> Dictionary:
 		effect_amount = eval_stat(effect.get(&"amount"), level, 0.0)
 		effect_duration = eval_stat(effect.get(&"duration"), level, 0.0)
 	return {
+		&"name": _str_val(skill, &"name"),
 		&"type": skill[&"type"],
+		&"hits": int(_float_val(skill, &"hits", 1.0)),
 		&"amount": eval_stat(skill.get(&"amount"), level, 10.0),
 		&"cooldown": eval_stat(skill.get(&"cooldown"), level, 1.0),
 		&"range": eval_stat(skill.get(&"range"), level, 20.0),

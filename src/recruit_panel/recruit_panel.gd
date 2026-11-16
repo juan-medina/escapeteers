@@ -6,34 +6,39 @@ extends UiPanel
 
 signal hero_selected(hero: HeroData)
 
+const MAX_CHOICES: int = 3
+
 var _recruit_roll_count: int = 0
 var _healer_offered_early: bool = false
+var _cards_by_id: Dictionary[StringName, UnitCard] = {}
 
-@onready var _cards: Array[UnitCard] = [
-	$Center/Panel/VBox/CardsContainer/Card1,
-	$Center/Panel/VBox/CardsContainer/Card2,
-	$Center/Panel/VBox/CardsContainer/Card3,
-]
+@onready var _cards_container: VBoxContainer = $Center/Panel/VBox/CardsContainer
 
 
 func _ready() -> void:
-	first_focus = _cards[0].get_recruit_button()
+	for child: Node in _cards_container.get_children():
+		var card: UnitCard = child as UnitCard
+		_cards_by_id[card.hero_id] = card
 	super._ready()
 
 
 func setup_choices(class_levels: Dictionary[StringName, int], unit_counts: Dictionary[StringName, int], forced_hero_id: StringName = &"") -> void:
-	var choices: Array[HeroData] = _roll_choices(unit_counts, forced_hero_id)
+	for card: UnitCard in _cards_by_id.values():
+		card.visible = false
 
-	for i: int in range(_cards.size()):
-		var card: UnitCard = _cards[i]
-		if i < choices.size():
-			var data: HeroData = choices[i]
-			var lvl: int = class_levels.get(data.id, 1)
-			var count: int = unit_counts.get(data.id, 0)
-			card.visible = true
-			card.setup(data, lvl, count)
-		else:
-			card.visible = false
+	var choices: Array[HeroData] = _roll_choices(unit_counts, forced_hero_id)
+	var choice_count: int = mini(choices.size(), MAX_CHOICES)
+
+	for i: int in range(choice_count):
+		var data: HeroData = choices[i]
+		var card: UnitCard = _cards_by_id[data.id]
+		var lvl: int = class_levels.get(data.id, 1)
+		var count: int = unit_counts.get(data.id, 0)
+		_cards_container.move_child(card, i)
+		card.update_stats(lvl, count)
+		card.visible = true
+		if i == 0:
+			first_focus = card.get_recruit_button()
 
 	grab_first_focus()
 
@@ -43,7 +48,7 @@ func _roll_choices(unit_counts: Dictionary[StringName, int], forced_hero_id: Str
 		return [HeroData.get_hero(forced_hero_id)]
 
 	_recruit_roll_count += 1
-	var choices: Array[HeroData] = HeroData.get_random_choices(_cards.size())
+	var choices: Array[HeroData] = HeroData.get_random_choices(MAX_CHOICES)
 	var priest_data: HeroData = HeroData.get_hero(&"priest")
 	if choices.has(priest_data):
 		_healer_offered_early = true

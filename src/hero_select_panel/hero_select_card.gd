@@ -19,6 +19,8 @@ const ROLE_COLORS: Dictionary[HeroData.Role, Color] = {
 	HeroData.Role.HYBRID: Color(1.0, 0.80, 0.30),
 }
 
+@export var hero_id: StringName = &""
+
 var _hero_data: HeroData = null
 
 @onready var _preview_sprite: AnimatedSprite2D = $Margin/VBox/PreviewContainer/PreviewSprite
@@ -27,8 +29,8 @@ var _hero_data: HeroData = null
 @onready var _hp_value_label: Label = $Margin/VBox/HPRow/HPValue
 
 
-func setup(data: HeroData) -> void:
-	_hero_data = data
+func _ready() -> void:
+	_hero_data = HeroData.get_hero(hero_id)
 	_name_label.text = _hero_data.name
 	_name_label.add_theme_color_override(&"font_color", _hero_data.color)
 
@@ -38,7 +40,21 @@ func setup(data: HeroData) -> void:
 	_hp_value_label.text = &"%d" % int(_hero_data.get_health(1))
 
 	_preview_sprite.sprite_frames = _hero_data.sprite_frames
-	_preview_sprite.play(Character.ANIM_IDLE)
+	_sync_sprite_playback()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED:
+		_sync_sprite_playback()
+
+
+func _sync_sprite_playback() -> void:
+	if not is_node_ready():
+		return
+	if is_visible_in_tree():
+		_preview_sprite.play(Character.ANIM_IDLE)
+	else:
+		_preview_sprite.pause()
 
 
 func _on_pressed() -> void:

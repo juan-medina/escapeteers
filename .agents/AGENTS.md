@@ -5,6 +5,7 @@
 - **Read the GDD first:** `docs/gdd.md` for the project context before starting.
 - **Coding standards & philosophy:** follow `docs/coding-standards.md` — typing, formatting,
   naming, architecture, error handling. Those rules apply to all GDScript in this repo.
+- **Enforce standards during refactors:** Flag and fix `.tscn` violations (static UI built with `.new()`/`queue_free()`, or re-skinned generic cards instead of pre-instanced static cards) and strip inherited defensive `if` checks on guaranteed nodes, assets, or data so build bugs fail fast.
 - **Formatting, Linting & Type Safety:** Follow `docs/coding-standards.md` Section 3. Always run the mandatory 3-step verification on modified GDScript files by running: `powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1 <file>...` (this script handles `gdformat -l 150`, `gdlint`, and headless `godot --check-only` with isolated cache paths to avoid Windows AppData access errors). Ensure zero Godot compiler warnings remain before submitting.
 - **Autoload Architecture & Global UI:**
   - **No class_name on Singletons:** Never add `class_name` to autoload singleton scripts in this project (e.g., `alerts.gd`, `transition.gd`). Autoloads are registered as singletons in `project.godot`; adding `class_name` causes global namespace collisions.

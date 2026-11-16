@@ -47,19 +47,66 @@ layout_mode = 2
 theme_override_constants/separation = 6
 alignment = 1
 
-[node name="Card1" parent="Center/Panel/VBox/CardsContainer" instance=ExtResource("2_card")]
+[node name="ArcherCard" parent="Center/Panel/VBox/CardsContainer" instance=ExtResource("2_card")]
+visible = false
 layout_mode = 2
+hero_id = &"archer"
 button_text = &"Level Up"
 
-[node name="Card2" parent="Center/Panel/VBox/CardsContainer" instance=ExtResource("2_card")]
+[node name="ArmoredAxemanCard" parent="Center/Panel/VBox/CardsContainer" instance=ExtResource("2_card")]
+visible = false
 layout_mode = 2
+hero_id = &"armored_axeman"
 button_text = &"Level Up"
 
-[node name="Card3" parent="Center/Panel/VBox/CardsContainer" instance=ExtResource("2_card")]
+[node name="KnightCard" parent="Center/Panel/VBox/CardsContainer" instance=ExtResource("2_card")]
+visible = false
 layout_mode = 2
+hero_id = &"knight"
 button_text = &"Level Up"
 
-[connection signal="chosen" from="Center/Panel/VBox/CardsContainer/Card1" to="." method="_on_card_chosen"]
-[connection signal="chosen" from="Center/Panel/VBox/CardsContainer/Card2" to="." method="_on_card_chosen"]
-[connection signal="chosen" from="Center/Panel/VBox/CardsContainer/Card3" to="." method="_on_card_chosen"]
+[node name="KnightTemplarCard" parent="Center/Panel/VBox/CardsContainer" instance=ExtResource("2_card")]
+visible = false
+layout_mode = 2
+hero_id = &"knight_templar"
+button_text = &"Level Up"
 
+[node name="PriestCard" parent="Center/Panel/VBox/CardsContainer" instance=ExtResource("2_card")]
+visible = false
+layout_mode = 2
+hero_id = &"priest"
+button_text = &"Level Up"
+
+[node name="SoldierCard" parent="Center/Panel/VBox/CardsContainer" instance=ExtResource("2_card")]
+visible = false
+layout_mode = 2
+hero_id = &"soldier"
+button_text = &"Level Up"
+
+[node name="SwordsmanCard" parent="Center/Panel/VBox/CardsContainer" instance=ExtResource("2_card")]
+visible = false
+layout_mode = 2
+hero_id = &"swordsman"
+button_text = &"Level Up"
+
+[node name="WizardCard" parent="Center/Panel/VBox/CardsContainer" instance=ExtResource("2_card")]
+visible = false
+layout_mode = 2
+hero_id = &"wizard"
+button_text = &"Level Up"
+
+[node name="TorcheroCard" parent="Center/Panel/VBox/CardsContainer" instance=ExtResource("2_card")]
+visible = false
+layout_mode = 2
+hero_id = &"torchero"
+button_text = &"Level Up"
+
+[connection signal="chosen" from="Center/Panel/VBox/CardsContainer/ArcherCard" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="Center/Panel/VBox/CardsContainer/ArmoredAxemanCard" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="Center/Panel/VBox/CardsContainer/KnightCard" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="Center/Panel/VBox/CardsContainer/KnightTemplarCard" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="Center/Panel/VBox/CardsContainer/PriestCard" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="Center/Panel/VBox/CardsContainer/SoldierCard" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="Center/Panel/VBox/CardsContainer/SwordsmanCard" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="Center/Panel/VBox/CardsContainer/WizardCard" to="." method="_on_card_chosen"]
+[connection signal="chosen" from="Center/Panel/VBox/CardsContainer/TorcheroCard" to="." method="_on_card_chosen"]

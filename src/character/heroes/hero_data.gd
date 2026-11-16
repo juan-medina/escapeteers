@@ -31,12 +31,6 @@ static func initialize() -> void:
 		if not hero_data.is_secret:
 			_heroes_by_role.append(hero_data)
 
-	_heroes_by_role.sort_custom(_compare_role_order)
-
-
-static func get_heroes_by_role_order() -> Array[HeroData]:
-	return _heroes_by_role.duplicate()
-
 
 static func get_hero(hero_id: StringName) -> HeroData:
 	return _heroes.get(hero_id, null)
@@ -85,12 +79,6 @@ static func _from_dict(dict: Dictionary) -> HeroData:
 	h.is_secret = dict.get(&"secret", false) == true
 	h.sprite_frames = extract_sprite_frames(h.scene)
 	return h
-
-
-static func _compare_role_order(a: HeroData, b: HeroData) -> bool:
-	if a.role != b.role:
-		return a.role < b.role
-	return a.name < b.name
 
 
 static func _apply_skill(hero: Hero, prefix: String, skill: Dictionary, level: int) -> void:

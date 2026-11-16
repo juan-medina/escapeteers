@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://cdmqnyn1xgdbq"]
 
 [ext_resource type="Script" uid="uid://8l1uinn6f7g5" path="res://unit_card/unit_card.gd" id="1_card"]
+[ext_resource type="PackedScene" path="res://unit_card/skill_column.tscn" id="2_skill"]
 
 [node name="UnitCard" type="PanelContainer" unique_id=890829835]
 custom_minimum_size = Vector2(560, 76)
@@ -82,20 +83,14 @@ text = "0"
 [node name="VSeparator1" type="VSeparator" parent="Margin/HBox" unique_id=1988609005]
 layout_mode = 2
 
-[node name="Skill1Column" type="VBoxContainer" parent="Margin/HBox" unique_id=976816502]
+[node name="Skill1Column" parent="Margin/HBox" unique_id=976816502 instance=ExtResource("2_skill")]
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 2
-alignment = 1
 
 [node name="VSeparator2" type="VSeparator" parent="Margin/HBox" unique_id=1472309140]
 layout_mode = 2
 
-[node name="Skill2Column" type="VBoxContainer" parent="Margin/HBox" unique_id=1990029063]
+[node name="Skill2Column" parent="Margin/HBox" unique_id=1990029063 instance=ExtResource("2_skill")]
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 2
-alignment = 1
 
 [node name="VSeparator3" type="VSeparator" parent="Margin/HBox" unique_id=1849102834]
 layout_mode = 2

@@ -1,0 +1,103 @@
+# SPDX-FileCopyrightText: 2026 Juan Medina
+# SPDX-License-Identifier: MIT
+
+class_name SkillColumn
+extends VBoxContainer
+
+const COLOR_HP: Color = Color(0.40, 0.95, 0.45)
+const COLOR_DMG: Color = Color(1.0, 0.50, 0.35)
+const COLOR_BURN: Color = Color(1.0, 0.65, 0.20)
+const COLOR_KB: Color = Color(0.90, 0.60, 1.0)
+const COOLDOWN_DELTA_EPSILON: float = -0.01
+
+const SKILL_TYPE_NAMES: Dictionary[CharacterData.SkillType, String] = {
+	CharacterData.SkillType.MELEE: "Melee",
+	CharacterData.SkillType.RANGED: "Ranged",
+	CharacterData.SkillType.HEAL: "Heal",
+	CharacterData.SkillType.SUMMON: "Summon",
+}
+
+@onready var _header_label: Label = $HeaderLabel
+@onready var _amount_label: Label = $Grid/AmountPair/Label
+@onready var _amount_value: Label = $Grid/AmountPair/Value
+@onready var _effect_pair: HBoxContainer = $Grid/EffectPair
+@onready var _effect_label: Label = $Grid/EffectPair/Label
+@onready var _effect_value: Label = $Grid/EffectPair/Value
+@onready var _cooldown_value: Label = $Grid/CooldownPair/Value
+@onready var _range_value: Label = $Grid/RangePair/Value
+
+
+static func format_int_delta(base_text: String, current_val: float, prev_val: float, has_prev: bool, multiplier: int = 1) -> String:
+	if not has_prev:
+		return base_text
+	var delta: int = int(current_val) - int(prev_val)
+	if delta > 0:
+		return "%s (+%d)" % [base_text, delta * multiplier]
+	return base_text
+
+
+func setup_static(skill: Dictionary) -> void:
+	var info: Dictionary = CharacterData.eval_skill(skill, 1)
+	var skill_name: String = info[&"name"]
+	var skill_type: CharacterData.SkillType = info[&"type"]
+	_header_label.text = "%s [%s]" % [skill_name, SKILL_TYPE_NAMES[skill_type]]
+
+	var is_heal: bool = skill_type == CharacterData.SkillType.HEAL
+	_amount_label.text = "HEAL:" if is_heal else "DMG:"
+	_amount_value.add_theme_color_override(&"font_color", COLOR_HP if is_heal else COLOR_DMG)
+
+	var effect_type: CharacterData.EffectType = info[&"effect_type"]
+	_effect_pair.visible = effect_type != CharacterData.EffectType.NONE
+	match effect_type:
+		CharacterData.EffectType.KNOCKBACK:
+			_effect_label.text = "KB:"
+			_effect_value.add_theme_color_override(&"font_color", COLOR_KB)
+		CharacterData.EffectType.STUN:
+			_effect_label.text = "STUN:"
+			_effect_value.add_theme_color_override(&"font_color", COLOR_KB)
+		CharacterData.EffectType.BURN:
+			_effect_label.text = "BURN:"
+			_effect_value.add_theme_color_override(&"font_color", COLOR_BURN)
+
+
+func update_stats(skill: Dictionary, target_level: int, prev_level: int) -> void:
+	var has_prev: bool = prev_level > 0
+	var cur: Dictionary = CharacterData.eval_skill(skill, target_level)
+	var prev: Dictionary = CharacterData.eval_skill(skill, prev_level) if has_prev else {}
+
+	var cur_amount: float = cur[&"amount"]
+	var prev_amount: float = prev[&"amount"] if has_prev else 0.0
+	var hits: int = cur[&"hits"]
+	var base_amount: String = "%dx%d" % [int(cur_amount), hits] if hits > 1 else "%d" % int(cur_amount)
+	_amount_value.text = format_int_delta(base_amount, cur_amount, prev_amount, has_prev, hits)
+
+	if _effect_pair.visible:
+		_update_effect_value(cur, prev, has_prev)
+
+	var cur_cd: float = cur[&"cooldown"]
+	var cd_str: String = "%.1fs" % cur_cd
+	if has_prev:
+		var prev_cd: float = prev[&"cooldown"]
+		var delta_cd: float = cur_cd - prev_cd
+		if delta_cd < COOLDOWN_DELTA_EPSILON:
+			cd_str = "%.1fs (%.1fs)" % [cur_cd, delta_cd]
+	_cooldown_value.text = cd_str
+
+	var cur_range: float = cur[&"range"]
+	_range_value.text = "%d" % int(cur_range)
+
+
+func _update_effect_value(cur: Dictionary, prev: Dictionary, has_prev: bool) -> void:
+	var effect_type: CharacterData.EffectType = cur[&"effect_type"]
+	var cur_amount: float = cur[&"effect_amount"]
+	var prev_amount: float = prev[&"effect_amount"] if has_prev else 0.0
+	var cur_dur: float = cur[&"effect_duration"]
+
+	match effect_type:
+		CharacterData.EffectType.KNOCKBACK:
+			_effect_value.text = format_int_delta("%d" % int(cur_amount), cur_amount, prev_amount, has_prev)
+		CharacterData.EffectType.STUN:
+			_effect_value.text = "%.1fs" % cur_dur
+		CharacterData.EffectType.BURN:
+			var base_burn: String = "%d/s (%ds)" % [int(cur_amount), int(cur_dur)]
+			_effect_value.text = format_int_delta(base_burn, cur_amount, prev_amount, has_prev)
