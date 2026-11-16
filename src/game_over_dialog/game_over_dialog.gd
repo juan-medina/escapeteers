@@ -10,4 +10,4 @@ func _on_retry_pressed() -> void:
 
 
 func _on_back_to_menu_pressed() -> void:
-	await Transition.go_to_menu(Transition.MenuTarget.MAIN_MENU)
+	await Transition.go_to_menu()

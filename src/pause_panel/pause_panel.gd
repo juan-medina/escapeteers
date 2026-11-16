@@ -13,7 +13,7 @@ func _on_resume_pressed() -> void:
 
 
 func _on_back_to_menu_pressed() -> void:
-	await Transition.go_to_menu(Transition.MenuTarget.MAIN_MENU)
+	await Transition.go_to_menu()
 
 
 func _on_settings_pressed() -> void:
