@@ -14,7 +14,7 @@ var check_line_of_sight: bool = false
 
 
 static func is_valid_target(target: Character) -> bool:
-	return target != null and is_instance_valid(target) and not target.is_dead and target.health > 0.0
+	return target != null and not target.is_dead and target.health > 0.0
 
 
 static func face_target(user: Character, target: Character, threshold: float = 1.0) -> void:

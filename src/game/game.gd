@@ -460,6 +460,11 @@ func _on_enemy_minion_summon_requested(pos: Vector2, room: Rect2i, enemy_level: 
 func _on_enemy_died(enemy: Enemy) -> void:
 	Audio.play_sfx(Audio.Sfx.ENEMY_DEATH)
 	_spike_hit_cooldowns.erase(enemy)
+	for member: Hero in _squad:
+		if member.active_target == enemy:
+			member.active_target = null
+	for child: Node in _projectiles.get_children():
+		(child as Projectile).clear_character_references(enemy)
 	var room: Rect2i = enemy.home_room
 	if _room_remaining_enemies.has(room):
 		_room_remaining_enemies[room] = maxi(0, _room_remaining_enemies[room] - 1)
@@ -541,6 +546,13 @@ func _on_hero_died(hero: Hero) -> void:
 	Audio.play_sfx(Audio.Sfx.HERO_DOWN)
 	_spike_hit_cooldowns.erase(hero)
 	_squad.erase(hero)
+	for member: Hero in _squad:
+		if member.active_target == hero:
+			member.active_target = null
+	for enemy: Enemy in _enemies:
+		enemy.clear_hero_references(hero)
+	for child: Node in _projectiles.get_children():
+		(child as Projectile).clear_character_references(hero)
 	_rebalance_escort_slots()
 	_sync_hud_squad()
 
@@ -548,6 +560,14 @@ func _on_hero_died(hero: Hero) -> void:
 func _on_player_died() -> void:
 	Audio.play_sfx(Audio.Sfx.HERO_DOWN)
 	Audio.stop_music()
+	_spike_hit_cooldowns.erase(_character)
+	for member: Hero in _squad:
+		if member.active_target == _character:
+			member.active_target = null
+	for enemy: Enemy in _enemies:
+		enemy.clear_hero_references(_character)
+	for child: Node in _projectiles.get_children():
+		(child as Projectile).clear_character_references(_character)
 	_sync_hud_squad()
 
 
@@ -560,11 +580,15 @@ func _on_player_death_completed() -> void:
 
 
 func _check_recruitment() -> void:
+	if _character.is_dead:
+		return
 	var i: int = _unrecruited_characters.size() - 1
 
 	while i >= 0:
 		var candidate: Unknown = _unrecruited_characters[i]
 		for member: Hero in _squad:
+			if member.is_dead:
+				continue
 			if candidate.is_touching(member):
 				_unrecruited_characters.remove_at(i)
 				var recruit_pos: Vector2 = candidate.position
@@ -631,7 +655,7 @@ func _add_squad_xp(amount: float) -> void:
 
 	_hud.update_xp(_current_xp, _xp_required, _squad_level)
 
-	if _pending_level_ups > 0 and not get_tree().paused:
+	if _pending_level_ups > 0 and not get_tree().paused and not _character.is_dead:
 		_open_next_level_up()
 
 

@@ -102,6 +102,8 @@ func sync_screen_state(camera_pos: Vector2) -> void:
 	var diff: Vector2 = (global_position - camera_pos).abs()
 	is_on_screen = diff.x <= 384.0 and diff.y <= 244.0
 	_status_vfx.set_on_screen(is_on_screen)
+	if is_dead:
+		return
 	if not is_on_screen and current_state == State.PATROL and not is_burning():
 		_set_sleeping(true)
 	else:
@@ -127,7 +129,7 @@ func _set_sleeping(sleeping: bool) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if is_dead or _is_summoning_in:
+	if is_dead:
 		return
 
 	_update_combat_cooldowns(delta)
@@ -160,7 +162,7 @@ func _physics_process(delta: float) -> void:
 				var src: Hero = _burn_source
 				_status_vfx.trigger_burn_pulse()
 				take_damage(tick_dmg, false)
-				if src != null and is_instance_valid(src):
+				if src != null:
 					src.enemy_hit.emit(self, tick_dmg, false)
 				if is_dead:
 					return
@@ -173,6 +175,9 @@ func _physics_process(delta: float) -> void:
 
 	if status_changed:
 		_update_status_visuals()
+
+	if _is_summoning_in:
+		return
 
 	if is_stunned():
 		velocity = _knockback_velocity
@@ -190,6 +195,8 @@ func _physics_process(delta: float) -> void:
 
 func _on_screen_visibility_changed() -> void:
 	_status_vfx.set_on_screen(is_on_screen)
+	if is_dead:
+		return
 	if is_on_screen:
 		_set_sleeping(false)
 	elif current_state == State.PATROL and not is_burning():
@@ -241,16 +248,29 @@ func set_target_candidate(hero_candidate: Hero) -> void:
 
 	_set_sleeping(false)
 
-	if target == null:
+	if not CombatAction.is_valid_target(target):
 		target = hero_candidate
 		current_state = State.CHASE
 		_navigator.reset()
-	elif target != hero_candidate and is_instance_valid(target):
+	elif target != hero_candidate:
 		var candidate_eff_sq: float = get_effective_target_dist_sq(hero_candidate)
 		var current_eff_sq: float = get_effective_target_dist_sq(target)
 		if candidate_eff_sq < current_eff_sq * 0.85:
 			target = hero_candidate
 			_navigator.reset()
+
+
+func clear_hero_references(hero: Hero) -> void:
+	if target == hero:
+		target = null
+	if attack_target == hero:
+		attack_target = null
+	if _burn_source == hero:
+		_burn_source = null
+	if active_telegraph is TelegraphLine:
+		var line: TelegraphLine = active_telegraph as TelegraphLine
+		if line.target == hero:
+			line.target = null
 
 
 func apply_knockback(force: Vector2) -> void:
@@ -376,6 +396,7 @@ func _process_patrol(delta: float) -> void:
 func _process_chase(delta: float) -> void:
 	if not CombatAction.is_valid_target(target):
 		target = null
+		attack_target = null
 		current_state = State.PATROL
 		_pick_new_patrol_destination()
 		if not is_on_screen:
@@ -386,6 +407,7 @@ func _process_chase(delta: float) -> void:
 
 	if dist_to_target > detection_range * 1.8:
 		target = null
+		attack_target = null
 		current_state = State.PATROL
 		_pick_new_patrol_destination()
 		if not is_on_screen:
@@ -395,7 +417,9 @@ func _process_chase(delta: float) -> void:
 	if _try_kite_away(dist_to_target, delta):
 		return
 
-	var look_target: Hero = attack_target if (combat_state == CombatState.ATTACKING and CombatAction.is_valid_target(attack_target)) else target
+	if not CombatAction.is_valid_target(attack_target):
+		attack_target = null
+	var look_target: Hero = attack_target if (combat_state == CombatState.ATTACKING and attack_target != null) else target
 	CombatAction.face_target(self, look_target, 2.0)
 
 	if combat_state == CombatState.ATTACKING:
@@ -590,12 +614,16 @@ func deactivate_for_pool() -> void:
 	target = null
 	attack_target = null
 	current_action = null
+	_burn_source = null
+	_is_summoning_in = false
 	_knockback_velocity = Vector2.ZERO
 	_set_sleeping(true)
 
 
 func reset_for_pool() -> void:
 	scale = Vector2.ONE
+	if is_minion:
+		level = -1
 	is_minion = false
 	health = max_health
 	is_dead = false
@@ -640,6 +668,10 @@ func _cancel_telegraph() -> void:
 
 func _on_death() -> void:
 	_cancel_telegraph()
+	_is_summoning_in = false
+	target = null
+	attack_target = null
+	current_action = null
 	set_physics_process(false)
 	remove_from_group(_GROUP_ENEMIES)
 	_stun_timer = 0.0
@@ -659,16 +691,21 @@ func _on_death() -> void:
 
 
 func _on_animation_finished() -> void:
+	if is_dead:
+		_is_summoning_in = false
+		super._on_animation_finished()
+		return
 	if _is_summoning_in:
 		_is_summoning_in = false
 		combat_state = CombatState.READY
-		if not is_dead:
-			play(ANIM_IDLE)
+		play(ANIM_IDLE)
 		return
 	super._on_animation_finished()
-	if is_dead:
-		return
-	var hit_target: Hero = attack_target if CombatAction.is_valid_target(attack_target) else target
+	var hit_target: Hero = null
+	if CombatAction.is_valid_target(attack_target):
+		hit_target = attack_target
+	elif CombatAction.is_valid_target(target):
+		hit_target = target
 	attack_target = null
 	if current_action is MeleeAction and hit_target != null:
 		var melee: MeleeAction = current_action as MeleeAction

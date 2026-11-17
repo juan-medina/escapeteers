@@ -13,6 +13,7 @@
 - [color=#ffffff][b]Smoother Dungeon Performance:[/b][/color] Reduced frame hitches during heavy combat, dungeon exploration, and menu transitions.
 
 [color=#e0e0e0][b]Fixed[/b][/color]
+- [color=#ffffff][b]Undead Cleanup & Combat Stability:[/b][/color] Defeated skeletons now always clear from the floor and fallen companions no longer cause combat crashes.
 - [color=#ffffff][b]Clean Horde Battle Audio:[/b][/color] Combat sound effects now prioritize important alerts and stay crisp without distortion during large dungeon battles.
 
 [color=#ffffff][b]v0.4.0 - 2026-11-12[/b][/color]

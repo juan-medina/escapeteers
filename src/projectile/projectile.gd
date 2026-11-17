@@ -95,8 +95,16 @@ func reset_for_pool() -> void:
 
 func deactivate_for_pool() -> void:
 	_is_dying = true
+	source_hero = null
+	_hit_targets.clear()
 	_disable_collisions()
 	_animated_sprite.stop()
+
+
+func clear_character_references(character: Character) -> void:
+	if source_hero == character:
+		source_hero = null
+	_hit_targets.erase(character)
 
 
 func _disable_collisions() -> void:
@@ -133,7 +141,7 @@ func _apply_character_hit(target: Node2D) -> void:
 	if knockback > 0.0 and enemy != null:
 		enemy.apply_knockback(direction * knockback)
 
-	if source_hero != null and is_instance_valid(source_hero) and enemy != null:
+	if source_hero != null and enemy != null:
 		source_hero.enemy_hit.emit(enemy, damage, false)
 
 
@@ -150,7 +158,7 @@ func _on_area_entered(area: Area2D) -> void:
 	if area is Hurtbox:
 		var hurtbox: Hurtbox = area as Hurtbox
 		var target: Character = hurtbox.owner_character
-		if target != null and is_instance_valid(target) and not target.is_dead:
+		if target != null and not target.is_dead:
 			if _hit_targets.has(target):
 				return
 			_hit_targets.append(target)

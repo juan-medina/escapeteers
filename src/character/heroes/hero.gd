@@ -336,7 +336,7 @@ func _check_auto_attack() -> void:
 
 
 func _is_valid_enemy_target(enemy: Enemy) -> bool:
-	return CombatAction.is_valid_target(enemy) and enemy.visible and not enemy.is_queued_for_deletion()
+	return CombatAction.is_valid_target(enemy) and enemy.visible
 
 
 func _is_preferred_target(_enemy: Enemy) -> bool:
@@ -389,7 +389,7 @@ func _find_injured_ally(max_health_ratio: float = HEAL_TRIAGE_THRESHOLD) -> Hero
 
 	for node: Node in get_tree().get_nodes_in_group(_GROUP_HEROES):
 		var ally: Hero = node as Hero
-		if not CombatAction.is_valid_target(ally) or ally.is_queued_for_deletion():
+		if not CombatAction.is_valid_target(ally):
 			continue
 		if not ally.is_player and ally.squad_member == null:
 			continue
@@ -414,6 +414,9 @@ func _find_injured_ally(max_health_ratio: float = HEAL_TRIAGE_THRESHOLD) -> Hero
 
 func _on_frame_changed() -> void:
 	if is_dead or combat_state != CombatState.ATTACKING:
+		return
+	if not CombatAction.is_valid_target(active_target):
+		active_target = null
 		return
 
 	if current_action is MeleeAction and active_target != null:
@@ -476,6 +479,9 @@ func _on_frame_changed() -> void:
 
 
 func _on_death() -> void:
+	active_target = null
+	current_action = null
+	remove_from_group(_GROUP_HEROES)
 	super._on_death()
 	_hero_vfx.trigger_death()
 	_player_light.enabled = false
@@ -489,6 +495,8 @@ func _on_animation_finished() -> void:
 	super._on_animation_finished()
 	if is_dead:
 		return
+	if not CombatAction.is_valid_target(active_target):
+		active_target = null
 	if not _hit_applied_this_attack and current_action is RangedAction and active_target != null:
 		var ranged: RangedAction = current_action as RangedAction
 		var proj: Projectile = ranged.spawn_projectile(self, active_target)
@@ -501,6 +509,8 @@ func _on_animation_finished() -> void:
 		if effect != null:
 			spawn_projectile(effect)
 		ally_healed.emit(active_target, heal_act.heal_amount)
+	if current_action is HealAction:
+		active_target = null
 	_hit_applied_this_attack = false
 	_hits_applied_frames.clear()
 
@@ -580,7 +590,7 @@ func _update_active_mode() -> void:
 		return
 	_hero_vfx.set_on_screen(is_visible_on_screen())
 	var is_recruited: bool = is_player or squad_member != null
-	_health_bar.visible = is_recruited
+	_health_bar.visible = is_recruited and not is_dead
 	_health_bar.set_level(level if (is_recruited and not is_dead) else 0)
 	if is_recruited:
 		set_process(true)

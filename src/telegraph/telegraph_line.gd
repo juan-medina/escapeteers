@@ -31,6 +31,11 @@ func update_telegraph(delta: float) -> void:
 	super.update_telegraph(delta)
 
 
+func cancel() -> void:
+	target = null
+	super.cancel()
+
+
 func _draw() -> void:
 	if not is_active:
 		return
@@ -50,7 +55,7 @@ func _draw() -> void:
 
 
 func _update_aim() -> void:
-	if target != null and is_instance_valid(target):
+	if target != null:
 		if horizontal_only:
 			var dir_x: float = -1.0 if target.global_position.x < global_position.x else 1.0
 			locked_direction = Vector2(dir_x, 0.0)
