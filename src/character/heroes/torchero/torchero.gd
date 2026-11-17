@@ -31,39 +31,5 @@ func _on_death() -> void:
 	_torch_light.enabled = false
 
 
-func _find_closest_enemy() -> Enemy:
-	var closest_unburned: Enemy = null
-	var min_dist_unburned_sq: float = INF
-	var closest_burned: Enemy = null
-	var min_dist_burned_sq: float = INF
-	var max_detection: float = get_detection_range()
-	var max_detection_sq: float = max_detection * max_detection
-	var leash: float = get_current_leash()
-	var leash_sq: float = leash * leash
-	var anchor_pos: Vector2 = get_anchor_position()
-	var enforce_leash: bool = not is_player and not can_ranged and leash > 0.0
-
-	for node: Node in get_tree().get_nodes_in_group(_GROUP_ENEMIES):
-		var enemy: Enemy = node as Enemy
-		if not _is_valid_enemy_target(enemy):
-			continue
-
-		var dist_to_self_sq: float = global_position.distance_squared_to(enemy.global_position)
-		if enforce_leash:
-			if anchor_pos.distance_squared_to(enemy.global_position) > leash_sq:
-				continue
-		elif dist_to_self_sq > max_detection_sq:
-			continue
-
-		if enemy.is_burning():
-			if dist_to_self_sq < min_dist_burned_sq:
-				min_dist_burned_sq = dist_to_self_sq
-				closest_burned = enemy
-		else:
-			if dist_to_self_sq < min_dist_unburned_sq:
-				min_dist_unburned_sq = dist_to_self_sq
-				closest_unburned = enemy
-
-	if closest_unburned != null:
-		return closest_unburned
-	return closest_burned
+func _is_preferred_target(enemy: Enemy) -> bool:
+	return not enemy.is_burning()

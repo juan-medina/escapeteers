@@ -23,6 +23,10 @@ const SLOW_MODULATE: Color = Color(0.45, 0.75, 1.35, 1.0)
 const MINION_MODULATE: Color = Color(0.85, 0.9, 1.1, 0.85)
 const BURN_TICK_INTERVAL: float = 0.5
 const ENEMY_HURTBOX_RADIUS: float = 10.0
+const LEVEL_COLOR: Color = Color(1.0, 0.45, 0.35, 1.0)
+const TELEGRAPH_COLOR: Color = Color(1.0, 1.0, 1.0, 0.35)
+const TELEGRAPH_LOCKED_COLOR: Color = Color(1.0, 1.0, 1.0, 0.85)
+const TELEGRAPH_LOCK_TIME: float = 0.25
 
 @export var level: int = 1
 
@@ -32,24 +36,25 @@ var attack_cooldown: float = 1.2
 var damage: float = 10.0
 var xp_value: float = 10.0
 var melee_damage: float = 8.0
+var melee_vertical_tolerance: float = 12.0
 var can_heavy_melee: bool = false
 var melee2_damage: float = 20.0
 var melee2_cooldown: float = 3.5
 var melee2_chance: float = 0.35
+var ranged_projectile_scene: PackedScene = null
+var requires_horizontal_alignment: bool = false
+var horizontal_alignment_tolerance: float = 16.0
 var can_summon: bool = false
 var summon_range: float = 180.0
 var summon_count: int = 2
 var kite_distance: float = 0.0
 var is_minion: bool = false
 
-var combat_actions: Array[CombatAction] = []
-var current_action: CombatAction = null
 var current_state: State = State.PATROL
 var map: Map = null
 var target: Hero = null
 var attack_target: Hero = null
 var home_room: Rect2i = Rect2i()
-var is_on_screen: bool = false
 var active_telegraph: Telegraph = null
 
 var _navigator: SquadNavigator = SquadNavigator.new()
@@ -57,8 +62,6 @@ var _patrol_destination: Vector2 = Vector2.ZERO
 var _patrol_timer: float = 0.0
 var _idle_wait_timer: float = 0.0
 var _knockback_velocity: Vector2 = Vector2.ZERO
-var _notifier: VisibleOnScreenNotifier2D = null
-var _status_vfx: StatusVfx = null
 var _slow_timer: float = 0.0
 var _slow_multiplier: float = 1.0
 var _stun_timer: float = 0.0
@@ -68,38 +71,28 @@ var _burn_tick_timer: float = 0.0
 var _burn_source: Hero = null
 var _is_summoning_in: bool = false
 
+@onready var _status_vfx: StatusVfx = $StatusVfx
+
 
 func _ready() -> void:
+	has_footsteps = false
 	if enemy_id != &"":
 		var data: EnemyData = EnemyData.get_enemy(enemy_id)
 		if data != null:
 			data.apply_to_enemy(self, level)
 	super._ready()
-	if _health_bar != null:
-		_health_bar.set_fill_color(HealthBar.DEFAULT_ENEMY_COLOR)
-		_health_bar.set_level_color(Color(1.0, 0.45, 0.35, 1.0))
-		_health_bar.set_level(level)
+	_health_bar.set_fill_color(HealthBar.DEFAULT_ENEMY_COLOR)
+	_health_bar.set_level_color(LEVEL_COLOR)
+	_health_bar.set_level(level)
 	add_to_group(_GROUP_ENEMIES)
 	collision_layer = 8
 	collision_mask = 1 | 2 | 4 | 8
 
-	hurtbox = Hurtbox.new(self, ENEMY_HURTBOX_RADIUS, Vector2(0.0, 0.0))
-	hurtbox.collision_layer = 128
-	hurtbox.collision_mask = 0
-	add_child(hurtbox)
+	hurtbox.setup(self, ENEMY_HURTBOX_RADIUS, Vector2.ZERO, 128)
+	_status_vfx.head_y = _health_bar.position.y + 3.0
+	_status_vfx.set_on_screen(is_on_screen)
 
-	_status_vfx = StatusVfx.new()
-	if _health_bar != null:
-		_status_vfx.head_y = _health_bar.position.y + 3.0
-	add_child(_status_vfx)
-
-	_notifier = VisibleOnScreenNotifier2D.new()
-	_notifier.rect = Rect2(-64.0, -64.0, 128.0, 128.0)
-	_notifier.screen_entered.connect(_on_screen_entered)
-	_notifier.screen_exited.connect(_on_screen_exited)
-	add_child(_notifier)
 	set_process(false)
-	is_on_screen = _notifier.is_on_screen()
 	if not is_on_screen:
 		_set_sleeping(true)
 	_setup_actions()
@@ -108,6 +101,7 @@ func _ready() -> void:
 func sync_screen_state(camera_pos: Vector2) -> void:
 	var diff: Vector2 = (global_position - camera_pos).abs()
 	is_on_screen = diff.x <= 384.0 and diff.y <= 244.0
+	_status_vfx.set_on_screen(is_on_screen)
 	if not is_on_screen and current_state == State.PATROL and not is_burning():
 		_set_sleeping(true)
 	else:
@@ -120,14 +114,14 @@ func _set_sleeping(sleeping: bool) -> void:
 	if sleeping:
 		_cancel_telegraph()
 		_animated_sprite.pause()
-		if _status_vfx != null:
-			_status_vfx.set_process(false)
+		_status_vfx.set_on_screen(false)
+		_status_vfx.set_process(false)
 		disable_collisions()
 	else:
 		if not is_stunned() and not _animated_sprite.is_playing():
 			_animated_sprite.play()
-		if _status_vfx != null:
-			_status_vfx.set_statuses(is_stunned(), is_burning(), is_slowed())
+		_status_vfx.set_on_screen(is_on_screen)
+		_status_vfx.set_statuses(is_stunned(), is_burning(), is_slowed())
 		if not is_dead:
 			enable_collisions()
 
@@ -136,17 +130,7 @@ func _physics_process(delta: float) -> void:
 	if is_dead or _is_summoning_in:
 		return
 
-	for action: CombatAction in combat_actions:
-		action.update(delta)
-
-	if combat_state == CombatState.COOLDOWN:
-		var any_ready: bool = false
-		for action: CombatAction in combat_actions:
-			if action.is_ready():
-				any_ready = true
-				break
-		if any_ready:
-			combat_state = CombatState.READY
+	_update_combat_cooldowns(delta)
 
 	if _knockback_velocity.length_squared() > 1.0:
 		_knockback_velocity = _knockback_velocity.move_toward(Vector2.ZERO, KNOCKBACK_DECAY * delta)
@@ -174,8 +158,7 @@ func _physics_process(delta: float) -> void:
 			var tick_dmg: float = _burn_dps * BURN_TICK_INTERVAL
 			if tick_dmg > 0.0 and not is_dead:
 				var src: Hero = _burn_source
-				if _status_vfx != null:
-					_status_vfx.trigger_burn_pulse()
+				_status_vfx.trigger_burn_pulse()
 				take_damage(tick_dmg, false)
 				if src != null and is_instance_valid(src):
 					src.enemy_hit.emit(self, tick_dmg, false)
@@ -205,19 +188,12 @@ func _physics_process(delta: float) -> void:
 			_process_chase(delta)
 
 
-func _on_screen_entered() -> void:
-	is_on_screen = true
-	_set_sleeping(false)
-
-
-func _on_screen_exited() -> void:
-	is_on_screen = false
-	if current_state == State.PATROL and not is_burning():
+func _on_screen_visibility_changed() -> void:
+	_status_vfx.set_on_screen(is_on_screen)
+	if is_on_screen:
+		_set_sleeping(false)
+	elif current_state == State.PATROL and not is_burning():
 		_set_sleeping(true)
-
-
-func is_visible_on_screen() -> bool:
-	return is_on_screen
 
 
 func play_summon_intro() -> void:
@@ -227,9 +203,8 @@ func play_summon_intro() -> void:
 	_is_summoning_in = true
 	_set_sleeping(false)
 	scale = Vector2(0.85, 0.85)
-	_base_modulate = Color(0.85, 0.9, 1.1, 0.85)
-	if _animated_sprite != null:
-		_animated_sprite.modulate = _base_modulate
+	_base_modulate = MINION_MODULATE
+	_animated_sprite.modulate = _base_modulate
 	# Minions are fragile fodder: lower health and damage, disable heavy attacks
 	max_health = maxf(15.0, roundf(max_health * 0.4))
 	health = max_health
@@ -245,8 +220,7 @@ func play_summon_intro() -> void:
 		elif action is RangedAction:
 			var ranged: RangedAction = action as RangedAction
 			ranged.damage = damage
-	if _health_bar != null:
-		_health_bar.update_health(health, max_health)
+	_health_bar.update_health(health, max_health)
 	play(ANIM_SUMMON)
 
 
@@ -255,7 +229,7 @@ func get_effective_target_dist_sq(hero_candidate: Hero) -> float:
 
 
 func set_target_candidate(hero_candidate: Hero) -> void:
-	if hero_candidate == null or not is_instance_valid(hero_candidate) or hero_candidate.is_dead:
+	if not CombatAction.is_valid_target(hero_candidate):
 		return
 
 	var dist_sq: float = global_position.distance_squared_to(hero_candidate.global_position)
@@ -284,8 +258,7 @@ func apply_knockback(force: Vector2) -> void:
 		return
 	_set_sleeping(false)
 	_knockback_velocity = force
-	if _status_vfx != null:
-		_status_vfx.trigger_knockback(force)
+	_status_vfx.trigger_knockback(force)
 
 
 func apply_slow(factor: float, duration: float) -> void:
@@ -339,12 +312,11 @@ func is_stunned() -> bool:
 func is_engaged() -> bool:
 	if is_dead or not visible:
 		return false
-	return current_state == State.CHASE or current_state == State.ATTACK or (target != null and is_instance_valid(target) and not target.is_dead)
+	return current_state == State.CHASE or current_state == State.ATTACK or CombatAction.is_valid_target(target)
 
 
 func _update_status_visuals() -> void:
-	if _status_vfx != null:
-		_status_vfx.set_statuses(is_stunned(), is_burning(), is_slowed())
+	_status_vfx.set_statuses(is_stunned(), is_burning(), is_slowed())
 	if is_stunned():
 		_animated_sprite.pause()
 	elif not _animated_sprite.is_playing() and not is_dead:
@@ -366,13 +338,6 @@ func take_damage(amount: float, flash_hurt: bool = true) -> void:
 		return
 	_set_sleeping(false)
 	super.take_damage(amount, flash_hurt)
-
-
-func apply_melee_damage(hit_hero: Hero, damage_amount: float) -> void:
-	if hit_hero != null and is_instance_valid(hit_hero):
-		hit_hero.take_damage(damage_amount)
-		attacked.emit(hit_hero, damage_amount)
-		Audio.play_enemy_attack(false)
 
 
 func _process_patrol(delta: float) -> void:
@@ -409,7 +374,7 @@ func _process_patrol(delta: float) -> void:
 
 
 func _process_chase(delta: float) -> void:
-	if target == null or not is_instance_valid(target) or target.health <= 0.0 or target.is_dead:
+	if not CombatAction.is_valid_target(target):
 		target = null
 		current_state = State.PATROL
 		_pick_new_patrol_destination()
@@ -430,12 +395,8 @@ func _process_chase(delta: float) -> void:
 	if _try_kite_away(dist_to_target, delta):
 		return
 
-	var look_target: Hero = (
-		attack_target if (combat_state == CombatState.ATTACKING and attack_target != null and is_instance_valid(attack_target)) else target
-	)
-	var diff_x: float = look_target.global_position.x - global_position.x
-	if absf(diff_x) > 2.0:
-		flip_h = diff_x < 0.0
+	var look_target: Hero = attack_target if (combat_state == CombatState.ATTACKING and CombatAction.is_valid_target(attack_target)) else target
+	CombatAction.face_target(self, look_target, 2.0)
 
 	if combat_state == CombatState.ATTACKING:
 		velocity = _knockback_velocity
@@ -462,9 +423,7 @@ func _try_kite_away(dist_to_target: float, delta: float) -> bool:
 	var too_close_to_shoot: bool = can_ranged and not can_melee and dist_to_target < ranged_min_range
 	if kite_distance <= 0.0 or (combat_state != CombatState.COOLDOWN and not too_close_to_shoot) or dist_to_target >= kite_distance:
 		return false
-	var diff_x: float = target.global_position.x - global_position.x
-	if absf(diff_x) > 2.0:
-		flip_h = diff_x < 0.0
+	CombatAction.face_target(self, target, 2.0)
 	var away_dir: Vector2 = (global_position - target.global_position).normalized()
 	if away_dir.length_squared() < 0.01:
 		away_dir = Vector2.LEFT if not flip_h else Vector2.RIGHT
@@ -475,7 +434,7 @@ func _try_kite_away(dist_to_target: float, delta: float) -> bool:
 
 
 func _can_reach_target() -> bool:
-	if target == null or not is_instance_valid(target) or target.health <= 0.0 or target.is_dead:
+	if not CombatAction.is_valid_target(target):
 		return false
 	for action: CombatAction in combat_actions:
 		if action.can_reach(self, target):
@@ -484,7 +443,7 @@ func _can_reach_target() -> bool:
 
 
 func _check_combat_actions() -> void:
-	if combat_state != CombatState.READY or target == null or not is_instance_valid(target) or target.health <= 0.0:
+	if combat_state != CombatState.READY or not CombatAction.is_valid_target(target):
 		return
 
 	for action: CombatAction in combat_actions:
@@ -512,7 +471,7 @@ func _find_blocking_hero(melee: MeleeAction) -> Hero:
 	var min_dist_sq: float = INF
 	for node: Node in get_tree().get_nodes_in_group(_GROUP_HEROES):
 		var hero: Hero = node as Hero
-		if hero == null or not is_instance_valid(hero) or hero.is_dead or hero.health <= 0.0:
+		if not CombatAction.is_valid_target(hero):
 			continue
 		if not hero.is_player and hero.squad_member == null:
 			continue
@@ -562,27 +521,30 @@ func _pick_new_patrol_destination() -> void:
 func set_level(new_level: int) -> void:
 	if level == new_level and not combat_actions.is_empty():
 		health = max_health
-		if _health_bar != null:
-			_health_bar.set_level(level)
-			_health_bar.update_health(health, max_health)
+		_health_bar.set_level(level)
+		_health_bar.update_health(health, max_health)
 		return
 	level = new_level
 	if enemy_id != &"":
 		var data: EnemyData = EnemyData.get_enemy(enemy_id)
-		if data != null:
-			data.apply_to_enemy(self, level)
+		data.apply_to_enemy(self, level)
 	if combat_actions.is_empty():
 		_setup_actions()
 	else:
 		_refresh_actions()
-	if _health_bar != null:
-		_health_bar.set_level_color(Color(1.0, 0.45, 0.35, 1.0))
-		_health_bar.set_level(level)
-		_health_bar.update_health(health, max_health)
+	_health_bar.set_level_color(LEVEL_COLOR)
+	_health_bar.set_level(level)
+	_health_bar.update_health(health, max_health)
 
 
 func _setup_actions() -> void:
-	pass
+	if can_melee:
+		combat_actions.append(MeleeAction.new())
+	if can_ranged:
+		combat_actions.append(RangedAction.new())
+	if can_summon:
+		combat_actions.append(SummonAction.new())
+	_refresh_actions()
 
 
 func _refresh_actions() -> void:
@@ -590,23 +552,36 @@ func _refresh_actions() -> void:
 		if action is MeleeAction:
 			var melee: MeleeAction = action as MeleeAction
 			melee.range_distance = melee_range
+			melee.vertical_tolerance = melee_vertical_tolerance
 			melee.damage = melee_damage
 			melee.cooldown = attack_cooldown
 			melee.can_heavy = can_heavy_melee
 			melee.heavy_damage = melee2_damage
 			melee.heavy_cooldown = melee2_cooldown
 			melee.heavy_chance = melee2_chance
+			melee.leash_distance = 0.0
 		elif action is RangedAction:
 			var ranged: RangedAction = action as RangedAction
+			ranged.projectile_scene = ranged_projectile_scene
 			ranged.range_distance = ranged_range
 			ranged.min_range_distance = ranged_min_range
 			ranged.damage = damage
 			ranged.cooldown = attack_cooldown
+			ranged.requires_horizontal_alignment = requires_horizontal_alignment
+			ranged.horizontal_tolerance = horizontal_alignment_tolerance
+			ranged.check_line_of_sight = true
+			ranged.leash_distance = 0.0
+			ranged.show_telegraph = true
+			ranged.telegraph_color = TELEGRAPH_COLOR
+			ranged.telegraph_locked_color = TELEGRAPH_LOCKED_COLOR
+			ranged.telegraph_lock_time = TELEGRAPH_LOCK_TIME
 		elif action is SummonAction:
 			var summon: SummonAction = action as SummonAction
 			summon.range_distance = summon_range
 			summon.cooldown = attack_cooldown
 			summon.summon_count = summon_count
+			summon.check_line_of_sight = true
+			summon.leash_distance = 0.0
 
 
 func deactivate_for_pool() -> void:
@@ -644,14 +619,11 @@ func reset_for_pool() -> void:
 	_knockback_velocity = Vector2.ZERO
 	_navigator.reset()
 	_base_modulate = Color.WHITE
-	if _status_vfx != null:
-		_status_vfx.clear()
-	if _animated_sprite != null:
-		_animated_sprite.modulate = Color.WHITE
-		_animated_sprite.play(ANIM_IDLE)
-	if _health_bar != null:
-		_health_bar.visible = true
-		_health_bar.update_health(health, max_health)
+	_status_vfx.clear()
+	_animated_sprite.modulate = Color.WHITE
+	_animated_sprite.play(ANIM_IDLE)
+	_health_bar.visible = true
+	_health_bar.update_health(health, max_health)
 	visible = true
 	if not is_in_group(_GROUP_ENEMIES):
 		add_to_group(_GROUP_ENEMIES)
@@ -677,8 +649,7 @@ func _on_death() -> void:
 	_burn_dps = 0.0
 	_burn_tick_timer = 0.0
 	_burn_source = null
-	if _status_vfx != null:
-		_status_vfx.clear()
+	_status_vfx.clear()
 	_base_modulate = Color.WHITE
 	_animated_sprite.modulate = Color.WHITE
 	super._on_death()
@@ -697,7 +668,7 @@ func _on_animation_finished() -> void:
 	super._on_animation_finished()
 	if is_dead:
 		return
-	var hit_target: Hero = attack_target if (attack_target != null and is_instance_valid(attack_target) and not attack_target.is_dead) else target
+	var hit_target: Hero = attack_target if CombatAction.is_valid_target(attack_target) else target
 	attack_target = null
 	if current_action is MeleeAction and hit_target != null:
 		var melee: MeleeAction = current_action as MeleeAction

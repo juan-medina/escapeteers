@@ -4,6 +4,8 @@
 class_name HeroVfx
 extends Node2D
 
+const REDRAW_INTERVAL: float = 1.0 / 12.0
+
 const SPRINT_PUFF_COUNT: int = 3
 const SPRINT_CYCLE_SPEED: float = 3.2
 const SPRINT_PHASE_OFFSETS: Array[float] = [0.0, 0.33, 0.66]
@@ -39,8 +41,10 @@ var head_y: float = -10.0
 var feet_y: float = 6.0
 
 var _is_sprinting: bool = false
+var _is_on_screen: bool = true
 var _sprint_dir: Vector2 = Vector2.RIGHT
 var _time: float = 0.0
+var _redraw_timer: float = 0.0
 var _strike_timer: float = 0.0
 var _strike_dir: Vector2 = Vector2.RIGHT
 var _strike_is_heavy: bool = false
@@ -56,6 +60,13 @@ func _ready() -> void:
 	set_process(false)
 	_arc_poly.resize(STRIKE_ARC_POINTS)
 	_ring_poly.resize(LEVEL_UP_RING_POINTS + 1)
+
+
+func set_on_screen(on_screen: bool) -> void:
+	if _is_on_screen == on_screen:
+		return
+	_is_on_screen = on_screen
+	_update_active_state(_is_on_screen)
 
 
 func set_sprinting(sprinting: bool, move_dir: Vector2) -> void:
@@ -88,10 +99,12 @@ func trigger_death() -> void:
 
 
 func _update_active_state(force_redraw: bool) -> void:
-	var any_active: bool = _is_sprinting or (_strike_timer > 0.0) or (_level_up_timer > 0.0) or (_death_timer > 0.0)
-	visible = any_active
-	set_process(any_active)
-	if force_redraw:
+	var has_timed_vfx: bool = (_strike_timer > 0.0) or (_level_up_timer > 0.0) or (_death_timer > 0.0)
+	var any_active: bool = _is_sprinting or has_timed_vfx
+	visible = any_active and _is_on_screen
+	set_process((_is_sprinting and _is_on_screen) or has_timed_vfx)
+	if force_redraw and visible:
+		_redraw_timer = 0.0
 		queue_redraw()
 
 
@@ -119,7 +132,10 @@ func _process(delta: float) -> void:
 		if not is_processing():
 			return
 
-	queue_redraw()
+	_redraw_timer += delta
+	if visible and _redraw_timer >= REDRAW_INTERVAL:
+		_redraw_timer = fmod(_redraw_timer, REDRAW_INTERVAL)
+		queue_redraw()
 
 
 func _draw() -> void:
@@ -167,9 +183,6 @@ func _draw_knockback_strike() -> void:
 	var arc_span: float = (PI * 0.65) if _strike_is_heavy else (PI * 0.45)
 	var radius: float = lerpf(5.5, 13.5 if _strike_is_heavy else 10.5, progress)
 
-	if _arc_poly.size() != STRIKE_ARC_POINTS:
-		_arc_poly.resize(STRIKE_ARC_POINTS)
-
 	for i: int in range(STRIKE_ARC_POINTS):
 		var t: float = float(i) / float(STRIKE_ARC_POINTS - 1) - 0.5
 		var ang: float = base_angle + t * arc_span
@@ -200,8 +213,6 @@ func _draw_level_up() -> void:
 
 	var ring_rx: float = lerpf(4.0, 9.5, minf(1.0, progress * 1.4))
 	var ring_ry: float = ring_rx * 0.42
-	if _ring_poly.size() != LEVEL_UP_RING_POINTS + 1:
-		_ring_poly.resize(LEVEL_UP_RING_POINTS + 1)
 	for i: int in range(LEVEL_UP_RING_POINTS):
 		var theta: float = (TAU * float(i)) / float(LEVEL_UP_RING_POINTS)
 		_ring_poly[i] = Vector2(cos(theta) * ring_rx, feet_y + sin(theta) * ring_ry)
@@ -249,4 +260,3 @@ func _draw_death_soul() -> void:
 
 	var trail_y: float = soul_y + 4.0
 	draw_rect(Rect2(soul_x, trail_y, 1.0, 2.0), outer_col, true)
-

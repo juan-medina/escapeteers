@@ -11,32 +11,30 @@ var radius: float = 6.0:
 		if _circle_shape != null:
 			_circle_shape.radius = radius
 
-var _collision_shape: CollisionShape2D = null
 var _circle_shape: CircleShape2D = null
 
+@onready var _collision_shape: CollisionShape2D = $CollisionShape2D
 
-func _init(target_owner: Character = null, initial_radius: float = 6.0, offset: Vector2 = Vector2.ZERO) -> void:
-	owner_character = target_owner
-	radius = initial_radius
+
+func _ready() -> void:
 	monitoring = false
 	monitorable = true
-
-	_circle_shape = CircleShape2D.new()
+	_circle_shape = (_collision_shape.shape as CircleShape2D).duplicate() as CircleShape2D
 	_circle_shape.radius = radius
-
-	_collision_shape = CollisionShape2D.new()
-	_collision_shape.position = offset
 	_collision_shape.shape = _circle_shape
-	add_child(_collision_shape)
+
+
+func setup(target_owner: Character, initial_radius: float, offset: Vector2, layer: int) -> void:
+	owner_character = target_owner
+	radius = initial_radius
+	_collision_shape.position = offset
+	collision_layer = layer
+	collision_mask = 0
 
 
 func set_disabled(disabled: bool) -> void:
-	if _collision_shape != null:
-		_collision_shape.set_deferred(&"disabled", disabled)
+	_collision_shape.set_deferred(&"disabled", disabled)
 
 
 func get_center_global_position() -> Vector2:
-	if _collision_shape != null:
-		return _collision_shape.global_position
-	return global_position
-
+	return _collision_shape.global_position

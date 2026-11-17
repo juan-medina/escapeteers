@@ -123,8 +123,6 @@ static func load_json_file(file_path: StringName) -> Dictionary:
 
 
 static func extract_sprite_frames(packed_scene: PackedScene) -> SpriteFrames:
-	if packed_scene == null:
-		return null
 	var state: SceneState = packed_scene.get_state()
 	for i: int in range(state.get_node_count()):
 		if state.get_node_name(i) == &"AnimatedSprite2D":
@@ -133,11 +131,7 @@ static func extract_sprite_frames(packed_scene: PackedScene) -> SpriteFrames:
 					var val: Variant = state.get_node_property_value(i, j)
 					if val is SpriteFrames:
 						return val
-	var inst: Node = packed_scene.instantiate()
-	var sprite: AnimatedSprite2D = inst.get_node_or_null(^"AnimatedSprite2D") as AnimatedSprite2D
-	var frames: SpriteFrames = sprite.sprite_frames if sprite != null else null
-	inst.queue_free()
-	return frames
+	return null
 
 
 func parse_base_fields(dict: Dictionary) -> void:

@@ -3,6 +3,8 @@
 [ext_resource type="Script" uid="uid://bmbmjf7fckb50" path="res://character/enemies/lava_slime/lava_slime.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://d3l2t53rjfh7i" path="res://data/assets/character/enemies/lava_slime/lava_slime.png" id="2_tex"]
 [ext_resource type="Script" uid="uid://b51ct7bx358a5" path="res://character/health_bar.gd" id="3_hbar"]
+[ext_resource type="Script" path="res://character/hurtbox.gd" id="4_hurtbox"]
+[ext_resource type="Script" path="res://character/status_vfx.gd" id="5_svfx"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_m0"]
 atlas = ExtResource("2_tex")
@@ -285,6 +287,9 @@ animations = [{
 [sub_resource type="CircleShape2D" id="CircleShape2D_slime"]
 radius = 6.0
 
+[sub_resource type="CircleShape2D" id="CircleShape2D_hurtbox"]
+radius = 6.0
+
 [node name="LavaSlime" type="CharacterBody2D" unique_id=1261512582]
 y_sort_enabled = true
 collision_layer = 8
@@ -305,3 +310,16 @@ position = Vector2(0, 3)
 position = Vector2(0, -10)
 script = ExtResource("3_hbar")
 fill_color = Color(0.9, 0.25, 0.25, 1)
+
+[node name="Hurtbox" type="Area2D" parent="."]
+monitoring = false
+script = ExtResource("4_hurtbox")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+shape = SubResource("CircleShape2D_hurtbox")
+
+[node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="."]
+rect = Rect2(-64, -64, 128, 128)
+
+[node name="StatusVfx" type="Node2D" parent="."]
+script = ExtResource("5_svfx")

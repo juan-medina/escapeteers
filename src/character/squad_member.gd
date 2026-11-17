@@ -79,9 +79,7 @@ func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 
 	hero.speed = leader.speed
 
-	var formation_pos: Vector2 = _compute_target_position(leader)
-	if map != null:
-		formation_pos = map.clamp_to_walkable(formation_pos)
+	var formation_pos: Vector2 = map.clamp_to_walkable(_compute_target_position(leader))
 
 	var move_dest: Vector2 = formation_pos
 	var current_leash: float = hero.get_current_leash()
@@ -91,9 +89,8 @@ func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 		hero.can_melee
 		and current_leash > 0.0
 		and hero.active_target is Enemy
-		and is_instance_valid(hero.active_target)
-		and hero.active_target.health > 0.0
-		and formation_pos.distance_to(hero.active_target.global_position) <= current_leash
+		and CombatAction.is_valid_target(hero.active_target)
+		and formation_pos.distance_squared_to(hero.active_target.global_position) <= current_leash * current_leash
 	)
 
 	if target_valid:
@@ -106,14 +103,12 @@ func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 				hero.movement_state = Character.MovementState.IDLE
 				move_dest = hero.position
 				if not hero.is_attacking:
-					var diff_x: float = target_pos.x - hero.global_position.x
-					if absf(diff_x) > 1.0:
-						hero.flip_h = diff_x < 0.0
+					CombatAction.face_target(hero, hero.active_target)
 			else:
 				hero.movement_state = Character.MovementState.NAVIGATING
 				move_dest = target_pos
 	else:
-		if hero.active_target != null and (not is_instance_valid(hero.active_target) or hero.active_target.health <= 0.0):
+		if not CombatAction.is_valid_target(hero.active_target):
 			hero.active_target = null
 		if dist_from_slot > FOLLOW_STOP_DISTANCE:
 			hero.movement_state = Character.MovementState.NAVIGATING
@@ -187,7 +182,7 @@ func _compute_separation(hero: Hero, squad: Array[Hero]) -> Vector2:
 		var dist_sq: float = diff.length_squared()
 
 		if other.is_player:
-			if hero.active_target != null and is_instance_valid(hero.active_target) and hero.active_target.health > 0.0:
+			if CombatAction.is_valid_target(hero.active_target):
 				continue
 			if dist_sq > 0.0001 and dist_sq < player_dist_sq:
 				var dist: float = sqrt(dist_sq)

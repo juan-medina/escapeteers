@@ -54,18 +54,5 @@ func _emit_summons() -> void:
 	for i: int in range(count):
 		var angle: float = base_angle + float(i) * step_angle + randf_range(-0.35, 0.35)
 		var dist: float = randf_range(SUMMON_RADIUS_MIN, SUMMON_RADIUS_MAX)
-		var candidate_pos: Vector2 = global_position + Vector2.from_angle(angle) * dist
-		if map != null:
-			candidate_pos = map.clamp_to_walkable(candidate_pos)
+		var candidate_pos: Vector2 = map.clamp_to_walkable(global_position + Vector2.from_angle(angle) * dist)
 		minion_summon_requested.emit(candidate_pos, home_room, level)
-
-
-func _setup_actions() -> void:
-	if can_summon:
-		var summon: SummonAction = SummonAction.new()
-		summon.range_distance = summon_range
-		summon.cooldown = attack_cooldown
-		summon.summon_count = summon_count
-		summon.check_line_of_sight = true
-		summon.leash_distance = 0.0
-		combat_actions.append(summon)

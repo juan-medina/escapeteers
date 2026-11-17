@@ -7,7 +7,6 @@ extends CharacterData
 const ENEMIES_JSON_PATH: StringName = &"res://character/enemies/enemies.json"
 
 static var _cached_enemies: Dictionary[StringName, EnemyData] = {}
-static var _cached_order: Array[StringName] = []
 
 var detection_range_stat: Dictionary = {}
 var xp_stat: Dictionary = {}
@@ -18,13 +17,9 @@ static func initialize() -> void:
 		return
 
 	var root: Dictionary = await CharacterData.load_json_file(ENEMIES_JSON_PATH)
-	for key: Variant in root.keys():
-		var entry_val: Variant = root[key]
-		if entry_val is Dictionary:
-			var entry: Dictionary = entry_val
-			var enemy_data: EnemyData = EnemyData._from_dict(entry)
-			_cached_enemies[enemy_data.id] = enemy_data
-			_cached_order.append(enemy_data.id)
+	for entry: Dictionary in root.values():
+		var enemy_data: EnemyData = EnemyData._from_dict(entry)
+		_cached_enemies[enemy_data.id] = enemy_data
 
 
 static func _from_dict(dict: Dictionary) -> EnemyData:
@@ -33,13 +28,6 @@ static func _from_dict(dict: Dictionary) -> EnemyData:
 	e.detection_range_stat = _dict_val(dict, &"detection_range")
 	e.xp_stat = _dict_val(dict, &"xp")
 	return e
-
-
-static func get_all_enemies() -> Array[EnemyData]:
-	var list: Array[EnemyData] = []
-	for id_key: StringName in _cached_order:
-		list.append(_cached_enemies[id_key])
-	return list
 
 
 static func get_enemy(enemy_id: StringName) -> EnemyData:

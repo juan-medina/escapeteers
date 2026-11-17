@@ -51,10 +51,12 @@ var heal_range: float = 140.0
 
 var health: float = 100.0
 var is_dead: bool = false
+var is_on_screen: bool = false
 var has_footsteps: bool = true
 var movement_state: MovementState = MovementState.IDLE
 var combat_state: CombatState = CombatState.READY
-var hurtbox: Hurtbox = null
+var combat_actions: Array[CombatAction] = []
+var current_action: CombatAction = null
 
 var flip_h: bool:
 	get:
@@ -91,18 +93,22 @@ var sprite_frames: SpriteFrames:
 var _base_modulate: Color = Color.WHITE
 var _stride_accumulator: float = 0.0
 
+@onready var hurtbox: Hurtbox = $Hurtbox
 @onready var _animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var _collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var _spawn_point: Marker2D = $SpawnPoint
-@onready var _health_bar: HealthBar = get_node_or_null(^"HealthBar") as HealthBar
+@onready var _health_bar: HealthBar = $HealthBar
+@onready var _notifier: VisibleOnScreenNotifier2D = $VisibleOnScreenNotifier2D
 
 
 func _ready() -> void:
 	motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
 	health = max_health
-	if _health_bar != null:
-		_health_bar.update_health(health, max_health)
+	_health_bar.update_health(health, max_health)
 	_animated_sprite.animation_finished.connect(_on_animation_finished)
+	_notifier.screen_entered.connect(_on_screen_entered)
+	_notifier.screen_exited.connect(_on_screen_exited)
+	is_on_screen = _notifier.is_on_screen()
 	play(ANIM_IDLE)
 
 
@@ -113,8 +119,6 @@ func play(anim_name: StringName = ANIM_IDLE) -> void:
 
 
 func get_animation_duration(anim_name: StringName) -> float:
-	if _animated_sprite == null or _animated_sprite.sprite_frames == null:
-		return 0.0
 	if not _animated_sprite.sprite_frames.has_animation(anim_name):
 		return 0.0
 	var anim_speed: float = _animated_sprite.sprite_frames.get_animation_speed(anim_name)
@@ -125,29 +129,21 @@ func get_animation_duration(anim_name: StringName) -> float:
 
 
 func disable_collisions() -> void:
-	if _collision_shape != null:
-		_collision_shape.set_deferred(&"disabled", true)
-	if hurtbox != null:
-		hurtbox.set_disabled(true)
+	_collision_shape.set_deferred(&"disabled", true)
+	hurtbox.set_disabled(true)
 
 
 func enable_collisions() -> void:
-	if _collision_shape != null:
-		_collision_shape.set_deferred(&"disabled", false)
-	if hurtbox != null:
-		hurtbox.set_disabled(false)
+	_collision_shape.set_deferred(&"disabled", false)
+	hurtbox.set_disabled(false)
 
 
 func get_hurtbox_position() -> Vector2:
-	if hurtbox != null:
-		return hurtbox.get_center_global_position()
-	return global_position
+	return hurtbox.get_center_global_position()
 
 
 func get_hurtbox_radius() -> float:
-	if hurtbox != null:
-		return hurtbox.radius
-	return 5.0
+	return hurtbox.radius
 
 
 func is_touching(other: Character) -> bool:
@@ -179,12 +175,10 @@ func update_visuals(movement_vector: Vector2) -> void:
 
 
 func is_visible_on_screen() -> bool:
-	return true
+	return is_on_screen
 
 
 func _trigger_footstep() -> void:
-	if not is_in_group(&"heroes"):
-		return
 	if not is_visible_on_screen():
 		return
 	Audio.play_footstep()
@@ -198,24 +192,13 @@ func spawn_projectile(projectile: Projectile) -> void:
 	projectile_spawn_requested.emit(projectile)
 
 
-func can_attack_at_distance(dist: float) -> bool:
-	if can_melee and dist <= melee_range:
-		return true
-	if can_ranged and dist >= ranged_min_range and dist <= ranged_range:
-		return true
-	if can_heal and dist <= heal_range:
-		return true
-	return false
-
-
 func heal(amount: float) -> void:
 	if is_dead:
 		return
 
 	health = minf(max_health, health + amount)
 	healed.emit(amount, health)
-	if _health_bar != null:
-		_health_bar.update_health(health, max_health)
+	_health_bar.update_health(health, max_health)
 
 
 func take_damage(amount: float, flash_hurt: bool = true) -> void:
@@ -224,8 +207,7 @@ func take_damage(amount: float, flash_hurt: bool = true) -> void:
 
 	health = maxf(0.0, health - amount)
 	damaged.emit(amount, health)
-	if _health_bar != null:
-		_health_bar.update_health(health, max_health)
+	_health_bar.update_health(health, max_health)
 	if health <= 0.0:
 		is_dead = true
 		movement_state = MovementState.IDLE
@@ -236,11 +218,35 @@ func take_damage(amount: float, flash_hurt: bool = true) -> void:
 		_flash_hurt()
 
 
+func _update_combat_cooldowns(delta: float) -> void:
+	for action: CombatAction in combat_actions:
+		action.update(delta)
+
+	if combat_state == CombatState.COOLDOWN:
+		for action: CombatAction in combat_actions:
+			if action.is_ready():
+				combat_state = CombatState.READY
+				return
+
+
+func _on_screen_entered() -> void:
+	is_on_screen = true
+	_on_screen_visibility_changed()
+
+
+func _on_screen_exited() -> void:
+	is_on_screen = false
+	_on_screen_visibility_changed()
+
+
+func _on_screen_visibility_changed() -> void:
+	pass
+
+
 func _on_death() -> void:
 	disable_collisions()
 	velocity = Vector2.ZERO
-	if _health_bar != null:
-		_health_bar.visible = false
+	_health_bar.visible = false
 	play(ANIM_DEATH)
 
 

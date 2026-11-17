@@ -3,9 +3,15 @@
 [ext_resource type="Script" uid="uid://bpjqaxhivbr7m" path="res://character/character.gd" id="1_yf0e5"]
 [ext_resource type="Script" path="res://character/ground_indicator.gd" id="2_ind"]
 [ext_resource type="Script" path="res://character/health_bar.gd" id="3_hbar"]
+[ext_resource type="Script" path="res://character/hurtbox.gd" id="4_hurtbox"]
+[ext_resource type="Script" path="res://character/heroes/hero_vfx.gd" id="5_hvfx"]
+[ext_resource type="Texture2D" path="res://map/light_texture.tres" id="6_light"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_char"]
 radius = 4.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_hurtbox"]
+radius = 6.0
 
 [node name="Character" type="CharacterBody2D" unique_id=1044397686]
 y_sort_enabled = true
@@ -28,5 +34,25 @@ script = ExtResource("3_hbar")
 
 [node name="SpawnPoint" type="Marker2D" parent="." unique_id=1192837465]
 position = Vector2(0, 2)
+
+[node name="Hurtbox" type="Area2D" parent="."]
+monitoring = false
+script = ExtResource("4_hurtbox")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+shape = SubResource("CircleShape2D_hurtbox")
+
+[node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="."]
+rect = Rect2(-64, -64, 128, 128)
+
+[node name="HeroVfx" type="Node2D" parent="."]
+script = ExtResource("5_hvfx")
+
+[node name="PlayerLight" type="PointLight2D" parent="."]
+enabled = false
+color = Color(1, 0.88, 0.7, 1)
+energy = 0.25
+texture = ExtResource("6_light")
+texture_scale = 1.6
 
 

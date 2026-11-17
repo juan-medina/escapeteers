@@ -4,6 +4,8 @@
 class_name StatusVfx
 extends Node2D
 
+const REDRAW_INTERVAL: float = 1.0 / 12.0
+
 const STUN_ORBIT_SPEED: float = 5.5
 const STUN_RADIUS_X: float = 6.0
 const STUN_RADIUS_Y: float = 2.0
@@ -22,7 +24,6 @@ const BURN_COLOR_SHADOW: Color = Color(0.20, 0.04, 0.0, 0.70)
 const BURN_X_OFFSETS: Array[float] = [-4.0, -2.0, 0.0, 2.0, 4.0]
 const BURN_PHASE_OFFSETS: Array[float] = [0.0, 0.42, 0.18, 0.64, 0.83]
 
-const SLOW_RING_POINTS: int = 16
 const SLOW_RADIUS_X: float = 6.5
 const SLOW_RADIUS_Y: float = 2.5
 const SLOW_SHARD_COUNT: int = 3
@@ -43,20 +44,27 @@ var feet_y: float = 6.0
 var _is_stunned: bool = false
 var _is_burning: bool = false
 var _is_slowed: bool = false
+var _is_on_screen: bool = true
 var _time: float = 0.0
+var _redraw_timer: float = 0.0
 var _burn_pulse: float = 0.0
 var _kb_timer: float = 0.0
 var _kb_duration: float = KB_DURATION
 var _kb_dir: Vector2 = Vector2.RIGHT
 var _kb_is_heavy: bool = false
-var _slow_ring_poly: PackedVector2Array = PackedVector2Array()
 
 
 func _ready() -> void:
 	z_index = 1
 	visible = false
 	set_process(false)
-	_rebuild_slow_ring()
+
+
+func set_on_screen(on_screen: bool) -> void:
+	if _is_on_screen == on_screen:
+		return
+	_is_on_screen = on_screen
+	_update_active_state(_is_on_screen)
 
 
 func set_statuses(stunned: bool, burning: bool, slowed: bool) -> void:
@@ -71,7 +79,9 @@ func trigger_burn_pulse() -> void:
 	if not _is_burning:
 		return
 	_burn_pulse = 1.0
-	queue_redraw()
+	if visible:
+		_redraw_timer = 0.0
+		queue_redraw()
 
 
 func trigger_knockback(force: Vector2) -> void:
@@ -91,6 +101,7 @@ func clear() -> void:
 	_is_slowed = false
 	_burn_pulse = 0.0
 	_kb_timer = 0.0
+	_redraw_timer = 0.0
 	visible = false
 	set_process(false)
 	queue_redraw()
@@ -98,11 +109,12 @@ func clear() -> void:
 
 func _update_active_state(force_redraw: bool) -> void:
 	var any_active: bool = _is_stunned or _is_burning or _is_slowed or (_kb_timer > 0.0)
-	visible = any_active
-	set_process(any_active)
+	visible = any_active and _is_on_screen
+	set_process((any_active and _is_on_screen) or (_kb_timer > 0.0))
 	if not _is_burning:
 		_burn_pulse = 0.0
-	if force_redraw:
+	if force_redraw and visible:
+		_redraw_timer = 0.0
 		queue_redraw()
 
 
@@ -115,7 +127,10 @@ func _process(delta: float) -> void:
 		if _kb_timer <= 0.0:
 			_update_active_state(true)
 			return
-	queue_redraw()
+	_redraw_timer += delta
+	if visible and _redraw_timer >= REDRAW_INTERVAL:
+		_redraw_timer = fmod(_redraw_timer, REDRAW_INTERVAL)
+		queue_redraw()
 
 
 func _draw() -> void:
@@ -154,18 +169,11 @@ func _draw_knockback_impact() -> void:
 		draw_rect(Rect2(dx, dy, 2.0, 2.0), dust_col, true)
 
 
-func _rebuild_slow_ring() -> void:
-	_slow_ring_poly.resize(SLOW_RING_POINTS + 1)
-	for i: int in range(SLOW_RING_POINTS):
-		var theta: float = (TAU * float(i)) / float(SLOW_RING_POINTS)
-		_slow_ring_poly[i] = Vector2(cos(theta) * SLOW_RADIUS_X, feet_y + sin(theta) * SLOW_RADIUS_Y)
-	_slow_ring_poly[SLOW_RING_POINTS] = _slow_ring_poly[0]
-
-
 func _draw_slow_frost() -> void:
-	if _slow_ring_poly.is_empty():
-		_rebuild_slow_ring()
-	draw_polyline(_slow_ring_poly, SLOW_RING_COLOR, 1.0, false)
+	draw_rect(Rect2(-4.0, feet_y - 2.0, 8.0, 1.0), SLOW_RING_COLOR, true)
+	draw_rect(Rect2(-4.0, feet_y + 2.0, 8.0, 1.0), SLOW_RING_COLOR, true)
+	draw_rect(Rect2(-6.0, feet_y - 1.0, 2.0, 2.0), SLOW_RING_COLOR, true)
+	draw_rect(Rect2(4.0, feet_y - 1.0, 2.0, 2.0), SLOW_RING_COLOR, true)
 
 	for i: int in range(SLOW_SHARD_COUNT):
 		var angle: float = _time * 1.6 + (TAU * float(i)) / float(SLOW_SHARD_COUNT)

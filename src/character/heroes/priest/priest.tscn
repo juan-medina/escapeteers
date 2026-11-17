@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://eo60a28lwjx6"]
 
 [ext_resource type="PackedScene" uid="uid://derhacq4fqbxt" path="res://character/character.tscn" id="1_base"]
-[ext_resource type="Script" uid="uid://dn2htm0m6ctby" path="res://character/heroes/priest/priest.gd" id="2_script"]
+[ext_resource type="Script" uid="uid://1kikuf053u7c" path="res://character/heroes/hero.gd" id="2_script"]
 [ext_resource type="PackedScene" uid="uid://df7h2kwl40v5r" path="res://projectile/arrow/arrow.tscn" id="3_epgk5"]
 [ext_resource type="PackedScene" path="res://projectile/heal/heal_effect.tscn" id="3_heal"]
 [ext_resource type="PackedScene" path="res://projectile/smite/smite_effect.tscn" id="4_smite"]

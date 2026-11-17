@@ -31,7 +31,7 @@ func update(delta: float) -> void:
 
 
 func can_reach(user: Character, target: Character) -> bool:
-	if target == null or not is_instance_valid(target) or target.health <= 0.0:
+	if not is_valid_target(target):
 		return false
 
 	var user_pos: Vector2 = user.get_hurtbox_position()
@@ -66,15 +66,8 @@ func execute(user: Character, target: Character) -> void:
 		fast_attacks_done += 1
 		user.play(Character.ANIM_ATTACK_MELEE1)
 
-	var diff_x: float = target.global_position.x - user.global_position.x
-	if absf(diff_x) > 1.0:
-		user.flip_h = diff_x < 0.0
-
 
 func apply_hit(user: Character, target: Character) -> bool:
-	if target == null or not is_instance_valid(target) or target.health <= 0.0:
-		return false
-
 	if not can_reach(user, target):
 		return false
 

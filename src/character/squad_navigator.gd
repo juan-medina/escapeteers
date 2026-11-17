@@ -5,6 +5,9 @@ class_name SquadNavigator
 extends RefCounted
 
 const REPATH_INTERVAL: float = 0.2
+const REPATH_JITTER: float = 0.08
+const FAILED_REPATH_INTERVAL: float = 0.5
+const FAILED_REPATH_JITTER: float = 0.1
 const WAYPOINT_REACHED_DIST_SQ: float = 64.0
 const REPATH_DISTANCE_MOVED_SQ: float = 144.0
 
@@ -17,14 +20,7 @@ var _repath_timer: float = 0.0
 
 
 static func has_line_of_sight(character: Character, target_pos: Vector2) -> bool:
-	var world_2d: World2D = character.get_world_2d()
-	if world_2d == null:
-		return true
-
-	var space_state: PhysicsDirectSpaceState2D = world_2d.direct_space_state
-	if space_state == null:
-		return true
-
+	var space_state: PhysicsDirectSpaceState2D = character.get_world_2d().direct_space_state
 	_los_query.from = character.global_position
 	_los_query.to = target_pos
 	_los_query.collision_mask = 1
@@ -54,19 +50,19 @@ func get_next_waypoint(character: Character, destination: Vector2, map: Map, del
 		elif destination.distance_squared_to(_target_pos) > REPATH_DISTANCE_MOVED_SQ:
 			needs_repath = true
 
-	if needs_repath and map != null:
-		_repath_timer = REPATH_INTERVAL + randf_range(0.0, 0.08)
+	if needs_repath:
+		_repath_timer = REPATH_INTERVAL + randf_range(0.0, REPATH_JITTER)
 		_target_pos = destination
 		if not map.is_in_nav_bounds(character.global_position) or not map.is_in_nav_bounds(destination):
 			_current_path.clear()
 			_path_index = 0
-			_repath_timer = 0.5 + randf_range(0.0, 0.1)
+			_repath_timer = FAILED_REPATH_INTERVAL + randf_range(0.0, FAILED_REPATH_JITTER)
 			return destination
 
 		_current_path = map.get_navigation_path(character.global_position, destination)
 		_path_index = 0
 		if _current_path.is_empty():
-			_repath_timer = 0.5 + randf_range(0.0, 0.1)
+			_repath_timer = FAILED_REPATH_INTERVAL + randf_range(0.0, FAILED_REPATH_JITTER)
 
 	if _current_path.is_empty():
 		return destination

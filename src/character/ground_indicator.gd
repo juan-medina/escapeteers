@@ -82,14 +82,10 @@ func _draw() -> void:
 
 
 func _draw_shadow() -> void:
-	if _shadow_points.is_empty():
-		_rebuild_ellipse()
 	draw_colored_polygon(_shadow_points, SHADOW_COLOR)
 
 
 func _draw_ring() -> void:
-	if _ring_points.is_empty():
-		_rebuild_ellipse()
 	draw_polyline(_ring_points, _get_ring_color(), RING_WIDTH, true)
 
 
@@ -104,15 +100,11 @@ func _draw_facing_arrow() -> void:
 	var right: Vector2 = anchor - dir * CHEVRON_WING_BACK - perp * CHEVRON_WING_WIDTH
 	var notch: Vector2 = anchor + dir * CHEVRON_NOTCH_FORWARD
 
-	if _chevron_poly.size() != 4:
-		_chevron_poly.resize(4)
 	_chevron_poly[0] = tip
 	_chevron_poly[1] = left
 	_chevron_poly[2] = notch
 	_chevron_poly[3] = right
 
-	if _border_poly.size() != 5:
-		_border_poly.resize(5)
 	_border_poly[0] = left
 	_border_poly[1] = tip
 	_border_poly[2] = right
