@@ -181,7 +181,7 @@ func is_visible_on_screen() -> bool:
 func _trigger_footstep() -> void:
 	if not is_visible_on_screen():
 		return
-	Audio.play_footstep()
+	Audio.play_sfx(Audio.Sfx.FOOTSTEP)
 
 
 func get_spawn_position() -> Vector2:

@@ -1,0 +1,224 @@
+[gd_scene format=3]
+
+[ext_resource type="AudioStreamOggVorbis" uid="uid://d3s2qv0nbmxre" path="res://data/assets/music/Three Red Hearts - Three Red Hearts.ogg" id="1_menu_music"]
+[ext_resource type="AudioStreamOggVorbis" uid="uid://liqxisdnqnxt" path="res://data/assets/music/Three Red Hearts - Box Jump.ogg" id="2_game_music"]
+[ext_resource type="AudioStreamWAV" uid="uid://bgr882trvwfu0" path="res://data/assets/sounds/Hover.wav" id="3_hover"]
+[ext_resource type="AudioStreamWAV" uid="uid://bcwqnyj8plcsv" path="res://data/assets/sounds/Click.wav" id="4_click"]
+[ext_resource type="AudioStreamWAV" uid="uid://dwamsam1rneer" path="res://data/assets/sounds/Return.wav" id="5_return"]
+[ext_resource type="AudioStreamWAV" uid="uid://lnxolxl7deng" path="res://data/assets/sounds/Start.wav" id="6_start"]
+[ext_resource type="AudioStreamWAV" uid="uid://bbt5ogs5a1q4n" path="res://data/assets/sounds/Pause.wav" id="7_pause"]
+[ext_resource type="AudioStreamWAV" uid="uid://dvq2nohl1hm5a" path="res://data/assets/sounds/Game_Over.wav" id="8_game_over"]
+[ext_resource type="AudioStreamWAV" uid="uid://c4xqkatfb3qsq" path="res://data/assets/sounds/Hero_Down.wav" id="9_hero_down"]
+[ext_resource type="AudioStreamWAV" uid="uid://c4dwovaoxd3ag" path="res://data/assets/sounds/Level_Up.wav" id="10_level_up"]
+[ext_resource type="AudioStreamWAV" uid="uid://b5tkkt50ix5t" path="res://data/assets/sounds/Hero_Recruited.wav" id="11_hero_recruited"]
+[ext_resource type="AudioStreamWAV" uid="uid://bmgmx45torwbr" path="res://data/assets/sounds/Secret_Torch.wav" id="12_secret_torch"]
+[ext_resource type="AudioStreamWAV" uid="uid://bhfr25hb85x1n" path="res://data/assets/sounds/Trap_Spike_01.wav" id="13_spike_1"]
+[ext_resource type="AudioStreamWAV" uid="uid://cs1ph3k3bdaci" path="res://data/assets/sounds/Trap_Spike_02.wav" id="14_spike_2"]
+[ext_resource type="AudioStreamWAV" uid="uid://cijcfwlfab122" path="res://data/assets/sounds/Telegraph_Warning.wav" id="15_telegraph"]
+[ext_resource type="AudioStreamWAV" uid="uid://cqlxsb7kgjumg" path="res://data/assets/sounds/Necromancer_Summon.wav" id="16_necro_summon"]
+[ext_resource type="AudioStreamWAV" uid="uid://d11t5pcps4xod" path="res://data/assets/sounds/Hero_Hurt.wav" id="17_hero_hurt"]
+[ext_resource type="AudioStreamWAV" uid="uid://xt0cmvksr8u7" path="res://data/assets/sounds/Heal_Received.wav" id="18_heal"]
+[ext_resource type="AudioStreamWAV" uid="uid://ka36abpuur41" path="res://data/assets/sounds/Enemy_Death_01.wav" id="19_enemy_death_1"]
+[ext_resource type="AudioStreamWAV" uid="uid://dpsgwfv4ly375" path="res://data/assets/sounds/Enemy_Death_02.wav" id="20_enemy_death_2"]
+[ext_resource type="AudioStreamWAV" uid="uid://dcd4vuoyfcu77" path="res://data/assets/sounds/Enemy_Death_03.wav" id="21_enemy_death_3"]
+[ext_resource type="AudioStreamWAV" uid="uid://d3id008aich2" path="res://data/assets/sounds/09_Impact_01.wav" id="22_impact_1"]
+[ext_resource type="AudioStreamWAV" uid="uid://b7x86krths82a" path="res://data/assets/sounds/10_Impact_02.wav" id="23_impact_2"]
+[ext_resource type="AudioStreamWAV" uid="uid://qx0q7xfge87m" path="res://data/assets/sounds/11_Impact_03.wav" id="24_impact_3"]
+[ext_resource type="AudioStreamWAV" uid="uid://ds3x5np73c5s0" path="res://data/assets/sounds/12_Impact_04.wav" id="25_impact_4"]
+[ext_resource type="AudioStreamWAV" uid="uid://cvihgvbrfdtio" path="res://data/assets/sounds/13_Impact_05.wav" id="26_impact_5"]
+[ext_resource type="AudioStreamWAV" uid="uid://dq6pgb3xtjxdx" path="res://data/assets/sounds/Magic_Cast.wav" id="27_magic_cast"]
+[ext_resource type="AudioStreamWAV" uid="uid://cjjy6f064etqg" path="res://data/assets/sounds/Bow_Shoot.wav" id="28_bow_shoot"]
+[ext_resource type="AudioStreamWAV" uid="uid://dfh55ip3o6pix" path="res://data/assets/sounds/31_swoosh_sword_1.wav" id="29_swoosh_1"]
+[ext_resource type="AudioStreamWAV" uid="uid://b7x4ysaha83to" path="res://data/assets/sounds/32_Swoosh_sword_2.wav" id="30_swoosh_2"]
+[ext_resource type="AudioStreamWAV" uid="uid://boh2drfnq171e" path="res://data/assets/sounds/33_Swoosh_Sword_3.wav" id="31_swoosh_3"]
+[ext_resource type="AudioStreamWAV" uid="uid://cfy1hqfn46ru0" path="res://data/assets/sounds/07_Step_rock_01.wav" id="32_step_1"]
+[ext_resource type="AudioStreamWAV" uid="uid://yiah3mlv8g57" path="res://data/assets/sounds/08_Step_rock_02.wav" id="33_step_2"]
+[ext_resource type="AudioStreamWAV" uid="uid://dfwu5yauwxuq" path="res://data/assets/sounds/09_Step_rock_03.wav" id="34_step_3"]
+
+[sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_spike_trap"]
+playback_mode = 0
+random_pitch = 1.15
+streams_count = 2
+stream_0/stream = ExtResource("13_spike_1")
+stream_1/stream = ExtResource("14_spike_2")
+
+[sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_telegraph"]
+playback_mode = 0
+random_pitch = 1.1
+streams_count = 1
+stream_0/stream = ExtResource("15_telegraph")
+
+[sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_necro_summon"]
+playback_mode = 0
+random_pitch = 1.1
+streams_count = 1
+stream_0/stream = ExtResource("16_necro_summon")
+
+[sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_hero_hurt"]
+playback_mode = 0
+random_pitch = 1.15
+streams_count = 1
+stream_0/stream = ExtResource("17_hero_hurt")
+
+[sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_heal"]
+playback_mode = 0
+random_pitch = 1.1
+streams_count = 1
+stream_0/stream = ExtResource("18_heal")
+
+[sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_enemy_death"]
+playback_mode = 0
+random_pitch = 1.15
+streams_count = 3
+stream_0/stream = ExtResource("19_enemy_death_1")
+stream_1/stream = ExtResource("20_enemy_death_2")
+stream_2/stream = ExtResource("21_enemy_death_3")
+
+[sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_impact"]
+playback_mode = 0
+random_pitch = 1.15
+streams_count = 5
+stream_0/stream = ExtResource("22_impact_1")
+stream_1/stream = ExtResource("23_impact_2")
+stream_2/stream = ExtResource("24_impact_3")
+stream_3/stream = ExtResource("25_impact_4")
+stream_4/stream = ExtResource("26_impact_5")
+
+[sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_magic_cast"]
+playback_mode = 0
+random_pitch = 1.15
+streams_count = 1
+stream_0/stream = ExtResource("27_magic_cast")
+
+[sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_bow_shoot"]
+playback_mode = 0
+random_pitch = 1.15
+streams_count = 1
+stream_0/stream = ExtResource("28_bow_shoot")
+
+[sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_melee_swoosh"]
+playback_mode = 0
+random_pitch = 1.15
+streams_count = 3
+stream_0/stream = ExtResource("29_swoosh_1")
+stream_1/stream = ExtResource("30_swoosh_2")
+stream_2/stream = ExtResource("31_swoosh_3")
+
+[sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_footstep"]
+playback_mode = 0
+random_pitch = 1.1
+streams_count = 3
+stream_0/stream = ExtResource("32_step_1")
+stream_1/stream = ExtResource("33_step_2")
+stream_2/stream = ExtResource("34_step_3")
+
+[node name="AudioLibrary" type="Node"]
+
+[node name="Music" type="Node" parent="."]
+
+[node name="MenuMusic" type="AudioStreamPlayer" parent="Music"]
+stream = ExtResource("1_menu_music")
+bus = &"Music"
+
+[node name="GameMusic" type="AudioStreamPlayer" parent="Music"]
+stream = ExtResource("2_game_music")
+bus = &"Music"
+
+[node name="UI" type="Node" parent="."]
+
+[node name="Hover" type="AudioStreamPlayer" parent="UI"]
+stream = ExtResource("3_hover")
+bus = &"Sfx"
+
+[node name="Click" type="AudioStreamPlayer" parent="UI"]
+stream = ExtResource("4_click")
+bus = &"Sfx"
+
+[node name="Return" type="AudioStreamPlayer" parent="UI"]
+stream = ExtResource("5_return")
+bus = &"Sfx"
+
+[node name="Start" type="AudioStreamPlayer" parent="UI"]
+stream = ExtResource("6_start")
+bus = &"Sfx"
+
+[node name="Pause" type="AudioStreamPlayer" parent="UI"]
+stream = ExtResource("7_pause")
+bus = &"Sfx"
+
+[node name="ChannelStinger" type="Node" parent="."]
+
+[node name="GameOver" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("8_game_over")
+bus = &"Sfx"
+
+[node name="HeroDown" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("9_hero_down")
+bus = &"Sfx"
+
+[node name="LevelUp" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("10_level_up")
+bus = &"Sfx"
+
+[node name="HeroRecruited" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("11_hero_recruited")
+bus = &"Sfx"
+
+[node name="SecretTorch" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("12_secret_torch")
+bus = &"Sfx"
+
+[node name="ChannelAlert" type="Node" parent="."]
+
+[node name="SpikeTrap" type="AudioStreamPlayer" parent="ChannelAlert"]
+stream = SubResource("AudioStreamRandomizer_spike_trap")
+bus = &"Sfx"
+
+[node name="Telegraph" type="AudioStreamPlayer" parent="ChannelAlert"]
+stream = SubResource("AudioStreamRandomizer_telegraph")
+bus = &"Sfx"
+
+[node name="NecroSummon" type="AudioStreamPlayer" parent="ChannelAlert"]
+stream = SubResource("AudioStreamRandomizer_necro_summon")
+bus = &"Sfx"
+
+[node name="HeroHurt" type="AudioStreamPlayer" parent="ChannelAlert"]
+stream = SubResource("AudioStreamRandomizer_hero_hurt")
+bus = &"Sfx"
+
+[node name="Heal" type="AudioStreamPlayer" parent="ChannelAlert"]
+stream = SubResource("AudioStreamRandomizer_heal")
+bus = &"Sfx"
+
+[node name="ChannelImpact" type="Node" parent="."]
+
+[node name="EnemyDeath" type="AudioStreamPlayer" parent="ChannelImpact"]
+stream = SubResource("AudioStreamRandomizer_enemy_death")
+bus = &"Sfx"
+
+[node name="HeavyImpact" type="AudioStreamPlayer" parent="ChannelImpact"]
+stream = SubResource("AudioStreamRandomizer_impact")
+volume_db = 2.0
+bus = &"Sfx"
+
+[node name="HitImpact" type="AudioStreamPlayer" parent="ChannelImpact"]
+stream = SubResource("AudioStreamRandomizer_impact")
+bus = &"Sfx"
+
+[node name="ChannelAction" type="Node" parent="."]
+
+[node name="MagicCast" type="AudioStreamPlayer" parent="ChannelAction"]
+stream = SubResource("AudioStreamRandomizer_magic_cast")
+bus = &"Sfx"
+
+[node name="BowShoot" type="AudioStreamPlayer" parent="ChannelAction"]
+stream = SubResource("AudioStreamRandomizer_bow_shoot")
+bus = &"Sfx"
+
+[node name="MeleeSwoosh" type="AudioStreamPlayer" parent="ChannelAction"]
+stream = SubResource("AudioStreamRandomizer_melee_swoosh")
+bus = &"Sfx"
+
+[node name="Footstep" type="AudioStreamPlayer" parent="ChannelAction"]
+stream = SubResource("AudioStreamRandomizer_footstep")
+bus = &"Sfx"

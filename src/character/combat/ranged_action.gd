@@ -65,7 +65,7 @@ func _on_telegraph_locked(telegraph: Telegraph) -> void:
 	var line: TelegraphLine = telegraph as TelegraphLine
 	if line != null:
 		locked_fire_direction = line.locked_direction
-		Audio.play_enemy_special(false)
+		Audio.play_sfx(Audio.Sfx.TELEGRAPH)
 
 
 func cancel_telegraph() -> void:

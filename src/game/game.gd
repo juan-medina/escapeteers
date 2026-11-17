@@ -458,7 +458,7 @@ func _on_enemy_minion_summon_requested(pos: Vector2, room: Rect2i, enemy_level: 
 
 
 func _on_enemy_died(enemy: Enemy) -> void:
-	Audio.play_enemy_death()
+	Audio.play_sfx(Audio.Sfx.ENEMY_DEATH)
 	_spike_hit_cooldowns.erase(enemy)
 	var room: Rect2i = enemy.home_room
 	if _room_remaining_enemies.has(room):
@@ -538,7 +538,7 @@ func _get_best_squad_target(enemy: Enemy) -> Hero:
 
 
 func _on_hero_died(hero: Hero) -> void:
-	Audio.play_defeat(false)
+	Audio.play_sfx(Audio.Sfx.HERO_DOWN)
 	_spike_hit_cooldowns.erase(hero)
 	_squad.erase(hero)
 	_rebalance_escort_slots()
@@ -546,13 +546,13 @@ func _on_hero_died(hero: Hero) -> void:
 
 
 func _on_player_died() -> void:
-	Audio.play_defeat(false)
+	Audio.play_sfx(Audio.Sfx.HERO_DOWN)
 	Audio.stop_music()
 	_sync_hud_squad()
 
 
 func _on_player_death_completed() -> void:
-	Audio.play_defeat(true)
+	Audio.play_sfx(Audio.Sfx.GAME_OVER)
 	Audio.stop_music()
 	_game_over_dialog.visible = true
 	_game_over_dialog.grab_first_focus()
@@ -582,7 +582,7 @@ func _check_recruitment() -> void:
 
 
 func _open_recruit_panel(recruit_pos: Vector2, forced_hero_id: StringName = &"") -> void:
-	Audio.play_hero_recruited()
+	Audio.play_sfx(Audio.Sfx.HERO_RECRUITED)
 	get_tree().paused = true
 	_pending_recruit_pos = recruit_pos
 	_recruit_panel.visible = true
@@ -603,7 +603,7 @@ func _sync_hud_squad() -> void:
 func _on_hero_enemy_hit(enemy: Enemy, damage: float, is_heavy: bool, hero: Hero) -> void:
 	_hud.record_damage(hero.hero_data.id, damage)
 	_reset_combat_cooldown()
-	Audio.play_hit_impact(is_heavy)
+	Audio.play_sfx(Audio.Sfx.HEAVY_IMPACT if is_heavy else Audio.Sfx.HIT_IMPACT)
 	if not enemy.is_dead and enemy.target == null:
 		enemy.set_target_candidate(hero)
 
@@ -639,7 +639,7 @@ func _open_next_level_up() -> void:
 	if _pending_level_ups <= 0:
 		return
 
-	Audio.play_level_up()
+	Audio.play_sfx(Audio.Sfx.LEVEL_UP)
 	_pending_level_ups -= 1
 	get_tree().paused = true
 	_level_up_panel.visible = true
@@ -840,7 +840,7 @@ func _check_character_spike(character: Character) -> float:
 	var foot_cell: Vector2i = _map.local_to_map(character.get_hurtbox_position())
 	if not _map.is_spike_active_at(foot_cell):
 		return 0.0
-	Audio.play_environment(&"spike")
+	Audio.play_sfx(Audio.Sfx.SPIKE_TRAP)
 	_spike_hit_cooldowns[character] = SPIKE_HIT_COOLDOWN
 	var damage: float = maxf(1.0, roundf(character.max_health * SPIKE_DAMAGE_MAX_HP_RATIO))
 	character.take_damage(damage)

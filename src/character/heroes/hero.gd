@@ -211,13 +211,13 @@ func refresh_combat_actions() -> void:
 func heal(amount: float) -> void:
 	super.heal(amount)
 	if not is_dead:
-		Audio.play_hero_health(true)
+		Audio.play_sfx(Audio.Sfx.HEAL)
 
 
 func take_damage(amount: float, flash_hurt: bool = true) -> void:
 	super.take_damage(amount, flash_hurt)
 	if not is_dead and health > 0.0:
-		Audio.play_hero_health(false)
+		Audio.play_sfx(Audio.Sfx.HERO_HURT)
 
 
 func get_anchor_position() -> Vector2:
@@ -328,7 +328,7 @@ func _check_auto_attack() -> void:
 		selected_action.execute(self, active_target)
 		if selected_action is MeleeAction:
 			melee_attack_started.emit(animation)
-			Audio.play_melee_swoosh()
+			Audio.play_sfx(Audio.Sfx.MELEE_SWOOSH)
 		elif selected_action is RangedAction:
 			ranged_attack_started.emit(animation)
 		elif selected_action is HealAction:
@@ -462,7 +462,7 @@ func _on_frame_changed() -> void:
 			if proj != null:
 				spawn_projectile(proj)
 				var is_magic: bool = hero_data != null and hero_data.id != &"archer"
-				Audio.play_ranged_attack(is_magic)
+				Audio.play_sfx(Audio.Sfx.MAGIC_CAST if is_magic else Audio.Sfx.BOW_SHOOT)
 	elif current_action is HealAction and active_target != null and not _hit_applied_this_attack:
 		var heal_act: HealAction = current_action as HealAction
 		if frame >= heal_act.cast_frame:
@@ -471,7 +471,7 @@ func _on_frame_changed() -> void:
 			var effect: Projectile = heal_act.spawn_heal_effect(self, active_target)
 			if effect != null:
 				spawn_projectile(effect)
-			Audio.play_ranged_attack(true)
+			Audio.play_sfx(Audio.Sfx.MAGIC_CAST)
 			ally_healed.emit(active_target, heal_act.heal_amount)
 
 
