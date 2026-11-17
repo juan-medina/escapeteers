@@ -4,6 +4,37 @@
 class_name Game
 extends Node2D
 
+
+class PendingSpawn:
+	extends RefCounted
+	var room: Rect2i
+	var pos: Vector2
+
+	func _init(spawn_room: Rect2i, spawn_pos: Vector2) -> void:
+		room = spawn_room
+		pos = spawn_pos
+
+
+class RoomCandidate:
+	extends RefCounted
+	var room: Rect2i
+	var dist_sq: float
+
+	func _init(cand_room: Rect2i, cand_dist_sq: float) -> void:
+		room = cand_room
+		dist_sq = cand_dist_sq
+
+
+class EvictCandidate:
+	extends RefCounted
+	var enemy: Enemy
+	var dist_sq: float
+
+	func _init(cand_enemy: Enemy, cand_dist_sq: float) -> void:
+		enemy = cand_enemy
+		dist_sq = cand_dist_sq
+
+
 const MAX_CHARACTERS: int = 80
 const MAX_ENEMIES: int = 160
 const MAX_SPAWNS_PER_FRAME: int = 8
@@ -19,14 +50,6 @@ const COMBAT_EXIT_DELAY: float = 1.25
 const SPIKE_DAMAGE_MAX_HP_RATIO: float = 0.15
 const SPIKE_HIT_COOLDOWN: float = 0.65
 
-const ARCHER_SCENE: PackedScene = preload("res://character/heroes/archer/archer.tscn")
-const ARMORED_AXEMAN_SCENE: PackedScene = preload("res://character/heroes/armored_axeman/armored_axeman.tscn")
-const KNIGHT_SCENE: PackedScene = preload("res://character/heroes/knight/knight.tscn")
-const KNIGHT_TEMPLAR_SCENE: PackedScene = preload("res://character/heroes/knight_templar/knight_templar.tscn")
-const PRIEST_SCENE: PackedScene = preload("res://character/heroes/priest/priest.tscn")
-const SOLDIER_SCENE: PackedScene = preload("res://character/heroes/soldier/soldier.tscn")
-const SWORDSMAN_SCENE: PackedScene = preload("res://character/heroes/swordsman/swordsman.tscn")
-const WIZARD_SCENE: PackedScene = preload("res://character/heroes/wizard/wizard.tscn")
 const UNKNOWN_SCENE: PackedScene = preload("res://character/heroes/unknown/unknown.tscn")
 const LAVA_SLIME_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_slime.tscn")
 const SKELETON_SCENE: PackedScene = preload("res://character/enemies/skeleton/skeleton.tscn")
@@ -39,43 +62,24 @@ const ICE_SCENE: PackedScene = preload("res://projectile/ice/ice.tscn")
 const HEAL_EFFECT_SCENE: PackedScene = preload("res://projectile/heal/heal_effect.tscn")
 const SMITE_EFFECT_SCENE: PackedScene = preload("res://projectile/smite/smite_effect.tscn")
 const SUMMON_PENTAGRAM_SCENE: PackedScene = preload("res://projectile/summon_pentagram/summon_pentagram.tscn")
-const GAME_OVER_DIALOG_SCENE: PackedScene = preload("res://game_over_dialog/game_over_dialog.tscn")
-const RECRUIT_PANEL_SCENE: PackedScene = preload("res://recruit_panel/recruit_panel.tscn")
-const LEVEL_UP_PANEL_SCENE: PackedScene = preload("res://level_up_panel/level_up_panel.tscn")
-const HUD_SCENE: PackedScene = preload("res://hud/hud.tscn")
-
-const HERO_SPAWN_WEIGHTS: Dictionary[PackedScene, int] = {
-	ARMORED_AXEMAN_SCENE: 5,
-	KNIGHT_SCENE: 3,
-	KNIGHT_TEMPLAR_SCENE: 2,
-	SWORDSMAN_SCENE: 2,
-	WIZARD_SCENE: 1,
-	ARCHER_SCENE: 1,
-	SOLDIER_SCENE: 1,
-	PRIEST_SCENE: 1,
-}
 
 var _squad: Array[Hero] = []
-var _unrecruited_characters: Array[Character] = []
+var _unrecruited_characters: Array[Unknown] = []
 var _starter_recruits: Array[Unknown] = []
 var _class_levels: Dictionary[StringName, int] = {}
-var _hud: Hud = null
 var _squad_level: int = 1
 var _current_xp: float = 0.0
 var _xp_required: float = 50.0
 var _pending_level_ups: int = 0
-var _recruit_panel: RecruitPanel = null
-var _level_up_panel: LevelUpPanel = null
 var _pending_recruit_pos: Vector2 = Vector2.ZERO
 var _enemies: Array[Enemy] = []
-var _hero_deck: Array[PackedScene] = []
 var _room_remaining_enemies: Dictionary[Rect2i, int] = {}
 var _room_spawned_enemies: Dictionary[Rect2i, int] = {}
 var _room_spawned_necros: Dictionary[Rect2i, int] = {}
 var _stream_timer: float = 0.0
 var _entity_pool: EntityPool = EntityPool.new()
 var _projectile_pool: EntityPool = EntityPool.new()
-var _pending_spawns: Array[Dictionary] = []
+var _pending_spawns: Array[PendingSpawn] = []
 var _character: Hero = null
 var _squad_speed: float = BASE_SQUAD_SPEED
 var _combat_cooldown_timer: float = 0.0
@@ -85,8 +89,11 @@ var _spike_hit_cooldowns: Dictionary[Character, float] = {}
 @onready var _camera: Camera2D = $Camera2D
 @onready var _characters: Node2D = $Characters
 @onready var _map: Map = $Map
-@onready var _overlays: CanvasLayer = $Overlays
 @onready var _projectiles: Node2D = $Projectiles
+@onready var _hud: Hud = $Hud
+@onready var _recruit_panel: RecruitPanel = $Overlays/RecruitPanel
+@onready var _level_up_panel: LevelUpPanel = $Overlays/LevelUpPanel
+@onready var _game_over_dialog: GameOverDialog = $Overlays/GameOverDialog
 
 
 func _ready() -> void:
@@ -98,47 +105,21 @@ func _ready() -> void:
 
 	await HeroData.initialize()
 	await EnemyData.initialize()
+	_recruit_panel.initialize()
+	_level_up_panel.initialize()
 
 	_map.generation_progress_updated.connect(_on_map_generation_progress)
 	_map.secret_torches_completed.connect(_on_secret_torches_completed)
 	await _map.generate_map()
 
 	var starting_data: HeroData = HeroData.get_hero(Transition.starting_hero_id)
-	_character = starting_data.scene.instantiate() as Hero
-	starting_data.apply_to_hero(_character, 1)
-	_character.name = &"Character"
-	_characters.add_child(_character)
-
-	_character.position = _map.get_hero_spawn_position()
-	_camera.position = _character.position
-	_character.y_sort_enabled = true
-	_character.is_player = true
-	_character.speed = _squad_speed
-	_character.move_direction = Vector2.UP
-	_character.record_step(0.0)
-	_character.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
-	_character.enemy_hit.connect(_on_hero_enemy_hit.bind(_character))
-	_character.death_completed.connect(_on_player_death_completed)
-	_character.died.connect(_on_player_died)
-	_squad.append(_character)
-
 	_class_levels[starting_data.id] = 1
+	_character = _spawn_hero(starting_data, _map.get_hero_spawn_position(), true)
+	_camera.position = _character.position
 
-	_hud = HUD_SCENE.instantiate() as Hud
-	add_child(_hud)
 	_hud.update_xp(_current_xp, _xp_required, _squad_level)
 	_sync_hud_squad()
 	_hud.setup_map(_map.plan, _character)
-
-	_recruit_panel = RECRUIT_PANEL_SCENE.instantiate() as RecruitPanel
-	_recruit_panel.visible = false
-	_recruit_panel.hero_selected.connect(_on_hero_recruited)
-	_overlays.add_child(_recruit_panel)
-
-	_level_up_panel = LEVEL_UP_PANEL_SCENE.instantiate() as LevelUpPanel
-	_level_up_panel.visible = false
-	_level_up_panel.class_leveled_up.connect(_on_class_leveled_up)
-	_overlays.add_child(_level_up_panel)
 
 	Transition.set_loading_progress(0.92, &"Assembling the fellowship...")
 	await get_tree().process_frame
@@ -160,9 +141,8 @@ func _ready() -> void:
 	_check_recruitment()
 	_register_and_populate_rooms(_map.companion_rooms)
 	while not _pending_spawns.is_empty():
-		var req: Dictionary = _pending_spawns.pop_back()
-		@warning_ignore("unsafe_call_argument")
-		_spawn_enemy_at(req[&"pos"], req[&"room"])
+		var req: PendingSpawn = _pending_spawns.pop_back()
+		_spawn_enemy_at(req.pos, req.room)
 
 	Transition.set_loading_progress(1.0, &"Ready to escape!")
 	await get_tree().process_frame
@@ -175,29 +155,13 @@ func _exit_tree() -> void:
 	Projectile.set_pool(null)
 
 
-func get_active_enemy_count() -> int:
-	return _enemies.size()
-
-
-func is_squad_in_combat() -> bool:
-	return _combat_cooldown_timer > 0.0 or _is_any_enemy_engaged() or _is_any_hero_engaged()
-
-
-func is_squad_sprinting() -> bool:
-	return _squad_speed > BASE_SQUAD_SPEED + 5.0
-
-
-func get_squad_speed() -> float:
-	return _squad_speed
-
-
 func _on_map_generation_progress(progress: float, stage_name: StringName) -> void:
 	Transition.set_loading_progress(progress, stage_name)
 
 
 func _on_secret_torches_completed() -> void:
 	for starter: Unknown in _starter_recruits:
-		if is_instance_valid(starter) and _unrecruited_characters.has(starter):
+		if _unrecruited_characters.has(starter):
 			starter.forced_hero_id = &"torchero"
 			starter.ignite_secret_light()
 			break
@@ -205,17 +169,16 @@ func _on_secret_torches_completed() -> void:
 
 
 func _process(delta: float) -> void:
-	if is_instance_valid(_character):
-		_camera.position = _character.position
-		if not _character.is_dead:
-			if _character.is_moving and _hud != null:
-				_hud.dismiss_movement_hint()
-			_character.record_step(delta)
-			_stream_timer -= delta
-			if _stream_timer <= 0.0:
-				_stream_timer = STREAM_CHECK_INTERVAL
-				_update_map_streaming()
-			_map.update_streaming(_character.global_position, _character.velocity)
+	_camera.position = _character.position
+	if not _character.is_dead:
+		if _character.is_moving:
+			_hud.dismiss_movement_hint()
+		_character.record_step(delta)
+		_stream_timer -= delta
+		if _stream_timer <= 0.0:
+			_stream_timer = STREAM_CHECK_INTERVAL
+			_update_map_streaming()
+		_map.update_streaming(_character.global_position, _character.velocity)
 
 	_map.update_spikes(delta)
 	_update_squad_speed(delta)
@@ -224,18 +187,6 @@ func _process(delta: float) -> void:
 	_check_recruitment()
 	_update_enemies()
 	_process_pending_spawns()
-
-
-func remove_member(hero: Hero) -> void:
-	var idx: int = _squad.find(hero)
-	if idx == -1 or hero == _character:
-		return
-
-	_spike_hit_cooldowns.erase(hero)
-	_squad.remove_at(idx)
-	hero.queue_free()
-	_rebalance_escort_slots()
-	_sync_hud_squad()
 
 
 func _update_map_streaming() -> void:
@@ -259,26 +210,18 @@ func _spawn_initial_characters() -> void:
 
 
 func _spawn_companions_for_room(room: Rect2i) -> void:
-	if MAX_CHARACTERS > 0 and (_squad.size() + _unrecruited_characters.size()) >= MAX_CHARACTERS:
+	if (_squad.size() + _unrecruited_characters.size()) >= MAX_CHARACTERS:
 		return
 
 	var positions: Array[Vector2] = _map.get_companion_spawn_positions_for_room(room)
 	for pos: Vector2 in positions:
-		if MAX_CHARACTERS > 0 and (_squad.size() + _unrecruited_characters.size()) >= MAX_CHARACTERS:
+		if (_squad.size() + _unrecruited_characters.size()) >= MAX_CHARACTERS:
 			break
 		_spawn_recruit_at(pos)
 
 
-func _draw_next_hero_scene() -> PackedScene:
-	if _hero_deck.is_empty():
-		_hero_deck = _build_hero_deck()
-		_hero_deck.shuffle()
-	return _hero_deck.pop_back()
-
-
-func _spawn_recruit_at(pos: Vector2, forced_hero_id: StringName = &"") -> Unknown:
+func _spawn_recruit_at(pos: Vector2) -> Unknown:
 	var ch: Unknown = UNKNOWN_SCENE.instantiate() as Unknown
-	ch.forced_hero_id = forced_hero_id
 	_characters.add_child(ch)
 	ch.position = pos
 	ch.y_sort_enabled = true
@@ -286,13 +229,30 @@ func _spawn_recruit_at(pos: Vector2, forced_hero_id: StringName = &"") -> Unknow
 	return ch
 
 
-func _build_hero_deck() -> Array[PackedScene]:
-	var deck: Array[PackedScene] = []
-	for scene: PackedScene in HERO_SPAWN_WEIGHTS:
-		var weight: int = HERO_SPAWN_WEIGHTS[scene]
-		for _i: int in range(weight):
-			deck.append(scene)
-	return deck
+func _spawn_hero(hero_data: HeroData, pos: Vector2, is_leader: bool) -> Hero:
+	var hero_level: int = _class_levels.get(hero_data.id, 1)
+	var hero: Hero = hero_data.scene.instantiate() as Hero
+	hero_data.apply_to_hero(hero, hero_level)
+	if is_leader:
+		hero.name = &"Character"
+	_characters.add_child(hero)
+	hero.is_player = is_leader
+	hero.position = pos
+	hero.y_sort_enabled = true
+	hero.speed = _squad_speed
+	hero.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
+	hero.enemy_hit.connect(_on_hero_enemy_hit.bind(hero))
+	if is_leader:
+		hero.move_direction = Vector2.UP
+		hero.record_step(0.0)
+		hero.death_completed.connect(_on_player_death_completed)
+		hero.died.connect(_on_player_died)
+	else:
+		hero.leader = _character
+		hero.squad_member = SquadMember.new()
+		hero.died.connect(_on_hero_died.bind(hero))
+	_squad.append(hero)
+	return hero
 
 
 func _register_and_populate_rooms(rooms: Array[Rect2i]) -> void:
@@ -321,7 +281,7 @@ func _populate_room_enemies(room: Rect2i) -> void:
 	var spawn_positions: Array[Vector2] = _map.get_enemy_spawn_positions_for_room(room, to_spawn)
 
 	for pos: Vector2 in spawn_positions:
-		_pending_spawns.append({&"room": room, &"pos": pos})
+		_pending_spawns.append(PendingSpawn.new(room, pos))
 		_room_spawned_enemies[room] = _room_spawned_enemies.get(room, 0) + 1
 
 
@@ -331,15 +291,13 @@ func _process_pending_spawns() -> void:
 	while not _pending_spawns.is_empty() and spawned < MAX_SPAWNS_PER_FRAME:
 		if _enemies.size() >= MAX_ENEMIES:
 			break
-		var req: Dictionary = _pending_spawns.pop_back()
-		var room: Rect2i = req[&"room"]
-		var pos: Vector2 = req[&"pos"]
-		var cell: Vector2i = _map.local_to_map(pos)
-		if pos.distance_squared_to(cam_pos) > ENEMY_DESPAWN_DIST_SQ or not _map.is_cell_walkable(cell):
-			if _room_spawned_enemies.has(room):
-				_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
+		var req: PendingSpawn = _pending_spawns.pop_back()
+		var cell: Vector2i = _map.local_to_map(req.pos)
+		if req.pos.distance_squared_to(cam_pos) > ENEMY_DESPAWN_DIST_SQ or not _map.is_cell_walkable(cell):
+			if _room_spawned_enemies.has(req.room):
+				_room_spawned_enemies[req.room] = maxi(0, _room_spawned_enemies[req.room] - 1)
 			continue
-		_spawn_enemy_at(pos, room)
+		_spawn_enemy_at(req.pos, req.room)
 		spawned += 1
 
 
@@ -357,13 +315,9 @@ func _spawn_enemy_at(pos: Vector2, room: Rect2i, forced_scene: PackedScene = nul
 	enemy.set_level(enemy_level)
 	if not enemy.projectile_spawn_requested.is_connected(_on_projectile_spawn_requested):
 		enemy.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
-	if not enemy.minion_summon_requested.is_connected(_on_enemy_minion_summon_requested):
 		enemy.minion_summon_requested.connect(_on_enemy_minion_summon_requested)
-	if not enemy.attacked.is_connected(_on_enemy_attacked):
 		enemy.attacked.connect(_on_enemy_attacked)
-	if enemy.died.get_connections().is_empty():
 		enemy.died.connect(_on_enemy_died.bind(enemy))
-	if enemy.death_completed.get_connections().is_empty():
 		enemy.death_completed.connect(_on_enemy_death_completed.bind(enemy))
 	enemy.sync_screen_state(_camera.global_position)
 	if is_summoned:
@@ -373,7 +327,7 @@ func _spawn_enemy_at(pos: Vector2, room: Rect2i, forced_scene: PackedScene = nul
 
 func _respawn_nearby_hibernating_rooms() -> void:
 	var player_pos: Vector2 = _character.global_position
-	var room_candidates: Array[Dictionary] = []
+	var room_candidates: Array[RoomCandidate] = []
 
 	for room: Rect2i in _map.companion_rooms:
 		var remaining: int = _room_remaining_enemies.get(room, 0)
@@ -384,16 +338,15 @@ func _respawn_nearby_hibernating_rooms() -> void:
 		var room_world_center: Vector2 = _map.map_to_local(room.get_center())
 		var dist_sq: float = player_pos.distance_squared_to(room_world_center)
 		if dist_sq <= ROOM_RESPAWN_DIST_SQ:
-			room_candidates.append({&"room": room, &"dist_sq": dist_sq})
+			room_candidates.append(RoomCandidate.new(room, dist_sq))
 
 	if room_candidates.is_empty():
 		return
 
 	room_candidates.sort_custom(_compare_room_candidate_asc)
 
-	for cand: Dictionary in room_candidates:
-		var room: Rect2i = cand[&"room"]
-		var room_dist_sq: float = cand[&"dist_sq"]
+	for cand: RoomCandidate in room_candidates:
+		var room: Rect2i = cand.room
 		var remaining: int = _room_remaining_enemies.get(room, 0)
 		var spawned: int = _room_spawned_enemies.get(room, 0)
 		var needed: int = remaining - spawned
@@ -402,7 +355,7 @@ func _respawn_nearby_hibernating_rooms() -> void:
 
 		var free_slots: int = MAX_ENEMIES - (_enemies.size() + _pending_spawns.size())
 		if free_slots < needed:
-			_reclaim_distant_enemies_for_room(room, room_dist_sq, needed - free_slots, player_pos)
+			_reclaim_distant_enemies_for_room(room, cand.dist_sq, needed - free_slots, player_pos)
 
 		_populate_room_enemies(room)
 
@@ -413,63 +366,57 @@ func _reclaim_distant_enemies_for_room(target_room: Rect2i, target_room_dist_sq:
 
 	var p_idx: int = _pending_spawns.size() - 1
 	while p_idx >= 0 and reclaimed < count_needed:
-		var req: Dictionary = _pending_spawns[p_idx]
-		var r_room: Rect2i = req[&"room"]
-		if r_room != target_room:
-			var r_center: Vector2 = _map.map_to_local(r_room.get_center())
+		var req: PendingSpawn = _pending_spawns[p_idx]
+		if req.room != target_room:
+			var r_center: Vector2 = _map.map_to_local(req.room.get_center())
 			if player_pos.distance_squared_to(r_center) > min_evict_dist_sq:
 				_pending_spawns.remove_at(p_idx)
-				if _room_spawned_enemies.has(r_room):
-					_room_spawned_enemies[r_room] = maxi(0, _room_spawned_enemies[r_room] - 1)
+				if _room_spawned_enemies.has(req.room):
+					_room_spawned_enemies[req.room] = maxi(0, _room_spawned_enemies[req.room] - 1)
 				reclaimed += 1
 		p_idx -= 1
 
 	if reclaimed >= count_needed:
 		return
 
-	var evictable: Array[Dictionary] = []
+	var evictable: Array[EvictCandidate] = []
 	for enemy: Enemy in _enemies:
-		if not is_instance_valid(enemy) or enemy.is_dead:
-			continue
-		if enemy.home_room == target_room or enemy.is_on_screen or enemy.current_state != Enemy.State.PATROL:
+		if enemy.is_dead or enemy.home_room == target_room or enemy.is_on_screen or enemy.current_state != Enemy.State.PATROL:
 			continue
 		var home_center: Vector2 = _map.map_to_local(enemy.home_room.get_center())
 		var home_dist_sq: float = player_pos.distance_squared_to(home_center)
 		if home_dist_sq > min_evict_dist_sq:
-			evictable.append({&"enemy": enemy, &"dist_sq": home_dist_sq})
+			evictable.append(EvictCandidate.new(enemy, home_dist_sq))
 
 	if evictable.is_empty():
 		return
 
-	evictable.sort_custom(_compare_room_candidate_desc)
+	evictable.sort_custom(_compare_evict_candidate_desc)
 
-	for item: Dictionary in evictable:
+	for item: EvictCandidate in evictable:
 		if reclaimed >= count_needed:
 			break
-		var enemy_to_evict: Enemy = item[&"enemy"]
-		var h_room: Rect2i = enemy_to_evict.home_room
-		if _room_spawned_enemies.has(h_room):
-			_room_spawned_enemies[h_room] = maxi(0, _room_spawned_enemies[h_room] - 1)
-		if enemy_to_evict is Necromancer and _room_spawned_necros.has(h_room):
-			_room_spawned_necros[h_room] = maxi(0, _room_spawned_necros[h_room] - 1)
-		_spike_hit_cooldowns.erase(enemy_to_evict)
-		_entity_pool.release(enemy_to_evict)
-		var e_idx: int = _enemies.find(enemy_to_evict)
-		if e_idx != -1:
-			_enemies.remove_at(e_idx)
+		_despawn_enemy(item.enemy)
 		reclaimed += 1
 
 
-static func _compare_room_candidate_asc(a: Dictionary, b: Dictionary) -> bool:
-	var dist_a: float = a[&"dist_sq"]
-	var dist_b: float = b[&"dist_sq"]
-	return dist_a < dist_b
+func _despawn_enemy(enemy: Enemy) -> void:
+	var room: Rect2i = enemy.home_room
+	if _room_spawned_enemies.has(room):
+		_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
+	if enemy is Necromancer and _room_spawned_necros.has(room):
+		_room_spawned_necros[room] = maxi(0, _room_spawned_necros[room] - 1)
+	_spike_hit_cooldowns.erase(enemy)
+	_entity_pool.release(enemy)
+	_enemies.erase(enemy)
 
 
-static func _compare_room_candidate_desc(a: Dictionary, b: Dictionary) -> bool:
-	var dist_a: float = a[&"dist_sq"]
-	var dist_b: float = b[&"dist_sq"]
-	return dist_a > dist_b
+static func _compare_room_candidate_asc(a: RoomCandidate, b: RoomCandidate) -> bool:
+	return a.dist_sq < b.dist_sq
+
+
+static func _compare_evict_candidate_desc(a: EvictCandidate, b: EvictCandidate) -> bool:
+	return a.dist_sq > b.dist_sq
 
 
 func _pick_enemy_scene_for_room(room: Rect2i, depth: int) -> PackedScene:
@@ -520,9 +467,7 @@ func _on_enemy_died(enemy: Enemy) -> void:
 		_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
 
 	_add_squad_xp(enemy.xp_value)
-	_combat_cooldown_timer = COMBAT_EXIT_DELAY
-	_continuous_move_timer = 0.0
-	_squad_speed = BASE_SQUAD_SPEED
+	_reset_combat_cooldown()
 
 
 func _on_enemy_death_completed(enemy: Enemy) -> void:
@@ -539,8 +484,7 @@ func _on_projectile_spawn_requested(projectile: Projectile) -> void:
 func _update_followers(delta: float) -> void:
 	for i: int in range(1, _squad.size()):
 		var follower: Hero = _squad[i]
-		if follower.squad_member != null:
-			follower.squad_member.update(follower, delta, _squad, _map)
+		follower.squad_member.update(follower, delta, _squad, _map)
 
 
 func _update_enemies() -> void:
@@ -549,21 +493,14 @@ func _update_enemies() -> void:
 	var i: int = _enemies.size() - 1
 	while i >= 0:
 		var enemy: Enemy = _enemies[i]
-		if not is_instance_valid(enemy) or enemy.is_dead:
+		if enemy.is_dead:
 			_enemies.remove_at(i)
 			i -= 1
 			continue
 
 		var dist_sq: float = enemy.global_position.distance_squared_to(camera_pos)
 		if dist_sq > ENEMY_DESPAWN_DIST_SQ:
-			var room: Rect2i = enemy.home_room
-			if _room_spawned_enemies.has(room):
-				_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
-			if enemy is Necromancer and _room_spawned_necros.has(room):
-				_room_spawned_necros[room] = maxi(0, _room_spawned_necros[room] - 1)
-			_spike_hit_cooldowns.erase(enemy)
-			_entity_pool.release(enemy)
-			_enemies.remove_at(i)
+			_despawn_enemy(enemy)
 			i -= 1
 			continue
 
@@ -588,7 +525,7 @@ func _get_best_squad_target(enemy: Enemy) -> Hero:
 	var max_dist_sq: float = enemy.detection_range * enemy.detection_range
 	var enemy_pos: Vector2 = enemy.global_position
 	for member: Hero in _squad:
-		if not is_instance_valid(member) or member.is_dead:
+		if member.is_dead:
 			continue
 		var raw_dist_sq: float = enemy_pos.distance_squared_to(member.global_position)
 		if raw_dist_sq > max_dist_sq:
@@ -603,19 +540,9 @@ func _get_best_squad_target(enemy: Enemy) -> Hero:
 func _on_hero_died(hero: Hero) -> void:
 	Audio.play_defeat(false)
 	_spike_hit_cooldowns.erase(hero)
-	if hero == _character:
-		return
-
-	var squad_idx: int = _squad.find(hero)
-	if squad_idx != -1:
-		_squad.remove_at(squad_idx)
-		_rebalance_escort_slots()
-		_sync_hud_squad()
-		return
-
-	var unrecruited_idx: int = _unrecruited_characters.find(hero)
-	if unrecruited_idx != -1:
-		_unrecruited_characters.remove_at(unrecruited_idx)
+	_squad.erase(hero)
+	_rebalance_escort_slots()
+	_sync_hud_squad()
 
 
 func _on_player_died() -> void:
@@ -627,8 +554,8 @@ func _on_player_died() -> void:
 func _on_player_death_completed() -> void:
 	Audio.play_defeat(true)
 	Audio.stop_music()
-	var dialog: GameOverDialog = GAME_OVER_DIALOG_SCENE.instantiate() as GameOverDialog
-	_overlays.add_child(dialog)
+	_game_over_dialog.visible = true
+	_game_over_dialog.grab_first_focus()
 	get_tree().paused = true
 
 
@@ -636,20 +563,17 @@ func _check_recruitment() -> void:
 	var i: int = _unrecruited_characters.size() - 1
 
 	while i >= 0:
-		var candidate: Character = _unrecruited_characters[i]
+		var candidate: Unknown = _unrecruited_characters[i]
 		for member: Hero in _squad:
 			if candidate.is_touching(member):
 				_unrecruited_characters.remove_at(i)
 				var recruit_pos: Vector2 = candidate.position
-				var forced_id: StringName = &""
-				if candidate is Unknown:
-					var unknown_char: Unknown = candidate as Unknown
-					forced_id = unknown_char.forced_hero_id
-					var starter_idx: int = _starter_recruits.find(unknown_char)
-					if starter_idx != -1:
-						_starter_recruits.remove_at(starter_idx)
-						if _starter_recruits.is_empty():
-							_map.cancel_secret_torches()
+				var forced_id: StringName = candidate.forced_hero_id
+				var starter_idx: int = _starter_recruits.find(candidate)
+				if starter_idx != -1:
+					_starter_recruits.remove_at(starter_idx)
+					if _starter_recruits.is_empty():
+						_map.cancel_secret_torches()
 				candidate.queue_free()
 				_open_recruit_panel(recruit_pos, forced_id)
 				return
@@ -667,21 +591,7 @@ func _open_recruit_panel(recruit_pos: Vector2, forced_hero_id: StringName = &"")
 
 func _on_hero_recruited(hero_data: HeroData) -> void:
 	get_tree().paused = false
-	var hero_level: int = get_class_level(hero_data.id)
-	var new_hero: Hero = hero_data.scene.instantiate() as Hero
-	hero_data.apply_to_hero(new_hero, hero_level)
-
-	_characters.add_child(new_hero)
-	new_hero.is_player = false
-	new_hero.position = _pending_recruit_pos
-	new_hero.y_sort_enabled = true
-	new_hero.leader = _character
-	new_hero.speed = _squad_speed
-	new_hero.squad_member = SquadMember.new()
-	new_hero.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
-	new_hero.enemy_hit.connect(_on_hero_enemy_hit.bind(new_hero))
-	new_hero.died.connect(_on_hero_died.bind(new_hero))
-	_squad.append(new_hero)
+	_spawn_hero(hero_data, _pending_recruit_pos, false)
 	_rebalance_escort_slots()
 	_sync_hud_squad()
 
@@ -692,22 +602,16 @@ func _sync_hud_squad() -> void:
 
 func _on_hero_enemy_hit(enemy: Enemy, damage: float, is_heavy: bool, hero: Hero) -> void:
 	_hud.record_damage(hero.hero_data.id, damage)
-	_combat_cooldown_timer = COMBAT_EXIT_DELAY
-	_continuous_move_timer = 0.0
-	_squad_speed = BASE_SQUAD_SPEED
+	_reset_combat_cooldown()
 	Audio.play_hit_impact(is_heavy)
-	if enemy != null and is_instance_valid(enemy) and not enemy.is_dead and enemy.target == null:
+	if not enemy.is_dead and enemy.target == null:
 		enemy.set_target_candidate(hero)
-
-
-func get_class_level(class_id: StringName) -> int:
-	return _class_levels.get(class_id, 1)
 
 
 func _get_squad_unit_counts() -> Dictionary[StringName, int]:
 	var counts: Dictionary[StringName, int] = {}
 	for member: Hero in _squad:
-		if is_instance_valid(member) and not member.is_dead and member.hero_data != null:
+		if not member.is_dead:
 			var id: StringName = member.hero_data.id
 			counts[id] = counts.get(id, 0) + 1
 	return counts
@@ -725,8 +629,7 @@ func _add_squad_xp(amount: float) -> void:
 		_xp_required = _get_xp_required_for_level(_squad_level)
 		_pending_level_ups += 1
 
-	if _hud != null:
-		_hud.update_xp(_current_xp, _xp_required, _squad_level)
+	_hud.update_xp(_current_xp, _xp_required, _squad_level)
 
 	if _pending_level_ups > 0 and not get_tree().paused:
 		_open_next_level_up()
@@ -744,15 +647,14 @@ func _open_next_level_up() -> void:
 
 
 func _on_class_leveled_up(hero_data: HeroData) -> void:
-	var new_level: int = get_class_level(hero_data.id) + 1
+	var new_level: int = _class_levels.get(hero_data.id, 1) + 1
 	_class_levels[hero_data.id] = new_level
 
 	for member: Hero in _squad:
-		if is_instance_valid(member) and not member.is_dead:
-			if member.hero_data != null and member.hero_data.id == hero_data.id:
-				hero_data.apply_to_hero(member, new_level)
-				member.health = member.max_health
-				member.play_level_up_vfx()
+		if not member.is_dead and member.hero_data.id == hero_data.id:
+			hero_data.apply_to_hero(member, new_level)
+			member.health = member.max_health
+			member.play_level_up_vfx()
 
 	_sync_hud_squad()
 
@@ -848,28 +750,30 @@ func _rebalance_escort_slots() -> void:
 
 		for i: int in range(b_count):
 			var follower: Hero = ring_backline[i]
-			if follower.squad_member != null:
-				follower.squad_member.assign_formation_slot(ring, b_angles[i], total_assigned, false)
+			follower.squad_member.assign_formation_slot(ring, b_angles[i], total_assigned, false)
 			total_assigned += 1
 
 		for i: int in range(f_count):
 			var follower: Hero = ring_frontline[i]
-			if follower.squad_member != null:
-				follower.squad_member.assign_formation_slot(ring, f_angles[i], total_assigned, true)
+			follower.squad_member.assign_formation_slot(ring, f_angles[i], total_assigned, true)
 			total_assigned += 1
 
 		ring += 1
 
 
-func _on_enemy_attacked(_target: Hero, _damage_amount: float) -> void:
+func _reset_combat_cooldown() -> void:
 	_combat_cooldown_timer = COMBAT_EXIT_DELAY
 	_continuous_move_timer = 0.0
 	_squad_speed = BASE_SQUAD_SPEED
 
 
+func _on_enemy_attacked(_target: Hero, _damage_amount: float) -> void:
+	_reset_combat_cooldown()
+
+
 func _is_any_enemy_engaged() -> bool:
 	for enemy: Enemy in _enemies:
-		if not is_instance_valid(enemy) or enemy.is_dead or not enemy.visible:
+		if enemy.is_dead or not enemy.visible:
 			continue
 		if enemy.is_engaged():
 			return true
@@ -878,7 +782,7 @@ func _is_any_enemy_engaged() -> bool:
 
 func _is_any_hero_engaged() -> bool:
 	for member: Hero in _squad:
-		if not is_instance_valid(member) or member.is_dead:
+		if member.is_dead:
 			continue
 		if member.is_engaged():
 			return true
@@ -888,67 +792,59 @@ func _is_any_hero_engaged() -> bool:
 func _update_squad_speed(delta: float) -> void:
 	var in_combat: bool = _is_any_enemy_engaged() or _is_any_hero_engaged()
 	if in_combat:
-		_combat_cooldown_timer = COMBAT_EXIT_DELAY
-		_continuous_move_timer = 0.0
-		_squad_speed = BASE_SQUAD_SPEED
+		_reset_combat_cooldown()
 	elif _combat_cooldown_timer > 0.0:
 		_combat_cooldown_timer = maxf(0.0, _combat_cooldown_timer - delta)
 		_continuous_move_timer = 0.0
 		_squad_speed = BASE_SQUAD_SPEED
-	else:
-		var is_moving: bool = is_instance_valid(_character) and _character.is_moving
-		if is_moving:
-			_continuous_move_timer += delta
-			if _continuous_move_timer >= SPRINT_WARMUP_TIME:
-				_squad_speed = move_toward(_squad_speed, SPRINT_SQUAD_SPEED, SPRINT_ACCELERATION * delta)
-			else:
-				_squad_speed = BASE_SQUAD_SPEED
+	elif _character.is_moving:
+		_continuous_move_timer += delta
+		if _continuous_move_timer >= SPRINT_WARMUP_TIME:
+			_squad_speed = move_toward(_squad_speed, SPRINT_SQUAD_SPEED, SPRINT_ACCELERATION * delta)
 		else:
-			_continuous_move_timer = 0.0
 			_squad_speed = BASE_SQUAD_SPEED
+	else:
+		_continuous_move_timer = 0.0
+		_squad_speed = BASE_SQUAD_SPEED
 
 	for member: Hero in _squad:
-		if is_instance_valid(member) and not member.is_dead:
+		if not member.is_dead:
 			member.speed = _squad_speed
 
 
 func _update_spike_hazards(delta: float) -> void:
+	var expired: Array[Character] = []
+	for ch: Character in _spike_hit_cooldowns:
+		var rem_cd: float = _spike_hit_cooldowns[ch] - delta
+		if rem_cd > 0.0:
+			_spike_hit_cooldowns[ch] = rem_cd
+		else:
+			expired.append(ch)
+	for ch: Character in expired:
+		_spike_hit_cooldowns.erase(ch)
+
 	for member: Hero in _squad:
-		if not is_instance_valid(member) or member.is_dead:
-			continue
-		var cd: float = _spike_hit_cooldowns.get(member, 0.0)
-		if cd > 0.0:
-			var rem_cd: float = cd - delta
-			if rem_cd > 0.0:
-				_spike_hit_cooldowns[member] = rem_cd
-				continue
-			_spike_hit_cooldowns.erase(member)
-		var foot_cell: Vector2i = _map.local_to_map(member.get_hurtbox_position())
-		if _map.is_spike_active_at(foot_cell):
-			Audio.play_environment(&"spike")
-			_spike_hit_cooldowns[member] = SPIKE_HIT_COOLDOWN
-			var damage: float = maxf(1.0, roundf(member.max_health * SPIKE_DAMAGE_MAX_HP_RATIO))
-			member.take_damage(damage)
+		if not member.is_dead:
+			_check_character_spike(member)
 
 	for enemy: Enemy in _enemies:
-		if not is_instance_valid(enemy) or enemy.is_dead or not enemy.visible:
-			continue
-		if not enemy.is_physics_processing():
-			continue
-		var cd: float = _spike_hit_cooldowns.get(enemy, 0.0)
-		if cd > 0.0:
-			var rem_cd: float = cd - delta
-			if rem_cd > 0.0:
-				_spike_hit_cooldowns[enemy] = rem_cd
-				continue
-			_spike_hit_cooldowns.erase(enemy)
-		var foot_cell: Vector2i = _map.local_to_map(enemy.get_hurtbox_position())
-		if _map.is_spike_active_at(foot_cell):
-			Audio.play_environment(&"spike")
-			_spike_hit_cooldowns[enemy] = SPIKE_HIT_COOLDOWN
-			var damage: float = maxf(1.0, roundf(enemy.max_health * SPIKE_DAMAGE_MAX_HP_RATIO))
-			enemy.take_damage(damage)
-			_hud.record_damage(&"spike", damage)
+		if not enemy.is_dead and enemy.visible and enemy.is_physics_processing():
+			var damage: float = _check_character_spike(enemy)
+			if damage > 0.0:
+				_hud.record_damage(&"spike", damage)
+
+
+func _check_character_spike(character: Character) -> float:
+	if _spike_hit_cooldowns.has(character):
+		return 0.0
+	var foot_cell: Vector2i = _map.local_to_map(character.get_hurtbox_position())
+	if not _map.is_spike_active_at(foot_cell):
+		return 0.0
+	Audio.play_environment(&"spike")
+	_spike_hit_cooldowns[character] = SPIKE_HIT_COOLDOWN
+	var damage: float = maxf(1.0, roundf(character.max_health * SPIKE_DAMAGE_MAX_HP_RATIO))
+	character.take_damage(damage)
+	return damage
 
 
 func _on_window_resized() -> void:

@@ -22,6 +22,11 @@ func _ready() -> void:
 	super._ready()
 
 
+func initialize() -> void:
+	for card: UnitCard in _cards_by_id.values():
+		card.initialize()
+
+
 func setup_choices(class_levels: Dictionary[StringName, int], unit_counts: Dictionary[StringName, int], forced_hero_id: StringName = &"") -> void:
 	for card: UnitCard in _cards_by_id.values():
 		card.visible = false

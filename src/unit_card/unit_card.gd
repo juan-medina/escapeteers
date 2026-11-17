@@ -26,7 +26,7 @@ var _hero_data: HeroData = null
 @onready var _recruit_button: Button = $Margin/HBox/RecruitButton
 
 
-func _ready() -> void:
+func initialize() -> void:
 	_recruit_button.text = button_text
 	_hero_data = HeroData.get_hero(hero_id)
 	_name_label.text = _hero_data.name
@@ -67,7 +67,7 @@ func get_recruit_button() -> Button:
 
 
 func _sync_sprite_playback() -> void:
-	if not is_node_ready():
+	if _hero_data == null:
 		return
 	if is_visible_in_tree():
 		_preview_sprite.play(Character.ANIM_IDLE)
