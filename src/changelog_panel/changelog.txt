@@ -1,72 +1,68 @@
 [center][color=#ffffff][b]Escapeteers - Changelog[/b][/color][/center]
 
-[color=#ffffff][b]v0.5.0 - WIP[/b][/color]
+[color=#ffffff][b]v0.6.0 - WIP[/b][/color]
+
+[color=#ffffff][b]v0.5.0 - 2026 - 11 - 17[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
-- [color=#ffffff][b]Combat & World Audio:[/b][/color] Dynamic retro sound effects for squad combat, recruitment, healing, environmental events, and milestones.
-- [color=#ffffff][b]Varied Dungeon Palettes:[/b][/color] Dungeon rooms and corridors now feature eight randomized stonework, floor, and spike trap color themes.
-- [color=#ffffff][b]Distinctive Room Architecture:[/b][/color] Chambers now vary across beveled, pillared, and cross-shaped layouts with inlaid floor stonework and north-wall grates replacing loose floor clutter.
+- [color=#ffffff][b]Sound Effects:[/b][/color] Retro audio for combat, menus, and dungeon events.
+- [color=#ffffff][b]Dungeon Color Themes:[/b][/color] Eight fresh color palettes for rooms and traps.
+- [color=#ffffff][b]New Room Layouts:[/b][/color] Pillared halls, cross chambers, and cleaner floors.
 
 [color=#e0e0e0][b]Changed[/b][/color]
-- [color=#ffffff][b]Pixel Sound Effects:[/b][/color] Switched all game and UI sound effects to Helton Yan's Pixel Combat pack with calibrated loudness balancing.
-- [color=#ffffff][b]Balanced Skeleton Archers:[/b][/color] Skeleton archers are now more fragile with shorter range, slower volleys, and no point-blank shots when crowded in melee.
-- [color=#ffffff][b]Smoother Dungeon Performance:[/b][/color] Reduced frame hitches during heavy combat, dungeon exploration, and menu transitions.
+- [color=#ffffff][b]Fairer Skeleton Archers:[/b][/color] Shorter range, slower shots, and squishier bones.
+- [color=#ffffff][b]Smoother Battles:[/b][/color] Faster menus and zero hitches in big brawls.
 
 [color=#e0e0e0][b]Fixed[/b][/color]
-- [color=#ffffff][b]Undead Cleanup & Combat Stability:[/b][/color] Defeated skeletons now always clear from the floor and fallen companions no longer cause combat crashes.
-- [color=#ffffff][b]Clean Horde Battle Audio:[/b][/color] Combat sound effects now prioritize important alerts and stay crisp without distortion during large dungeon battles.
+- [color=#ffffff][b]Stubborn Skeletons:[/b][/color] Defeated bones now properly clear from the floor.
 
 [color=#ffffff][b]v0.4.0 - 2026-11-12[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
-- [color=#ffffff][b]Touch & Click Controls:[/b][/color] Steer your squad seamlessly with mouse clicks, drags, or touchscreen touches alongside keyboard and controller.
-- [color=#ffffff][b]Auto-Sprint:[/b][/color] The squad picks up the pace automatically when no monsters are around.
-- [color=#ffffff][b]Spike Traps:[/b][/color] Deadly floor spikes pop up in rooms and hallways to skewer heroes and monsters alike, with trap damage tracked in the DPS meter.
-- [color=#ffffff][b]Ranged Attack Telegraphs:[/b][/color] Skeleton archers and lava slimes now project dashed targeting lines before firing so you can dodge or block incoming shots.
-- [color=#ffffff][b]Clearer Status Effects:[/b][/color] Stunned, burning, and slowed monsters now display orbiting stars, rising embers, and icy frost so stacked debuffs are easy to read at a glance.
-- [color=#ffffff][b]Squad Action & State VFX:[/b][/color] Heroes now kick up dust while sprinting, unleash shockwave arcs on heavy and knockback strikes, shine with golden sparkles when leveling up, and release a rising soul burst when falling in battle.
+- [color=#ffffff][b]Touch & Click Controls:[/b][/color] Steer your squad with mouse or touchscreen.
+- [color=#ffffff][b]Auto-Sprint:[/b][/color] Heroes dash automatically when the coast is clear.
+- [color=#ffffff][b]Spike Traps:[/b][/color] Deadly floor spikes skewer careless heroes and monsters.
+- [color=#ffffff][b]Enemy Aim Lines:[/b][/color] Archers and slimes telegraph their shots before firing.
+- [color=#ffffff][b]Battle & Status VFX:[/b][/color] Flashier hits, sprint dust, and clearer debuff icons.
 
 [color=#e0e0e0][b]Changed[/b][/color]
-- [color=#ffffff][b]Relentless Necromancers:[/b][/color] Necromancers now raise undead minions much faster during battle to keep the pressure on.
-- [color=#ffffff][b]Better Level-Up Scaling:[/b][/color] Heroes hit harder, survive longer, and attack faster as they level up.
-- [color=#ffffff][b]Fragile Undead Swarms:[/b][/color] Summoned skeletons are now fragile fodder that go down in a couple of hits, dealing half damage with no heavy swings.
-- [color=#ffffff][b]Necromancer Encounter Pacing:[/b][/color] Necromancers are tougher to withstand combat while their minions swarm, appearing solo on early floors before pairs emerge deeper in crypts.
-- [color=#ffffff][b]Deeper Dungeon Pacing:[/b][/color] Early rooms warm you up gently before the deeper floors throw giant hordes at you.
+- [color=#ffffff][b]Better Level-Up Scaling:[/b][/color] Heroes grow noticeably stronger with every level.
+- [color=#ffffff][b]Reworked Necromancers:[/b][/color] Tougher bosses summoning faster, squishier skeleton swarms.
+- [color=#ffffff][b]Deeper Dungeon Pacing:[/b][/color] Gentle early rooms ramping into massive deep-floor hordes.
 
 [color=#ffffff][b]v0.3.0 - 2026-11-11[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
-- [color=#ffffff][b]Pick Your Leader:[/b][/color] Choose which hero leads the charge before entering the dungeon.
+- [color=#ffffff][b]Pick Your Leader:[/b][/color] Choose which hero leads the charge.
 - [color=#ffffff][b]New Undead Threats:[/b][/color]
-  • [b]Skeleton Rusher:[/b] Fast boneheads that sprint past your tanks to harass the backline.
-  • [b]Skeleton Archer:[/b] Pesky snipers that shoot and run away when you get close.
-  • [b]Necromancer:[/b] Creepy summoners that keep raising more skeletons until you take them down.
-- [color=#ffffff][b]Themed Dungeon Rooms:[/b][/color] Rooms now have their own flavor-Slime Pits, Bone Swarms, Archer Garrisons, and Necromancer Crypts.
-- [color=#ffffff][b]Secret Hero (Torchero):[/b][/color] A mysterious torch-bearing survivor hiding in the dark for clever explorers to find.
+  • [b]Skeleton Rusher:[/b] Fast boneheads that charge your backline.
+  • [b]Skeleton Archer:[/b] Pesky snipers that shoot and run.
+  • [b]Necromancer:[/b] Creepy summoners raising endless skeleton waves.
+- [color=#ffffff][b]Themed Dungeon Rooms:[/b][/color] Slime Pits, Bone Swarms, Archer Garrisons, and Crypts.
+- [color=#ffffff][b]Secret Hero (Torchero):[/b][/color] A mysterious torch-bearer hiding in the dark.
 
 [color=#e0e0e0][b]Changed[/b][/color]
-- [color=#ffffff][b]Cleaner HUD:[/b][/color] Tidied up the squad health grid, damage meter, and pixel fonts.
-- [color=#ffffff][b]Tougher Frontlines:[/b][/color] Tuned hero health and damage so your melee wall doesn't melt instantly.
+- [color=#ffffff][b]Cleaner HUD:[/b][/color] Tidier health grid, damage meter, and pixel fonts.
+- [color=#ffffff][b]Tougher Frontlines:[/b][/color] Melee heroes survive longer against monster swarms.
 
 [color=#ffffff][b]v0.2.0 - 2026-11-04[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
-- [color=#ffffff][b]Original Soundtrack:[/b][/color] Retro dungeon tunes for the menus and battles.
+- [color=#ffffff][b]Original Soundtrack:[/b][/color] Retro dungeon tunes for menus and battles.
 
 [color=#e0e0e0][b]Changed[/b][/color]
-- [color=#ffffff][b]Nobody Left Behind:[/b][/color] The whole squad now marches at the same speed so stragglers don't get lost.
-- [color=#ffffff][b]Snappier Melee Combat:[/b][/color] Sword and axe swings connect more reliably and feel punchier.
-- [color=#ffffff][b]Feistier Priests:[/b][/color] Priests spend less time over-healing and more time smiting monsters.
-- [color=#ffffff][b]Clearer Minimap:[/b][/color] Easier to see where you've been and which rooms are still unexplored.
-- [color=#ffffff][b]Smoother Swarms:[/b][/color] Big monster waves run buttery smooth without frame drops.
+- [color=#ffffff][b]Nobody Left Behind:[/b][/color] The whole squad marches at the same speed.
+- [color=#ffffff][b]Snappier Melee Combat:[/b][/color] Sword and axe swings connect more reliably.
+- [color=#ffffff][b]Feistier Priests:[/b][/color] Less time over-healing, more time smiting monsters.
+- [color=#ffffff][b]Clearer Minimap:[/b][/color] Easier to spot unexplored rooms.
+- [color=#ffffff][b]Smoother Swarms:[/b][/color] Big monster waves run without frame drops.
 
 [color=#ffffff][b]v0.1.0 - 2026-11-04[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
 - [color=#ffffff][b]Procedural Dungeons:[/b][/color] Endless torch-lit rooms and corridors to explore.
-- [color=#ffffff][b]Single-Stick Squad Control:[/b][/color] You steer the leader; your fellowship follows in formation and fights automatically.
-- [color=#ffffff][b]8 Hero Classes:[/b][/color] Archer, Armored Axeman, Knight, Knight Templar, Priest, Soldier, Swordsman, and Wizard.
-- [color=#ffffff][b]Rescue & Level Up:[/b][/color] Bump into lost survivors to draft new heroes and upgrade your classes with XP.
+- [color=#ffffff][b]Single-Stick Squad Control:[/b][/color] Steer the leader; your squad follows and fights.
+- [color=#ffffff][b]8 Hero Classes:[/b][/color] Archer, Axeman, Knight, Templar, Priest, Soldier, Swordsman, Wizard.
+- [color=#ffffff][b]Rescue & Level Up:[/b][/color] Draft lost survivors and upgrade classes with XP.
 - [color=#ffffff][b]Lava Slimes:[/b][/color] Grumpy fire-spitting blobs guarding the dungeon.
-- [color=#ffffff][b]Retro Arcade Vibes:[/b][/color] Squad HUD, live damage meter, controller + WASD support, and an optional CRT filter.
-
+- [color=#ffffff][b]Retro Arcade Vibes:[/b][/color] Squad HUD, damage meter, controller support, and CRT filter.
