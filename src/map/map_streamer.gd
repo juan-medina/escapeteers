@@ -63,11 +63,7 @@ func update(player_world_pos: Vector2, player_velocity: Vector2) -> void:
 	var player_cell: Vector2i = _floor.local_to_map(player_world_pos)
 	var player_chunk: Vector2i = get_chunk_coord(player_cell)
 
-	if _nav_window != null:
-		_nav_window.update_center(player_cell)
-
-	if _light_manager != null:
-		_light_manager.set_focus(player_world_pos)
+	_nav_window.update_center(player_cell)
 
 	if player_chunk != _last_player_chunk:
 		_last_player_chunk = player_chunk
@@ -98,18 +94,6 @@ static func cell_to_chunk(cell: Vector2i) -> Vector2i:
 
 func get_chunk_coord(cell: Vector2i) -> Vector2i:
 	return cell_to_chunk(cell)
-
-
-func is_chunk_loaded(coord: Vector2i) -> bool:
-	return _loaded_chunks.has(coord)
-
-
-func get_loaded_chunk_count() -> int:
-	return _loaded_chunks.size()
-
-
-func get_queued_chunk_count() -> int:
-	return _load_queue.size()
 
 
 func _queue_chunks_in_radius(center_chunk: Vector2i) -> void:
@@ -203,7 +187,7 @@ func _materialize_chunk(coord: Vector2i) -> void:
 
 	var spawned_lights: Array[Vector2i] = []
 	for lpos: Vector2i in lights:
-		if _light_manager != null and not _light_manager.has_light(lpos):
+		if not _light_manager.has_light(lpos):
 			var world_pos: Vector2 = _decorations.map_to_local(lpos)
 			_light_manager.add_light(coord, lpos, world_pos)
 			spawned_lights.append(lpos)
@@ -211,8 +195,7 @@ func _materialize_chunk(coord: Vector2i) -> void:
 	for fpos: Vector2i in floors:
 		if not wall_set.has(fpos):
 			_walkable_cells[fpos] = true
-			if _nav_window != null:
-				_nav_window.set_cell_walkable(fpos, true)
+			_nav_window.set_cell_walkable(fpos, true)
 
 	_loaded_chunks[coord] = {
 		&"floors": floors,
@@ -246,8 +229,7 @@ func _evict_chunk(coord: Vector2i) -> void:
 	for fpos: Vector2i in floors:
 		_floor.erase_cell(fpos)
 		_walkable_cells.erase(fpos)
-		if _nav_window != null:
-			_nav_window.set_cell_walkable(fpos, false)
+		_nav_window.set_cell_walkable(fpos, false)
 
 	for wpos: Vector2i in walls:
 		_walls.erase_cell(wpos)
@@ -255,7 +237,6 @@ func _evict_chunk(coord: Vector2i) -> void:
 	for tpos: Vector2i in torches:
 		_decorations.erase_cell(tpos)
 
-	if _light_manager != null:
-		_light_manager.remove_chunk_lights(coord)
+	_light_manager.remove_chunk_lights(coord)
 
 	_loaded_chunks.erase(coord)

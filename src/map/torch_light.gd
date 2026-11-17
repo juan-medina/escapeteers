@@ -20,8 +20,26 @@ func _ready() -> void:
 	color = TORCH_COLOR
 	energy = BASE_ENERGY
 	texture_scale = BASE_SCALE
-	enabled = true
+	enabled = false
 	set_process(false)
+
+
+func reset(pos: Vector2, cell: Vector2i, phase: float) -> void:
+	position = pos
+	cell_pos = cell
+	phase_offset = phase
+	current_dist_sq = 0.0
+	is_blinking = false
+	energy = BASE_ENERGY
+	texture_scale = BASE_SCALE
+	enabled = false
+	visible = true
+
+
+func deactivate() -> void:
+	enabled = false
+	visible = false
+	is_blinking = false
 
 
 func apply_flicker(wave: float, jitter: float, time: float = 0.0) -> void:

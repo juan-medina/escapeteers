@@ -56,7 +56,7 @@ static func get_floor_atlas(run_seed: int, gx: int, gy: int) -> Vector2i:
 	return Vector2i(ax, ay)
 
 
-static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan = null) -> Dictionary:
+static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan) -> Dictionary:
 	var out_floors: Array[Vector2i] = []
 	var out_floor_atlas: Array[Vector2i] = []
 	var out_spikes: Array[Vector2i] = []
@@ -125,7 +125,7 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan =
 
 			if is_f:
 				out_floors.append(gpos)
-				if wall_coords.x == -1 and plan != null and plan.is_spike_cell(gpos):
+				if wall_coords.x == -1 and plan.is_spike_cell(gpos):
 					out_floor_atlas.append(SPIKE_FRAMES[0])
 					out_spikes.append(gpos)
 				else:
@@ -170,17 +170,15 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan =
 						var atlas: Vector2i = wall_grid[lpos]
 						if atlas in WALL_TOP_VARIANTS:
 							var cand_top: Vector2i = Vector2i(target_gx, target_gy)
-							if (
-								(plan == null or not plan.has_candle_post_near(cand_top, 64))
-								and not _is_near_any(cand_top, out_lights, MIN_TORCH_DIST_SQ)
-							):
+							if not plan.has_candle_post_near(cand_top, 64) and not _is_near_any(cand_top, out_lights, MIN_TORCH_DIST_SQ):
 								top_candidates.append(cand_top)
 						elif atlas in WALL_LEFT_VARIANTS:
 							var adj_lx: int = lx + 1
 							if adj_lx < ChunkRaster.CHUNK_SIZE and not wall_grid.has(Vector2i(adj_lx, ly)) and raster.is_floor_local(adj_lx, ly):
 								var cand_left: Vector2i = Vector2i(target_gx + 1, target_gy)
 								if (
-									(plan == null or (not plan.has_candle_post_near(cand_left, 64) and not plan.is_spike_cell(cand_left)))
+									not plan.has_candle_post_near(cand_left, 64)
+									and not plan.is_spike_cell(cand_left)
 									and not _is_near_any(cand_left, out_lights, MIN_TORCH_DIST_SQ)
 								):
 									left_candidates.append(cand_left)
@@ -189,51 +187,35 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan =
 							if adj_lx >= 0 and not wall_grid.has(Vector2i(adj_lx, ly)) and raster.is_floor_local(adj_lx, ly):
 								var cand_right: Vector2i = Vector2i(target_gx - 1, target_gy)
 								if (
-									(plan == null or (not plan.has_candle_post_near(cand_right, 64) and not plan.is_spike_cell(cand_right)))
+									not plan.has_candle_post_near(cand_right, 64)
+									and not plan.is_spike_cell(cand_right)
 									and not _is_near_any(cand_right, out_lights, MIN_TORCH_DIST_SQ)
 								):
 									right_candidates.append(cand_right)
 
 			# Prefer top walls, then left, then right
-			if not top_candidates.is_empty():
-				var chosen_idx: int = h % top_candidates.size()
-				var gpos: Vector2i = top_candidates[chosen_idx]
-				out_torches.append(gpos)
-				out_torch_atlas.append(TORCH_TOP)
-				out_torch_alt_ids.append(0)
-				out_lights.append(gpos)
-			elif not left_candidates.is_empty():
-				var chosen_idx: int = h % left_candidates.size()
-				var gpos: Vector2i = left_candidates[chosen_idx]
-				out_torches.append(gpos)
-				out_torch_atlas.append(TORCH_SIDE)
-				out_torch_alt_ids.append(0)
-				out_lights.append(gpos)
-			elif not right_candidates.is_empty():
-				var chosen_idx: int = h % right_candidates.size()
-				var gpos: Vector2i = right_candidates[chosen_idx]
-				out_torches.append(gpos)
-				out_torch_atlas.append(TORCH_SIDE)
-				out_torch_alt_ids.append(TORCH_RIGHT_ALT_ID)
-				out_lights.append(gpos)
+			if not _try_append_torch(top_candidates, h, TORCH_TOP, 0, out_torches, out_torch_atlas, out_torch_alt_ids, out_lights):
+				if not _try_append_torch(left_candidates, h, TORCH_SIDE, 0, out_torches, out_torch_atlas, out_torch_alt_ids, out_lights):
+					_try_append_torch(
+						right_candidates, h, TORCH_SIDE, TORCH_RIGHT_ALT_ID, out_torches, out_torch_atlas, out_torch_alt_ids, out_lights
+					)
 
 	# Candle posts streamed directly from WorldPlan
-	if plan != null:
-		for ly: int in range(ChunkRaster.CHUNK_SIZE):
-			var gy: int = raster.origin.y + ly
-			for lx: int in range(ChunkRaster.CHUNK_SIZE):
-				var gx: int = raster.origin.x + lx
-				var gpos: Vector2i = Vector2i(gx, gy)
-				if not wall_grid.has(Vector2i(lx, ly)) and raster.is_floor_local(lx, ly):
-					if plan.is_candle_post_top(gpos):
-						out_torches.append(gpos)
-						out_torch_atlas.append(CANDLE_POST_TOP)
-						out_torch_alt_ids.append(0)
-						out_lights.append(gpos)
-					elif plan.is_candle_post_base(gpos):
-						out_torches.append(gpos)
-						out_torch_atlas.append(CANDLE_POST_BOTTOM)
-						out_torch_alt_ids.append(0)
+	for ly: int in range(ChunkRaster.CHUNK_SIZE):
+		var gy: int = raster.origin.y + ly
+		for lx: int in range(ChunkRaster.CHUNK_SIZE):
+			var gx: int = raster.origin.x + lx
+			var gpos: Vector2i = Vector2i(gx, gy)
+			if not wall_grid.has(Vector2i(lx, ly)) and raster.is_floor_local(lx, ly):
+				if plan.is_candle_post_top(gpos):
+					out_torches.append(gpos)
+					out_torch_atlas.append(CANDLE_POST_TOP)
+					out_torch_alt_ids.append(0)
+					out_lights.append(gpos)
+				elif plan.is_candle_post_base(gpos):
+					out_torches.append(gpos)
+					out_torch_atlas.append(CANDLE_POST_BOTTOM)
+					out_torch_alt_ids.append(0)
 
 	return {
 		&"floors": out_floors,
@@ -247,6 +229,27 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan =
 		&"torch_alt_ids": out_torch_alt_ids,
 		&"lights": out_lights,
 	}
+
+
+static func _try_append_torch(
+	candidates: Array[Vector2i],
+	h: int,
+	atlas: Vector2i,
+	alt_id: int,
+	out_torches: Array[Vector2i],
+	out_torch_atlas: Array[Vector2i],
+	out_torch_alt_ids: Array[int],
+	out_lights: Array[Vector2i]
+) -> bool:
+	if candidates.is_empty():
+		return false
+	var chosen_idx: int = h % candidates.size()
+	var gpos: Vector2i = candidates[chosen_idx]
+	out_torches.append(gpos)
+	out_torch_atlas.append(atlas)
+	out_torch_alt_ids.append(alt_id)
+	out_lights.append(gpos)
+	return true
 
 
 static func _is_near_any(cell: Vector2i, existing: Array[Vector2i], min_dist_sq: int) -> bool:

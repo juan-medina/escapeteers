@@ -108,16 +108,6 @@ func get_depth_rooms(depth: int) -> Array[Rect2i]:
 	return result
 
 
-func get_carve_rects_in_rect(query_rect: Rect2i) -> Array[Rect2i]:
-	var candidate_ids: Array[int] = spatial_grid.get_candidate_ids_for_rect(query_rect)
-	var result: Array[Rect2i] = []
-	for idx: int in candidate_ids:
-		if idx >= 0 and idx < carve_rects.size():
-			if carve_rects[idx].intersects(query_rect):
-				result.append(carve_rects[idx])
-	return result
-
-
 func get_room_depth(room: Rect2i) -> int:
 	if _room_depths.has(room):
 		return _room_depths[room]
@@ -428,11 +418,15 @@ func _plan_candle_posts_for_room(room: Rect2i) -> void:
 
 
 func has_candle_post_near(cell: Vector2i, radius_sq: int = 81) -> bool:
+	return _has_cell_near(cell, _candle_post_tops, radius_sq)
+
+
+static func _has_cell_near(cell: Vector2i, lookup: Dictionary, radius_sq: int) -> bool:
 	var r: int = int(ceilf(sqrt(float(radius_sq))))
 	for dy: int in range(-r, r + 1):
 		for dx: int in range(-r, r + 1):
 			if dx * dx + dy * dy <= radius_sq:
-				if _candle_post_tops.has(cell + Vector2i(dx, dy)):
+				if lookup.has(cell + Vector2i(dx, dy)):
 					return true
 	return false
 
@@ -485,37 +479,33 @@ func _eliminate_narrow_gaps() -> void:
 			if j <= i or j >= carve_rects.size():
 				continue
 			var rect_b: Rect2i = carve_rects[j]
-
-			var gap_x1: int = rect_b.position.x - rect_a.end.x
-			if gap_x1 > 0 and gap_x1 <= 2:
-				var ov_y_start: int = maxi(rect_a.position.y, rect_b.position.y)
-				var ov_y_end: int = mini(rect_a.end.y, rect_b.end.y)
-				if ov_y_end > ov_y_start:
-					bridges_to_add.append(Rect2i(rect_a.end.x, ov_y_start, gap_x1, ov_y_end - ov_y_start))
-
-			var gap_x2: int = rect_a.position.x - rect_b.end.x
-			if gap_x2 > 0 and gap_x2 <= 2:
-				var ov_y_start: int = maxi(rect_a.position.y, rect_b.position.y)
-				var ov_y_end: int = mini(rect_a.end.y, rect_b.end.y)
-				if ov_y_end > ov_y_start:
-					bridges_to_add.append(Rect2i(rect_b.end.x, ov_y_start, gap_x2, ov_y_end - ov_y_start))
-
-			var gap_y1: int = rect_b.position.y - rect_a.end.y
-			if gap_y1 > 0 and gap_y1 <= 2:
-				var ov_x_start: int = maxi(rect_a.position.x, rect_b.position.x)
-				var ov_x_end: int = mini(rect_a.end.x, rect_b.end.x)
-				if ov_x_end > ov_x_start:
-					bridges_to_add.append(Rect2i(ov_x_start, rect_a.end.y, ov_x_end - ov_x_start, gap_y1))
-
-			var gap_y2: int = rect_a.position.y - rect_b.end.y
-			if gap_y2 > 0 and gap_y2 <= 2:
-				var ov_x_start: int = maxi(rect_a.position.x, rect_b.position.x)
-				var ov_x_end: int = mini(rect_a.end.x, rect_b.end.x)
-				if ov_x_end > ov_x_start:
-					bridges_to_add.append(Rect2i(ov_x_start, rect_b.end.y, ov_x_end - ov_x_start, gap_y2))
+			_try_add_horizontal_bridge(rect_a, rect_b, bridges_to_add)
+			_try_add_horizontal_bridge(rect_b, rect_a, bridges_to_add)
+			_try_add_vertical_bridge(rect_a, rect_b, bridges_to_add)
+			_try_add_vertical_bridge(rect_b, rect_a, bridges_to_add)
 
 	for bridge: Rect2i in bridges_to_add:
 		_add_carve_rect(bridge)
+
+
+static func _try_add_horizontal_bridge(left_rect: Rect2i, right_rect: Rect2i, bridges: Array[Rect2i]) -> void:
+	var gap: int = right_rect.position.x - left_rect.end.x
+	if gap <= 0 or gap > 2:
+		return
+	var ov_y_start: int = maxi(left_rect.position.y, right_rect.position.y)
+	var ov_y_end: int = mini(left_rect.end.y, right_rect.end.y)
+	if ov_y_end > ov_y_start:
+		bridges.append(Rect2i(left_rect.end.x, ov_y_start, gap, ov_y_end - ov_y_start))
+
+
+static func _try_add_vertical_bridge(top_rect: Rect2i, bottom_rect: Rect2i, bridges: Array[Rect2i]) -> void:
+	var gap: int = bottom_rect.position.y - top_rect.end.y
+	if gap <= 0 or gap > 2:
+		return
+	var ov_x_start: int = maxi(top_rect.position.x, bottom_rect.position.x)
+	var ov_x_end: int = mini(top_rect.end.x, bottom_rect.end.x)
+	if ov_x_end > ov_x_start:
+		bridges.append(Rect2i(ov_x_start, top_rect.end.y, ov_x_end - ov_x_start, gap))
 
 
 func _compute_companion_spawns_for_room(room: Rect2i) -> Array[Vector2i]:
@@ -792,10 +782,4 @@ func _is_valid_corridor_spike_cell(cell: Vector2i) -> bool:
 
 
 func _has_spike_near(cell: Vector2i, radius_sq: int) -> bool:
-	var r: int = int(ceilf(sqrt(float(radius_sq))))
-	for dy: int in range(-r, r + 1):
-		for dx: int in range(-r, r + 1):
-			if dx * dx + dy * dy <= radius_sq:
-				if _spike_cells.has(cell + Vector2i(dx, dy)):
-					return true
-	return false
+	return _has_cell_near(cell, _spike_cells, radius_sq)

@@ -41,16 +41,7 @@ func is_in_bounds(cell: Vector2i) -> bool:
 	return _astar.is_in_boundsv(cell)
 
 
-func is_point_solid(cell: Vector2i) -> bool:
-	if not _astar.is_in_boundsv(cell):
-		return true
-	return _astar.is_point_solid(cell)
-
-
 func get_path(from_pos: Vector2, to_pos: Vector2) -> PackedVector2Array:
-	if _floor == null:
-		return PackedVector2Array()
-
 	var from_cell: Vector2i = _floor.local_to_map(from_pos)
 	var to_cell: Vector2i = _floor.local_to_map(to_pos)
 
@@ -58,10 +49,10 @@ func get_path(from_pos: Vector2, to_pos: Vector2) -> PackedVector2Array:
 		return PackedVector2Array()
 
 	if _astar.is_point_solid(from_cell):
-		from_cell = _find_closest_walkable_cell(from_cell)
+		from_cell = find_closest_walkable_cell(from_cell, true)
 
 	if _astar.is_point_solid(to_cell):
-		to_cell = _find_closest_walkable_cell(to_cell)
+		to_cell = find_closest_walkable_cell(to_cell, true)
 
 	if _astar.is_point_solid(from_cell) or _astar.is_point_solid(to_cell):
 		return PackedVector2Array()
@@ -83,6 +74,28 @@ func get_path(from_pos: Vector2, to_pos: Vector2) -> PackedVector2Array:
 	return world_path
 
 
+func find_closest_walkable_cell(target_cell: Vector2i, require_nav_bounds: bool = false) -> Vector2i:
+	if _is_walkable_candidate(target_cell, require_nav_bounds):
+		return target_cell
+
+	for r: int in range(1, 6):
+		for dx: int in range(-r, r + 1):
+			for dy: int in range(-r, r + 1):
+				if absi(dx) != r and absi(dy) != r:
+					continue
+				var candidate: Vector2i = target_cell + Vector2i(dx, dy)
+				if _is_walkable_candidate(candidate, require_nav_bounds):
+					return candidate
+
+	return target_cell
+
+
+func _is_walkable_candidate(cell: Vector2i, require_nav_bounds: bool) -> bool:
+	if require_nav_bounds:
+		return _astar.is_in_boundsv(cell) and not _astar.is_point_solid(cell)
+	return _walkable_cells.has(cell)
+
+
 func _recenter(new_center: Vector2i) -> void:
 	_center_cell = new_center
 	var top_left: Vector2i = new_center - Vector2i(HALF_WINDOW_SIZE, HALF_WINDOW_SIZE)
@@ -101,19 +114,3 @@ func _recenter(new_center: Vector2i) -> void:
 	for cell: Vector2i in _walkable_cells:
 		if _current_region.has_point(cell):
 			_astar.set_point_solid(cell, false)
-
-
-func _find_closest_walkable_cell(target_cell: Vector2i) -> Vector2i:
-	if _astar.is_in_boundsv(target_cell) and not _astar.is_point_solid(target_cell):
-		return target_cell
-
-	for r: int in range(1, 6):
-		for dx: int in range(-r, r + 1):
-			for dy: int in range(-r, r + 1):
-				if absi(dx) != r and absi(dy) != r:
-					continue
-				var candidate: Vector2i = target_cell + Vector2i(dx, dy)
-				if _astar.is_in_boundsv(candidate) and not _astar.is_point_solid(candidate):
-					return candidate
-
-	return target_cell

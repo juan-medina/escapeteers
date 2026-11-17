@@ -23,15 +23,12 @@ const SPIKE_DOWN_2_TIME: float = 0.10
 const SPIKE_DOWN_1_TIME: float = 0.10
 const SPIKE_CYCLE_DURATION: float = 3.80
 
-@export var debug_seed: int = 0
-
 var plan: WorldPlan = WorldPlan.new()
 var streamer: MapStreamer = MapStreamer.new()
 var hero_room: Rect2i = Rect2i()
 var companion_rooms: Array[Rect2i] = []
 
 var nav_window: NavWindow = NavWindow.new()
-var light_manager: LightManager = LightManager.new()
 var _walkable_cells: Dictionary[Vector2i, bool] = {}
 var _loaded_spikes: Dictionary[Vector2i, int] = {}
 var _group_frames: Array[int] = [0, 0, 0, 0]
@@ -41,26 +38,10 @@ var _decorated_rooms: Dictionary[Rect2i, bool] = {}
 var _secret_torch_cells: Array[Vector2i] = []
 var _secret_torch_index: int = 0
 
+@onready var light_manager: LightManager = $Lights
 @onready var _floor: TileMapLayer = $Floor
 @onready var _walls: TileMapLayer = $Walls
 @onready var _decorations: TileMapLayer = $Decorations
-@onready var _lights: Node2D = $Lights
-
-
-func _ready() -> void:
-	y_sort_enabled = true
-	_walls.y_sort_enabled = true
-	_decorations.y_sort_enabled = true
-	_floor.z_index = -1
-	_floor.rendering_quadrant_size = 4
-	_walls.rendering_quadrant_size = 4
-	_decorations.rendering_quadrant_size = 4
-	if _walls.tile_set == null:
-		_walls.tile_set = _floor.tile_set
-	if _decorations.tile_set == null:
-		_decorations.tile_set = _floor.tile_set
-	if not _lights.is_ancestor_of(light_manager):
-		_lights.add_child(light_manager)
 
 
 func get_hero_spawn_position() -> Vector2:
@@ -142,34 +123,26 @@ func clamp_to_walkable(world_pos: Vector2) -> Vector2:
 	var cell: Vector2i = _floor.local_to_map(world_pos)
 	if is_cell_walkable(cell):
 		return world_pos
-	var closest_cell: Vector2i = _find_closest_walkable_cell(cell)
+	var closest_cell: Vector2i = nav_window.find_closest_walkable_cell(cell)
 	return _floor.map_to_local(closest_cell)
 
 
 func get_navigation_path(from_pos: Vector2, to_pos: Vector2) -> PackedVector2Array:
-	if nav_window == null:
-		return PackedVector2Array()
 	return nav_window.get_path(from_pos, to_pos)
 
 
 func is_in_nav_bounds(world_pos: Vector2) -> bool:
-	if nav_window == null or _floor == null:
-		return false
 	return nav_window.is_in_bounds(_floor.local_to_map(world_pos))
 
 
 func generate_map() -> void:
-	if debug_seed != 0:
-		seed(debug_seed)
-		print(&"[Map] Seed set to debug_seed: %d" % debug_seed)
-
 	generation_progress_updated.emit(0.15, &"Surveying primal chamber...")
 	await get_tree().process_frame
 
 	_floor.clear()
 	_walls.clear()
 	_decorations.clear()
-	_clear_lights()
+	light_manager.clear()
 	companion_rooms.clear()
 	_walkable_cells.clear()
 	_loaded_spikes.clear()
@@ -178,7 +151,7 @@ func generate_map() -> void:
 	_expanded_rooms.clear()
 	_decorated_rooms.clear()
 
-	plan.generate(debug_seed)
+	plan.generate()
 	hero_room = plan.hero_room
 	_expanded_rooms[hero_room] = true
 
@@ -190,9 +163,9 @@ func generate_map() -> void:
 
 	nav_window.setup(_walkable_cells, _floor)
 	nav_window.update_center(hero_room.get_center())
-	light_manager.setup(debug_seed)
+	light_manager.setup(plan.run_seed)
 	light_manager.set_focus(get_hero_spawn_position())
-	streamer.setup(plan, _floor, _walls, _decorations, light_manager, nav_window, _walkable_cells, _loaded_spikes, _group_frames, debug_seed)
+	streamer.setup(plan, _floor, _walls, _decorations, light_manager, nav_window, _walkable_cells, _loaded_spikes, _group_frames, plan.run_seed)
 
 	generation_progress_updated.emit(0.70, &"Materializing starting chambers...")
 	await get_tree().process_frame
@@ -341,29 +314,8 @@ func _check_secret_torch_proximity(player_world_pos: Vector2) -> void:
 	secret_torches_completed.emit()
 
 
-func _find_closest_walkable_cell(target_cell: Vector2i) -> Vector2i:
-	if is_cell_walkable(target_cell):
-		return target_cell
-
-	for r: int in range(1, 6):
-		for dx: int in range(-r, r + 1):
-			for dy: int in range(-r, r + 1):
-				if absi(dx) != r and absi(dy) != r:
-					continue
-				var candidate: Vector2i = target_cell + Vector2i(dx, dy)
-				if is_cell_walkable(candidate):
-					return candidate
-
-	return target_cell
-
-
 func _pick_random_tile(tiles: Array[Vector2i]) -> Vector2i:
 	return tiles[randi() % tiles.size()]
-
-
-func _clear_lights() -> void:
-	if light_manager != null:
-		light_manager.clear()
 
 
 func _setup_secret_torches() -> void:

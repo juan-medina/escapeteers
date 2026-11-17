@@ -63,9 +63,5 @@ func is_floor_local(lx: int, ly: int) -> bool:
 	return data[(ly + 1) * RASTER_SIZE + (lx + 1)] == 1
 
 
-func has_any_floor() -> bool:
-	return floor_count > 0
-
-
 func has_any_content() -> bool:
 	return any_floor_in_raster
