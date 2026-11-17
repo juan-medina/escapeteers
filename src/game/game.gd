@@ -85,6 +85,8 @@ var _squad_speed: float = BASE_SQUAD_SPEED
 var _combat_cooldown_timer: float = 0.0
 var _continuous_move_timer: float = 0.0
 var _spike_hit_cooldowns: Dictionary[Character, float] = {}
+var _current_room: Rect2i = Rect2i()
+var _last_player_cell: Vector2i = Vector2i(2147483647, 2147483647)
 
 @onready var _camera: Camera2D = $Camera2D
 @onready var _characters: Node2D = $Characters
@@ -120,6 +122,7 @@ func _ready() -> void:
 	_hud.update_xp(_current_xp, _xp_required, _squad_level)
 	_sync_hud_squad()
 	_hud.setup_map(_map.plan, _character)
+	_check_room_entry()
 
 	Transition.set_loading_progress(0.92, &"Assembling the fellowship...")
 	await get_tree().process_frame
@@ -173,6 +176,7 @@ func _process(delta: float) -> void:
 	if not _character.is_dead:
 		if _character.is_moving:
 			_hud.dismiss_movement_hint()
+			_check_room_entry()
 		_character.record_step(delta)
 		_stream_timer -= delta
 		if _stream_timer <= 0.0:
@@ -197,6 +201,42 @@ func _update_map_streaming() -> void:
 		_register_and_populate_rooms(new_rooms)
 
 	_respawn_nearby_hibernating_rooms()
+
+
+func _check_room_entry() -> void:
+	var player_cell: Vector2i = _map.local_to_map(_character.global_position)
+	if player_cell == _last_player_cell:
+		return
+	_last_player_cell = player_cell
+
+	var room: Rect2i = _map.plan.get_room_at(player_cell)
+	if room == _current_room:
+		return
+	_current_room = room
+	if room.size == Vector2i.ZERO:
+		return
+
+	if room == _map.hero_room:
+		_hud.notify_room_entered(room, &"Starting Chamber", true)
+		return
+
+	var room_level: int = clampi(_map.get_room_depth(room), 1, 12)
+	var remaining: int = _room_remaining_enemies.get(room, _map.get_room_enemy_quota(room))
+	var archetype_name: StringName = _get_archetype_title(_map.plan.get_room_archetype(room))
+	var title: String = &"%s - Lv. %d" % [archetype_name, room_level]
+	_hud.notify_room_entered(room, title, remaining <= 0)
+
+
+static func _get_archetype_title(archetype: WorldPlan.RoomArchetype) -> StringName:
+	var title: StringName = &"Slime Pit"
+	match archetype:
+		WorldPlan.RoomArchetype.BONE_SWARM:
+			title = &"Bone Swarm"
+		WorldPlan.RoomArchetype.ARCHER_GARRISON:
+			title = &"Archer Garrison"
+		WorldPlan.RoomArchetype.NECRO_CRYPT:
+			title = &"Necro Crypt"
+	return title
 
 
 func _spawn_initial_characters() -> void:
@@ -468,6 +508,8 @@ func _on_enemy_died(enemy: Enemy) -> void:
 	var room: Rect2i = enemy.home_room
 	if _room_remaining_enemies.has(room):
 		_room_remaining_enemies[room] = maxi(0, _room_remaining_enemies[room] - 1)
+		if _room_remaining_enemies[room] <= 0:
+			_hud.set_room_cleared(room, true)
 	if _room_spawned_enemies.has(room):
 		_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
 

@@ -5,6 +5,18 @@
 [ext_resource type="PackedScene" path="res://hud/map_overlay/map_overlay.tscn" id="3_map"]
 [ext_resource type="PackedScene" path="res://hud/squad_grid/squad_grid.tscn" id="4_squad_grid"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_room_toast"]
+content_margin_left = 8.0
+content_margin_top = 2.0
+content_margin_right = 8.0
+content_margin_bottom = 2.0
+bg_color = Color(0.06, 0.06, 0.09, 0.88)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.22, 0.3, 0.6)
+
 [node name="Hud" type="CanvasLayer" unique_id=1849182746]
 layer = 10
 script = ExtResource("1_hud")
@@ -82,3 +94,23 @@ grow_vertical = 0
 theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 0.85)
 horizontal_alignment = 1
 text = "WASD / Cursors / Controller or touch to move"
+
+[node name="RoomToast" type="PanelContainer" parent="."]
+visible = false
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -80.0
+offset_top = 30.0
+offset_right = 80.0
+offset_bottom = 48.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_room_toast")
+
+[node name="Label" type="Label" parent="RoomToast"]
+layout_mode = 2
+mouse_filter = 2
+text = "Slime Pit - Lv. 1"
+horizontal_alignment = 1
+vertical_alignment = 1

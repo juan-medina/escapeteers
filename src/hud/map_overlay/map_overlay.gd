@@ -10,6 +10,13 @@ const CHUNK_SIZE_PX: float = float(CHUNK_SIZE_TILES) * TILE_SIZE
 const DEADZONE_HALF_EXTENT: Vector2 = Vector2(220.0, 130.0)
 const DAMAGE_METER_SAFE_MARGIN: float = 192.0
 const RECENTER_SPEED: float = 420.0
+const ROOM_LABEL_SCENE: PackedScene = preload("res://hud/map_overlay/room_level_label.tscn")
+const LABEL_HALF_SIZE: Vector2 = Vector2(16.0, 8.0)
+const LABEL_COLOR_SAFE: Color = Color(0.55, 0.95, 0.62, 0.95)
+const LABEL_COLOR_CAUTION: Color = Color(1.0, 0.82, 0.32, 0.95)
+const LABEL_COLOR_DANGER: Color = Color(1.0, 0.38, 0.35, 0.95)
+const LABEL_COLOR_CLEARED: Color = Color(0.55, 0.62, 0.70, 0.50)
+const LABEL_COLOR_START: Color = Color(0.70, 0.88, 1.0, 0.80)
 
 ## Screen pixels per world tile. Must be an integer so every wall vertex lands on a whole pixel (crisp, no shimmer).
 @export_range(1, 8) var pixels_per_tile: int = 2
@@ -17,11 +24,17 @@ const RECENTER_SPEED: float = 420.0
 @export_range(1, 8) var explore_chunk_radius: int = 2
 
 var map_scale: float = 0.0
+var _plan: WorldPlan = null
 var _target: CharacterBody2D = null
+var _squad_level: int = 1
 var _chunk_segments: Dictionary[Vector2i, PackedVector2Array] = {}
 var _chunk_floor_vertices: Dictionary[Vector2i, PackedVector2Array] = {}
 var _revealed_chunks: Dictionary[Vector2i, bool] = {}
 var _explored_chunks: Dictionary[Vector2i, bool] = {}
+var _discovered_rooms: Dictionary[Rect2i, bool] = {}
+var _cleared_rooms: Dictionary[Rect2i, bool] = {}
+var _room_labels: Dictionary[Rect2i, Label] = {}
+var _label_pool: Array[Label] = []
 var _last_revealed_chunk: Vector2i = Vector2i(2147483647, 2147483647)
 var _anchor_map_pos: Vector2 = Vector2.ZERO
 var _has_anchor: bool = false
@@ -32,6 +45,7 @@ var _dirty: bool = false
 @onready var _unexplored_floor_mesh: MeshInstance2D = $Chunks/UnexploredFloorMesh
 @onready var _explored_floor_mesh: MeshInstance2D = $Chunks/ExploredFloorMesh
 @onready var _walls_mesh: MeshInstance2D = $Chunks/WallsMesh
+@onready var _room_labels_container: Node2D = $RoomLabels
 @onready var _player_marker: Node2D = $PlayerMarker
 
 
@@ -82,6 +96,42 @@ func set_map_visible(is_vis: bool) -> void:
 			_rebuild_meshes()
 
 
+func mark_room_discovered(room: Rect2i) -> void:
+	if _room_labels.has(room) and not _discovered_rooms.has(room):
+		_discovered_rooms[room] = true
+		_update_room_label(room)
+
+
+func set_room_cleared(room: Rect2i, is_cleared: bool) -> void:
+	if is_cleared:
+		_cleared_rooms[room] = true
+	else:
+		_cleared_rooms.erase(room)
+	_update_room_label(room)
+
+
+func set_squad_level(squad_level: int) -> void:
+	if _squad_level == squad_level:
+		return
+	_squad_level = squad_level
+	for room: Rect2i in _discovered_rooms:
+		_update_room_label(room)
+
+
+func get_room_color(room: Rect2i) -> Color:
+	var depth: int = _plan.get_room_depth(room)
+	if depth <= 0:
+		return LABEL_COLOR_START
+	if _cleared_rooms.has(room):
+		return LABEL_COLOR_CLEARED
+	var diff: int = clampi(depth, 1, 12) - _squad_level
+	if diff <= 0:
+		return LABEL_COLOR_SAFE
+	if diff == 1:
+		return LABEL_COLOR_CAUTION
+	return LABEL_COLOR_DANGER
+
+
 func _center_anchor_on_target() -> void:
 	_anchor_map_pos = (_target.global_position * map_scale).round()
 	_has_anchor = true
@@ -108,6 +158,7 @@ func _update_view(delta: float) -> void:
 
 	var snapped_anchor: Vector2 = _anchor_map_pos.round()
 	_chunks_container.position = center - snapped_anchor
+	_room_labels_container.position = center - snapped_anchor
 	_player_marker.position = center + (player_map_pos - snapped_anchor)
 	if _target.velocity.length_squared() > 0.01:
 		_player_marker.rotation = _target.velocity.angle()
@@ -181,19 +232,66 @@ func _build_chunks(plan: WorldPlan) -> void:
 	_explored_floor_mesh.mesh = null
 	_walls_mesh.mesh = null
 	_dirty = false
+	_plan = plan
 	_revealed_chunks.clear()
 	_explored_chunks.clear()
+	_discovered_rooms.clear()
+	_cleared_rooms.clear()
+	_room_labels.clear()
 	_chunk_segments.clear()
 	_chunk_floor_vertices.clear()
 	_last_revealed_chunk = Vector2i(2147483647, 2147483647)
 
 	if plan.carve_rects.is_empty():
+		for label: Label in _label_pool:
+			label.visible = false
 		return
 
 	map_scale = float(pixels_per_tile) / TILE_SIZE
 	_chunks_container.scale = Vector2(map_scale, map_scale)
 	_extract_chunked_floors(plan)
 	_extract_chunked_wall_segments(plan)
+	_build_room_labels(plan)
+
+
+func _build_room_labels(plan: WorldPlan) -> void:
+	var pool_idx: int = 0
+	if plan.hero_room.size != Vector2i.ZERO:
+		_register_room_label(plan.hero_room, &"Start", pool_idx)
+		pool_idx += 1
+
+	for room: Rect2i in plan.rooms:
+		var level_text: String = &"Lv.%d" % clampi(plan.get_room_depth(room), 1, 12)
+		_register_room_label(room, level_text, pool_idx)
+		pool_idx += 1
+
+	for i: int in range(pool_idx, _label_pool.size()):
+		_label_pool[i].visible = false
+
+
+func _register_room_label(room: Rect2i, label_text: String, pool_idx: int) -> void:
+	var label: Label
+	if pool_idx < _label_pool.size():
+		label = _label_pool[pool_idx]
+	else:
+		label = ROOM_LABEL_SCENE.instantiate() as Label
+		_label_pool.append(label)
+		_room_labels_container.add_child(label)
+
+	var room_center: Vector2 = Vector2(room.position) + Vector2(room.size) * 0.5
+	label.text = label_text
+	label.position = (room_center * TILE_SIZE * map_scale).round() - LABEL_HALF_SIZE
+	label.visible = false
+	_room_labels[room] = label
+
+
+func _update_room_label(room: Rect2i) -> void:
+	if not _room_labels.has(room):
+		return
+	var label: Label = _room_labels[room]
+	label.visible = _discovered_rooms.has(room)
+	if label.visible:
+		label.add_theme_color_override(&"font_color", get_room_color(room))
 
 
 func _extract_chunked_floors(plan: WorldPlan) -> void:

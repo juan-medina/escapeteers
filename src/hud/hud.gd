@@ -7,12 +7,16 @@ extends CanvasLayer
 const FILL_SPEED: float = 60.0
 const HINT_AUTO_DISMISS_DELAY: float = 8.0
 const HINT_FADE_DURATION: float = 0.8
+const ROOM_TOAST_FADE_IN: float = 0.18
+const ROOM_TOAST_HOLD: float = 2.0
+const ROOM_TOAST_FADE_OUT: float = 0.45
 
 var _current_level: int = 1
 var _target_xp: float = 0.0
 var _display_xp: float = 0.0
 var _display_max_xp: float = 50.0
 var _movement_hint_dismissed: bool = false
+var _room_toast_tween: Tween = null
 
 @onready var _damage_meter: DamageMeter = $DamageMeter
 @onready var _squad_grid: SquadGrid = $SquadGrid
@@ -22,6 +26,8 @@ var _movement_hint_dismissed: bool = false
 @onready var _xp_text: Label = $Margin/HBox/XPText
 @onready var _map_hint: Label = $MapHint
 @onready var _movement_hint: Label = $MovementHint
+@onready var _room_toast: PanelContainer = $RoomToast
+@onready var _room_toast_label: Label = $RoomToast/Label
 
 
 func _ready() -> void:
@@ -53,6 +59,7 @@ func _process(delta: float) -> void:
 
 func update_xp(current_xp: float, xp_required: float, squad_level: int) -> void:
 	_level_badge.text = &"Lv. %d" % squad_level
+	_map_overlay.set_squad_level(squad_level)
 
 	if squad_level > _current_level:
 		_current_level = squad_level
@@ -79,6 +86,30 @@ func record_damage(class_id: StringName, amount: float) -> void:
 
 func setup_map(plan: WorldPlan, target: Hero) -> void:
 	_map_overlay.setup(plan, target)
+
+
+func notify_room_entered(room: Rect2i, title: String, is_cleared: bool) -> void:
+	_map_overlay.mark_room_discovered(room)
+	_map_overlay.set_room_cleared(room, is_cleared)
+
+	var color: Color = _map_overlay.get_room_color(room)
+	color.a = 1.0
+	_room_toast_label.text = title
+	_room_toast_label.add_theme_color_override(&"font_color", color)
+
+	if _room_toast_tween != null and _room_toast_tween.is_valid():
+		_room_toast_tween.kill()
+	_room_toast.modulate.a = 0.0
+	_room_toast.visible = true
+	_room_toast_tween = create_tween()
+	_room_toast_tween.tween_property(_room_toast, ^"modulate:a", 1.0, ROOM_TOAST_FADE_IN)
+	_room_toast_tween.tween_interval(ROOM_TOAST_HOLD)
+	_room_toast_tween.tween_property(_room_toast, ^"modulate:a", 0.0, ROOM_TOAST_FADE_OUT)
+	_room_toast_tween.tween_callback(_room_toast.hide)
+
+
+func set_room_cleared(room: Rect2i, is_cleared: bool) -> void:
+	_map_overlay.set_room_cleared(room, is_cleared)
 
 
 func dismiss_movement_hint() -> void:
