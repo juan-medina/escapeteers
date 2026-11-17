@@ -174,7 +174,8 @@ func _materialize_chunk(coord: Vector2i) -> void:
 		_loaded_spikes[spos] = group_id
 		if group_id >= 0 and group_id < _group_frames.size():
 			var frame_idx: int = _group_frames[group_id]
-			_floor.set_cell(spos, TileClassifier.TILE_SET_SOURCE_ID, TileClassifier.SPIKE_FRAMES[frame_idx])
+			var tile_set: int = _plan.get_cell_tile_set(spos)
+			_floor.set_cell(spos, TileClassifier.TILE_SET_SOURCE_ID, TileClassifier.get_spike_frame(frame_idx, tile_set))
 
 	var wall_set: Dictionary[Vector2i, bool] = {}
 	for i: int in range(walls.size()):

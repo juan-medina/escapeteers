@@ -7,10 +7,6 @@ extends Node2D
 signal generation_progress_updated(progress: float, stage_name: StringName)
 signal secret_torches_completed
 
-const PROP_BARREL: Vector2i = Vector2i(4, 28)
-const PROP_BOX: Vector2i = Vector2i(4, 29)
-const PROP_SKULLS_AND_BONES: Array[Vector2i] = [Vector2i(5, 29), Vector2i(6, 29), Vector2i(7, 29), Vector2i(8, 29)]
-
 const ROOM_PADDING: int = 8
 const EXPAND_TRIGGER_DISTANCE_TILES: float = 75.0
 const SECRET_TORCH_COUNT: int = 4
@@ -34,7 +30,6 @@ var _loaded_spikes: Dictionary[Vector2i, int] = {}
 var _group_frames: Array[int] = [0, 0, 0, 0]
 var _spike_elapsed: float = 0.0
 var _expanded_rooms: Dictionary[Rect2i, bool] = {}
-var _decorated_rooms: Dictionary[Rect2i, bool] = {}
 var _secret_torch_cells: Array[Vector2i] = []
 var _secret_torch_index: int = 0
 
@@ -106,7 +101,7 @@ func get_enemy_spawn_positions_for_room(room: Rect2i, count: int) -> Array[Vecto
 	while positions.size() < count and attempts < max_attempts:
 		attempts += 1
 		var cell: Vector2i = Vector2i(randi_range(min_x, max_x), randi_range(min_y, max_y))
-		if cell.distance_squared_to(center) >= 2:
+		if cell.distance_squared_to(center) >= 2 and is_cell_walkable(cell):
 			positions.append(_floor.map_to_local(cell))
 
 	if positions.is_empty():
@@ -149,7 +144,6 @@ func generate_map() -> void:
 	_group_frames = [0, 0, 0, 0]
 	_spike_elapsed = 0.0
 	_expanded_rooms.clear()
-	_decorated_rooms.clear()
 
 	plan.generate()
 	hero_room = plan.hero_room
@@ -175,9 +169,6 @@ func generate_map() -> void:
 		start_bounds = start_bounds.merge(r)
 	streamer.materialize_rect_immediate(start_bounds.grow(ROOM_PADDING))
 
-	var initial_rooms: Array[Rect2i] = [hero_room]
-	initial_rooms.append_array(companion_rooms)
-	_decorate_rooms(initial_rooms)
 	_setup_secret_torches()
 
 	generation_progress_updated.emit(0.90, &"Lighting dungeon torches...")
@@ -209,7 +200,8 @@ func update_spikes(delta: float) -> void:
 		var group_id: int = _loaded_spikes[cell]
 		if changed_groups.has(group_id):
 			var frame_idx: int = changed_groups[group_id]
-			_floor.set_cell(cell, TileClassifier.TILE_SET_SOURCE_ID, TileClassifier.SPIKE_FRAMES[frame_idx])
+			var tile_set: int = plan.get_cell_tile_set(cell)
+			_floor.set_cell(cell, TileClassifier.TILE_SET_SOURCE_ID, TileClassifier.get_spike_frame(frame_idx, tile_set))
 
 
 func is_spike_active_at(cell: Vector2i) -> bool:
@@ -277,20 +269,7 @@ func expand_frontier_near(player_world_pos: Vector2) -> Array[Rect2i]:
 					companion_rooms.append(child_room)
 					new_rooms.append(child_room)
 
-	var ready_to_decorate: Array[Rect2i] = []
-	for r: Rect2i in companion_rooms:
-		if not _decorated_rooms.has(r) and is_room_materialized(r):
-			ready_to_decorate.append(r)
-	if not ready_to_decorate.is_empty():
-		_decorate_rooms(ready_to_decorate)
-
 	return new_rooms
-
-
-func _decorate_rooms(rooms: Array[Rect2i]) -> void:
-	_place_room_props_for_rooms(rooms)
-	for r: Rect2i in rooms:
-		_decorated_rooms[r] = true
 
 
 func _check_secret_torch_proximity(player_world_pos: Vector2) -> void:
@@ -314,10 +293,6 @@ func _check_secret_torch_proximity(player_world_pos: Vector2) -> void:
 	secret_torches_completed.emit()
 
 
-func _pick_random_tile(tiles: Array[Vector2i]) -> Vector2i:
-	return tiles[randi() % tiles.size()]
-
-
 func _setup_secret_torches() -> void:
 	_secret_torch_cells.clear()
 	_secret_torch_index = 0
@@ -337,7 +312,7 @@ func _setup_secret_torches() -> void:
 
 	for x: int in range(hero_room.position.x + 1, hero_room.end.x - 1):
 		var top_cell: Vector2i = Vector2i(x, hero_room.position.y)
-		if _walls.get_cell_atlas_coords(top_cell) in TileClassifier.WALL_TOP_VARIANTS:
+		if TileClassifier.is_top_wall(_walls.get_cell_atlas_coords(top_cell)):
 			var entry: Dictionary = {&"cell": top_cell, &"atlas": TileClassifier.TORCH_TOP, &"alt": 0}
 			all_candidates.append(entry)
 			if x < center.x:
@@ -348,7 +323,7 @@ func _setup_secret_torches() -> void:
 	for y: int in range(hero_room.position.y + 2, hero_room.end.y - 1):
 		var left_wall: Vector2i = Vector2i(hero_room.position.x - 1, y)
 		var left_floor: Vector2i = Vector2i(hero_room.position.x, y)
-		if _walls.get_cell_atlas_coords(left_wall) in TileClassifier.WALL_LEFT_VARIANTS and _walls.get_cell_source_id(left_floor) == -1:
+		if TileClassifier.is_left_wall(_walls.get_cell_atlas_coords(left_wall)) and _walls.get_cell_source_id(left_floor) == -1:
 			var entry_l: Dictionary = {&"cell": left_floor, &"atlas": TileClassifier.TORCH_SIDE, &"alt": 0}
 			all_candidates.append(entry_l)
 			if y >= center.y:
@@ -356,7 +331,7 @@ func _setup_secret_torches() -> void:
 
 		var right_wall: Vector2i = Vector2i(hero_room.end.x, y)
 		var right_floor: Vector2i = Vector2i(hero_room.end.x - 1, y)
-		if _walls.get_cell_atlas_coords(right_wall) in TileClassifier.WALL_RIGHT_VARIANTS and _walls.get_cell_source_id(right_floor) == -1:
+		if TileClassifier.is_right_wall(_walls.get_cell_atlas_coords(right_wall)) and _walls.get_cell_source_id(right_floor) == -1:
 			var entry_r: Dictionary = {
 				&"cell": right_floor,
 				&"atlas": TileClassifier.TORCH_SIDE,
@@ -400,59 +375,3 @@ func _setup_secret_torches() -> void:
 	_secret_torch_cells.shuffle()
 	if not _secret_torch_cells.is_empty():
 		light_manager.set_light_blinking(_secret_torch_cells[0], true)
-
-
-func _is_corner_cell(cell: Vector2i) -> bool:
-	if _walls.get_cell_source_id(cell) != -1:
-		return false
-	var wall_n: bool = _walls.get_cell_source_id(cell + Vector2i(0, -1)) != -1
-	var wall_s: bool = _walls.get_cell_source_id(cell + Vector2i(0, 1)) != -1
-	var wall_w: bool = _walls.get_cell_source_id(cell + Vector2i(-1, 0)) != -1
-	var wall_e: bool = _walls.get_cell_source_id(cell + Vector2i(1, 0)) != -1
-	return (wall_n and wall_w) or (wall_n and wall_e) or (wall_s and wall_w) or (wall_s and wall_e)
-
-
-func _place_room_props_for_rooms(rooms: Array[Rect2i]) -> void:
-	for room: Rect2i in rooms:
-		if _decorated_rooms.has(room):
-			continue
-		var center: Vector2i = room.get_center()
-		var corner_cells: Array[Vector2i] = []
-		var floor_cells: Array[Vector2i] = []
-
-		for x: int in range(room.position.x, room.position.x + room.size.x):
-			for y: int in range(room.position.y, room.position.y + room.size.y):
-				var cell: Vector2i = Vector2i(x, y)
-				if _floor.get_cell_source_id(cell) == -1 or _walls.get_cell_source_id(cell) != -1:
-					continue
-				if plan.is_spike_cell(cell):
-					continue
-				if cell.distance_squared_to(center) <= 4:
-					continue
-				if _is_corner_cell(cell):
-					corner_cells.append(cell)
-				else:
-					floor_cells.append(cell)
-
-		corner_cells.shuffle()
-		floor_cells.shuffle()
-
-		# Barrels and boxes only in corners
-		for cell: Vector2i in corner_cells:
-			if _decorations.get_cell_source_id(cell) != -1:
-				continue
-			if randf() <= 0.75:
-				var prop_tile: Vector2i = PROP_BARREL if randf() > 0.5 else PROP_BOX
-				_decorations.set_cell(cell, TileClassifier.TILE_SET_SOURCE_ID, prop_tile)
-
-		# Skulls and bones in rooms
-		var bones_count: int = clampi(int(float(room.size.x * room.size.y) * 0.025), 1, 4)
-		var bones_placed: int = 0
-		for cell: Vector2i in floor_cells:
-			if bones_placed >= bones_count:
-				break
-			if _decorations.get_cell_source_id(cell) != -1:
-				continue
-			var bone_tile: Vector2i = _pick_random_tile(PROP_SKULLS_AND_BONES)
-			_decorations.set_cell(cell, TileClassifier.TILE_SET_SOURCE_ID, bone_tile)
-			bones_placed += 1

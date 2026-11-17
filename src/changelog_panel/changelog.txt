@@ -4,6 +4,8 @@
 
 [color=#e0e0e0][b]Added[/b][/color]
 - [color=#ffffff][b]Combat & World Audio:[/b][/color] Dynamic retro sound effects for squad combat, recruitment, healing, environmental events, and milestones.
+- [color=#ffffff][b]Varied Dungeon Palettes:[/b][/color] Dungeon rooms and corridors now feature eight randomized stonework, floor, and spike trap color themes.
+- [color=#ffffff][b]Distinctive Room Architecture:[/b][/color] Chambers now vary across beveled, pillared, and cross-shaped layouts with inlaid floor stonework and north-wall grates replacing loose floor clutter.
 
 [color=#e0e0e0][b]Changed[/b][/color]
 - [color=#ffffff][b]Pixel Sound Effects:[/b][/color] Switched all game and UI sound effects to Helton Yan's Pixel Combat pack with calibrated loudness balancing.

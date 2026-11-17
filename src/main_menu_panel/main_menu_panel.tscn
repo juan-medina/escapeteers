@@ -1,6 +1,8 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://co338o54a3iqn"]
 
-[ext_resource type="Script" path="res://main_menu_panel/main_menu_panel.gd" id="1_main"]
+[ext_resource type="Script" uid="uid://cpvc1v4om2pj7" path="res://main_menu_panel/main_menu_panel.gd" id="1_main"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_root"]
 
 [sub_resource type="InputEventAction" id="InputEventAction_pause"]
 device = -1
@@ -13,61 +15,59 @@ action = &"back"
 [sub_resource type="Shortcut" id="Shortcut_back"]
 events = [SubResource("InputEventAction_pause"), SubResource("InputEventAction_back")]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_root"]
-
-[node name="MainMenuPanel" type="PanelContainer" node_paths=PackedStringArray("first_focus")]
+[node name="MainMenuPanel" type="PanelContainer" unique_id=1247528943 node_paths=PackedStringArray("first_focus")]
 theme_override_styles/panel = SubResource("StyleBoxEmpty_root")
 script = ExtResource("1_main")
 first_focus = NodePath("VBox/MenuBox/ButtonsVBox/Play")
 
-[node name="VBox" type="VBoxContainer" parent="."]
+[node name="VBox" type="VBoxContainer" parent="." unique_id=1194357424]
 layout_mode = 2
 theme_override_constants/separation = 16
 alignment = 1
 
-[node name="TitleLabel" type="Label" parent="VBox"]
+[node name="TitleLabel" type="Label" parent="VBox" unique_id=182382626]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "Escapeteers"
 horizontal_alignment = 1
 
-[node name="MenuBox" type="PanelContainer" parent="VBox"]
+[node name="MenuBox" type="PanelContainer" parent="VBox" unique_id=1144398677]
 layout_mode = 2
 size_flags_horizontal = 4
 
-[node name="ButtonsVBox" type="VBoxContainer" parent="VBox/MenuBox"]
+[node name="ButtonsVBox" type="VBoxContainer" parent="VBox/MenuBox" unique_id=308937908]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="Play" type="Button" parent="VBox/MenuBox/ButtonsVBox"]
+[node name="Play" type="Button" parent="VBox/MenuBox/ButtonsVBox" unique_id=402006900]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Play"
 
-[node name="Settings" type="Button" parent="VBox/MenuBox/ButtonsVBox"]
+[node name="Settings" type="Button" parent="VBox/MenuBox/ButtonsVBox" unique_id=2141789090]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Settings"
 
-[node name="About" type="Button" parent="VBox/MenuBox/ButtonsVBox"]
+[node name="About" type="Button" parent="VBox/MenuBox/ButtonsVBox" unique_id=2097270205]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "About"
 
-[node name="Changelog" type="Button" parent="VBox/MenuBox/ButtonsVBox"]
+[node name="Changelog" type="Button" parent="VBox/MenuBox/ButtonsVBox" unique_id=1587643944]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Changelog"
 
-[node name="HSeparator" type="HSeparator" parent="VBox/MenuBox/ButtonsVBox"]
+[node name="HSeparator" type="HSeparator" parent="VBox/MenuBox/ButtonsVBox" unique_id=504209109]
 layout_mode = 2
 
-[node name="Exit" type="Button" parent="VBox/MenuBox/ButtonsVBox" groups=["ui_return"]]
+[node name="Exit" type="Button" parent="VBox/MenuBox/ButtonsVBox" unique_id=1787343312 groups=["ui_return"]]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 4

@@ -11,6 +11,21 @@ enum RoomArchetype {
 	NECRO_CRYPT,
 }
 
+enum RoomShape {
+	RECTANGLE,
+	CUT_CORNERS,
+	PILLARED,
+	CROSS,
+}
+
+enum FloorPattern {
+	BORDER_TRIM,
+	CROSSROADS,
+	ARENA_RINGS,
+	CHECKERED_COURT,
+	PILLAR_PLINTHS,
+}
+
 const WORLD_SIZE_TILES: int = 4096
 const HALF_WORLD_SIZE: int = 2048
 
@@ -34,6 +49,7 @@ const TIER_3_MIN_SIZE: Vector2i = Vector2i(36, 36)
 const TIER_3_MAX_SIZE: Vector2i = Vector2i(50, 50)
 const TIER_3_DISTANCE_RANGE: Vector2 = Vector2(56.0, 84.0)
 const SPIKE_PHASE_GROUPS: int = 4
+const TILE_SET_COUNT: int = 8
 
 var run_seed: int = 0
 var hero_room: Rect2i = Rect2i()
@@ -44,6 +60,10 @@ var room_children: Dictionary[Rect2i, Array] = {}
 
 var _room_depths: Dictionary[Rect2i, int] = {}
 var _room_archetypes: Dictionary[Rect2i, RoomArchetype] = {}
+var _room_tile_sets: Dictionary[Rect2i, int] = {}
+var _room_shapes: Dictionary[Rect2i, RoomShape] = {}
+var _room_floor_patterns: Dictionary[Rect2i, FloorPattern] = {}
+var _room_pillars: Dictionary[Rect2i, Array] = {}
 var _room_neighbors: Dictionary[Rect2i, Array] = {}
 var _room_enemy_quotas: Dictionary[Rect2i, int] = {}
 var _room_companion_spawns: Dictionary[Rect2i, Array] = {}
@@ -53,6 +73,9 @@ var _candle_post_bases: Dictionary[Vector2i, bool] = {}
 var _candle_post_tops: Dictionary[Vector2i, bool] = {}
 var _spike_cells: Dictionary[Vector2i, int] = {}
 var _corridor_segments: Array[Dictionary] = []
+var _corridor_rects: Array[Rect2i] = []
+var _all_pillars: Array[Rect2i] = []
+var _cut_corner_rects: Array[Rect2i] = []
 var _next_spike_group: int = 0
 
 
@@ -71,6 +94,10 @@ func generate(seed_val: int = 0, max_depth: int = 12) -> void:
 	_room_grid.clear()
 	_room_depths.clear()
 	_room_archetypes.clear()
+	_room_tile_sets.clear()
+	_room_shapes.clear()
+	_room_floor_patterns.clear()
+	_room_pillars.clear()
 	_room_neighbors.clear()
 	_room_enemy_quotas.clear()
 	_room_companion_spawns.clear()
@@ -78,13 +105,19 @@ func generate(seed_val: int = 0, max_depth: int = 12) -> void:
 	_candle_post_tops.clear()
 	_spike_cells.clear()
 	_corridor_segments.clear()
+	_corridor_rects.clear()
+	_all_pillars.clear()
+	_cut_corner_rects.clear()
 	_next_spike_group = 0
 
 	_create_hero_room()
 	_create_initial_rooms()
 	_expand_dungeon_branches(max_depth)
+	_prune_clipped_pillars()
 	_color_room_graph()
 	_eliminate_narrow_gaps()
+	for room: Rect2i in rooms:
+		_plan_candle_posts_for_room(room)
 	_plan_spike_traps()
 
 
@@ -128,6 +161,35 @@ func get_room_archetype(room: Rect2i) -> RoomArchetype:
 	if _room_archetypes.has(room):
 		return _room_archetypes[room]
 	return RoomArchetype.SLIME_PIT
+
+
+func get_room_tile_set(room: Rect2i) -> int:
+	return _room_tile_sets.get(room, 1)
+
+
+func get_cell_tile_set(cell: Vector2i) -> int:
+	var room: Rect2i = get_room_at(cell)
+	if room.size != Vector2i.ZERO:
+		return _room_tile_sets.get(room, 1)
+
+	var best_room: Rect2i = hero_room
+	var best_dist_sq: int = _dist_sq_to_rect(cell, hero_room)
+	if best_dist_sq > 2:
+		for candidate: Rect2i in rooms:
+			var dist_sq: int = _dist_sq_to_rect(cell, candidate)
+			if dist_sq < best_dist_sq:
+				best_dist_sq = dist_sq
+				best_room = candidate
+				if best_dist_sq <= 2:
+					break
+
+	return _room_tile_sets.get(best_room, 1)
+
+
+static func _dist_sq_to_rect(cell: Vector2i, rect: Rect2i) -> int:
+	var dx: int = maxi(rect.position.x - cell.x, maxi(0, cell.x - (rect.end.x - 1)))
+	var dy: int = maxi(rect.position.y - cell.y, maxi(0, cell.y - (rect.end.y - 1)))
+	return dx * dx + dy * dy
 
 
 func _color_room_graph() -> void:
@@ -260,10 +322,95 @@ func get_spike_group(cell: Vector2i) -> int:
 	return _spike_cells.get(cell, 0)
 
 
+func get_floor_plate_index(cell: Vector2i) -> int:
+	var room: Rect2i = get_room_at(cell)
+	if room.size == Vector2i.ZERO:
+		return -1
+
+	var pattern: FloorPattern = _room_floor_patterns.get(room, FloorPattern.BORDER_TRIM)
+	if pattern == FloorPattern.PILLAR_PLINTHS:
+		var plinth_idx: int = _get_pillar_plinth_plate(cell, room)
+		if plinth_idx >= 0:
+			return plinth_idx
+
+	if not _is_wall_buffer_free(cell):
+		return -1
+
+	var center: Vector2i = room.get_center()
+	var result: int = -1
+	match pattern:
+		FloorPattern.BORDER_TRIM, FloorPattern.PILLAR_PLINTHS:
+			result = 0 if _is_border_trim_cell(cell) else -1
+		FloorPattern.CROSSROADS:
+			var dx: int = absi(cell.x - center.x)
+			var dy: int = absi(cell.y - center.y)
+			var cheb: int = maxi(dx, dy)
+			if cheb == 3:
+				result = 0
+			elif cheb > 3 and (dx == 2 or dy == 2):
+				result = 1
+		FloorPattern.ARENA_RINGS:
+			var cheb: int = maxi(absi(cell.x - center.x), absi(cell.y - center.y))
+			if cheb == 4:
+				result = 0
+			elif mini(room.size.x, room.size.y) >= 24 and cheb == 8:
+				result = 1
+		FloorPattern.CHECKERED_COURT:
+			if absi(cell.x - center.x) % 3 == 0 and absi(cell.y - center.y) % 3 == 0:
+				result = 2 if absi(cell.x + cell.y) % 2 == 0 else 3
+	return result
+
+
+func _get_pillar_plinth_plate(cell: Vector2i, room: Rect2i) -> int:
+	if not is_floor(cell) or not is_floor(cell + Vector2i(0, -1)):
+		return -1
+	var pillars: Array = _room_pillars.get(room, [])
+	for p_var: Variant in pillars:
+		if p_var is Rect2i:
+			var p: Rect2i = p_var
+			var ring: Rect2i = Rect2i(p.position.x - 1, p.position.y - 1, p.size.x + 2, p.size.y + 3)
+			if ring.has_point(cell):
+				var on_side: bool = cell.x == ring.position.x or cell.x == ring.end.x - 1
+				var on_cap: bool = cell.y == ring.position.y or cell.y == ring.end.y - 1
+				return 2 if (on_side and on_cap) else 0
+	return -1
+
+
+func _is_wall_buffer_free(cell: Vector2i) -> bool:
+	return (
+		is_floor(cell)
+		and is_floor(cell + Vector2i(0, -1))
+		and is_floor(cell + Vector2i(0, -2))
+		and is_floor(cell + Vector2i(0, 1))
+		and is_floor(cell + Vector2i(-1, 0))
+		and is_floor(cell + Vector2i(1, 0))
+	)
+
+
+func _is_border_trim_cell(cell: Vector2i) -> bool:
+	for dy: int in range(-1, 2):
+		for dx: int in range(-1, 2):
+			if dx == 0 and dy == 0:
+				continue
+			var n_cell: Vector2i = cell + Vector2i(dx, dy)
+			if not _is_wall_buffer_free(n_cell):
+				var in_pillar: bool = false
+				for p: Rect2i in _all_pillars:
+					if Rect2i(p.position.x - 1, p.position.y - 1, p.size.x + 2, p.size.y + 3).has_point(n_cell):
+						in_pillar = true
+						break
+				if not in_pillar:
+					return true
+	return false
+
+
 func _create_hero_room() -> void:
 	var top_left: Vector2i = Vector2i(Vector2(-HERO_ROOM_SIZE) * 0.5)
 	hero_room = Rect2i(top_left, HERO_ROOM_SIZE)
 	_room_depths[hero_room] = 0
+	_room_tile_sets[hero_room] = _rng.randi_range(0, TILE_SET_COUNT - 1)
+	_room_shapes[hero_room] = RoomShape.RECTANGLE
+	_room_floor_patterns[hero_room] = FloorPattern.ARENA_RINGS
 	_add_carve_rect(hero_room)
 
 
@@ -382,11 +529,121 @@ func _expand_dungeon_branches(target_max_depth: int) -> void:
 func _add_room(room: Rect2i, depth: int) -> void:
 	rooms.append(room)
 	_room_depths[room] = depth
+	_room_tile_sets[room] = _rng.randi_range(0, TILE_SET_COUNT - 1)
+	var shape_roll: float = _rng.randf()
+	var shape: RoomShape = RoomShape.RECTANGLE
+	if shape_roll >= 0.85:
+		shape = RoomShape.CROSS
+	elif shape_roll >= 0.55:
+		shape = RoomShape.PILLARED
+	elif shape_roll >= 0.25:
+		shape = RoomShape.CUT_CORNERS
+	_room_shapes[room] = shape
+
+	var pattern: FloorPattern = FloorPattern.BORDER_TRIM
+	match shape:
+		RoomShape.PILLARED:
+			pattern = FloorPattern.PILLAR_PLINTHS if _rng.randf() < 0.65 else FloorPattern.CROSSROADS
+		RoomShape.CROSS:
+			pattern = FloorPattern.CROSSROADS if _rng.randf() < 0.70 else FloorPattern.BORDER_TRIM
+		RoomShape.CUT_CORNERS:
+			pattern = FloorPattern.ARENA_RINGS if _rng.randf() < 0.60 else FloorPattern.BORDER_TRIM
+		_:
+			var r_pat: int = _rng.randi_range(0, 3)
+			pattern = r_pat as FloorPattern
+	_room_floor_patterns[room] = pattern
+
 	_room_grid.add_rect(rooms.size() - 1, room)
-	_add_carve_rect(room)
+	_carve_room_layout(room, shape)
 	get_room_enemy_quota(room)
 	get_companion_spawns_for_room(room)
-	_plan_candle_posts_for_room(room)
+
+
+func _carve_room_layout(room: Rect2i, shape: RoomShape) -> void:
+	var cut_x: int = 0
+	var cut_y: int = 0
+	if shape == RoomShape.CUT_CORNERS:
+		cut_x = clampi(int(float(mini(room.size.x, room.size.y)) * 0.18), 3, 6)
+		cut_y = cut_x
+	elif shape == RoomShape.CROSS:
+		cut_x = mini(clampi(int(float(room.size.x) * 0.25), 4, 10), maxi(0, int(float(room.size.x - 8) * 0.5)))
+		cut_y = mini(clampi(int(float(room.size.y) * 0.25), 4, 10), maxi(0, int(float(room.size.y - 8) * 0.5)))
+	elif shape == RoomShape.PILLARED and room.size.x >= 26 and room.size.y >= 26 and _rng.randf() < 0.5:
+		cut_x = 3
+		cut_y = 3
+
+	var floor_rects: Array[Rect2i] = []
+	if cut_x > 0 and cut_y > 0:
+		floor_rects.append(Rect2i(room.position.x + cut_x, room.position.y, room.size.x - 2 * cut_x, cut_y))
+		floor_rects.append(Rect2i(room.position.x, room.position.y + cut_y, room.size.x, room.size.y - 2 * cut_y))
+		floor_rects.append(Rect2i(room.position.x + cut_x, room.end.y - cut_y, room.size.x - 2 * cut_x, cut_y))
+		_cut_corner_rects.append(Rect2i(room.position.x, room.position.y, cut_x, cut_y))
+		_cut_corner_rects.append(Rect2i(room.end.x - cut_x, room.position.y, cut_x, cut_y))
+		_cut_corner_rects.append(Rect2i(room.position.x, room.end.y - cut_y, cut_x, cut_y))
+		_cut_corner_rects.append(Rect2i(room.end.x - cut_x, room.end.y - cut_y, cut_x, cut_y))
+	else:
+		floor_rects.append(room)
+
+	if shape == RoomShape.PILLARED:
+		var center: Vector2i = room.get_center()
+		var ps: int = 3 if mini(room.size.x, room.size.y) >= 26 else 2
+		var ox: int = maxi(4, int(float(room.size.x) * 0.22))
+		var oy: int = maxi(4, int(float(room.size.y) * 0.22))
+		var p_size: Vector2i = Vector2i(ps, ps)
+		var pillars: Array[Rect2i] = [
+			Rect2i(Vector2i(center.x - ox - ps + 1, center.y - oy - ps + 1), p_size),
+			Rect2i(Vector2i(center.x + ox, center.y - oy - ps + 1), p_size),
+			Rect2i(Vector2i(center.x - ox - ps + 1, center.y + oy), p_size),
+			Rect2i(Vector2i(center.x + ox, center.y + oy), p_size),
+		]
+		_room_pillars[room] = pillars
+		_all_pillars.append_array(pillars)
+		for p: Rect2i in pillars:
+			floor_rects = _subtract_rect_from_list(floor_rects, p)
+
+	for r: Rect2i in floor_rects:
+		_add_carve_rect(r)
+
+
+static func _subtract_rect_from_list(rects: Array[Rect2i], hole: Rect2i) -> Array[Rect2i]:
+	var result: Array[Rect2i] = []
+	for r: Rect2i in rects:
+		if not r.intersects(hole):
+			result.append(r)
+			continue
+		var inter: Rect2i = r.intersection(hole)
+		if inter.position.y > r.position.y:
+			result.append(Rect2i(r.position.x, r.position.y, r.size.x, inter.position.y - r.position.y))
+		if inter.end.y < r.end.y:
+			result.append(Rect2i(r.position.x, inter.end.y, r.size.x, r.end.y - inter.end.y))
+		if inter.position.x > r.position.x:
+			result.append(Rect2i(r.position.x, inter.position.y, inter.position.x - r.position.x, inter.size.y))
+		if inter.end.x < r.end.x:
+			result.append(Rect2i(inter.end.x, inter.position.y, r.end.x - inter.end.x, inter.size.y))
+	return result
+
+
+func _prune_clipped_pillars() -> void:
+	for room: Rect2i in rooms:
+		if not _room_pillars.has(room):
+			continue
+		var pillars: Array = _room_pillars[room]
+		var kept: Array[Rect2i] = []
+		for p_var: Variant in pillars:
+			if p_var is Rect2i:
+				var p: Rect2i = p_var
+				var padded: Rect2i = p.grow(1)
+				var touched: bool = false
+				for c_rect: Rect2i in _corridor_rects:
+					if c_rect.intersects(padded):
+						touched = true
+						break
+				if touched:
+					_add_carve_rect(p)
+					_all_pillars.erase(p)
+				else:
+					kept.append(p)
+		_room_pillars[room] = kept
 
 
 func _add_carve_rect(rect: Rect2i) -> void:
@@ -401,6 +658,7 @@ func _plan_candle_posts_for_room(room: Rect2i) -> void:
 
 	var step_x: float = float(room.size.x - 6) / float(cols + 1)
 	var step_y: float = float(room.size.y - 6) / float(rows + 1)
+	var nudges: Array[Vector2i] = [Vector2i.ZERO, Vector2i(2, 0), Vector2i(-2, 0), Vector2i(0, 2), Vector2i(0, -2), Vector2i(2, 2), Vector2i(-2, -2)]
 
 	for r_idx: int in range(rows):
 		var target_y: int = room.position.y + 3 + int(roundf(float(r_idx + 1) * step_y))
@@ -412,9 +670,28 @@ func _plan_candle_posts_for_room(room: Rect2i) -> void:
 			if base_cell.distance_squared_to(center) <= 6:
 				base_cell.x += 2 if (c_idx % 2 == 0) else -2
 
-			var top_cell: Vector2i = base_cell + Vector2i(0, -1)
-			_candle_post_bases[base_cell] = true
-			_candle_post_tops[top_cell] = true
+			for offset: Vector2i in nudges:
+				var candidate: Vector2i = base_cell + offset
+				if _is_valid_candle_base(candidate, center):
+					_candle_post_bases[candidate] = true
+					_candle_post_tops[candidate + Vector2i(0, -1)] = true
+					break
+
+
+func _is_valid_candle_base(cell: Vector2i, center: Vector2i) -> bool:
+	if cell.distance_squared_to(center) <= 6:
+		return false
+	var top_cell: Vector2i = cell + Vector2i(0, -1)
+	if not is_floor(cell) or not is_floor(top_cell) or not is_floor(top_cell + Vector2i(0, -1)):
+		return false
+	return not _is_near_pillar(cell, 1) and not _is_near_pillar(top_cell, 1)
+
+
+func _is_near_pillar(cell: Vector2i, margin: int) -> bool:
+	for p: Rect2i in _all_pillars:
+		if p.grow(margin).has_point(cell):
+			return true
+	return false
 
 
 func has_candle_post_near(cell: Vector2i, radius_sq: int = 81) -> bool:
@@ -457,6 +734,7 @@ func _add_horizontal_corridor_rect(x_start: int, x_end: int, y: int, half_width:
 	var max_x: int = maxi(x_start, x_end)
 	var rect: Rect2i = Rect2i(min_x, y - half_width, (max_x - min_x) + 1, half_width * 2 + 1)
 	_add_carve_rect(rect)
+	_corridor_rects.append(rect)
 	_corridor_segments.append({&"is_horizontal": true, &"min": min_x, &"max": max_x, &"fixed": y, &"half_width": half_width})
 
 
@@ -465,6 +743,7 @@ func _add_vertical_corridor_rect(y_start: int, y_end: int, x: int, half_width: i
 	var max_y: int = maxi(y_start, y_end)
 	var rect: Rect2i = Rect2i(x - half_width, min_y, half_width * 2 + 1, (max_y - min_y) + 1)
 	_add_carve_rect(rect)
+	_corridor_rects.append(rect)
 	_corridor_segments.append({&"is_horizontal": false, &"min": min_y, &"max": max_y, &"fixed": x, &"half_width": half_width})
 
 
@@ -485,7 +764,15 @@ func _eliminate_narrow_gaps() -> void:
 			_try_add_vertical_bridge(rect_b, rect_a, bridges_to_add)
 
 	for bridge: Rect2i in bridges_to_add:
-		_add_carve_rect(bridge)
+		if not _intersects_any_rect(bridge, _all_pillars) and not _intersects_any_rect(bridge, _cut_corner_rects):
+			_add_carve_rect(bridge)
+
+
+static func _intersects_any_rect(rect: Rect2i, rects: Array[Rect2i]) -> bool:
+	for other: Rect2i in rects:
+		if rect.intersects(other):
+			return true
+	return false
 
 
 static func _try_add_horizontal_bridge(left_rect: Rect2i, right_rect: Rect2i, bridges: Array[Rect2i]) -> void:
@@ -527,30 +814,18 @@ func _compute_companion_spawns_for_room(room: Rect2i) -> Array[Vector2i]:
 
 
 func _get_min_size_for_depth(depth: int) -> Vector2i:
-	if depth <= 1:
-		return TIER_1_MIN_SIZE
-	if depth <= 3:
-		return TIER_2_MIN_SIZE
 	var bonus: int = mini((depth - 4) * 2, 10)
-	return TIER_3_MIN_SIZE + Vector2i(bonus, bonus)
+	return TIER_1_MIN_SIZE if depth <= 1 else (TIER_2_MIN_SIZE if depth <= 3 else TIER_3_MIN_SIZE + Vector2i(bonus, bonus))
 
 
 func _get_max_size_for_depth(depth: int) -> Vector2i:
-	if depth <= 1:
-		return TIER_1_MAX_SIZE
-	if depth <= 3:
-		return TIER_2_MAX_SIZE
 	var bonus: int = mini((depth - 4) * 3, 12)
-	return TIER_3_MAX_SIZE + Vector2i(bonus, bonus)
+	return TIER_1_MAX_SIZE if depth <= 1 else (TIER_2_MAX_SIZE if depth <= 3 else TIER_3_MAX_SIZE + Vector2i(bonus, bonus))
 
 
 func _get_step_distance_for_depth(depth: int) -> Vector2:
-	if depth <= 1:
-		return TIER_1_DISTANCE_RANGE
-	if depth <= 3:
-		return TIER_2_DISTANCE_RANGE
 	var bonus: float = minf(float(depth - 4) * 3.0, 16.0)
-	return TIER_3_DISTANCE_RANGE + Vector2(bonus, bonus)
+	return TIER_1_DISTANCE_RANGE if depth <= 1 else (TIER_2_DISTANCE_RANGE if depth <= 3 else TIER_3_DISTANCE_RANGE + Vector2(bonus, bonus))
 
 
 func _plan_spike_traps() -> void:
@@ -564,15 +839,8 @@ func _plan_room_spike_traps(room: Rect2i) -> void:
 	if depth <= 0:
 		return
 
-	var chance: float = 0.35
-	var max_patches: int = 1
-	if depth >= 4:
-		chance = 0.80
-		max_patches = _rng.randi_range(2, 3)
-	elif depth >= 2:
-		chance = 0.60
-		max_patches = _rng.randi_range(1, 2)
-
+	var chance: float = 0.80 if depth >= 4 else (0.60 if depth >= 2 else 0.35)
+	var max_patches: int = _rng.randi_range(2, 3) if depth >= 4 else (_rng.randi_range(1, 2) if depth >= 2 else 1)
 	if _rng.randf() > chance:
 		return
 
@@ -589,12 +857,7 @@ func _plan_room_spike_traps(room: Rect2i) -> void:
 	var qx2: int = int(lerpf(float(max_x), float(center.x), 0.45))
 	var qy1: int = int(lerpf(float(min_y), float(center.y), 0.45))
 	var qy2: int = int(lerpf(float(max_y), float(center.y), 0.45))
-	var anchors: Array[Vector2i] = [
-		Vector2i(qx1, qy1),
-		Vector2i(qx2, qy1),
-		Vector2i(qx1, qy2),
-		Vector2i(qx2, qy2),
-	]
+	var anchors: Array[Vector2i] = [Vector2i(qx1, qy1), Vector2i(qx2, qy1), Vector2i(qx1, qy2), Vector2i(qx2, qy2)]
 	for i: int in range(anchors.size() - 1, 0, -1):
 		var swap_idx: int = _rng.randi_range(0, i)
 		var tmp: Vector2i = anchors[i]
@@ -605,64 +868,33 @@ func _plan_room_spike_traps(room: Rect2i) -> void:
 	for base_anchor: Vector2i in anchors:
 		if placed >= max_patches:
 			break
-		var jitter: Vector2i = Vector2i(_rng.randi_range(-1, 1), _rng.randi_range(-1, 1))
-		var anchor: Vector2i = base_anchor + jitter
-		var offsets: Array[Vector2i] = _pick_room_spike_pattern(depth)
-		if _try_place_spike_patch(anchor, offsets, room, 25):
+		var anchor: Vector2i = base_anchor + Vector2i(_rng.randi_range(-1, 1), _rng.randi_range(-1, 1))
+		if _try_place_spike_patch(anchor, _pick_room_spike_pattern(depth), room):
 			placed += 1
 
 
 func _pick_room_spike_pattern(depth: int) -> Array[Vector2i]:
-	if depth <= 1:
-		if _rng.randf() < 0.65:
-			return _get_rect_offsets(2, 2)
-		return _get_cross_offsets(1)
-
 	var roll: float = _rng.randf()
-	if roll < 0.30:
-		return _get_rect_offsets(2, 2) if depth == 2 else _get_rect_offsets(3, 3)
-	if roll < 0.60:
-		return _get_cross_offsets(2)
-	if roll < 0.80:
-		return _get_zigzag_offsets(_rng.randf() < 0.5)
-	return _get_rect_offsets(3, 3)
-
-
-static func _get_rect_offsets(w: int, h: int) -> Array[Vector2i]:
 	var offsets: Array[Vector2i] = []
-	var start_x: int = -int(float(w) * 0.5)
-	var start_y: int = -int(float(h) * 0.5)
-	for dy: int in range(h):
-		for dx: int in range(w):
-			offsets.append(Vector2i(start_x + dx, start_y + dy))
-	return offsets
-
-
-static func _get_cross_offsets(arm_len: int) -> Array[Vector2i]:
-	var offsets: Array[Vector2i] = [Vector2i.ZERO]
-	for d: int in range(1, arm_len + 1):
-		offsets.append(Vector2i(d, 0))
-		offsets.append(Vector2i(-d, 0))
-		offsets.append(Vector2i(0, d))
-		offsets.append(Vector2i(0, -d))
-	return offsets
-
-
-static func _get_zigzag_offsets(flip_x: bool) -> Array[Vector2i]:
-	var raw: Array[Vector2i] = [
-		Vector2i(-1, -1),
-		Vector2i(0, -1),
-		Vector2i(0, 0),
-		Vector2i(1, 0),
-		Vector2i(1, 1),
-		Vector2i(2, 1),
-	]
-	if not flip_x:
-		return raw
-	var flipped: Array[Vector2i] = []
-	for p: Vector2i in raw:
-		flipped.append(Vector2i(-p.x, p.y))
-	return flipped
+	if (depth <= 1 and roll < 0.65) or (depth > 1 and (roll < 0.30 or roll >= 0.80)):
+		var size: int = 2 if (depth <= 1 or (depth == 2 and roll < 0.30)) else 3
+		var start: int = -int(float(size) * 0.5)
+		for dy: int in range(size):
+			for dx: int in range(size):
+				offsets.append(Vector2i(start + dx, start + dy))
+		return offsets
+	if depth <= 1 or roll < 0.60:
+		var arm: int = 1 if depth <= 1 else 2
+		offsets.append(Vector2i.ZERO)
+		for d: int in range(1, arm + 1):
+			offsets.append(Vector2i(d, 0))
+			offsets.append(Vector2i(-d, 0))
+			offsets.append(Vector2i(0, d))
+			offsets.append(Vector2i(0, -d))
+		return offsets
+	var sx: int = -1 if _rng.randf() < 0.5 else 1
+	var zigzag: Array[Vector2i] = [Vector2i(-sx, -1), Vector2i(0, -1), Vector2i(0, 0), Vector2i(sx, 0), Vector2i(sx, 1), Vector2i(2 * sx, 1)]
+	return zigzag
 
 
 func _plan_corridor_spike_traps() -> void:
@@ -723,63 +955,41 @@ func _place_corridor_half_block(is_horiz: bool, along_center: int, fixed_c: int,
 				cells.append(Vector2i(x_base + dx, start_along + dy))
 
 	for cell: Vector2i in cells:
-		if not _is_valid_corridor_spike_cell(cell) or _has_spike_near(cell, 9):
+		if hero_room.grow(4).has_point(cell) or get_room_at(cell) != Rect2i():
+			return
+		if not is_floor(cell) or not is_floor(cell + Vector2i(0, -1)) or has_candle_post_near(cell, 6):
+			return
+		if _has_cell_near(cell, _spike_cells, 9):
 			return
 
-	var group_id: int = _next_spike_group % SPIKE_PHASE_GROUPS
-	_next_spike_group += 1
-	for cell: Vector2i in cells:
-		_spike_cells[cell] = group_id
+	_commit_spike_cells(cells)
 
 
-func _try_place_spike_patch(anchor: Vector2i, offsets: Array[Vector2i], room: Rect2i, min_other_patch_dist_sq: int) -> bool:
+func _try_place_spike_patch(anchor: Vector2i, offsets: Array[Vector2i], room: Rect2i) -> bool:
 	var cells: Array[Vector2i] = []
 	var center: Vector2i = room.get_center()
 	var recruits: Array = get_companion_spawns_for_room(room)
+	var inner_rect: Rect2i = room.grow(-3)
 
 	for offset: Vector2i in offsets:
 		var cell: Vector2i = anchor + offset
-		if not _is_valid_room_spike_cell(cell, room, center, recruits):
+		if not inner_rect.has_point(cell) or not is_floor(cell) or not is_floor(cell + Vector2i(0, -1)):
 			return false
-		if _has_spike_near(cell, min_other_patch_dist_sq):
+		if cell.distance_squared_to(center) < 25 or has_candle_post_near(cell, 6) or _has_cell_near(cell, _spike_cells, 25):
 			return false
+		for r_var: Variant in recruits:
+			if r_var is Vector2i:
+				var r_cell: Vector2i = r_var
+				if cell.distance_squared_to(r_cell) < 25:
+					return false
 		cells.append(cell)
 
+	_commit_spike_cells(cells)
+	return true
+
+
+func _commit_spike_cells(cells: Array[Vector2i]) -> void:
 	var group_id: int = _next_spike_group % SPIKE_PHASE_GROUPS
 	_next_spike_group += 1
 	for cell: Vector2i in cells:
 		_spike_cells[cell] = group_id
-	return true
-
-
-func _is_valid_room_spike_cell(cell: Vector2i, room: Rect2i, center: Vector2i, recruits: Array) -> bool:
-	if not room.grow(-3).has_point(cell):
-		return false
-	if not is_floor(cell) or not is_floor(cell + Vector2i(0, -1)):
-		return false
-	if cell.distance_squared_to(center) < 25:
-		return false
-	for r_var: Variant in recruits:
-		if r_var is Vector2i:
-			var r_cell: Vector2i = r_var
-			if cell.distance_squared_to(r_cell) < 25:
-				return false
-	if has_candle_post_near(cell, 6):
-		return false
-	return true
-
-
-func _is_valid_corridor_spike_cell(cell: Vector2i) -> bool:
-	if hero_room.grow(4).has_point(cell):
-		return false
-	if get_room_at(cell) != Rect2i():
-		return false
-	if not is_floor(cell) or not is_floor(cell + Vector2i(0, -1)):
-		return false
-	if has_candle_post_near(cell, 6):
-		return false
-	return true
-
-
-func _has_spike_near(cell: Vector2i, radius_sq: int) -> bool:
-	return _has_cell_near(cell, _spike_cells, radius_sq)

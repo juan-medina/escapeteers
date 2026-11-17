@@ -1,17 +1,17 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://cocbxcwipqvw8"]
 
-[ext_resource type="Script" path="res://menu/menu.gd" id="1_g18jx"]
+[ext_resource type="Script" uid="uid://ddyex34wycqit" path="res://menu/menu.gd" id="1_g18jx"]
 [ext_resource type="PackedScene" path="res://main_menu_panel/main_menu_panel.tscn" id="2_main"]
 [ext_resource type="PackedScene" path="res://hero_select_panel/hero_select_panel.tscn" id="3_hero_select"]
 [ext_resource type="PackedScene" path="res://settings_panel/settings_panel.tscn" id="4_settings"]
 [ext_resource type="PackedScene" path="res://about_panel/about_panel.tscn" id="5_about"]
 [ext_resource type="PackedScene" path="res://changelog_panel/changelog_panel.tscn" id="6_changelog"]
-[ext_resource type="PackedScene" path="res://eula_screen/eula_screen.tscn" id="7_eula"]
+[ext_resource type="PackedScene" uid="uid://brfganlrf5bin" path="res://eula_screen/eula_screen.tscn" id="7_eula"]
 
-[node name="Menu" type="CanvasLayer"]
+[node name="Menu" type="CanvasLayer" unique_id=79307951]
 script = ExtResource("1_g18jx")
 
-[node name="ColorRect" type="ColorRect" parent="."]
+[node name="ColorRect" type="ColorRect" parent="." unique_id=1078777907]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -19,34 +19,34 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.05, 0.05, 0.05, 1)
 
-[node name="Center" type="CenterContainer" parent="."]
+[node name="Center" type="CenterContainer" parent="." unique_id=1467003728]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="MainMenuPanel" parent="Center" instance=ExtResource("2_main")]
+[node name="MainMenuPanel" parent="Center" unique_id=1154318988 instance=ExtResource("2_main")]
 visible = false
 layout_mode = 2
 
-[node name="HeroSelectPanel" parent="Center" instance=ExtResource("3_hero_select")]
+[node name="HeroSelectPanel" parent="Center" unique_id=1558250468 instance=ExtResource("3_hero_select")]
 visible = false
 layout_mode = 2
 
-[node name="SettingsPanel" parent="Center" instance=ExtResource("4_settings")]
+[node name="SettingsPanel" parent="Center" unique_id=1945728467 instance=ExtResource("4_settings")]
 visible = false
 layout_mode = 2
 
-[node name="AboutPanel" parent="Center" instance=ExtResource("5_about")]
+[node name="AboutPanel" parent="Center" unique_id=1064444877 instance=ExtResource("5_about")]
 visible = false
 layout_mode = 2
 
-[node name="ChangelogPanel" parent="Center" instance=ExtResource("6_changelog")]
+[node name="ChangelogPanel" parent="Center" unique_id=1751577137 instance=ExtResource("6_changelog")]
 visible = false
 layout_mode = 2
 
-[node name="EulaScreen" parent="Center" instance=ExtResource("7_eula")]
+[node name="EulaScreen" parent="Center" unique_id=1149562743 instance=ExtResource("7_eula")]
 visible = false
 layout_mode = 2
 

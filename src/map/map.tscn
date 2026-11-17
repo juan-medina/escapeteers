@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://ckmbsnqsr8kd2" path="res://map/map.gd" id="1_hgrid"]
 [ext_resource type="TileSet" uid="uid://dynugnietdfql" path="res://map/dungeon.tres" id="2_a0dt8"]
-[ext_resource type="Script" path="res://map/light_manager.gd" id="3_lights"]
+[ext_resource type="Script" uid="uid://ccfkgfl7gk0yn" path="res://map/light_manager.gd" id="3_lights"]
 
 [node name="Map" type="Node2D" unique_id=602158425]
 y_sort_enabled = true
