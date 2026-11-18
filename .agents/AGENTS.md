@@ -24,6 +24,10 @@
 ## GitHub Issues
 When instructed to review, edit, or modify GitHub issues (e.g., reviewing a specific issue number), use the GitHub CLI tool (`gh`) directly instead of manually querying the GitHub API or scraping web pages (e.g., `gh issue view <number>`, `gh issue edit <number>`, `gh issue comment <number>`).
 
+- **Parent Release Issues:** Group releases under parent tracking issues titled `Release vX.Y.Z: <Summary>` and tagged with the `release` label (`gh issue list --label release`).
+- **Ordered Sub-Issues:** List each release's issues as an ordered checklist (`1. - [ ] #<number>`) under `## Implementation Order` in the parent issue, and link them as native GitHub Sub-issues in that exact execution order (`gh api repos/:owner/:repo/issues/<parent_number>/sub_issues -X POST -F sub_issue_id=<issue_database_id>`).
+- **Priority & Execution Order:** Work release-by-release (lowest open `Release vX.Y.Z` parent first) and top-to-bottom through its sub-issues (`gh api repos/:owner/:repo/issues/<parent_number>/sub_issues`). When adding new issues to the roadmap, attach them to the appropriate `Release vX.Y.Z` parent issue in implementation order.
+
 
 ## Git Commit Rules
 When generating git commit messages, strictly follow these constraints:
