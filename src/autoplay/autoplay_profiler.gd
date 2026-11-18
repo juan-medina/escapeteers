@@ -13,6 +13,7 @@ var _pending_frame: Dictionary = {}
 var _pending_start_usec: int = 0
 var _last_balance_usec: int = 0
 var _prev_loaded_chunks: Dictionary[Vector2i, bool] = {}
+var _viewport_rid: RID = RID()
 
 var _total_frames: int = 0
 var _cpu_ms_samples: Array[float] = []
@@ -25,7 +26,11 @@ var _squad_ms_samples: Array[float] = []
 var _enemies_ms_samples: Array[float] = []
 var _spawns_ms_samples: Array[float] = []
 var _hazards_ms_samples: Array[float] = []
+var _map_overlay_ms_samples: Array[float] = []
 var _bot_ms_samples: Array[float] = []
+var _render_cpu_ms_samples: Array[float] = []
+var _render_gpu_ms_samples: Array[float] = []
+var _draw_calls_samples: Array[float] = []
 
 var _spikes_over_8ms: int = 0
 var _spikes_over_16ms: int = 0
@@ -35,12 +40,20 @@ var _chunk_load_count: int = 0
 var _chunk_load_stream_ms: Array[float] = []
 var _chunk_evict_count: int = 0
 var _chunk_evict_stream_ms: Array[float] = []
+var _map_rebuild_count: int = 0
+var _map_rebuild_ms: Array[float] = []
+var _max_revealed_map_chunks: int = 0
 var _max_squad_seen: int = 0
 var _max_awake_enemies_seen: int = 0
 var _max_awake_offscreen_seen: int = 0
 var _max_projectiles_seen: int = 0
 var _max_collision_pairs_seen: int = 0
 var _max_nodes_seen: int = 0
+var _max_draw_calls_seen: int = 0
+var _max_draw_objects_seen: int = 0
+var _max_enabled_lights_seen: int = 0
+var _max_total_lights_seen: int = 0
+var _max_vram_mb_seen: float = 0.0
 var _top_spikes: Array[Dictionary] = []
 
 
@@ -61,7 +74,11 @@ func reset_session() -> void:
 	_enemies_ms_samples.clear()
 	_spawns_ms_samples.clear()
 	_hazards_ms_samples.clear()
+	_map_overlay_ms_samples.clear()
 	_bot_ms_samples.clear()
+	_render_cpu_ms_samples.clear()
+	_render_gpu_ms_samples.clear()
+	_draw_calls_samples.clear()
 	_spikes_over_8ms = 0
 	_spikes_over_16ms = 0
 	_nav_recenter_count = 0
@@ -70,22 +87,36 @@ func reset_session() -> void:
 	_chunk_load_stream_ms.clear()
 	_chunk_evict_count = 0
 	_chunk_evict_stream_ms.clear()
+	_map_rebuild_count = 0
+	_map_rebuild_ms.clear()
+	_max_revealed_map_chunks = 0
 	_max_squad_seen = 0
 	_max_awake_enemies_seen = 0
 	_max_awake_offscreen_seen = 0
 	_max_projectiles_seen = 0
 	_max_collision_pairs_seen = 0
 	_max_nodes_seen = 0
+	_max_draw_calls_seen = 0
+	_max_draw_objects_seen = 0
+	_max_enabled_lights_seen = 0
+	_max_total_lights_seen = 0
+	_max_vram_mb_seen = 0.0
 	_top_spikes.clear()
 
 
-func begin_run(map: Map) -> void:
+func begin_run(game: Game, map: Map) -> void:
 	_has_pending_frame = false
 	_pending_frame = {}
 	_last_balance_usec = 0
 	_prev_loaded_chunks.clear()
 	for coord: Vector2i in map.streamer._loaded_chunks:
 		_prev_loaded_chunks[coord] = true
+	game._hud._map_overlay.set_process(false)
+	_viewport_rid = map.get_viewport().get_viewport_rid()
+	RenderingServer.viewport_set_measure_render_time(_viewport_rid, true)
+	if DisplayServer.get_name() != "headless":
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 
 
 func on_tick_start() -> void:
@@ -106,7 +137,7 @@ func flush_pending_frame() -> void:
 	_finalize_pending_frame(now_usec)
 
 
-func step_game_frame(game: Game, map: Map, delta: float, sim_frame: int, seed_val: int, bot_usec: int) -> void:
+func step_game_frame(game: Game, map: Map, bot: AutoplayBot, delta: float, sim_frame: int, seed_val: int, bot_usec: int) -> void:
 	var frame_enter_usec: int = Time.get_ticks_usec()
 	if _has_pending_frame:
 		_finalize_pending_frame(frame_enter_usec)
@@ -116,6 +147,10 @@ func step_game_frame(game: Game, map: Map, delta: float, sim_frame: int, seed_va
 	var prev_rooms_count: int = map.companion_rooms.size()
 	var prev_enemies_count: int = game._enemies.size()
 	var prev_pending_count: int = game._pending_spawns.size()
+	var map_overlay: MapOverlay = game._hud._map_overlay
+	var prev_map_chunk: Vector2i = map_overlay._last_revealed_chunk
+	var prev_map_dirty: bool = map_overlay._dirty
+	var prev_map_vis: bool = map_overlay.visible
 
 	var t0: int = Time.get_ticks_usec()
 	_step_streaming_and_spikes(game, map, delta)
@@ -130,6 +165,15 @@ func step_game_frame(game: Game, map: Map, delta: float, sim_frame: int, seed_va
 	var t4: int = Time.get_ticks_usec()
 	game._update_spike_hazards(delta)
 	var t5: int = Time.get_ticks_usec()
+
+	var tm0: int = Time.get_ticks_usec()
+	bot.update_map_toggle(game, delta)
+	map_overlay._process(delta)
+	var tm1: int = Time.get_ticks_usec()
+
+	var map_vis: bool = map_overlay.visible
+	var map_rebuilt: bool = map_vis and ((not prev_map_vis and prev_map_dirty) or (map_overlay._last_revealed_chunk != prev_map_chunk))
+	var map_overlay_ms: float = float(tm1 - tm0) / 1000.0
 
 	var chunk_stats: Vector2i = _diff_chunks(map, prev_chunk_count)
 	var nav_recentered: bool = map.nav_window._center_cell != prev_nav_center
@@ -149,6 +193,8 @@ func step_game_frame(game: Game, map: Map, delta: float, sim_frame: int, seed_va
 		&"awake_enemies": counts[&"awake_enemies"],
 		&"awake_offscreen": counts[&"awake_offscreen"],
 		&"projectiles": counts[&"projectiles"],
+		&"enabled_lights": counts[&"enabled_lights"],
+		&"total_lights": counts[&"total_lights"],
 		&"pending_spawns": game._pending_spawns.size(),
 		&"queued_chunks": map.streamer._load_queue.size(),
 		&"chunks_loaded": chunk_stats.x,
@@ -162,8 +208,12 @@ func step_game_frame(game: Game, map: Map, delta: float, sim_frame: int, seed_va
 		&"enemies_ms": float(t3 - t2) / 1000.0,
 		&"spawns_ms": float(t4 - t3) / 1000.0,
 		&"hazards_ms": float(t5 - t4) / 1000.0,
+		&"map_overlay_ms": map_overlay_ms,
+		&"map_open": map_vis,
+		&"map_rebuilt": map_rebuilt,
+		&"map_chunks": map_overlay._revealed_chunks.size(),
 		&"bot_ms": float(bot_usec) / 1000.0,
-		&"game_step_ms": float(t5 - t0) / 1000.0,
+		&"game_step_ms": float((t5 - t0) + (tm1 - tm0)) / 1000.0,
 	}
 	_has_pending_frame = true
 
@@ -237,6 +287,8 @@ func _sample_entity_counts(game: Game, map: Map) -> Dictionary:
 		&"awake_enemies": awake,
 		&"awake_offscreen": awake_offscreen,
 		&"projectiles": projectiles,
+		&"enabled_lights": map.light_manager._enabled_lights.size(),
+		&"total_lights": map.light_manager._all_lights.size(),
 	}
 
 
@@ -247,13 +299,18 @@ func _finalize_pending_frame(next_enter_usec: int) -> void:
 	var wall_ms: float = float(maxi(0, next_enter_usec - _pending_start_usec)) / 1000.0
 	var balance_ms: float = float(_last_balance_usec) / 1000.0
 	var game_step_ms: float = _pending_frame[&"game_step_ms"]
-	var cpu_ms: float = maxf(game_step_ms, wall_ms - balance_ms)
-	if DisplayServer.get_name() != "headless":
-		cpu_ms = process_ms + physics_ms
+	var render_cpu_ms: float = maxf(
+		0.0, RenderingServer.viewport_get_measured_render_time_cpu(_viewport_rid) + RenderingServer.get_frame_setup_time_cpu()
+	)
+	var render_gpu_ms: float = maxf(0.0, RenderingServer.viewport_get_measured_render_time_gpu(_viewport_rid))
+	var cpu_ms: float = maxf(game_step_ms, wall_ms - balance_ms) if DisplayServer.get_name() == "headless" else (game_step_ms + render_cpu_ms)
 	var other_ms: float = maxf(0.0, cpu_ms - game_step_ms)
 	var collision_pairs: int = int(Performance.get_monitor(Performance.PHYSICS_2D_COLLISION_PAIRS))
 	var active_physics: int = int(Performance.get_monitor(Performance.PHYSICS_2D_ACTIVE_OBJECTS))
 	var node_count: int = int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))
+	var draw_calls: int = int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
+	var draw_objects: int = int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME))
+	var vram_mb: float = float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / (1024.0 * 1024.0)
 
 	_pending_frame[&"process_ms"] = process_ms
 	_pending_frame[&"physics_ms"] = physics_ms
@@ -263,6 +320,11 @@ func _finalize_pending_frame(next_enter_usec: int) -> void:
 	_pending_frame[&"collision_pairs"] = collision_pairs
 	_pending_frame[&"active_physics"] = active_physics
 	_pending_frame[&"node_count"] = node_count
+	_pending_frame[&"render_cpu_ms"] = render_cpu_ms
+	_pending_frame[&"render_gpu_ms"] = render_gpu_ms
+	_pending_frame[&"draw_calls"] = draw_calls
+	_pending_frame[&"draw_objects"] = draw_objects
+	_pending_frame[&"vram_mb"] = vram_mb
 
 	_accumulate_sample(_pending_frame)
 
@@ -272,6 +334,14 @@ func _accumulate_sample(rec: Dictionary) -> void:
 	var cpu_ms: float = rec[&"cpu_ms"]
 	var other_ms: float = rec[&"other_ms"]
 	var stream_ms: float = rec[&"streaming_ms"]
+	var render_cpu_ms: float = rec[&"render_cpu_ms"]
+	var render_gpu_ms: float = rec[&"render_gpu_ms"]
+	var draw_calls: int = rec[&"draw_calls"]
+	var draw_objects: int = rec[&"draw_objects"]
+	var enabled_lights: int = rec[&"enabled_lights"]
+	var total_lights: int = rec[&"total_lights"]
+	var vram_mb: float = rec[&"vram_mb"]
+
 	_cpu_ms_samples.append(cpu_ms)
 	_other_ms_samples.append(other_ms)
 	_process_ms_samples.append(rec[&"process_ms"])
@@ -282,7 +352,12 @@ func _accumulate_sample(rec: Dictionary) -> void:
 	_enemies_ms_samples.append(rec[&"enemies_ms"])
 	_spawns_ms_samples.append(rec[&"spawns_ms"])
 	_hazards_ms_samples.append(rec[&"hazards_ms"])
+	var map_overlay_ms: float = rec[&"map_overlay_ms"]
+	_map_overlay_ms_samples.append(map_overlay_ms)
 	_bot_ms_samples.append(rec[&"bot_ms"])
+	_render_cpu_ms_samples.append(render_cpu_ms)
+	_render_gpu_ms_samples.append(render_gpu_ms)
+	_draw_calls_samples.append(float(draw_calls))
 
 	if cpu_ms > SPIKE_WARN_MS:
 		_spikes_over_8ms += 1
@@ -291,6 +366,7 @@ func _accumulate_sample(rec: Dictionary) -> void:
 
 	var chunks_loaded: int = rec[&"chunks_loaded"]
 	var chunks_evicted: int = rec[&"chunks_evicted"]
+	var map_chunks: int = rec[&"map_chunks"]
 	var squad_count: int = rec[&"squad"]
 	var awake_enemies: int = rec[&"awake_enemies"]
 	var awake_offscreen: int = rec[&"awake_offscreen"]
@@ -307,6 +383,10 @@ func _accumulate_sample(rec: Dictionary) -> void:
 	if chunks_evicted > 0:
 		_chunk_evict_count += chunks_evicted
 		_chunk_evict_stream_ms.append(stream_ms)
+	if rec[&"map_rebuilt"]:
+		_map_rebuild_count += 1
+		_map_rebuild_ms.append(map_overlay_ms)
+	_max_revealed_map_chunks = maxi(_max_revealed_map_chunks, map_chunks)
 
 	_max_squad_seen = maxi(_max_squad_seen, squad_count)
 	_max_awake_enemies_seen = maxi(_max_awake_enemies_seen, awake_enemies)
@@ -314,6 +394,11 @@ func _accumulate_sample(rec: Dictionary) -> void:
 	_max_projectiles_seen = maxi(_max_projectiles_seen, projectiles)
 	_max_collision_pairs_seen = maxi(_max_collision_pairs_seen, collision_pairs)
 	_max_nodes_seen = maxi(_max_nodes_seen, node_count)
+	_max_draw_calls_seen = maxi(_max_draw_calls_seen, draw_calls)
+	_max_draw_objects_seen = maxi(_max_draw_objects_seen, draw_objects)
+	_max_enabled_lights_seen = maxi(_max_enabled_lights_seen, enabled_lights)
+	_max_total_lights_seen = maxi(_max_total_lights_seen, total_lights)
+	_max_vram_mb_seen = maxf(_max_vram_mb_seen, vram_mb)
 
 	_record_top_spike(rec)
 
@@ -358,8 +443,20 @@ func build_report_dict() -> Dictionary:
 			&"enemies": _stats_dict(_enemies_ms_samples),
 			&"spawns": _stats_dict(_spawns_ms_samples),
 			&"hazards": _stats_dict(_hazards_ms_samples),
+			&"map_overlay": _stats_dict(_map_overlay_ms_samples),
 			&"other_engine": _stats_dict(_other_ms_samples),
 			&"bot_overhead": _stats_dict(_bot_ms_samples),
+			&"render_cpu": _stats_dict(_render_cpu_ms_samples),
+			&"render_gpu": _stats_dict(_render_gpu_ms_samples),
+		},
+		&"gpu":
+		{
+			&"draw_calls": _stats_dict(_draw_calls_samples),
+			&"max_draw_calls": _max_draw_calls_seen,
+			&"max_draw_objects": _max_draw_objects_seen,
+			&"max_enabled_lights": _max_enabled_lights_seen,
+			&"max_total_lights": _max_total_lights_seen,
+			&"max_vram_mb": _max_vram_mb_seen,
 		},
 		&"triggers":
 		{
@@ -369,6 +466,9 @@ func build_report_dict() -> Dictionary:
 			&"chunk_load_stream": _stats_dict(_chunk_load_stream_ms),
 			&"chunks_evicted": _chunk_evict_count,
 			&"chunk_evict_stream": _stats_dict(_chunk_evict_stream_ms),
+			&"map_rebuilds": _map_rebuild_count,
+			&"map_rebuild_ms": _stats_dict(_map_rebuild_ms),
+			&"max_map_chunks": _max_revealed_map_chunks,
 		},
 		&"peaks":
 		{
@@ -388,6 +488,8 @@ func print_report() -> void:
 	var subs: Dictionary = r[&"subsystems"]
 	var trigs: Dictionary = r[&"triggers"]
 	var peaks: Dictionary = r[&"peaks"]
+	var gpu: Dictionary = r[&"gpu"]
+	var dc_stats: Dictionary = gpu[&"draw_calls"]
 
 	print(&"\n================ AUTOPLAY PERFORMANCE REPORT ================")
 	print(&"Frames Sampled:         %d" % _total_frames)
@@ -406,18 +508,33 @@ func print_report() -> void:
 	_print_sub_row(&"  Game.enemies", subs, &"enemies")
 	_print_sub_row(&"  Game.spawns", subs, &"spawns")
 	_print_sub_row(&"  Game.hazards", subs, &"hazards")
+	_print_sub_row(&"  Hud.map_overlay", subs, &"map_overlay")
 	_print_sub_row(&"  Other Engine (H/E/P2D)", subs, &"other_engine")
 	_print_sub_row(&"  Bot.update (test only)", subs, &"bot_overhead")
+	_print_sub_row(&"Render CPU (viewport)", subs, &"render_cpu")
+	_print_sub_row(&"Render GPU (viewport)", subs, &"render_gpu")
 	_print_sub_row(&"Monitor _process (1s)", subs, &"process")
 	_print_sub_row(&"Monitor _physics (1s)", subs, &"physics")
+	print(&"-------------------------------------------------------------")
+	print(&"GPU & LIGHTING DIAGNOSTICS:")
+	print(&"  Draw Calls:           avg=%.0f  p95=%.0f  max=%d" % [dc_stats[&"avg"], dc_stats[&"p95"], _max_draw_calls_seen])
+	print(&"  Drawn Obj / VRAM Pk:  %d objects | %.2f MB VRAM" % [_max_draw_objects_seen, _max_vram_mb_seen])
+	print(&"  PointLight2D Peak:    %d enabled / %d total" % [_max_enabled_lights_seen, _max_total_lights_seen])
 	print(&"-------------------------------------------------------------")
 	print(&"STREAMING & NAV TRIGGERS:")
 	var nav_s: Dictionary = trigs[&"nav_recenter_stream"]
 	var load_s: Dictionary = trigs[&"chunk_load_stream"]
 	var evict_s: Dictionary = trigs[&"chunk_evict_stream"]
+	var map_s: Dictionary = trigs[&"map_rebuild_ms"]
 	print(&"  NavWindow Recenters:  %d (stream avg=%.2fms max=%.2fms)" % [_nav_recenter_count, nav_s[&"avg"], nav_s[&"max"]])
 	print(&"  Chunks Loaded:        %d (stream avg=%.2fms max=%.2fms)" % [_chunk_load_count, load_s[&"avg"], load_s[&"max"]])
 	print(&"  Chunks Evicted:       %d (stream avg=%.2fms max=%.2fms)" % [_chunk_evict_count, evict_s[&"avg"], evict_s[&"max"]])
+	print(
+		(
+			&"  MapOverlay Rebuilds:  %d (overlay avg=%.2fms max=%.2fms | revealed_chunks_pk=%d)"
+			% [_map_rebuild_count, map_s[&"avg"], map_s[&"max"], _max_revealed_map_chunks]
+		)
+	)
 	print(
 		(
 			&"Peaks: squad=%d | awake_enemies=%d (offscreen=%d) | proj=%d | pairs=%d | nodes=%d"
@@ -454,8 +571,18 @@ func print_report() -> void:
 			]
 		)
 		var p3: String = (
-			&" | load=%d evict=%d nav=%s spawn=%d"
-			% [rec[&"chunks_loaded"], rec[&"chunks_evicted"], str(rec[&"nav_recentered"]), rec[&"spawns_processed"]]
+			&" | load=%d evict=%d nav=%s spawn=%d | map=%.2f(reb=%s) dc=%d lgt=%d gpu=%.2fms"
+			% [
+				rec[&"chunks_loaded"],
+				rec[&"chunks_evicted"],
+				str(rec[&"nav_recentered"]),
+				rec[&"spawns_processed"],
+				rec[&"map_overlay_ms"],
+				str(rec[&"map_rebuilt"]),
+				rec[&"draw_calls"],
+				rec[&"enabled_lights"],
+				rec[&"render_gpu_ms"],
+			]
 		)
 		print(p1 + p2 + p3)
 	print(&"=============================================================\n")

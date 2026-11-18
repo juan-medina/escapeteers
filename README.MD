@@ -97,12 +97,16 @@ Run the zero-overhead autoplay suite (`src/autoplay/`, excluded from release exp
 - `-Leader <hero_id>`: Starting hero class (default `knight`).
 - `-Seeds <int>` / `-Seed <int>`: Number of sequential seeds and/or fixed starting seed (default `12345`).
 - `-MaxDepth <int>`, `-MaxFrames <int>`, `-Speed <float>`, `-Out <path.json>`: Depth cap, frame cap, time scale, and optional JSON export.
+- `-Gpu`: Run `perf` with real GPU rendering (windowed, VSync disabled, defaults to `3600` frames / `60s` per seed) to measure viewport GPU time, draw calls, and `PointLight2D` overhead alongside CPU metrics.
 
 ### Examples
 
 ```powershell
-# Profile 3 seeds headlessly for performance hiccups
+# Profile 3 seeds headlessly without GPU (CPU-only hiccups)
 powershell -ExecutionPolicy Bypass -File .\scripts\autoplay.ps1 -Mode perf -Seeds 3
+
+# Profile 3 seeds with real GPU rendering, draw calls, and lighting enabled
+powershell -ExecutionPolicy Bypass -File .\scripts\autoplay.ps1 -Mode perf -Gpu -Seeds 3
 
 # Test a single build's balance across 20 seeds
 powershell -ExecutionPolicy Bypass -File .\scripts\autoplay.ps1 -Mode balance -Leader knight -Build melee_stack -Seeds 20

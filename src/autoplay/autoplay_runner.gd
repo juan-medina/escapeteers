@@ -200,7 +200,7 @@ func _tick_loading() -> void:
 
 	if _profile_enabled:
 		_game.set_process(false)
-		_profiler.begin_run(_map)
+		_profiler.begin_run(_game, _map)
 
 	_sim_frame = 0
 	_state = RunState.RUNNING
@@ -239,7 +239,9 @@ func _tick_running(delta: float) -> void:
 		_sim_frame += 1
 		var run_seed: int = _current_run_cfg[&"seed"]
 		if _profile_enabled:
-			_profiler.step_game_frame(_game, _map, delta, _sim_frame, run_seed, bot_usec)
+			_profiler.step_game_frame(_game, _map, _bot, delta, _sim_frame, run_seed, bot_usec)
+		else:
+			_bot.update_map_toggle(_game, delta)
 		var bal_t0: int = Time.get_ticks_usec()
 		_balance.update(_game, _map, delta)
 		var bal_usec: int = Time.get_ticks_usec() - bal_t0

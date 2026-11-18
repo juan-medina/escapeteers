@@ -16,6 +16,8 @@ const STUCK_UNSTICK_TIME: float = 2.2
 const ROOM_STALL_TIMEOUT: float = 45.0
 const SPIKE_AVOID_RADIUS_CELLS: int = 1
 const EARLY_RECRUIT_TARGET_SQUAD: int = 6
+const MAP_OPEN_DURATION: float = 4.0
+const MAP_CLOSED_DURATION: float = 6.0
 
 const MELEE_IDS: Array[StringName] = [&"knight", &"armored_axeman", &"swordsman", &"knight_templar", &"torchero"]
 const RANGED_IDS: Array[StringName] = [&"archer", &"wizard", &"soldier", &"priest"]
@@ -45,6 +47,7 @@ var _cached_path_dest: Vector2 = Vector2.ZERO
 var _repath_timer: float = 0.0
 var _strafe_sign: float = 1.0
 var _strafe_timer: float = 0.0
+var _map_toggle_timer: float = MAP_CLOSED_DURATION
 
 
 func setup(map: Map, policy: String, max_depth: int) -> void:
@@ -67,6 +70,7 @@ func setup(map: Map, policy: String, max_depth: int) -> void:
 	_cached_path = PackedVector2Array()
 	_cached_path_dest = Vector2.ZERO
 	_repath_timer = 0.0
+	_map_toggle_timer = MAP_CLOSED_DURATION
 	_build_room_graph(map)
 	release_movement()
 
@@ -76,6 +80,15 @@ func release_movement() -> void:
 	Input.action_release(&"right")
 	Input.action_release(&"up")
 	Input.action_release(&"down")
+
+
+func update_map_toggle(game: Game, delta: float) -> bool:
+	_map_toggle_timer -= delta
+	if _map_toggle_timer <= 0.0:
+		game._hud._map_overlay.toggle()
+		_map_toggle_timer = MAP_OPEN_DURATION if game._hud._map_overlay.visible else MAP_CLOSED_DURATION
+		return true
+	return false
 
 
 func update(game: Game, map: Map, delta: float) -> void:

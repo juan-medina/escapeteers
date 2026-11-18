@@ -12,7 +12,8 @@ param(
     [int]$MaxFrames = -1,
     [double]$Speed = 0.0,
     [string]$Immortal = "",
-    [string]$Out = ""
+    [string]$Out = "",
+    [switch]$Gpu
 )
 
 $repoRoot = Split-Path $PSScriptRoot -Parent
@@ -58,6 +59,8 @@ $userArgs = @(
 
 if ($MaxFrames -ge 0) {
     $userArgs += "--max_frames=$MaxFrames"
+} elseif ($Gpu) {
+    $userArgs += "--max_frames=3600"
 }
 if ($Speed -gt 0.0) {
     $userArgs += "--speed=$Speed"
@@ -76,7 +79,9 @@ if ($Out -ne "") {
 
 $godotArgs = @()
 if ($Mode -ne "watch") {
-    $godotArgs += "--headless"
+    if (-Not $Gpu) {
+        $godotArgs += "--headless"
+    }
     $godotArgs += "--audio-driver"
     $godotArgs += "Dummy"
     $godotArgs += "--fixed-fps"
