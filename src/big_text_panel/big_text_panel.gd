@@ -6,6 +6,8 @@ extends MenuPanel
 
 const SCROLL_SPEED: float = 500.0
 const WEBSITE_URL: StringName = &"https://github.com/juan-medina/escapeteers"
+const DOWNLOAD_URL: StringName = &"https://github.com/juan-medina/escapeteers/releases"
+const DOWNLOAD_LABEL: StringName = &"GitHub"
 
 @export var title: String = ""
 @export_file("*.txt") var text_file: String = ""
@@ -53,7 +55,8 @@ func _load_file() -> void:
 	var download_text: String = ""
 	if OS.has_feature(&"web"):
 		download_text = (
-			&"\n[center]Download the desktop version from: [pulse freq=2.0 color=#6cc6ff][url=%s/]itch.io[/url][/pulse][/center]\n" % WEBSITE_URL
+			&"\n[center]Download the desktop version from: [pulse freq=2.0 color=#6cc6ff][url=%s]%s[/url][/pulse][/center]\n"
+			% [DOWNLOAD_URL, DOWNLOAD_LABEL]
 		)
 
 	_text_label.text = content.replace(&"{download}", download_text)
