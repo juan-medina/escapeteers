@@ -4,7 +4,7 @@
 class_name Map
 extends Node2D
 
-signal generation_progress_updated(progress: float, stage_name: StringName)
+signal generation_progress_updated(progress: float)
 signal secret_torches_completed
 
 const ROOM_PADDING: int = 8
@@ -131,7 +131,7 @@ func is_in_nav_bounds(world_pos: Vector2) -> bool:
 
 
 func generate_map() -> void:
-	generation_progress_updated.emit(0.15, &"Surveying primal chamber...")
+	generation_progress_updated.emit(0.15)
 	await get_tree().process_frame
 
 	_floor.clear()
@@ -152,7 +152,7 @@ func generate_map() -> void:
 	var depth_1_rooms: Array[Rect2i] = plan.get_depth_rooms(1)
 	companion_rooms.append_array(depth_1_rooms)
 
-	generation_progress_updated.emit(0.20, &"Baking dungeon chambers...")
+	generation_progress_updated.emit(0.20)
 	await get_tree().process_frame
 
 	var all_chunks: Array[Vector2i] = ChunkRaster.collect_chunk_coords(plan, MapStreamer.CHUNK_SIZE)
@@ -163,11 +163,11 @@ func generate_map() -> void:
 		TileClassifier.bake_chunk(all_chunks[i], chunk_raster, plan)
 		if (Time.get_ticks_usec() - slice_start_usec) >= 12000:
 			var pct: float = lerpf(0.20, 0.72, float(i + 1) / float(maxi(1, total_chunks)))
-			generation_progress_updated.emit(pct, &"Baking dungeon chambers...")
+			generation_progress_updated.emit(pct)
 			await get_tree().process_frame
 			slice_start_usec = Time.get_ticks_usec()
 
-	generation_progress_updated.emit(0.75, &"Preparing navigation network...")
+	generation_progress_updated.emit(0.75)
 	await get_tree().process_frame
 
 	nav_window.setup(_walkable_cells, _floor)
@@ -176,7 +176,7 @@ func generate_map() -> void:
 	light_manager.set_focus(get_hero_spawn_position())
 	streamer.setup(plan, _floor, _walls, _decorations, light_manager, nav_window, _walkable_cells, _loaded_spikes, _group_frames, plan.run_seed)
 
-	generation_progress_updated.emit(0.70, &"Materializing starting chambers...")
+	generation_progress_updated.emit(0.82)
 	await get_tree().process_frame
 
 	var start_bounds: Rect2i = hero_room
@@ -186,7 +186,7 @@ func generate_map() -> void:
 
 	_setup_secret_torches()
 
-	generation_progress_updated.emit(0.90, &"Lighting dungeon torches...")
+	generation_progress_updated.emit(0.90)
 	await get_tree().process_frame
 
 

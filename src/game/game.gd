@@ -124,7 +124,7 @@ func _ready() -> void:
 	_hud.setup_map(_map.plan, _character)
 	_check_room_entry()
 
-	Transition.set_loading_progress(0.92, &"Assembling the fellowship...")
+	Transition.set_loading_progress(0.92)
 	await get_tree().process_frame
 	_entity_pool.setup(_characters)
 	_entity_pool.prewarm(LAVA_SLIME_SCENE, 25)
@@ -147,7 +147,7 @@ func _ready() -> void:
 		var req: PendingSpawn = _pending_spawns.pop_back()
 		_spawn_enemy_at(req.pos, req.room)
 
-	Transition.set_loading_progress(1.0, &"Ready to escape!")
+	Transition.set_loading_progress(1.0)
 	await get_tree().process_frame
 	set_process(true)
 	await Transition.hide_loading()
@@ -158,8 +158,8 @@ func _exit_tree() -> void:
 	Projectile.set_pool(null)
 
 
-func _on_map_generation_progress(progress: float, stage_name: StringName) -> void:
-	Transition.set_loading_progress(progress, stage_name)
+func _on_map_generation_progress(progress: float) -> void:
+	Transition.set_loading_progress(progress)
 
 
 func _on_secret_torches_completed() -> void:

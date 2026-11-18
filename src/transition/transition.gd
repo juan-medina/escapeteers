@@ -40,8 +40,8 @@ func fade_to_black(duration: float = FADE_PHASE) -> void:
 	await _filler.create_tween().tween_property(_filler, ^"color:a", 1.0, duration).finished
 
 
-func set_loading_progress(progress: float, message: StringName) -> void:
-	_loading_screen.set_progress(progress, message)
+func set_loading_progress(progress: float) -> void:
+	_loading_screen.set_progress(progress)
 
 
 func hide_loading() -> void:
@@ -65,7 +65,7 @@ func reload_game(hero_id: StringName = &"") -> void:
 	if not hero_id.is_empty():
 		starting_hero_id = hero_id
 
-	await _loading_screen.fade_in(&"Delving into the dungeon...", SCENE_FADE_DURATION)
+	await _loading_screen.fade_in(SCENE_FADE_DURATION)
 	await _change_scene(GAME_SCENE)
 
 

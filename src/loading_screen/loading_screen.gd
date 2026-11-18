@@ -6,12 +6,37 @@ extends Control
 
 const PROGRESS_SPEED: float = 3.0
 const DOT_INTERVAL: float = 0.28
+const MESSAGE_INTERVAL: float = 2.0
+const FUNNY_MESSAGES: Array[String] = [
+	"Teaching Lava Slimes to aim",
+	"Polishing skeleton bones",
+	"Bribing the Necromancer",
+	"Sharpening floor spikes",
+	"Convincing the Priest to heal",
+	"Hiding lost heroes in dark corners",
+	"Warming up the Wizard's ice spells",
+	"Sweeping up yesterday's bones",
+	"Checking torches for secret switches",
+	"Untangling the Archer's bowstring",
+	"Asking the Knight for directions",
+	"Inflating Lava Slimes",
+	"Waking up grumpy skeletons",
+	"Oiling rusty dungeon traps",
+	"Counting how many arrows we brought",
+	"Telling Torchero where to hide",
+	"Stacking skulls in neat little piles",
+	"Dent-testing the Templar's shield",
+	"Feeding fireballs to the blobs",
+	"Dusting off ancient pentagrams",
+]
 
 var _target_progress: float = 0.0
 var _displayed_progress: float = 0.0
 var _last_percent: int = -1
 var _dot_time: float = 0.0
 var _dot_index: int = 0
+var _message_time: float = 0.0
+var _message_deck: Array[String] = []
 var _base_message: String = ""
 
 @onready var _dust_particles: CPUParticles2D = $DustParticles
@@ -22,13 +47,13 @@ var _base_message: String = ""
 @onready var _percentage_label: Label = $UI/Percentage
 
 
-func set_progress(progress: float, message: StringName) -> void:
+func set_progress(progress: float) -> void:
 	_target_progress = progress
-	_set_base_message(String(message))
 
 
-func fade_in(initial_message: StringName, duration: float) -> void:
-	_set_base_message(String(initial_message))
+func fade_in(duration: float) -> void:
+	_pick_next_message()
+	_message_time = 0.0
 	_reset_progress()
 	modulate.a = 0.0
 	_set_active(true)
@@ -61,6 +86,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_update_progress(delta)
 	_update_text_dots(delta)
+	_update_message_rotation(delta)
 
 
 func _set_active(active: bool) -> void:
@@ -114,3 +140,21 @@ func _update_text_dots(delta: float) -> void:
 	_dot_time = 0.0
 	_dot_index = (_dot_index + 1) % 4
 	_status_label.text = _base_message + ".".repeat(_dot_index)
+
+
+func _update_message_rotation(delta: float) -> void:
+	_message_time += delta
+	if _message_time < MESSAGE_INTERVAL:
+		return
+
+	_message_time = 0.0
+	_pick_next_message()
+
+
+func _pick_next_message() -> void:
+	if _message_deck.is_empty():
+		_message_deck = FUNNY_MESSAGES.duplicate()
+		_message_deck.shuffle()
+
+	var next_message: String = _message_deck.pop_back()
+	_set_base_message(next_message)
