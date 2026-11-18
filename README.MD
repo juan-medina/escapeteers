@@ -70,9 +70,9 @@ The submodule is private: without access, the clone succeeds but `src/data` stay
 
 ### Fonts
 
-#### m5x7
+#### m3x6, m5x7, m6x11 & m6x11plus
 * **Author:** [Daniel Linssen](https://managore.itch.io/)
-* **Source:** [Itch.io](https://managore.itch.io/m5x7)
+* **Source:** [m3x6](https://managore.itch.io/m3x6), [m5x7](https://managore.itch.io/m5x7), [m6x11](https://managore.itch.io/m6x11)
 * **License:** Free for personal and commercial use.
 
 ---

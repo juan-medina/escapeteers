@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://pause_panel/pause_panel.gd" id="1_jp402"]
+[ext_resource type="FontFile" uid="uid://bg6arvysy4jwv" path="res://data/assets/pixel_ui_theme/m6x11plus.ttf" id="2_m6x11plus"]
 
 [sub_resource type="InputEventAction" id="InputEventAction_pause"]
 device = -1
@@ -24,7 +25,8 @@ alignment = 1
 
 [node name="Title" type="Label" parent="VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_override_fonts/font = ExtResource("2_m6x11plus")
+theme_override_font_sizes/font_size = 18
 text = "Pause"
 horizontal_alignment = 1
 

@@ -6,6 +6,8 @@
 [ext_resource type="Texture2D" uid="uid://dp1ruav0a3eyf" path="res://data/assets/character/heroes/archer/archer.png" id="4_archer"]
 [ext_resource type="Texture2D" uid="uid://bic67xjm1dhfl" path="res://data/assets/character/heroes/priest/priest.png" id="5_priest"]
 [ext_resource type="Texture2D" uid="uid://bi02ie18e72m7" path="res://data/assets/character/heroes/swordsman/swordsman.png" id="6_swordsman"]
+[ext_resource type="FontFile" uid="uid://bg6arvysy4jwv" path="res://data/assets/pixel_ui_theme/m6x11plus.ttf" id="7_m6x11plus"]
+[ext_resource type="FontFile" uid="uid://bst61g6fxq6sj" path="res://data/assets/pixel_ui_theme/m6x11.ttf" id="8_m6x11"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_slime_0"]
 atlas = ExtResource("2_slime")
@@ -451,7 +453,8 @@ theme_override_colors/font_color = Color(0.964706, 0.847059, 0.607843, 1)
 theme_override_colors/font_shadow_color = Color(0.101961, 0.0627451, 0.0705882, 1)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 32
+theme_override_fonts/font = ExtResource("7_m6x11plus")
+theme_override_font_sizes/font_size = 36
 text = "ESCAPETEERS"
 horizontal_alignment = 1
 
@@ -463,6 +466,7 @@ offset_top = 88.0
 offset_bottom = 112.0
 grow_horizontal = 2
 theme_override_colors/font_color = Color(0.560784, 0.537255, 0.619608, 1)
+theme_override_fonts/font = ExtResource("8_m6x11")
 theme_override_font_sizes/font_size = 16
 text = "DELVING INTO THE DUNGEON"
 horizontal_alignment = 1

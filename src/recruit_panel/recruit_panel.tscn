@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://recruit_panel/recruit_panel.gd" id="1_panel"]
 [ext_resource type="PackedScene" path="res://unit_card/unit_card.tscn" id="2_card"]
+[ext_resource type="FontFile" uid="uid://bg6arvysy4jwv" path="res://data/assets/pixel_ui_theme/m6x11plus.ttf" id="3_m6x11plus"]
 
 [node name="RecruitPanel" type="Control"]
 process_mode = 3
@@ -38,7 +39,8 @@ alignment = 1
 
 [node name="Title" type="Label" parent="Center/Panel/VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 32
+theme_override_fonts/font = ExtResource("3_m6x11plus")
+theme_override_font_sizes/font_size = 18
 text = "Choose a Companion"
 horizontal_alignment = 1
 

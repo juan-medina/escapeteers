@@ -56,11 +56,11 @@ Author: [url=https://heltonyan.itch.io/]Helton Yan[/url]
 Source: [url=https://heltonyan.itch.io/pixelcombat]Itch.io[/url]
 License: Paid. Personal & commercial use allowed; the pack was purchased to support the author.
 
-[color=#ffffff][b]FONT[/b][/color]
+[color=#ffffff][b]FONTS[/b][/color]
 
-[color=#ffffff][b]m5x7[/b][/color]
+[color=#ffffff][b]m3x6, m5x7, m6x11 & m6x11plus[/b][/color]
 Author: [url=https://managore.itch.io/]Daniel Linssen[/url]
-Source: [url=https://managore.itch.io/m5x7]Itch.io[/url]
+Source: [url=https://managore.itch.io/m3x6]m3x6[/url], [url=https://managore.itch.io/m5x7]m5x7[/url], [url=https://managore.itch.io/m6x11]m6x11[/url]
 License: Free for personal and commercial use.
 
 -----------------------------------------------

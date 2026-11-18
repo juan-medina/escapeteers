@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://hero_select_panel/hero_select_card.gd" id="1_card"]
 [ext_resource type="FontFile" uid="uid://dlxxgod8ydjxc" path="res://data/assets/pixel_ui_theme/m3x6.ttf" id="2_m3x6"]
+[ext_resource type="FontFile" uid="uid://bst61g6fxq6sj" path="res://data/assets/pixel_ui_theme/m6x11.ttf" id="3_m6x11"]
 
 [node name="HeroSelectCard" type="Button"]
 custom_minimum_size = Vector2(138, 104)
@@ -43,6 +44,8 @@ position = Vector2(18, 18)
 [node name="NameLabel" type="Label" parent="Margin/VBox"]
 layout_mode = 2
 mouse_filter = 2
+theme_override_fonts/font = ExtResource("3_m6x11")
+theme_override_font_sizes/font_size = 16
 text = "Knight"
 horizontal_alignment = 1
 
@@ -51,6 +54,7 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
 theme_override_fonts/font = ExtResource("2_m3x6")
+theme_override_font_sizes/font_size = 16
 text = "Melee"
 horizontal_alignment = 1
 
@@ -65,6 +69,7 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
 theme_override_fonts/font = ExtResource("2_m3x6")
+theme_override_font_sizes/font_size = 16
 text = "HP:"
 
 [node name="HPValue" type="Label" parent="Margin/VBox/HPRow"]
@@ -72,6 +77,7 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.4, 0.95, 0.45, 1)
 theme_override_fonts/font = ExtResource("2_m3x6")
+theme_override_font_sizes/font_size = 16
 text = "140"
 
 [connection signal="pressed" from="." to="." method="_on_pressed"]

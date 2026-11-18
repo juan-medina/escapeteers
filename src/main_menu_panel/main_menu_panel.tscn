@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://co338o54a3iqn"]
 
 [ext_resource type="Script" uid="uid://cpvc1v4om2pj7" path="res://main_menu_panel/main_menu_panel.gd" id="1_main"]
+[ext_resource type="FontFile" uid="uid://bg6arvysy4jwv" path="res://data/assets/pixel_ui_theme/m6x11plus.ttf" id="2_m6x11plus"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_root"]
 
@@ -27,7 +28,8 @@ alignment = 1
 
 [node name="TitleLabel" type="Label" parent="VBox" unique_id=182382626]
 layout_mode = 2
-theme_override_font_sizes/font_size = 32
+theme_override_fonts/font = ExtResource("2_m6x11plus")
+theme_override_font_sizes/font_size = 36
 text = "Escapeteers"
 horizontal_alignment = 1
 

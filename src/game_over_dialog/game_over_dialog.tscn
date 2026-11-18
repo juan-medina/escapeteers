@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://game_over_dialog/game_over_dialog.gd" id="1_gov"]
+[ext_resource type="FontFile" uid="uid://bg6arvysy4jwv" path="res://data/assets/pixel_ui_theme/m6x11plus.ttf" id="2_m6x11plus"]
 
 [node name="GameOverDialog" type="Control" node_paths=PackedStringArray("first_focus")]
 process_mode = 3
@@ -31,7 +32,8 @@ alignment = 1
 
 [node name="Title" type="Label" parent="Center/Panel/VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_override_fonts/font = ExtResource("2_m6x11plus")
+theme_override_font_sizes/font_size = 18
 text = "Game Over"
 horizontal_alignment = 1
 
