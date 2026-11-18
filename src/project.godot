@@ -20,6 +20,9 @@ config/features=PackedStringArray("4.7")
 boot_splash/bg_color=Color(0, 0, 0, 1)
 boot_splash/stretch_mode=0
 boot_splash/use_filter=false
+boot_splash/image="res://data/assets/logo/logo.png"
+config/icon="res://data/assets/logo/icon.png"
+config/windows_native_icon="res://data/assets/logo/icon.ico"
 
 [audio]
 
