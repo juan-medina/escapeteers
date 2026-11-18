@@ -39,13 +39,20 @@ static func get_hero(hero_id: StringName) -> HeroData:
 	return _heroes.get(hero_id, null)
 
 
-static func get_random_choices(count: int, unit_counts: Dictionary[StringName, int] = {}) -> Array[HeroData]:
-	var weights: Array[float] = []
+static func get_random_choices(count: int, unit_counts: Dictionary[StringName, int] = {}, excluded_ids: Array[StringName] = []) -> Array[HeroData]:
+	var candidates: Array[HeroData] = []
 	for hero: HeroData in _heroes_by_role:
+		if not excluded_ids.has(hero.id):
+			candidates.append(hero)
+	if candidates.size() < count:
+		candidates = _heroes_by_role.duplicate()
+
+	var weights: Array[float] = []
+	for hero: HeroData in candidates:
 		var raw_owned: int = unit_counts.get(hero.id, 0)
 		var owned: int = maxi(raw_owned, 0)
 		weights.append(1.0 / float(owned + 1))
-	return pick_weighted_choices(_heroes_by_role, weights, count)
+	return pick_weighted_choices(candidates, weights, count)
 
 
 static func pick_weighted_choices(candidates: Array[HeroData], weights: Array[float], count: int) -> Array[HeroData]:

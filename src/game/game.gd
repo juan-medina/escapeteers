@@ -51,6 +51,7 @@ const SPIKE_DAMAGE_MAX_HP_RATIO: float = 0.15
 const SPIKE_HIT_COOLDOWN: float = 0.65
 
 const UNKNOWN_SCENE: PackedScene = preload("res://character/heroes/unknown/unknown.tscn")
+const COIN_SCENE: PackedScene = preload("res://coin/coin.tscn")
 const LAVA_SLIME_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_slime.tscn")
 const SKELETON_SCENE: PackedScene = preload("res://character/enemies/skeleton/skeleton.tscn")
 const SKELETON_ARCHER_SCENE: PackedScene = preload("res://character/enemies/skeleton_archer/skeleton_archer.tscn")
@@ -66,6 +67,8 @@ const SUMMON_PENTAGRAM_SCENE: PackedScene = preload("res://projectile/summon_pen
 var _squad: Array[Hero] = []
 var _unrecruited_characters: Array[Unknown] = []
 var _starter_recruits: Array[Unknown] = []
+var _coins: Array[Coin] = []
+var _reroll_coins: int = 0
 var _class_levels: Dictionary[StringName, int] = {}
 var _squad_level: int = 1
 var _current_xp: float = 0.0
@@ -142,6 +145,7 @@ func _ready() -> void:
 	_projectile_pool.prewarm(SUMMON_PENTAGRAM_SCENE, 15)
 	_spawn_initial_characters()
 	_check_recruitment()
+	_check_coin_pickups()
 	_register_and_populate_rooms(_map.companion_rooms)
 	while not _pending_spawns.is_empty():
 		var req: PendingSpawn = _pending_spawns.pop_back()
@@ -189,6 +193,7 @@ func _process(delta: float) -> void:
 	_update_followers(delta)
 	_update_spike_hazards(delta)
 	_check_recruitment()
+	_check_coin_pickups()
 	_update_enemies()
 	_process_pending_spawns()
 
@@ -198,6 +203,7 @@ func _update_map_streaming() -> void:
 	if not new_rooms.is_empty():
 		for room: Rect2i in new_rooms:
 			_spawn_companions_for_room(room)
+			_spawn_coins_for_room(room)
 		_register_and_populate_rooms(new_rooms)
 
 	_respawn_nearby_hibernating_rooms()
@@ -247,6 +253,7 @@ func _spawn_initial_characters() -> void:
 
 	for room: Rect2i in _map.companion_rooms:
 		_spawn_companions_for_room(room)
+		_spawn_coins_for_room(room)
 
 
 func _spawn_companions_for_room(room: Rect2i) -> void:
@@ -267,6 +274,38 @@ func _spawn_recruit_at(pos: Vector2) -> Unknown:
 	ch.y_sort_enabled = true
 	_unrecruited_characters.append(ch)
 	return ch
+
+
+func _spawn_coins_for_room(room: Rect2i) -> void:
+	var positions: Array[Vector2] = _map.get_coin_spawn_positions_for_room(room)
+	for pos: Vector2 in positions:
+		_spawn_coin_at(pos)
+
+
+func _spawn_coin_at(pos: Vector2) -> Coin:
+	var coin: Coin = COIN_SCENE.instantiate() as Coin
+	_characters.add_child(coin)
+	coin.position = pos
+	_coins.append(coin)
+	return coin
+
+
+func _check_coin_pickups() -> void:
+	if _character.is_dead:
+		return
+	var i: int = _coins.size() - 1
+	while i >= 0:
+		var coin: Coin = _coins[i]
+		for member: Hero in _squad:
+			if member.is_dead:
+				continue
+			if coin.is_touching(member):
+				_coins.remove_at(i)
+				coin.queue_free()
+				_reroll_coins += 1
+				Audio.play_sfx(Audio.Sfx.COIN_PICKUP)
+				break
+		i -= 1
 
 
 func _spawn_hero(hero_data: HeroData, pos: Vector2, is_leader: bool) -> Hero:
@@ -652,7 +691,14 @@ func _open_recruit_panel(recruit_pos: Vector2, forced_hero_id: StringName = &"")
 	get_tree().paused = true
 	_pending_recruit_pos = recruit_pos
 	_recruit_panel.visible = true
-	_recruit_panel.setup_choices(_class_levels, _get_squad_unit_counts(), forced_hero_id)
+	_recruit_panel.setup_choices(_class_levels, _get_squad_unit_counts(), forced_hero_id, _reroll_coins)
+
+
+func _on_recruit_reroll_requested() -> void:
+	if _reroll_coins <= 0:
+		return
+	_reroll_coins -= 1
+	_recruit_panel.reroll_choices(_class_levels, _get_squad_unit_counts(), _reroll_coins)
 
 
 func _on_hero_recruited(hero_data: HeroData) -> void:
@@ -709,7 +755,14 @@ func _open_next_level_up() -> void:
 	_pending_level_ups -= 1
 	get_tree().paused = true
 	_level_up_panel.visible = true
-	_level_up_panel.setup_choices(_class_levels, _get_squad_unit_counts())
+	_level_up_panel.setup_choices(_class_levels, _get_squad_unit_counts(), _reroll_coins)
+
+
+func _on_level_up_reroll_requested() -> void:
+	if _reroll_coins <= 0:
+		return
+	_reroll_coins -= 1
+	_level_up_panel.reroll_choices(_class_levels, _get_squad_unit_counts(), _reroll_coins)
 
 
 func _on_class_leveled_up(hero_data: HeroData) -> void:

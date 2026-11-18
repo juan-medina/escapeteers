@@ -201,6 +201,11 @@
       "input": "src/data/raw/sounds/Wall_Impact.wav",
       "output": "src/data/assets/sounds/Wall_Impact.wav",
       "tier": "soft"
+    },
+    {
+      "input": "src/data/raw/sounds/Coin_Pickup.wav",
+      "output": "src/data/assets/sounds/Coin_Pickup.wav",
+      "tier": "heavy"
     }
   ]
 }

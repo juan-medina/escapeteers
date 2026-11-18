@@ -5,6 +5,7 @@
 [color=#e0e0e0][b]Added[/b][/color]
 - [color=#ffffff][b]Animated Title & Logo:[/b][/color] Torch-lit menu header with prowling Torchero.
 - [color=#ffffff][b]Room & Map Alerts:[/b][/color] Room entry banners and map level labels.
+- [color=#ffffff][b]Reroll Coins:[/b][/color] Collect spinning dungeon coins to reroll hero drafts.
 
 [color=#e0e0e0][b]Changed[/b][/color]
 - [color=#ffffff][b]Loading Screen:[/b][/color] Improved text.

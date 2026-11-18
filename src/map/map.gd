@@ -18,6 +18,7 @@ const SPIKE_STAY_UP_TIME: float = 1.10
 const SPIKE_DOWN_2_TIME: float = 0.10
 const SPIKE_DOWN_1_TIME: float = 0.10
 const SPIKE_CYCLE_DURATION: float = 3.80
+const COIN_ROOM_CHANCE: float = 0.30
 
 var plan: WorldPlan = WorldPlan.new()
 var streamer: MapStreamer = MapStreamer.new()
@@ -32,6 +33,7 @@ var _spike_elapsed: float = 0.0
 var _expanded_rooms: Dictionary[Rect2i, bool] = {}
 var _secret_torch_cells: Array[Vector2i] = []
 var _secret_torch_index: int = 0
+var _guaranteed_coin_room: Rect2i = Rect2i()
 
 @onready var light_manager: LightManager = $Lights
 @onready var _floor: TileMapLayer = $Floor
@@ -151,6 +153,10 @@ func generate_map() -> void:
 
 	var depth_1_rooms: Array[Rect2i] = plan.get_depth_rooms(1)
 	companion_rooms.append_array(depth_1_rooms)
+	_guaranteed_coin_room = Rect2i()
+	if not depth_1_rooms.is_empty():
+		var pick_idx: int = TileClassifier.cell_hash(plan.run_seed, 71, 97) % depth_1_rooms.size()
+		_guaranteed_coin_room = depth_1_rooms[pick_idx]
 
 	generation_progress_updated.emit(0.20)
 	await get_tree().process_frame
@@ -390,3 +396,53 @@ func _setup_secret_torches() -> void:
 	_secret_torch_cells.shuffle()
 	if not _secret_torch_cells.is_empty():
 		light_manager.set_light_blinking(_secret_torch_cells[0], true)
+
+
+func get_coin_spawn_positions_for_room(room: Rect2i) -> Array[Vector2]:
+	var positions: Array[Vector2] = []
+	if room == hero_room or room.size.x < 8 or room.size.y < 8:
+		return positions
+	var is_guaranteed: bool = room == _guaranteed_coin_room
+	var roll: int = TileClassifier.cell_hash(plan.run_seed, room.position.x, room.position.y) % 100
+	if not is_guaranteed and float(roll) >= COIN_ROOM_CHANCE * 100.0:
+		return positions
+
+	var cell: Vector2i = _find_coin_cell_for_room(room)
+	if cell.x != 2147483647:
+		positions.append(_floor.map_to_local(cell))
+	return positions
+
+
+func _find_coin_cell_for_room(room: Rect2i) -> Vector2i:
+	var inner: Rect2i = room.grow(-3)
+	if inner.size.x <= 0 or inner.size.y <= 0:
+		return Vector2i(2147483647, 2147483647)
+
+	var center: Vector2i = room.get_center()
+	var companions: Array = plan.get_companion_spawns_for_room(room)
+	for attempt: int in range(40):
+		var hx: int = TileClassifier.cell_hash(plan.run_seed + attempt * 17, room.position.x, room.position.y)
+		var hy: int = TileClassifier.cell_hash(plan.run_seed + attempt * 31, room.end.x, room.end.y)
+		var cell: Vector2i = Vector2i(inner.position.x + (hx % inner.size.x), inner.position.y + (hy % inner.size.y))
+		if _is_valid_coin_cell(cell, center, companions):
+			return cell
+	return Vector2i(2147483647, 2147483647)
+
+
+func _is_valid_coin_cell(cell: Vector2i, center: Vector2i, companions: Array) -> bool:
+	if cell.distance_squared_to(center) < 16 or plan.has_candle_post_near(cell, 4):
+		return false
+	for comp_var: Variant in companions:
+		if comp_var is Vector2i:
+			var comp_cell: Vector2i = comp_var
+			if cell.distance_squared_to(comp_cell) < 16:
+				return false
+	for dy: int in range(-1, 2):
+		for dx: int in range(-1, 2):
+			if not plan.is_floor(cell + Vector2i(dx, dy)):
+				return false
+	for dy: int in range(-2, 3):
+		for dx: int in range(-2, 3):
+			if dx * dx + dy * dy <= 4 and plan.is_spike_cell(cell + Vector2i(dx, dy)):
+				return false
+	return true

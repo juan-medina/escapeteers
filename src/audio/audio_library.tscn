@@ -34,6 +34,7 @@
 [ext_resource type="AudioStreamWAV" uid="uid://cfy1hqfn46ru0" path="res://data/assets/sounds/07_Step_rock_01.wav" id="32_step_1"]
 [ext_resource type="AudioStreamWAV" uid="uid://yiah3mlv8g57" path="res://data/assets/sounds/08_Step_rock_02.wav" id="33_step_2"]
 [ext_resource type="AudioStreamWAV" uid="uid://dfwu5yauwxuq" path="res://data/assets/sounds/09_Step_rock_03.wav" id="34_step_3"]
+[ext_resource type="AudioStreamWAV" uid="uid://dp7lrgitjkov1" path="res://data/assets/sounds/Coin_Pickup.wav" id="35_coin_pickup"]
 
 [sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_spike_trap"]
 playback_mode = 0
@@ -166,6 +167,10 @@ bus = &"Sfx"
 
 [node name="SecretTorch" type="AudioStreamPlayer" parent="ChannelStinger"]
 stream = ExtResource("12_secret_torch")
+bus = &"Sfx"
+
+[node name="CoinPickup" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("35_coin_pickup")
 bus = &"Sfx"
 
 [node name="ChannelAlert" type="Node" parent="."]

@@ -1,0 +1,57 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://coin/coin.gd" id="1_coin"]
+[ext_resource type="Script" path="res://character/ground_indicator.gd" id="2_ind"]
+[ext_resource type="Texture2D" uid="uid://bew3b5nrsmhiw" path="res://data/assets/map/tiles/Tileset.png" id="3_tileset"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_coin_0"]
+atlas = ExtResource("3_tileset")
+region = Rect2(144, 304, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_coin_1"]
+atlas = ExtResource("3_tileset")
+region = Rect2(144, 320, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_coin_2"]
+atlas = ExtResource("3_tileset")
+region = Rect2(144, 336, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_coin_3"]
+atlas = ExtResource("3_tileset")
+region = Rect2(144, 352, 16, 16)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_coin"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_coin_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_coin_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_coin_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_coin_3")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 8.0
+}]
+
+[node name="Coin" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_coin")
+
+[node name="GroundIndicator" type="Node2D" parent="."]
+position = Vector2(0, 4)
+script = ExtResource("2_ind")
+radius_x = 5.0
+radius_y = 2.5
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+position = Vector2(0, -2)
+sprite_frames = SubResource("SpriteFrames_coin")
+animation = &"idle"
+autoplay = "idle"

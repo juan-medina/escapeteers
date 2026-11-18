@@ -44,5 +44,7 @@ y_sort_enabled = true
 [node name="Fog" parent="." instance=ExtResource("4_fog")]
 
 [connection signal="hero_selected" from="Overlays/RecruitPanel" to="." method="_on_hero_recruited"]
+[connection signal="reroll_requested" from="Overlays/RecruitPanel" to="." method="_on_recruit_reroll_requested"]
 [connection signal="class_leveled_up" from="Overlays/LevelUpPanel" to="." method="_on_class_leveled_up"]
+[connection signal="reroll_requested" from="Overlays/LevelUpPanel" to="." method="_on_level_up_reroll_requested"]
 
