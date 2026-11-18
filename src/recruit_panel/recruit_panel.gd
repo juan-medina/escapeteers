@@ -53,7 +53,7 @@ func _roll_choices(unit_counts: Dictionary[StringName, int], forced_hero_id: Str
 		return [HeroData.get_hero(forced_hero_id)]
 
 	_recruit_roll_count += 1
-	var choices: Array[HeroData] = HeroData.get_random_choices(MAX_CHOICES)
+	var choices: Array[HeroData] = HeroData.get_random_choices(MAX_CHOICES, unit_counts)
 	var priest_data: HeroData = HeroData.get_hero(&"priest")
 	if choices.has(priest_data):
 		_healer_offered_early = true

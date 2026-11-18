@@ -29,15 +29,10 @@ func setup_choices(class_levels: Dictionary[StringName, int], unit_counts: Dicti
 	for card: UnitCard in _cards_by_id.values():
 		card.visible = false
 
-	var candidates: Array[HeroData] = []
-	for id: StringName in unit_counts:
-		candidates.append(HeroData.get_hero(id))
-
-	candidates.shuffle()
-
-	var choice_count: int = mini(candidates.size(), MAX_CHOICES)
+	var choices: Array[HeroData] = _roll_choices(class_levels, unit_counts)
+	var choice_count: int = mini(choices.size(), MAX_CHOICES)
 	for i: int in range(choice_count):
-		var data: HeroData = candidates[i]
+		var data: HeroData = choices[i]
 		var cur_lvl: int = class_levels.get(data.id, 1)
 		var count: int = unit_counts.get(data.id, 0)
 		var card: UnitCard = _cards_by_id[data.id]
@@ -48,6 +43,24 @@ func setup_choices(class_levels: Dictionary[StringName, int], unit_counts: Dicti
 			first_focus = card.get_recruit_button()
 
 	grab_first_focus()
+
+
+func _roll_choices(class_levels: Dictionary[StringName, int], unit_counts: Dictionary[StringName, int]) -> Array[HeroData]:
+	var candidates: Array[HeroData] = []
+	for id: StringName in unit_counts:
+		candidates.append(HeroData.get_hero(id))
+
+	if candidates.size() < 4:
+		candidates.shuffle()
+		return candidates.slice(0, mini(candidates.size(), MAX_CHOICES))
+
+	var weights: Array[float] = []
+	for hero: HeroData in candidates:
+		var raw_lvl: int = class_levels.get(hero.id, 1)
+		var lvl: int = maxi(raw_lvl, 1)
+		weights.append(1.0 / float(lvl))
+
+	return HeroData.pick_weighted_choices(candidates, weights, MAX_CHOICES)
 
 
 func _on_card_chosen(hero_data: HeroData) -> void:

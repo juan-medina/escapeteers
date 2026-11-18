@@ -39,10 +39,39 @@ static func get_hero(hero_id: StringName) -> HeroData:
 	return _heroes.get(hero_id, null)
 
 
-static func get_random_choices(count: int) -> Array[HeroData]:
-	var pool: Array[HeroData] = _heroes_by_role.duplicate()
-	pool.shuffle()
-	return pool.slice(0, count)
+static func get_random_choices(count: int, unit_counts: Dictionary[StringName, int] = {}) -> Array[HeroData]:
+	var weights: Array[float] = []
+	for hero: HeroData in _heroes_by_role:
+		var raw_owned: int = unit_counts.get(hero.id, 0)
+		var owned: int = maxi(raw_owned, 0)
+		weights.append(1.0 / float(owned + 1))
+	return pick_weighted_choices(_heroes_by_role, weights, count)
+
+
+static func pick_weighted_choices(candidates: Array[HeroData], weights: Array[float], count: int) -> Array[HeroData]:
+	var pool: Array[HeroData] = candidates.duplicate()
+	var pool_weights: Array[float] = weights.duplicate()
+	var choices: Array[HeroData] = []
+	var target_count: int = mini(count, pool.size())
+
+	for _i: int in range(target_count):
+		var total_weight: float = 0.0
+		for weight: float in pool_weights:
+			total_weight += weight
+
+		var roll: float = randf() * total_weight
+		var picked_idx: int = pool.size() - 1
+		for idx: int in range(pool.size()):
+			roll -= pool_weights[idx]
+			if roll <= 0.0:
+				picked_idx = idx
+				break
+
+		choices.append(pool[picked_idx])
+		pool.remove_at(picked_idx)
+		pool_weights.remove_at(picked_idx)
+
+	return choices
 
 
 func apply_to_hero(hero: Hero, level: int = 1) -> void:
