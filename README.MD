@@ -77,6 +77,43 @@ The submodule is private: without access, the clone succeeds but `src/data` stay
 
 ---
 
+## Autoplay, Profiling & Balance Testing
+
+Run the zero-overhead autoplay suite (`src/autoplay/`, excluded from release exports) via PowerShell to hunt CPU performance hiccups headlessly, sweep build/class balance, or watch live replays:
+
+### Modes
+
+| Mode | Purpose | Defaults |
+| :--- | :--- | :--- |
+| `perf` | Headless CPU profiler (subsystem timers + top 20 slowest frames) | `3` seeds, immortal leader, `1x` speed, `9000` frames (`150s`) |
+| `balance` | Headless single-build mortality & DPS/room-difficulty audit | `20` seeds, real death, `1x` speed (`60Hz` uncapped), `18000` frames (`300s`) |
+| `matrix` | Headless sweep comparing all builds (`balanced`, `melee_stack`, `ranged_kite`, `random`, and `mono:<hero>`) | `10` seeds per build, `1x` speed (`60Hz` uncapped) |
+| `watch` | Windowed live replay with rendering and audio enabled | `1` seed, `2x` speed |
+
+### Parameters
+
+- `-Mode <perf|balance|matrix|watch>`: Runner mode (default `perf`).
+- `-Build <balanced|melee_stack|ranged_kite|random|mono:<hero_id>>`: Draft & level-up policy (default `balanced`).
+- `-Leader <hero_id>`: Starting hero class (default `knight`).
+- `-Seeds <int>` / `-Seed <int>`: Number of sequential seeds and/or fixed starting seed (default `12345`).
+- `-MaxDepth <int>`, `-MaxFrames <int>`, `-Speed <float>`, `-Out <path.json>`: Depth cap, frame cap, time scale, and optional JSON export.
+
+### Examples
+
+```powershell
+# Profile 3 seeds headlessly for performance hiccups
+powershell -ExecutionPolicy Bypass -File .\scripts\autoplay.ps1 -Mode perf -Seeds 3
+
+# Test a single build's balance across 20 seeds
+powershell -ExecutionPolicy Bypass -File .\scripts\autoplay.ps1 -Mode balance -Leader knight -Build melee_stack -Seeds 20
+
+# Compare all builds and hero classes, exporting full JSON telemetry
+powershell -ExecutionPolicy Bypass -File .\scripts\autoplay.ps1 -Mode matrix -Seeds 10 -Out .venv\cache\balance_matrix.json
+
+# Watch the bot play seed 12345 in a visible window at 2x speed
+powershell -ExecutionPolicy Bypass -File .\scripts\autoplay.ps1 -Mode watch -Seed 12345 -Build balanced -Speed 2
+```
+
 ## Coding standards
 
 This project follows the Godot coding standards and philosophy in [docs/coding-standards.md](docs/coding-standards.md).
