@@ -7,6 +7,67 @@
 [ext_resource type="PackedScene" path="res://about_panel/about_panel.tscn" id="5_about"]
 [ext_resource type="PackedScene" path="res://changelog_panel/changelog_panel.tscn" id="6_changelog"]
 [ext_resource type="PackedScene" uid="uid://brfganlrf5bin" path="res://eula_screen/eula_screen.tscn" id="7_eula"]
+[ext_resource type="TileSet" uid="uid://dynugnietdfql" path="res://map/dungeon.tres" id="8_dungeon"]
+[ext_resource type="Texture2D" uid="uid://bew3b5nrsmhiw" path="res://data/assets/map/tiles/Tileset.png" id="9_tileset"]
+[ext_resource type="Texture2D" uid="uid://cd8wqoflbfbrv" path="res://map/light_texture.tres" id="10_light"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_torch_0"]
+atlas = ExtResource("9_tileset")
+region = Rect2(192, 320, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_torch_1"]
+atlas = ExtResource("9_tileset")
+region = Rect2(208, 320, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_torch_2"]
+atlas = ExtResource("9_tileset")
+region = Rect2(224, 320, 16, 16)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_wall_torch"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_torch_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_torch_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_torch_2")
+}],
+"loop": true,
+"name": &"burn",
+"speed": 8.0
+}]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_post_0"]
+atlas = ExtResource("9_tileset")
+region = Rect2(160, 480, 16, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_post_1"]
+atlas = ExtResource("9_tileset")
+region = Rect2(176, 480, 16, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_post_2"]
+atlas = ExtResource("9_tileset")
+region = Rect2(192, 480, 16, 32)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_candle_post"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_post_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_post_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_post_2")
+}],
+"loop": true,
+"name": &"burn",
+"speed": 8.0
+}]
 
 [node name="Menu" type="CanvasLayer" unique_id=79307951]
 script = ExtResource("1_g18jx")
@@ -18,6 +79,98 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.05, 0.05, 0.05, 1)
+
+[node name="Backdrop" type="Node2D" parent="." unique_id=1078777908]
+
+[node name="Floor" type="TileMapLayer" parent="Backdrop" unique_id=1078777909]
+modulate = Color(0.11, 0.1, 0.15, 1)
+light_mask = 4
+tile_set = ExtResource("8_dungeon")
+
+[node name="Walls" type="TileMapLayer" parent="Backdrop" unique_id=1078777910]
+modulate = Color(0.13, 0.12, 0.18, 1)
+light_mask = 4
+tile_set = ExtResource("8_dungeon")
+
+[node name="WallTorchLeft" type="AnimatedSprite2D" parent="Backdrop" unique_id=1078777911]
+position = Vector2(104, 24)
+sprite_frames = SubResource("SpriteFrames_wall_torch")
+animation = &"burn"
+autoplay = "burn"
+
+[node name="PointLight2D" type="PointLight2D" parent="Backdrop/WallTorchLeft" unique_id=1078777912]
+color = Color(1, 0.72, 0.35, 1)
+energy = 2.8
+range_layer_min = 0
+range_layer_max = 1
+range_item_cull_mask = 4
+texture = ExtResource("10_light")
+texture_scale = 0.85
+
+[node name="WallTorchRight" type="AnimatedSprite2D" parent="Backdrop" unique_id=1078777913]
+position = Vector2(536, 24)
+sprite_frames = SubResource("SpriteFrames_wall_torch")
+animation = &"burn"
+autoplay = "burn"
+frame = 1
+
+[node name="PointLight2D" type="PointLight2D" parent="Backdrop/WallTorchRight" unique_id=1078777914]
+color = Color(1, 0.72, 0.35, 1)
+energy = 2.8
+range_layer_min = 0
+range_layer_max = 1
+range_item_cull_mask = 4
+texture = ExtResource("10_light")
+texture_scale = 0.85
+
+[node name="CandlePostLeft" type="AnimatedSprite2D" parent="Backdrop" unique_id=1078777915]
+position = Vector2(104, 264)
+sprite_frames = SubResource("SpriteFrames_candle_post")
+animation = &"burn"
+autoplay = "burn"
+frame = 2
+
+[node name="PointLight2D" type="PointLight2D" parent="Backdrop/CandlePostLeft" unique_id=1078777916]
+position = Vector2(0, -10)
+color = Color(1, 0.7, 0.35, 1)
+energy = 2.6
+range_layer_min = 0
+range_layer_max = 1
+range_item_cull_mask = 4
+texture = ExtResource("10_light")
+texture_scale = 0.8
+
+[node name="CandlePostRight" type="AnimatedSprite2D" parent="Backdrop" unique_id=1078777917]
+position = Vector2(536, 264)
+sprite_frames = SubResource("SpriteFrames_candle_post")
+animation = &"burn"
+autoplay = "burn"
+
+[node name="PointLight2D" type="PointLight2D" parent="Backdrop/CandlePostRight" unique_id=1078777918]
+position = Vector2(0, -10)
+color = Color(1, 0.7, 0.35, 1)
+energy = 2.6
+range_layer_min = 0
+range_layer_max = 1
+range_item_cull_mask = 4
+texture = ExtResource("10_light")
+texture_scale = 0.8
+
+[node name="EmberParticles" type="CPUParticles2D" parent="Backdrop" unique_id=1078777919]
+position = Vector2(320, 355)
+amount = 20
+lifetime = 4.5
+preprocess = 2.0
+emission_shape = 3
+emission_rect_extents = Vector2(280, 10)
+direction = Vector2(0, -1)
+spread = 15.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 14.0
+initial_velocity_max = 32.0
+scale_amount_min = 1.0
+scale_amount_max = 2.0
+color = Color(1, 0.72, 0.24, 0.55)
 
 [node name="Center" type="CenterContainer" parent="." unique_id=1467003728]
 anchors_preset = 15

@@ -3,7 +3,7 @@
 [color=#ffffff][b]v0.6.0 - WIP[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
-- [color=#ffffff][b]Game Logo & Icon:[/b][/color] Torch-lit emblem and boot splash.
+- [color=#ffffff][b]Animated Title & Logo:[/b][/color] Torch-lit menu header with prowling Torchero.
 - [color=#ffffff][b]Room & Map Alerts:[/b][/color] Room entry banners and map level labels.
 
 [color=#e0e0e0][b]Changed[/b][/color]
