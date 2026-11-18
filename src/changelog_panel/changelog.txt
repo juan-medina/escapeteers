@@ -5,6 +5,9 @@
 [color=#e0e0e0][b]Added[/b][/color]
 - [color=#ffffff][b]Room & Map Alerts:[/b][/color] Room entry banners and map level labels.
 
+[color=#e0e0e0][b]Fixed[/b][/color]
+- [color=#ffffff][b]Dungeon Stutters:[/b][/color] Eliminated frame hitches while exploring new rooms.
+
 [color=#ffffff][b]v0.5.0 - 2026-11-17[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]

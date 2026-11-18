@@ -97,6 +97,24 @@ static func _to_base_coords(atlas: Vector2i) -> Vector2i:
 	return Vector2i(-1, -1)
 
 
+static func bake_chunk(coord: Vector2i, raster: ChunkRaster, plan: WorldPlan) -> void:
+	raster.rasterize(coord, plan)
+	if not raster.has_any_content():
+		return
+	var data: Dictionary = classify_chunk(raster, plan.run_seed, plan)
+	var floors: Array[Vector2i] = data[&"floors"]
+	var walls: Array[Vector2i] = data[&"walls"]
+	var wall_set: Dictionary[Vector2i, bool] = {}
+	for wpos: Vector2i in walls:
+		wall_set[wpos] = true
+	var walkable: Array[Vector2i] = []
+	for fpos: Vector2i in floors:
+		if not wall_set.has(fpos):
+			walkable.append(fpos)
+	data[&"walkable"] = walkable
+	plan.baked_chunks[coord] = data
+
+
 static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan) -> Dictionary:
 	var out_floors: Array[Vector2i] = []
 	var out_floor_atlas: Array[Vector2i] = []

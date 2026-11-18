@@ -19,6 +19,11 @@ func setup(walkable_cells: Dictionary[Vector2i, bool], floor_layer: TileMapLayer
 	_walkable_cells = walkable_cells
 	_floor = floor_layer
 	_center_cell = Vector2i(-999999, -999999)
+	_astar.cell_size = Vector2(16, 16)
+	_astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_AT_LEAST_ONE_WALKABLE
+	_astar.default_compute_heuristic = AStarGrid2D.HEURISTIC_OCTILE
+	_astar.default_estimate_heuristic = AStarGrid2D.HEURISTIC_OCTILE
+	_astar.jumping_enabled = true
 
 
 func update_center(player_cell: Vector2i) -> void:
@@ -102,11 +107,6 @@ func _recenter(new_center: Vector2i) -> void:
 	_current_region = Rect2i(top_left, Vector2i(WINDOW_SIZE, WINDOW_SIZE))
 
 	_astar.region = _current_region
-	_astar.cell_size = Vector2(16, 16)
-	_astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_AT_LEAST_ONE_WALKABLE
-	_astar.default_compute_heuristic = AStarGrid2D.HEURISTIC_OCTILE
-	_astar.default_estimate_heuristic = AStarGrid2D.HEURISTIC_OCTILE
-	_astar.jumping_enabled = true
 	_astar.update()
 
 	_astar.fill_solid_region(_current_region, true)

@@ -65,3 +65,21 @@ func is_floor_local(lx: int, ly: int) -> bool:
 
 func has_any_content() -> bool:
 	return any_floor_in_raster
+
+
+static func collect_chunk_coords(plan: WorldPlan, chunk_size: int) -> Array[Vector2i]:
+	var seen: Dictionary[Vector2i, bool] = {}
+	var result: Array[Vector2i] = []
+	for r: Rect2i in plan.carve_rects:
+		var padded: Rect2i = r.grow(1)
+		var min_cx: int = floori(float(padded.position.x) / float(chunk_size))
+		var max_cx: int = floori(float(padded.end.x - 1) / float(chunk_size))
+		var min_cy: int = floori(float(padded.position.y) / float(chunk_size))
+		var max_cy: int = floori(float(padded.end.y - 1) / float(chunk_size))
+		for cy: int in range(min_cy, max_cy + 1):
+			for cx: int in range(min_cx, max_cx + 1):
+				var coord: Vector2i = Vector2i(cx, cy)
+				if not seen.has(coord):
+					seen[coord] = true
+					result.append(coord)
+	return result

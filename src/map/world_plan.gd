@@ -57,6 +57,8 @@ var rooms: Array[Rect2i] = []
 var carve_rects: Array[Rect2i] = []
 var spatial_grid: SpatialGrid = SpatialGrid.new()
 var room_children: Dictionary[Rect2i, Array] = {}
+var baked_chunks: Dictionary[Vector2i, Dictionary] = {}
+var spike_tile_sets: Dictionary[Vector2i, int] = {}
 
 var _room_depths: Dictionary[Rect2i, int] = {}
 var _room_archetypes: Dictionary[Rect2i, RoomArchetype] = {}
@@ -91,6 +93,8 @@ func generate(seed_val: int = 0, max_depth: int = 12) -> void:
 	carve_rects.clear()
 	spatial_grid.clear()
 	room_children.clear()
+	baked_chunks.clear()
+	spike_tile_sets.clear()
 	_room_grid.clear()
 	_room_depths.clear()
 	_room_archetypes.clear()
@@ -174,15 +178,15 @@ func get_cell_tile_set(cell: Vector2i) -> int:
 
 	var best_room: Rect2i = hero_room
 	var best_dist_sq: int = _dist_sq_to_rect(cell, hero_room)
-	if best_dist_sq > 2:
-		for candidate: Rect2i in rooms:
-			var dist_sq: int = _dist_sq_to_rect(cell, candidate)
-			if dist_sq < best_dist_sq:
-				best_dist_sq = dist_sq
-				best_room = candidate
-				if best_dist_sq <= 2:
-					break
-
+	if best_dist_sq <= 2:
+		return _room_tile_sets.get(best_room, 1)
+	for idx: int in _room_grid.get_candidate_ids_for_rect(Rect2i(cell - Vector2i(64, 64), Vector2i(128, 128))):
+		var dist_sq: int = _dist_sq_to_rect(cell, rooms[idx])
+		if dist_sq < best_dist_sq:
+			best_dist_sq = dist_sq
+			best_room = rooms[idx]
+			if best_dist_sq <= 2:
+				break
 	return _room_tile_sets.get(best_room, 1)
 
 
@@ -340,7 +344,7 @@ func get_floor_plate_index(cell: Vector2i) -> int:
 	var result: int = -1
 	match pattern:
 		FloorPattern.BORDER_TRIM, FloorPattern.PILLAR_PLINTHS:
-			result = 0 if _is_border_trim_cell(cell) else -1
+			result = 0 if _is_border_trim_cell(cell, room) else -1
 		FloorPattern.CROSSROADS:
 			var dx: int = absi(cell.x - center.x)
 			var dy: int = absi(cell.y - center.y)
@@ -387,15 +391,15 @@ func _is_wall_buffer_free(cell: Vector2i) -> bool:
 	)
 
 
-func _is_border_trim_cell(cell: Vector2i) -> bool:
+func _is_border_trim_cell(cell: Vector2i, room: Rect2i) -> bool:
+	var room_pillars: Array = _room_pillars.get(room, [])
 	for dy: int in range(-1, 2):
 		for dx: int in range(-1, 2):
-			if dx == 0 and dy == 0:
-				continue
-			var n_cell: Vector2i = cell + Vector2i(dx, dy)
-			if not _is_wall_buffer_free(n_cell):
+			if (dx != 0 or dy != 0) and not _is_wall_buffer_free(cell + Vector2i(dx, dy)):
+				var n_cell: Vector2i = cell + Vector2i(dx, dy)
 				var in_pillar: bool = false
-				for p: Rect2i in _all_pillars:
+				for p_var: Variant in room_pillars:
+					var p: Rect2i = p_var
 					if Rect2i(p.position.x - 1, p.position.y - 1, p.size.x + 2, p.size.y + 3).has_point(n_cell):
 						in_pillar = true
 						break
@@ -993,3 +997,4 @@ func _commit_spike_cells(cells: Array[Vector2i]) -> void:
 	_next_spike_group += 1
 	for cell: Vector2i in cells:
 		_spike_cells[cell] = group_id
+		spike_tile_sets[cell] = get_cell_tile_set(cell)

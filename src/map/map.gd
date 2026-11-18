@@ -152,7 +152,22 @@ func generate_map() -> void:
 	var depth_1_rooms: Array[Rect2i] = plan.get_depth_rooms(1)
 	companion_rooms.append_array(depth_1_rooms)
 
-	generation_progress_updated.emit(0.45, &"Preparing navigation network...")
+	generation_progress_updated.emit(0.20, &"Baking dungeon chambers...")
+	await get_tree().process_frame
+
+	var all_chunks: Array[Vector2i] = ChunkRaster.collect_chunk_coords(plan, MapStreamer.CHUNK_SIZE)
+	var chunk_raster: ChunkRaster = ChunkRaster.new()
+	var total_chunks: int = all_chunks.size()
+	var slice_start_usec: int = Time.get_ticks_usec()
+	for i: int in range(total_chunks):
+		TileClassifier.bake_chunk(all_chunks[i], chunk_raster, plan)
+		if (Time.get_ticks_usec() - slice_start_usec) >= 12000:
+			var pct: float = lerpf(0.20, 0.72, float(i + 1) / float(maxi(1, total_chunks)))
+			generation_progress_updated.emit(pct, &"Baking dungeon chambers...")
+			await get_tree().process_frame
+			slice_start_usec = Time.get_ticks_usec()
+
+	generation_progress_updated.emit(0.75, &"Preparing navigation network...")
 	await get_tree().process_frame
 
 	nav_window.setup(_walkable_cells, _floor)
@@ -200,7 +215,7 @@ func update_spikes(delta: float) -> void:
 		var group_id: int = _loaded_spikes[cell]
 		if changed_groups.has(group_id):
 			var frame_idx: int = changed_groups[group_id]
-			var tile_set: int = plan.get_cell_tile_set(cell)
+			var tile_set: int = plan.spike_tile_sets.get(cell, 1)
 			_floor.set_cell(cell, TileClassifier.TILE_SET_SOURCE_ID, TileClassifier.get_spike_frame(frame_idx, tile_set))
 
 

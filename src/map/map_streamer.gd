@@ -4,10 +4,28 @@
 class_name MapStreamer
 extends RefCounted
 
+
+class StreamJob:
+	extends RefCounted
+	var coord: Vector2i
+	var data: Dictionary
+	var is_evict: bool
+	var phase: int = 0
+	var idx: int = 0
+	var spawned_lights: Array[Vector2i] = []
+
+	func _init(job_coord: Vector2i, job_data: Dictionary, job_is_evict: bool) -> void:
+		coord = job_coord
+		data = job_data
+		is_evict = job_is_evict
+
+
 const CHUNK_SIZE: int = 32
+const SUBCHUNK_SIZE: int = 8
 const LOAD_RADIUS: int = 3
 const UNLOAD_RADIUS: int = 5
-const FRAME_BUDGET_USEC: int = 1500
+const FRAME_BUDGET_USEC: int = 1200
+const CELL_BATCH_SIZE: int = 48
 
 var _plan: WorldPlan = null
 var _floor: TileMapLayer = null
@@ -23,8 +41,12 @@ var _run_seed: int = 0
 var _loaded_chunks: Dictionary[Vector2i, Dictionary] = {}
 var _load_queue: Array[Vector2i] = []
 var _queued_set: Dictionary[Vector2i, bool] = {}
-var _raster: ChunkRaster = ChunkRaster.new()
+var _evict_queue: Array[Vector2i] = []
+var _evict_queued_set: Dictionary[Vector2i, bool] = {}
+var _active_load_job: StreamJob = null
+var _active_evict_job: StreamJob = null
 var _last_player_chunk: Vector2i = Vector2i(-999999, -999999)
+var _last_player_subchunk: Vector2i = Vector2i(-999999, -999999)
 var _sort_center_chunk: Vector2i = Vector2i.ZERO
 var _sort_has_vel: bool = false
 var _sort_move_dir: Vector2 = Vector2.ZERO
@@ -56,23 +78,32 @@ func setup(
 	_loaded_chunks.clear()
 	_load_queue.clear()
 	_queued_set.clear()
+	_evict_queue.clear()
+	_evict_queued_set.clear()
+	_active_load_job = null
+	_active_evict_job = null
 	_last_player_chunk = Vector2i(-999999, -999999)
+	_last_player_subchunk = Vector2i(-999999, -999999)
 
 
 func update(player_world_pos: Vector2, player_velocity: Vector2) -> void:
+	var start_usec: int = Time.get_ticks_usec()
 	var player_cell: Vector2i = _floor.local_to_map(player_world_pos)
 	var player_chunk: Vector2i = get_chunk_coord(player_cell)
+	var player_subchunk: Vector2i = cell_to_subchunk(player_cell)
 
 	_nav_window.update_center(player_cell)
 
-	if player_chunk != _last_player_chunk:
+	if player_subchunk != _last_player_subchunk:
+		_last_player_subchunk = player_subchunk
 		_last_player_chunk = player_chunk
 		_queue_chunks_in_radius(player_chunk)
-		_evict_distant_chunks(player_chunk)
+		_queue_evict_distant_chunks(player_chunk)
+		if not _load_queue.is_empty():
+			_sort_queue(player_chunk, player_velocity)
 
-	if not _load_queue.is_empty():
-		_sort_queue(player_chunk, player_velocity)
-		_process_queue()
+	if _has_pending_work():
+		_process_queues(start_usec)
 
 
 func materialize_rect_immediate(tile_rect: Rect2i) -> void:
@@ -82,8 +113,16 @@ func materialize_rect_immediate(tile_rect: Rect2i) -> void:
 	for cy: int in range(min_chunk.y, max_chunk.y + 1):
 		for cx: int in range(min_chunk.x, max_chunk.x + 1):
 			var coord: Vector2i = Vector2i(cx, cy)
-			if not _loaded_chunks.has(coord):
-				_materialize_chunk(coord)
+			if _loaded_chunks.has(coord):
+				continue
+			var data: Dictionary = _plan.baked_chunks.get(coord, {})
+			if data.is_empty():
+				_store_empty_chunk(coord)
+				continue
+			var job: StreamJob = StreamJob.new(coord, data, false)
+			while job.phase <= 5:
+				_step_load_job(job, 999999)
+			_commit_loaded_job(job)
 
 
 static func cell_to_chunk(cell: Vector2i) -> Vector2i:
@@ -92,17 +131,53 @@ static func cell_to_chunk(cell: Vector2i) -> Vector2i:
 	return Vector2i(cx, cy)
 
 
+static func cell_to_subchunk(cell: Vector2i) -> Vector2i:
+	var sx: int = floori(float(cell.x) / float(SUBCHUNK_SIZE))
+	var sy: int = floori(float(cell.y) / float(SUBCHUNK_SIZE))
+	return Vector2i(sx, sy)
+
+
 func get_chunk_coord(cell: Vector2i) -> Vector2i:
 	return cell_to_chunk(cell)
+
+
+func _has_pending_work() -> bool:
+	return _active_load_job != null or not _load_queue.is_empty() or _active_evict_job != null or not _evict_queue.is_empty()
+
+
+func _is_active_job_coord(job: StreamJob, coord: Vector2i) -> bool:
+	return job != null and job.coord == coord
 
 
 func _queue_chunks_in_radius(center_chunk: Vector2i) -> void:
 	for dy: int in range(-LOAD_RADIUS, LOAD_RADIUS + 1):
 		for dx: int in range(-LOAD_RADIUS, LOAD_RADIUS + 1):
 			var coord: Vector2i = center_chunk + Vector2i(dx, dy)
-			if not _loaded_chunks.has(coord) and not _queued_set.has(coord):
+			if _evict_queued_set.has(coord):
+				_evict_queued_set.erase(coord)
+				_evict_queue.erase(coord)
+			if (
+				not _loaded_chunks.has(coord)
+				and not _queued_set.has(coord)
+				and not _is_active_job_coord(_active_load_job, coord)
+				and not _is_active_job_coord(_active_evict_job, coord)
+			):
 				_load_queue.append(coord)
 				_queued_set[coord] = true
+
+
+func _queue_evict_distant_chunks(center_chunk: Vector2i) -> void:
+	for i: int in range(_load_queue.size() - 1, -1, -1):
+		var qcoord: Vector2i = _load_queue[i]
+		if absi(qcoord.x - center_chunk.x) > UNLOAD_RADIUS or absi(qcoord.y - center_chunk.y) > UNLOAD_RADIUS:
+			_load_queue.remove_at(i)
+			_queued_set.erase(qcoord)
+
+	for coord: Vector2i in _loaded_chunks:
+		if absi(coord.x - center_chunk.x) > UNLOAD_RADIUS or absi(coord.y - center_chunk.y) > UNLOAD_RADIUS:
+			if not _evict_queued_set.has(coord) and not _is_active_job_coord(_active_evict_job, coord):
+				_evict_queue.append(coord)
+				_evict_queued_set[coord] = true
 
 
 func _sort_queue(center_chunk: Vector2i, velocity: Vector2) -> void:
@@ -130,114 +205,177 @@ func _compare_chunk_priority(a: Vector2i, b: Vector2i) -> bool:
 	return score_a < score_b
 
 
-func _process_queue() -> void:
-	var start_usec: int = Time.get_ticks_usec()
-	while not _load_queue.is_empty():
-		var coord: Vector2i = _load_queue.pop_front()
-		_queued_set.erase(coord)
-		_materialize_chunk(coord)
+func _process_queues(start_usec: int) -> void:
+	while (Time.get_ticks_usec() - start_usec) < FRAME_BUDGET_USEC:
+		if _active_load_job != null or not _load_queue.is_empty():
+			if _active_load_job == null:
+				var coord: Vector2i = _load_queue.pop_front()
+				_queued_set.erase(coord)
+				var data: Dictionary = _plan.baked_chunks.get(coord, {})
+				if data.is_empty():
+					_store_empty_chunk(coord)
+					continue
+				_active_load_job = StreamJob.new(coord, data, false)
 
-		if (Time.get_ticks_usec() - start_usec) >= FRAME_BUDGET_USEC:
+			_step_load_job(_active_load_job, CELL_BATCH_SIZE)
+			if _active_load_job.phase > 5:
+				_commit_loaded_job(_active_load_job)
+				_active_load_job = null
+		elif _active_evict_job != null or not _evict_queue.is_empty():
+			if _active_evict_job == null:
+				var coord: Vector2i = _evict_queue.pop_front()
+				_evict_queued_set.erase(coord)
+				if not _loaded_chunks.has(coord):
+					continue
+				var data: Dictionary = _loaded_chunks[coord]
+				_loaded_chunks.erase(coord)
+				var floors: Array[Vector2i] = data[&"floors"]
+				var walls: Array[Vector2i] = data[&"walls"]
+				if floors.is_empty() and walls.is_empty():
+					continue
+				_active_evict_job = StreamJob.new(coord, data, true)
+
+			_step_evict_job(_active_evict_job, CELL_BATCH_SIZE)
+			if _active_evict_job.phase > 5:
+				var evicted_coord: Vector2i = _active_evict_job.coord
+				_active_evict_job = null
+				_requeue_if_returned(evicted_coord)
+		else:
 			break
 
 
-func _materialize_chunk(coord: Vector2i) -> void:
-	_raster.rasterize(coord, _plan)
+func _requeue_if_returned(coord: Vector2i) -> void:
+	if absi(coord.x - _last_player_chunk.x) <= LOAD_RADIUS and absi(coord.y - _last_player_chunk.y) <= LOAD_RADIUS:
+		if not _loaded_chunks.has(coord) and not _queued_set.has(coord):
+			_load_queue.append(coord)
+			_queued_set[coord] = true
 
-	if not _raster.has_any_content():
-		_loaded_chunks[coord] = {
-			&"floors": [] as Array[Vector2i],
-			&"spikes": [] as Array[Vector2i],
-			&"walls": [] as Array[Vector2i],
-			&"torches": [] as Array[Vector2i],
-			&"lights": [] as Array[Vector2i],
-		}
-		return
 
-	var data: Dictionary = TileClassifier.classify_chunk(_raster, _run_seed, _plan)
-	var floors: Array[Vector2i] = data[&"floors"]
-	var floor_atlas: Array[Vector2i] = data[&"floor_atlas"]
-	var spikes: Array[Vector2i] = data[&"spikes"]
-	var walls: Array[Vector2i] = data[&"walls"]
-	var wall_atlas: Array[Vector2i] = data[&"wall_atlas"]
-	var wall_alt_ids: Array[int] = data[&"wall_alt_ids"]
-	var torches: Array[Vector2i] = data[&"torches"]
-	var torch_atlas: Array[Vector2i] = data[&"torch_atlas"]
-	var torch_alt_ids: Array[int] = data[&"torch_alt_ids"]
-	var lights: Array[Vector2i] = data[&"lights"]
-
-	for i: int in range(floors.size()):
-		_floor.set_cell(floors[i], TileClassifier.TILE_SET_SOURCE_ID, floor_atlas[i])
-
-	for spos: Vector2i in spikes:
-		var group_id: int = _plan.get_spike_group(spos)
-		_loaded_spikes[spos] = group_id
-		if group_id >= 0 and group_id < _group_frames.size():
-			var frame_idx: int = _group_frames[group_id]
-			var tile_set: int = _plan.get_cell_tile_set(spos)
-			_floor.set_cell(spos, TileClassifier.TILE_SET_SOURCE_ID, TileClassifier.get_spike_frame(frame_idx, tile_set))
-
-	var wall_set: Dictionary[Vector2i, bool] = {}
-	for i: int in range(walls.size()):
-		var wpos: Vector2i = walls[i]
-		_walls.set_cell(wpos, TileClassifier.TILE_SET_SOURCE_ID, wall_atlas[i], wall_alt_ids[i])
-		wall_set[wpos] = true
-
-	for i: int in range(torches.size()):
-		_decorations.set_cell(torches[i], TileClassifier.TILE_SET_SOURCE_ID, torch_atlas[i], torch_alt_ids[i])
-
-	var spawned_lights: Array[Vector2i] = []
-	for lpos: Vector2i in lights:
-		if not _light_manager.has_light(lpos):
-			var world_pos: Vector2 = _decorations.map_to_local(lpos)
-			_light_manager.add_light(coord, lpos, world_pos)
-			spawned_lights.append(lpos)
-
-	for fpos: Vector2i in floors:
-		if not wall_set.has(fpos):
-			_walkable_cells[fpos] = true
-			_nav_window.set_cell_walkable(fpos, true)
-
+func _store_empty_chunk(coord: Vector2i) -> void:
 	_loaded_chunks[coord] = {
-		&"floors": floors,
-		&"spikes": spikes,
-		&"walls": walls,
-		&"torches": torches,
-		&"lights": spawned_lights,
+		&"floors": [] as Array[Vector2i],
+		&"spikes": [] as Array[Vector2i],
+		&"walls": [] as Array[Vector2i],
+		&"torches": [] as Array[Vector2i],
+		&"lights": [] as Array[Vector2i],
+		&"walkable": [] as Array[Vector2i],
 	}
 
 
-func _evict_distant_chunks(center_chunk: Vector2i) -> void:
-	var chunks_to_evict: Array[Vector2i] = []
-	for coord: Vector2i in _loaded_chunks:
-		if absi(coord.x - center_chunk.x) > UNLOAD_RADIUS or absi(coord.y - center_chunk.y) > UNLOAD_RADIUS:
-			chunks_to_evict.append(coord)
+func _commit_loaded_job(job: StreamJob) -> void:
+	var data: Dictionary = job.data
+	_loaded_chunks[job.coord] = {
+		&"floors": data[&"floors"],
+		&"spikes": data[&"spikes"],
+		&"walls": data[&"walls"],
+		&"torches": data[&"torches"],
+		&"lights": job.spawned_lights,
+		&"walkable": data[&"walkable"],
+	}
 
-	for coord: Vector2i in chunks_to_evict:
-		_evict_chunk(coord)
+
+func _step_load_job(job: StreamJob, batch_limit: int) -> void:
+	var data: Dictionary = job.data
+	match job.phase:
+		0:
+			var floors: Array[Vector2i] = data[&"floors"]
+			var floor_atlas: Array[Vector2i] = data[&"floor_atlas"]
+			var end_idx: int = mini(floors.size(), job.idx + batch_limit)
+			for i: int in range(job.idx, end_idx):
+				_floor.set_cell(floors[i], TileClassifier.TILE_SET_SOURCE_ID, floor_atlas[i])
+			_advance_job_cursor(job, end_idx, floors.size())
+		1:
+			var spikes: Array[Vector2i] = data[&"spikes"]
+			var end_idx: int = mini(spikes.size(), job.idx + batch_limit)
+			for i: int in range(job.idx, end_idx):
+				var spos: Vector2i = spikes[i]
+				var group_id: int = _plan.get_spike_group(spos)
+				_loaded_spikes[spos] = group_id
+				if group_id >= 0 and group_id < _group_frames.size():
+					var frame_idx: int = _group_frames[group_id]
+					var tile_set: int = _plan.spike_tile_sets.get(spos, 1)
+					_floor.set_cell(spos, TileClassifier.TILE_SET_SOURCE_ID, TileClassifier.get_spike_frame(frame_idx, tile_set))
+			_advance_job_cursor(job, end_idx, spikes.size())
+		2:
+			var walls: Array[Vector2i] = data[&"walls"]
+			var wall_atlas: Array[Vector2i] = data[&"wall_atlas"]
+			var wall_alt_ids: Array[int] = data[&"wall_alt_ids"]
+			var end_idx: int = mini(walls.size(), job.idx + batch_limit)
+			for i: int in range(job.idx, end_idx):
+				_walls.set_cell(walls[i], TileClassifier.TILE_SET_SOURCE_ID, wall_atlas[i], wall_alt_ids[i])
+			_advance_job_cursor(job, end_idx, walls.size())
+		3:
+			var torches: Array[Vector2i] = data[&"torches"]
+			var torch_atlas: Array[Vector2i] = data[&"torch_atlas"]
+			var torch_alt_ids: Array[int] = data[&"torch_alt_ids"]
+			var end_idx: int = mini(torches.size(), job.idx + batch_limit)
+			for i: int in range(job.idx, end_idx):
+				_decorations.set_cell(torches[i], TileClassifier.TILE_SET_SOURCE_ID, torch_atlas[i], torch_alt_ids[i])
+			_advance_job_cursor(job, end_idx, torches.size())
+		4:
+			var lights: Array[Vector2i] = data[&"lights"]
+			var end_idx: int = mini(lights.size(), job.idx + batch_limit)
+			for i: int in range(job.idx, end_idx):
+				var lpos: Vector2i = lights[i]
+				if not _light_manager.has_light(lpos):
+					var world_pos: Vector2 = _decorations.map_to_local(lpos)
+					_light_manager.add_light(job.coord, lpos, world_pos)
+					job.spawned_lights.append(lpos)
+			_advance_job_cursor(job, end_idx, lights.size())
+		5:
+			var walkable: Array[Vector2i] = data[&"walkable"]
+			var end_idx: int = mini(walkable.size(), job.idx + batch_limit)
+			for i: int in range(job.idx, end_idx):
+				var fpos: Vector2i = walkable[i]
+				_walkable_cells[fpos] = true
+				_nav_window.set_cell_walkable(fpos, true)
+			_advance_job_cursor(job, end_idx, walkable.size())
 
 
-func _evict_chunk(coord: Vector2i) -> void:
-	var chunk_data: Dictionary = _loaded_chunks[coord]
-	var floors: Array[Vector2i] = chunk_data[&"floors"]
-	var spikes: Array[Vector2i] = chunk_data[&"spikes"]
-	var walls: Array[Vector2i] = chunk_data[&"walls"]
-	var torches: Array[Vector2i] = chunk_data[&"torches"]
+func _step_evict_job(job: StreamJob, batch_limit: int) -> void:
+	var data: Dictionary = job.data
+	match job.phase:
+		0:
+			var spikes: Array[Vector2i] = data[&"spikes"]
+			var end_idx: int = mini(spikes.size(), job.idx + batch_limit)
+			for i: int in range(job.idx, end_idx):
+				_loaded_spikes.erase(spikes[i])
+			_advance_job_cursor(job, end_idx, spikes.size())
+		1:
+			var walkable: Array[Vector2i] = data[&"walkable"]
+			var end_idx: int = mini(walkable.size(), job.idx + batch_limit)
+			for i: int in range(job.idx, end_idx):
+				var fpos: Vector2i = walkable[i]
+				_walkable_cells.erase(fpos)
+				_nav_window.set_cell_walkable(fpos, false)
+			_advance_job_cursor(job, end_idx, walkable.size())
+		2:
+			var floors: Array[Vector2i] = data[&"floors"]
+			var end_idx: int = mini(floors.size(), job.idx + batch_limit)
+			for i: int in range(job.idx, end_idx):
+				_floor.erase_cell(floors[i])
+			_advance_job_cursor(job, end_idx, floors.size())
+		3:
+			var walls: Array[Vector2i] = data[&"walls"]
+			var end_idx: int = mini(walls.size(), job.idx + batch_limit)
+			for i: int in range(job.idx, end_idx):
+				_walls.erase_cell(walls[i])
+			_advance_job_cursor(job, end_idx, walls.size())
+		4:
+			var torches: Array[Vector2i] = data[&"torches"]
+			var end_idx: int = mini(torches.size(), job.idx + batch_limit)
+			for i: int in range(job.idx, end_idx):
+				_decorations.erase_cell(torches[i])
+			_advance_job_cursor(job, end_idx, torches.size())
+		5:
+			_light_manager.remove_chunk_lights(job.coord)
+			job.phase = 6
+			job.idx = 0
 
-	for spos: Vector2i in spikes:
-		_loaded_spikes.erase(spos)
 
-	for fpos: Vector2i in floors:
-		_floor.erase_cell(fpos)
-		_walkable_cells.erase(fpos)
-		_nav_window.set_cell_walkable(fpos, false)
-
-	for wpos: Vector2i in walls:
-		_walls.erase_cell(wpos)
-
-	for tpos: Vector2i in torches:
-		_decorations.erase_cell(tpos)
-
-	_light_manager.remove_chunk_lights(coord)
-
-	_loaded_chunks.erase(coord)
+static func _advance_job_cursor(job: StreamJob, end_idx: int, total_size: int) -> void:
+	if end_idx >= total_size:
+		job.phase += 1
+		job.idx = 0
+	else:
+		job.idx = end_idx
