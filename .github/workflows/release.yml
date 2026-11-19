@@ -249,9 +249,7 @@ jobs:
                         "dist/escapeteers-$v-linux-32.tar.gz" \
                         "dist/escapeteers-$v-macos.zip"
 
-    # Disabled until the itch.io page is live (remove `if: false` and add BUTLER_API_KEY secret).
     itch:
-        if: false
         name: itch.io ${{ matrix.channel }}
         needs: [prepare, build]
         runs-on: ubuntu-latest

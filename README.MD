@@ -4,7 +4,9 @@
 [![Made with Godot](https://img.shields.io/badge/GODOT-4.7-478CBF?style=for-the-badge&logo=godot%20engine&logoColor=white)](https://godotengine.org)
 
 <p align="center">
-  <img src="screens/cover.jpg" alt="Escapeteers">
+  <a href="https://youtu.be/E95BCyRuTGU">
+    <img src="screens/cover.jpg" alt="Escapeteers">
+  </a>
 </p>
 
 > **Escapeteers** is a top-down squad bullet heaven & horde survival game. Lead a frantic, auto-firing fellowship of survivors through an endless, dynamically generated dungeon.
