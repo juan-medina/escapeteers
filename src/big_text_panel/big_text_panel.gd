@@ -6,8 +6,8 @@ extends MenuPanel
 
 const SCROLL_SPEED: float = 500.0
 const WEBSITE_URL: StringName = &"https://github.com/juan-medina/escapeteers"
-const DOWNLOAD_URL: StringName = &"https://github.com/juan-medina/escapeteers/releases"
-const DOWNLOAD_LABEL: StringName = &"GitHub"
+const DOWNLOAD_URL: StringName = &"https://juanmedina.itch.io/escapeteers"
+const DOWNLOAD_LABEL: StringName = &"itch.io"
 
 @export var title: String = ""
 @export_file("*.txt") var text_file: String = ""
