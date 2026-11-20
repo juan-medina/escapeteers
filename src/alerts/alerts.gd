@@ -4,6 +4,7 @@
 extends CanvasLayer
 
 const SILENT_DB: float = -80.0
+const AUDIO_FLUSH_USEC: int = 50000
 const TOAST_SCENE: PackedScene = preload("res://toast/toast.tscn")
 const ERROR_DIALOG_SCENE: PackedScene = preload("res://error_dialog/error_dialog.tscn")
 
@@ -83,6 +84,11 @@ func _terminate(is_error: bool, message: StringName) -> void:
 	if is_error:
 		_show_error_dialog(message)
 		return
+
+	var flush_deadline_usec: int = Time.get_ticks_usec() + AUDIO_FLUSH_USEC
+	while Time.get_ticks_usec() < flush_deadline_usec:
+		await tree.process_frame
+	await tree.process_frame
 
 	tree.quit()
 
