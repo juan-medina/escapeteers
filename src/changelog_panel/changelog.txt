@@ -1,5 +1,7 @@
 [center][color=#ffffff][b]Escapeteers - Changelog[/b][/color][/center]
 
+[color=#ffffff][b]v0.7.0 - WIP[/b][/color]
+
 [color=#ffffff][b]v0.6.0 - 2026-11-18[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
