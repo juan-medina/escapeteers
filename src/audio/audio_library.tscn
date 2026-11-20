@@ -35,6 +35,9 @@
 [ext_resource type="AudioStreamWAV" uid="uid://yiah3mlv8g57" path="res://data/assets/sounds/08_Step_rock_02.wav" id="33_step_2"]
 [ext_resource type="AudioStreamWAV" uid="uid://dfwu5yauwxuq" path="res://data/assets/sounds/09_Step_rock_03.wav" id="34_step_3"]
 [ext_resource type="AudioStreamWAV" uid="uid://dp7lrgitjkov1" path="res://data/assets/sounds/Coin_Pickup.wav" id="35_coin_pickup"]
+[ext_resource type="AudioStreamWAV" path="res://data/assets/sounds/Key_Pickup.wav" id="36_key_pickup"]
+[ext_resource type="AudioStreamWAV" path="res://data/assets/sounds/Door_Unlock.wav" id="37_door_unlock"]
+[ext_resource type="AudioStreamWAV" path="res://data/assets/sounds/Shortcut_Open.wav" id="38_shortcut_open"]
 
 [sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_spike_trap"]
 playback_mode = 0
@@ -171,6 +174,18 @@ bus = &"Sfx"
 
 [node name="CoinPickup" type="AudioStreamPlayer" parent="ChannelStinger"]
 stream = ExtResource("35_coin_pickup")
+bus = &"Sfx"
+
+[node name="KeyPickup" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("36_key_pickup")
+bus = &"Sfx"
+
+[node name="DoorUnlock" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("37_door_unlock")
+bus = &"Sfx"
+
+[node name="ShortcutOpen" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("38_shortcut_open")
 bus = &"Sfx"
 
 [node name="ChannelAlert" type="Node" parent="."]

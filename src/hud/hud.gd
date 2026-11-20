@@ -10,6 +10,8 @@ const HINT_FADE_DURATION: float = 0.8
 const ROOM_TOAST_FADE_IN: float = 0.18
 const ROOM_TOAST_HOLD: float = 2.0
 const ROOM_TOAST_FADE_OUT: float = 0.45
+const KEY_COLLECTED_COLOR: Color = Color(1.0, 1.0, 1.0, 1.0)
+const KEY_USED_COLOR: Color = Color(0.45, 0.48, 0.52, 0.20)
 
 var _current_level: int = 1
 var _target_xp: float = 0.0
@@ -28,10 +30,41 @@ var _room_toast_tween: Tween = null
 @onready var _movement_hint: Label = $MovementHint
 @onready var _room_toast: PanelContainer = $RoomToast
 @onready var _room_toast_label: Label = $RoomToast/Label
+@onready var _key_icons: Array[TextureRect] = [
+	$Margin/HBox/KeyBar/BlueKey,
+	$Margin/HBox/KeyBar/GreenKey,
+	$Margin/HBox/KeyBar/YellowKey,
+	$Margin/HBox/KeyBar/RedKey,
+]
+@onready var _door_edge_indicators: Array[Node2D] = [
+	$EdgeIndicators/BlueDoorIndicator,
+	$EdgeIndicators/GreenDoorIndicator,
+	$EdgeIndicators/YellowDoorIndicator,
+	$EdgeIndicators/RedDoorIndicator,
+]
+@onready var _door_edge_arrows: Array[Node2D] = [
+	$EdgeIndicators/BlueDoorIndicator/Arrow,
+	$EdgeIndicators/GreenDoorIndicator/Arrow,
+	$EdgeIndicators/YellowDoorIndicator/Arrow,
+	$EdgeIndicators/RedDoorIndicator/Arrow,
+]
+@onready var _key_edge_indicators: Array[Node2D] = [
+	$EdgeIndicators/BlueKeyIndicator,
+	$EdgeIndicators/GreenKeyIndicator,
+	$EdgeIndicators/YellowKeyIndicator,
+	$EdgeIndicators/RedKeyIndicator,
+]
+@onready var _key_edge_arrows: Array[Node2D] = [
+	$EdgeIndicators/BlueKeyIndicator/Arrow,
+	$EdgeIndicators/GreenKeyIndicator/Arrow,
+	$EdgeIndicators/YellowKeyIndicator/Arrow,
+	$EdgeIndicators/RedKeyIndicator/Arrow,
+]
 
 
 func _ready() -> void:
 	set_process(false)
+	_map_overlay.set_hud_edge_indicators(_door_edge_indicators, _door_edge_arrows, _key_edge_indicators, _key_edge_arrows)
 	InputManager.input_mode_changed.connect(_on_input_mode_changed)
 	_update_map_prompt(InputManager.current_mode)
 	var hint_timer: SceneTreeTimer = get_tree().create_timer(HINT_AUTO_DISMISS_DELAY)
@@ -85,7 +118,25 @@ func record_damage(class_id: StringName, amount: float) -> void:
 
 
 func setup_map(plan: WorldPlan, target: Hero) -> void:
+	_reset_keys()
 	_map_overlay.setup(plan, target)
+
+
+func set_key_state(color: WorldPlan.KeyColor, collected: bool, used: bool) -> void:
+	var idx: int = int(color)
+	if idx >= 0 and idx < _key_icons.size():
+		_key_icons[idx].visible = collected or used
+		_key_icons[idx].modulate = KEY_USED_COLOR if used else KEY_COLLECTED_COLOR
+	_map_overlay.set_key_state(color, collected, used)
+
+
+func notify_shortcut_opened(color: WorldPlan.KeyColor) -> void:
+	_map_overlay.notify_shortcut_opened(color)
+	show_event_toast(&"Shortcut Opened!", Color(0.95, 0.90, 0.45, 1.0))
+
+
+func show_event_toast(title: String, color: Color) -> void:
+	_show_toast(title, color)
 
 
 func notify_room_entered(room: Rect2i, title: String, is_cleared: bool) -> void:
@@ -94,6 +145,16 @@ func notify_room_entered(room: Rect2i, title: String, is_cleared: bool) -> void:
 
 	var color: Color = _map_overlay.get_room_color(room)
 	color.a = 1.0
+	_show_toast(title, color)
+
+
+func _reset_keys() -> void:
+	for icon: TextureRect in _key_icons:
+		icon.visible = false
+		icon.modulate = KEY_COLLECTED_COLOR
+
+
+func _show_toast(title: String, color: Color) -> void:
 	_room_toast_label.text = title
 	_room_toast_label.add_theme_color_override(&"font_color", color)
 

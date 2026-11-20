@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://ckmbsnqsr8kd2" path="res://map/map.gd" id="1_hgrid"]
 [ext_resource type="TileSet" uid="uid://dynugnietdfql" path="res://map/dungeon.tres" id="2_a0dt8"]
 [ext_resource type="Script" uid="uid://ccfkgfl7gk0yn" path="res://map/light_manager.gd" id="3_lights"]
+[ext_resource type="Texture2D" uid="uid://bew3b5nrsmhiw" path="res://data/assets/map/tiles/Tileset.png" id="4_tileset"]
 
 [node name="Map" type="Node2D" unique_id=602158425]
 y_sort_enabled = true
@@ -28,3 +29,37 @@ rendering_quadrant_size = 4
 y_sort_enabled = true
 tile_set = ExtResource("2_a0dt8")
 rendering_quadrant_size = 4
+
+[node name="ShortcutEffect" type="Node2D" parent="." unique_id=1319287143]
+process_mode = 3
+visible = false
+z_index = 2
+
+[node name="LeftWall" type="Sprite2D" parent="ShortcutEffect" unique_id=1970072943]
+position = Vector2(-8, 0)
+texture = ExtResource("4_tileset")
+region_enabled = true
+region_rect = Rect2(48, 0, 16, 16)
+
+[node name="RightWall" type="Sprite2D" parent="ShortcutEffect" unique_id=1797530889]
+position = Vector2(8, 0)
+texture = ExtResource("4_tileset")
+region_enabled = true
+region_rect = Rect2(64, 0, 16, 16)
+
+[node name="DustParticles" type="CPUParticles2D" parent="ShortcutEffect" unique_id=73941844]
+emitting = false
+amount = 20
+lifetime = 0.55
+one_shot = true
+explosiveness = 0.85
+emission_shape = 3
+emission_rect_extents = Vector2(16, 6)
+direction = Vector2(0, 1)
+spread = 180.0
+gravity = Vector2(0, 20)
+initial_velocity_min = 18.0
+initial_velocity_max = 42.0
+scale_amount_min = 1.5
+scale_amount_max = 3.0
+color = Color(0.85, 0.8, 0.7, 0.9)

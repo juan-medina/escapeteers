@@ -11,6 +11,14 @@ enum RoomArchetype {
 	NECRO_CRYPT,
 }
 
+enum KeyColor {
+	NONE = -1,
+	BLUE = 0,
+	GREEN = 1,
+	YELLOW = 2,
+	RED = 3,
+}
+
 enum RoomShape {
 	RECTANGLE,
 	CUT_CORNERS,
@@ -59,6 +67,12 @@ var spatial_grid: SpatialGrid = SpatialGrid.new()
 var room_children: Dictionary[Rect2i, Array] = {}
 var baked_chunks: Dictionary[Vector2i, Dictionary] = {}
 var spike_tile_sets: Dictionary[Vector2i, int] = {}
+var sector_gates: Array[SectorGatePlanner.SectorGate] = []
+var door_cell_codes: Dictionary[Vector2i, int] = {}
+var closed_shortcut_walls: Dictionary[Vector2i, bool] = {}
+var lever_cells: Dictionary[Vector2i, KeyColor] = {}
+var no_prop_cells: Dictionary[Vector2i, bool] = {}
+var protected_neck_rects: Array[Rect2i] = []
 
 var _room_depths: Dictionary[Rect2i, int] = {}
 var _room_archetypes: Dictionary[Rect2i, RoomArchetype] = {}
@@ -95,6 +109,12 @@ func generate(seed_val: int = 0, max_depth: int = 12) -> void:
 	room_children.clear()
 	baked_chunks.clear()
 	spike_tile_sets.clear()
+	sector_gates.clear()
+	door_cell_codes.clear()
+	closed_shortcut_walls.clear()
+	lever_cells.clear()
+	no_prop_cells.clear()
+	protected_neck_rects.clear()
 	_room_grid.clear()
 	_room_depths.clear()
 	_room_archetypes.clear()
@@ -122,7 +142,7 @@ func generate(seed_val: int = 0, max_depth: int = 12) -> void:
 	_eliminate_narrow_gaps()
 	for room: Rect2i in rooms:
 		_plan_candle_posts_for_room(room)
-	_plan_spike_traps()
+	SectorGatePlanner.plan_spike_traps(self)
 
 
 func is_floor(cell: Vector2i) -> bool:
@@ -467,6 +487,10 @@ func _expand_dungeon_branches(target_max_depth: int) -> void:
 	var frontier_rooms: Array[Rect2i] = rooms.duplicate()
 
 	while current_depth < target_max_depth and not frontier_rooms.is_empty():
+		if current_depth in SectorGatePlanner.GATE_DEPTHS:
+			frontier_rooms = SectorGatePlanner.build_sector_gate(self, frontier_rooms, current_depth)
+			current_depth += 1
+			continue
 		var next_frontier: Array[Rect2i] = []
 		for parent_room: Rect2i in frontier_rooms:
 			var child_depth: int = current_depth + 1
@@ -519,6 +543,8 @@ func _expand_dungeon_branches(target_max_depth: int) -> void:
 
 				for other_room: Rect2i in rooms:
 					if other_room == candidate or other_room == parent_room:
+						continue
+					if SectorGatePlanner.get_sector_for_depth(child_depth) != SectorGatePlanner.get_sector_for_depth(get_room_depth(other_room)):
 						continue
 					var d: float = Vector2(candidate.get_center()).distance_to(Vector2(other_room.get_center()))
 					if d <= LOOP_CONNECT_MAX_DISTANCE and _rng.randf() <= LOOP_CONNECT_CHANCE:
@@ -683,9 +709,11 @@ func _plan_candle_posts_for_room(room: Rect2i) -> void:
 
 
 func _is_valid_candle_base(cell: Vector2i, center: Vector2i) -> bool:
-	if cell.distance_squared_to(center) <= 6:
+	if cell.distance_squared_to(center) <= 6 or no_prop_cells.has(cell):
 		return false
 	var top_cell: Vector2i = cell + Vector2i(0, -1)
+	if no_prop_cells.has(top_cell):
+		return false
 	if not is_floor(cell) or not is_floor(top_cell) or not is_floor(top_cell + Vector2i(0, -1)):
 		return false
 	return not _is_near_pillar(cell, 1) and not _is_near_pillar(top_cell, 1)
@@ -715,7 +743,9 @@ static func _has_cell_near(cell: Vector2i, lookup: Dictionary, radius_sq: int) -
 func _overlaps_any_room(candidate: Rect2i) -> bool:
 	if hero_room.grow(ROOM_PADDING).intersects(candidate):
 		return true
-	return _room_grid.intersects_any(candidate, rooms, ROOM_PADDING)
+	if _room_grid.intersects_any(candidate, rooms, ROOM_PADDING):
+		return true
+	return _intersects_any_rect(candidate.grow(3), _corridor_rects)
 
 
 func _is_outside_world_bounds(rect: Rect2i) -> bool:
@@ -768,8 +798,19 @@ func _eliminate_narrow_gaps() -> void:
 			_try_add_vertical_bridge(rect_b, rect_a, bridges_to_add)
 
 	for bridge: Rect2i in bridges_to_add:
-		if not _intersects_any_rect(bridge, _all_pillars) and not _intersects_any_rect(bridge, _cut_corner_rects):
+		if (
+			not _intersects_any_rect(bridge, _all_pillars)
+			and not _intersects_any_rect(bridge, _cut_corner_rects)
+			and not _intersects_any_rect(bridge, protected_neck_rects)
+		):
 			_add_carve_rect(bridge)
+
+
+static func _intersects_any_point(point: Vector2i, rects: Array[Rect2i]) -> bool:
+	for other: Rect2i in rects:
+		if other.has_point(point):
+			return true
+	return false
 
 
 static func _intersects_any_rect(rect: Rect2i, rects: Array[Rect2i]) -> bool:
@@ -830,166 +871,6 @@ func _get_max_size_for_depth(depth: int) -> Vector2i:
 func _get_step_distance_for_depth(depth: int) -> Vector2:
 	var bonus: float = minf(float(depth - 4) * 3.0, 16.0)
 	return TIER_1_DISTANCE_RANGE if depth <= 1 else (TIER_2_DISTANCE_RANGE if depth <= 3 else TIER_3_DISTANCE_RANGE + Vector2(bonus, bonus))
-
-
-func _plan_spike_traps() -> void:
-	for room: Rect2i in rooms:
-		_plan_room_spike_traps(room)
-	_plan_corridor_spike_traps()
-
-
-func _plan_room_spike_traps(room: Rect2i) -> void:
-	var depth: int = get_room_depth(room)
-	if depth <= 0:
-		return
-
-	var chance: float = 0.80 if depth >= 4 else (0.60 if depth >= 2 else 0.35)
-	var max_patches: int = _rng.randi_range(2, 3) if depth >= 4 else (_rng.randi_range(1, 2) if depth >= 2 else 1)
-	if _rng.randf() > chance:
-		return
-
-	var margin: int = 4
-	var min_x: int = room.position.x + margin
-	var max_x: int = room.end.x - margin - 1
-	var min_y: int = room.position.y + margin
-	var max_y: int = room.end.y - margin - 1
-	if min_x >= max_x or min_y >= max_y:
-		return
-
-	var center: Vector2i = room.get_center()
-	var qx1: int = int(lerpf(float(min_x), float(center.x), 0.45))
-	var qx2: int = int(lerpf(float(max_x), float(center.x), 0.45))
-	var qy1: int = int(lerpf(float(min_y), float(center.y), 0.45))
-	var qy2: int = int(lerpf(float(max_y), float(center.y), 0.45))
-	var anchors: Array[Vector2i] = [Vector2i(qx1, qy1), Vector2i(qx2, qy1), Vector2i(qx1, qy2), Vector2i(qx2, qy2)]
-	for i: int in range(anchors.size() - 1, 0, -1):
-		var swap_idx: int = _rng.randi_range(0, i)
-		var tmp: Vector2i = anchors[i]
-		anchors[i] = anchors[swap_idx]
-		anchors[swap_idx] = tmp
-
-	var placed: int = 0
-	for base_anchor: Vector2i in anchors:
-		if placed >= max_patches:
-			break
-		var anchor: Vector2i = base_anchor + Vector2i(_rng.randi_range(-1, 1), _rng.randi_range(-1, 1))
-		if _try_place_spike_patch(anchor, _pick_room_spike_pattern(depth), room):
-			placed += 1
-
-
-func _pick_room_spike_pattern(depth: int) -> Array[Vector2i]:
-	var roll: float = _rng.randf()
-	var offsets: Array[Vector2i] = []
-	if (depth <= 1 and roll < 0.65) or (depth > 1 and (roll < 0.30 or roll >= 0.80)):
-		var size: int = 2 if (depth <= 1 or (depth == 2 and roll < 0.30)) else 3
-		var start: int = -int(float(size) * 0.5)
-		for dy: int in range(size):
-			for dx: int in range(size):
-				offsets.append(Vector2i(start + dx, start + dy))
-		return offsets
-	if depth <= 1 or roll < 0.60:
-		var arm: int = 1 if depth <= 1 else 2
-		offsets.append(Vector2i.ZERO)
-		for d: int in range(1, arm + 1):
-			offsets.append(Vector2i(d, 0))
-			offsets.append(Vector2i(-d, 0))
-			offsets.append(Vector2i(0, d))
-			offsets.append(Vector2i(0, -d))
-		return offsets
-	var sx: int = -1 if _rng.randf() < 0.5 else 1
-	var zigzag: Array[Vector2i] = [Vector2i(-sx, -1), Vector2i(0, -1), Vector2i(0, 0), Vector2i(sx, 0), Vector2i(sx, 1), Vector2i(2 * sx, 1)]
-	return zigzag
-
-
-func _plan_corridor_spike_traps() -> void:
-	for seg: Dictionary in _corridor_segments:
-		var is_horiz: bool = seg[&"is_horizontal"]
-		var min_c: int = seg[&"min"]
-		var max_c: int = seg[&"max"]
-		var fixed_c: int = seg[&"fixed"]
-		var half_w: int = seg[&"half_width"]
-
-		var run_start: int = -999999
-		var best_start: int = 0
-		var best_len: int = 0
-
-		for c: int in range(min_c, max_c + 1):
-			var center_cell: Vector2i = Vector2i(c, fixed_c) if is_horiz else Vector2i(fixed_c, c)
-			if get_room_at(center_cell) == Rect2i():
-				if run_start == -999999:
-					run_start = c
-				var cur_len: int = c - run_start + 1
-				if cur_len > best_len:
-					best_len = cur_len
-					best_start = run_start
-			else:
-				run_start = -999999
-
-		if best_len < 10:
-			continue
-
-		var mid_c: int = best_start + int(float(best_len) * 0.5)
-		var mid_y: int = fixed_c if is_horiz else mid_c
-		var approx_depth: int = maxi(1, int(maxf(0.0, float(-mid_y)) / 50.0))
-		var chance: float = 0.25 if approx_depth <= 1 else (0.40 if approx_depth <= 3 else 0.55)
-		if _rng.randf() > chance:
-			continue
-
-		var side_first: int = -1 if _rng.randf() < 0.5 else 1
-		if best_len >= 18 and _rng.randf() < 0.45:
-			_place_corridor_half_block(is_horiz, mid_c - 3, fixed_c, half_w, side_first, 2)
-			_place_corridor_half_block(is_horiz, mid_c + 3, fixed_c, half_w, -side_first, 2)
-		else:
-			_place_corridor_half_block(is_horiz, mid_c, fixed_c, half_w, side_first, 3)
-
-
-func _place_corridor_half_block(is_horiz: bool, along_center: int, fixed_c: int, half_w: int, side: int, length: int) -> void:
-	var cells: Array[Vector2i] = []
-	var start_along: int = along_center - int(float(length) * 0.5)
-	if is_horiz:
-		# Top row (fixed_c - half_w) has the top wall on it; walkable rows are fixed_c - half_w + 1 .. fixed_c + half_w
-		var y_base: int = (fixed_c - half_w + 1) if side < 0 else (fixed_c + half_w - 1)
-		for dx: int in range(length):
-			for dy: int in range(2):
-				cells.append(Vector2i(start_along + dx, y_base + dy))
-	else:
-		var x_base: int = (fixed_c - half_w) if side < 0 else (fixed_c + half_w - 1)
-		for dy: int in range(length):
-			for dx: int in range(2):
-				cells.append(Vector2i(x_base + dx, start_along + dy))
-
-	for cell: Vector2i in cells:
-		if hero_room.grow(4).has_point(cell) or get_room_at(cell) != Rect2i():
-			return
-		if not is_floor(cell) or not is_floor(cell + Vector2i(0, -1)) or has_candle_post_near(cell, 6):
-			return
-		if _has_cell_near(cell, _spike_cells, 9):
-			return
-
-	_commit_spike_cells(cells)
-
-
-func _try_place_spike_patch(anchor: Vector2i, offsets: Array[Vector2i], room: Rect2i) -> bool:
-	var cells: Array[Vector2i] = []
-	var center: Vector2i = room.get_center()
-	var recruits: Array = get_companion_spawns_for_room(room)
-	var inner_rect: Rect2i = room.grow(-3)
-
-	for offset: Vector2i in offsets:
-		var cell: Vector2i = anchor + offset
-		if not inner_rect.has_point(cell) or not is_floor(cell) or not is_floor(cell + Vector2i(0, -1)):
-			return false
-		if cell.distance_squared_to(center) < 25 or has_candle_post_near(cell, 6) or _has_cell_near(cell, _spike_cells, 25):
-			return false
-		for r_var: Variant in recruits:
-			if r_var is Vector2i:
-				var r_cell: Vector2i = r_var
-				if cell.distance_squared_to(r_cell) < 25:
-					return false
-		cells.append(cell)
-
-	_commit_spike_cells(cells)
-	return true
 
 
 func _commit_spike_cells(cells: Array[Vector2i]) -> void:

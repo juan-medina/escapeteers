@@ -5,6 +5,25 @@
 [ext_resource type="PackedScene" path="res://hud/map_overlay/map_overlay.tscn" id="3_map"]
 [ext_resource type="PackedScene" path="res://hud/squad_grid/squad_grid.tscn" id="4_squad_grid"]
 [ext_resource type="FontFile" uid="uid://bst61g6fxq6sj" path="res://data/assets/pixel_ui_theme/m6x11.ttf" id="5_m6x11"]
+[ext_resource type="Texture2D" uid="uid://bew3b5nrsmhiw" path="res://data/assets/map/tiles/Tileset.png" id="6_tileset"]
+[ext_resource type="Texture2D" path="res://data/assets/hud/door_icon.png" id="7_door_icon"]
+[ext_resource type="Texture2D" path="res://data/assets/hud/key_icon.png" id="8_key_icon"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_blue_key"]
+atlas = ExtResource("6_tileset")
+region = Rect2(160, 464, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_green_key"]
+atlas = ExtResource("6_tileset")
+region = Rect2(128, 480, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_yellow_key"]
+atlas = ExtResource("6_tileset")
+region = Rect2(112, 480, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_red_key"]
+atlas = ExtResource("6_tileset")
+region = Rect2(144, 464, 16, 16)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_room_toast"]
 content_margin_left = 8.0
@@ -21,6 +40,152 @@ border_color = Color(0.2, 0.22, 0.3, 0.6)
 [node name="Hud" type="CanvasLayer" unique_id=1849182746]
 layer = 10
 script = ExtResource("1_hud")
+
+[node name="EdgeIndicators" type="Node2D" parent="."]
+
+[node name="BlueDoorIndicator" type="Node2D" parent="EdgeIndicators"]
+visible = false
+modulate = Color(0.25, 0.68, 1, 0.95)
+
+[node name="Icon" type="Sprite2D" parent="EdgeIndicators/BlueDoorIndicator"]
+texture = ExtResource("7_door_icon")
+
+[node name="Arrow" type="Node2D" parent="EdgeIndicators/BlueDoorIndicator"]
+
+[node name="Fill" type="Polygon2D" parent="EdgeIndicators/BlueDoorIndicator/Arrow"]
+polygon = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
+
+[node name="Outline" type="Line2D" parent="EdgeIndicators/BlueDoorIndicator/Arrow"]
+points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
+closed = true
+width = 1.0
+default_color = Color(0.09, 0.11, 0.15, 0.95)
+
+[node name="GreenDoorIndicator" type="Node2D" parent="EdgeIndicators"]
+visible = false
+modulate = Color(0.3, 0.92, 0.48, 0.95)
+
+[node name="Icon" type="Sprite2D" parent="EdgeIndicators/GreenDoorIndicator"]
+texture = ExtResource("7_door_icon")
+
+[node name="Arrow" type="Node2D" parent="EdgeIndicators/GreenDoorIndicator"]
+
+[node name="Fill" type="Polygon2D" parent="EdgeIndicators/GreenDoorIndicator/Arrow"]
+polygon = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
+
+[node name="Outline" type="Line2D" parent="EdgeIndicators/GreenDoorIndicator/Arrow"]
+points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
+closed = true
+width = 1.0
+default_color = Color(0.09, 0.11, 0.15, 0.95)
+
+[node name="YellowDoorIndicator" type="Node2D" parent="EdgeIndicators"]
+visible = false
+modulate = Color(1, 0.86, 0.25, 0.95)
+
+[node name="Icon" type="Sprite2D" parent="EdgeIndicators/YellowDoorIndicator"]
+texture = ExtResource("7_door_icon")
+
+[node name="Arrow" type="Node2D" parent="EdgeIndicators/YellowDoorIndicator"]
+
+[node name="Fill" type="Polygon2D" parent="EdgeIndicators/YellowDoorIndicator/Arrow"]
+polygon = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
+
+[node name="Outline" type="Line2D" parent="EdgeIndicators/YellowDoorIndicator/Arrow"]
+points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
+closed = true
+width = 1.0
+default_color = Color(0.09, 0.11, 0.15, 0.95)
+
+[node name="RedDoorIndicator" type="Node2D" parent="EdgeIndicators"]
+visible = false
+modulate = Color(1, 0.35, 0.35, 0.95)
+
+[node name="Icon" type="Sprite2D" parent="EdgeIndicators/RedDoorIndicator"]
+texture = ExtResource("7_door_icon")
+
+[node name="Arrow" type="Node2D" parent="EdgeIndicators/RedDoorIndicator"]
+
+[node name="Fill" type="Polygon2D" parent="EdgeIndicators/RedDoorIndicator/Arrow"]
+polygon = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
+
+[node name="Outline" type="Line2D" parent="EdgeIndicators/RedDoorIndicator/Arrow"]
+points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
+closed = true
+width = 1.0
+default_color = Color(0.09, 0.11, 0.15, 0.95)
+
+[node name="BlueKeyIndicator" type="Node2D" parent="EdgeIndicators"]
+visible = false
+modulate = Color(0.25, 0.68, 1, 0.95)
+
+[node name="Icon" type="Sprite2D" parent="EdgeIndicators/BlueKeyIndicator"]
+texture = ExtResource("8_key_icon")
+
+[node name="Arrow" type="Node2D" parent="EdgeIndicators/BlueKeyIndicator"]
+
+[node name="Fill" type="Polygon2D" parent="EdgeIndicators/BlueKeyIndicator/Arrow"]
+polygon = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
+
+[node name="Outline" type="Line2D" parent="EdgeIndicators/BlueKeyIndicator/Arrow"]
+points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
+closed = true
+width = 1.0
+default_color = Color(0.09, 0.11, 0.15, 0.95)
+
+[node name="GreenKeyIndicator" type="Node2D" parent="EdgeIndicators"]
+visible = false
+modulate = Color(0.3, 0.92, 0.48, 0.95)
+
+[node name="Icon" type="Sprite2D" parent="EdgeIndicators/GreenKeyIndicator"]
+texture = ExtResource("8_key_icon")
+
+[node name="Arrow" type="Node2D" parent="EdgeIndicators/GreenKeyIndicator"]
+
+[node name="Fill" type="Polygon2D" parent="EdgeIndicators/GreenKeyIndicator/Arrow"]
+polygon = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
+
+[node name="Outline" type="Line2D" parent="EdgeIndicators/GreenKeyIndicator/Arrow"]
+points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
+closed = true
+width = 1.0
+default_color = Color(0.09, 0.11, 0.15, 0.95)
+
+[node name="YellowKeyIndicator" type="Node2D" parent="EdgeIndicators"]
+visible = false
+modulate = Color(1, 0.86, 0.25, 0.95)
+
+[node name="Icon" type="Sprite2D" parent="EdgeIndicators/YellowKeyIndicator"]
+texture = ExtResource("8_key_icon")
+
+[node name="Arrow" type="Node2D" parent="EdgeIndicators/YellowKeyIndicator"]
+
+[node name="Fill" type="Polygon2D" parent="EdgeIndicators/YellowKeyIndicator/Arrow"]
+polygon = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
+
+[node name="Outline" type="Line2D" parent="EdgeIndicators/YellowKeyIndicator/Arrow"]
+points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
+closed = true
+width = 1.0
+default_color = Color(0.09, 0.11, 0.15, 0.95)
+
+[node name="RedKeyIndicator" type="Node2D" parent="EdgeIndicators"]
+visible = false
+modulate = Color(1, 0.35, 0.35, 0.95)
+
+[node name="Icon" type="Sprite2D" parent="EdgeIndicators/RedKeyIndicator"]
+texture = ExtResource("8_key_icon")
+
+[node name="Arrow" type="Node2D" parent="EdgeIndicators/RedKeyIndicator"]
+
+[node name="Fill" type="Polygon2D" parent="EdgeIndicators/RedKeyIndicator/Arrow"]
+polygon = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
+
+[node name="Outline" type="Line2D" parent="EdgeIndicators/RedKeyIndicator/Arrow"]
+points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
+closed = true
+width = 1.0
+default_color = Color(0.09, 0.11, 0.15, 0.95)
 
 [node name="MapOverlay" parent="." instance=ExtResource("3_map")]
 
@@ -57,6 +222,38 @@ show_percentage = false
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
 text = "0 / 50"
+
+[node name="KeyBar" type="HBoxContainer" parent="Margin/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="BlueKey" type="TextureRect" parent="Margin/HBox/KeyBar"]
+visible = false
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+texture = SubResource("AtlasTexture_blue_key")
+stretch_mode = 3
+
+[node name="GreenKey" type="TextureRect" parent="Margin/HBox/KeyBar"]
+visible = false
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+texture = SubResource("AtlasTexture_green_key")
+stretch_mode = 3
+
+[node name="YellowKey" type="TextureRect" parent="Margin/HBox/KeyBar"]
+visible = false
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+texture = SubResource("AtlasTexture_yellow_key")
+stretch_mode = 3
+
+[node name="RedKey" type="TextureRect" parent="Margin/HBox/KeyBar"]
+visible = false
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+texture = SubResource("AtlasTexture_red_key")
+stretch_mode = 3
 
 [node name="DamageMeter" parent="." instance=ExtResource("2_meter")]
 anchors_preset = 1

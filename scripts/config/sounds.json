@@ -206,6 +206,21 @@
       "input": "src/data/raw/sounds/Coin_Pickup.wav",
       "output": "src/data/assets/sounds/Coin_Pickup.wav",
       "tier": "heavy"
+    },
+    {
+      "input": "src/data/raw/sounds/Key_Pickup.wav",
+      "output": "src/data/assets/sounds/Key_Pickup.wav",
+      "tier": "heavy"
+    },
+    {
+      "input": "src/data/raw/sounds/Door_Unlock.wav",
+      "output": "src/data/assets/sounds/Door_Unlock.wav",
+      "tier": "heavy"
+    },
+    {
+      "input": "src/data/raw/sounds/Shortcut_Open.wav",
+      "output": "src/data/assets/sounds/Shortcut_Open.wav",
+      "tier": "critical"
     }
   ]
 }

@@ -1,0 +1,72 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://key_pickup/key_pickup.gd" id="1_key"]
+[ext_resource type="Script" path="res://character/ground_indicator.gd" id="2_ind"]
+[ext_resource type="Texture2D" uid="uid://bew3b5nrsmhiw" path="res://data/assets/map/tiles/Tileset.png" id="3_tileset"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_blue"]
+atlas = ExtResource("3_tileset")
+region = Rect2(160, 464, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_green"]
+atlas = ExtResource("3_tileset")
+region = Rect2(128, 480, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_red"]
+atlas = ExtResource("3_tileset")
+region = Rect2(144, 464, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_yellow"]
+atlas = ExtResource("3_tileset")
+region = Rect2(112, 480, 16, 16)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_key"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_blue")
+}],
+"loop": true,
+"name": &"blue",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_green")
+}],
+"loop": true,
+"name": &"green",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_red")
+}],
+"loop": true,
+"name": &"red",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_yellow")
+}],
+"loop": true,
+"name": &"yellow",
+"speed": 1.0
+}]
+
+[node name="KeyPickup" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_key")
+
+[node name="GroundIndicator" type="Node2D" parent="."]
+position = Vector2(0, 4)
+script = ExtResource("2_ind")
+radius_x = 6.0
+radius_y = 3.0
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+position = Vector2(0, -3)
+sprite_frames = SubResource("SpriteFrames_key")
+animation = &"blue"
+autoplay = "blue"

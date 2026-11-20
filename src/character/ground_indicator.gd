@@ -43,6 +43,11 @@ const POINT_COUNT: int = 24
 		if is_recruited != value:
 			is_recruited = value
 			queue_redraw()
+@export var custom_ring_color: Color = Color(0.0, 0.0, 0.0, 0.0):
+	set(value):
+		if custom_ring_color != value:
+			custom_ring_color = value
+			queue_redraw()
 @export var facing_direction: Vector2 = Vector2.RIGHT:
 	set(value):
 		if value != Vector2.ZERO and facing_direction != value:
@@ -117,6 +122,8 @@ func _draw_facing_arrow() -> void:
 
 
 func _get_ring_color() -> Color:
+	if custom_ring_color.a > 0.0:
+		return custom_ring_color
 	if is_player:
 		return PLAYER_RING_COLOR
 	if is_recruited:

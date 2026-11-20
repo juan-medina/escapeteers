@@ -46,6 +46,44 @@ const FLOOR_PLATE_VARIANTS: Array[Vector2i] = [
 	Vector2i(6, 9),
 	Vector2i(7, 9),
 ]
+const DOOR_CLOSED_LEFT: Array[Vector2i] = [
+	Vector2i(7, 22),
+	Vector2i(7, 23),
+	Vector2i(7, 24),
+	Vector2i(5, 24),
+]
+const DOOR_CLOSED_RIGHT: Array[Vector2i] = [
+	Vector2i(8, 22),
+	Vector2i(8, 23),
+	Vector2i(8, 24),
+	Vector2i(6, 24),
+]
+const DOOR_OPEN_TOP_LEFT: Array[Vector2i] = [
+	Vector2i(2, 22),
+	Vector2i(2, 24),
+	Vector2i(0, 24),
+	Vector2i(0, 22),
+]
+const DOOR_OPEN_TOP_RIGHT: Array[Vector2i] = [
+	Vector2i(3, 22),
+	Vector2i(3, 24),
+	Vector2i(1, 24),
+	Vector2i(1, 22),
+]
+const DOOR_OPEN_BOTTOM_LEFT: Array[Vector2i] = [
+	Vector2i(2, 23),
+	Vector2i(2, 25),
+	Vector2i(0, 25),
+	Vector2i(0, 23),
+]
+const DOOR_OPEN_BOTTOM_RIGHT: Array[Vector2i] = [
+	Vector2i(3, 23),
+	Vector2i(3, 25),
+	Vector2i(1, 25),
+	Vector2i(1, 23),
+]
+const LEVER_CLOSED: Vector2i = Vector2i(5, 31)
+const LEVER_OPEN: Vector2i = Vector2i(6, 31)
 
 
 static func cell_hash(run_seed: int, gx: int, gy: int) -> int:
@@ -71,6 +109,20 @@ static func get_spike_frame(frame_idx: int, tile_set: int = 0) -> Vector2i:
 
 static func get_floor_plate_atlas(plate_idx: int, tile_set: int = 0) -> Vector2i:
 	return _apply_set_offset(FLOOR_PLATE_VARIANTS[clampi(plate_idx, 0, FLOOR_PLATE_VARIANTS.size() - 1)], tile_set)
+
+
+static func get_closed_door_atlas(door_code: int) -> Vector2i:
+	var color_idx: int = clampi(door_code >> 1, 0, DOOR_CLOSED_LEFT.size() - 1)
+	return DOOR_CLOSED_RIGHT[color_idx] if (door_code % 2) == 1 else DOOR_CLOSED_LEFT[color_idx]
+
+
+static func get_wall_top_for_cell(run_seed: int, cell: Vector2i, tile_set: int) -> Vector2i:
+	var h: int = cell_hash(run_seed, cell.x, cell.y)
+	return _apply_set_offset(WALL_TOP_VARIANTS[h % WALL_TOP_VARIANTS.size()], tile_set)
+
+
+static func get_wall_top_inner_for_side(is_right: bool, tile_set: int) -> Vector2i:
+	return _apply_set_offset(WALL_TOP_RIGHT_INNER if is_right else WALL_TOP_LEFT_INNER, tile_set)
 
 
 static func is_top_wall(atlas: Vector2i) -> bool:
@@ -149,7 +201,17 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan) 
 			var gpos: Vector2i = Vector2i(gx, gy)
 
 			var wall_coords: Vector2i = Vector2i(-1, -1)
-			if is_f:
+			var is_fixed_door: bool = false
+			if plan.door_cell_codes.has(gpos):
+				var door_code: int = plan.door_cell_codes[gpos]
+				wall_coords = get_closed_door_atlas(door_code)
+				is_fixed_door = true
+				if (door_code % 2) == 0:
+					out_lights.append(gpos)
+			elif plan.closed_shortcut_walls.has(gpos):
+				var h: int = cell_hash(run_seed, gx, gy)
+				wall_coords = WALL_TOP_VARIANTS[h % WALL_TOP_VARIANTS.size()]
+			elif is_f:
 				if not n:
 					if ne and not nw:
 						wall_coords = WALL_TOP_LEFT_INNER
@@ -202,7 +264,8 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan) 
 						out_floor_atlas.append(get_floor_atlas(run_seed, gx, gy, tile_set))
 
 				if wall_coords.x != -1:
-					wall_coords = _apply_set_offset(wall_coords, tile_set)
+					if not is_fixed_door:
+						wall_coords = _apply_set_offset(wall_coords, tile_set)
 					out_walls.append(gpos)
 					out_wall_atlas.append(wall_coords)
 					out_wall_alt_ids.append(0)
@@ -241,14 +304,19 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan) 
 						var atlas: Vector2i = wall_grid[lpos]
 						if is_top_wall(atlas):
 							var cand_top: Vector2i = Vector2i(target_gx, target_gy)
-							if not plan.has_candle_post_near(cand_top, 64) and not _is_near_any(cand_top, out_lights, MIN_TORCH_DIST_SQ):
+							if (
+								not plan.no_prop_cells.has(cand_top)
+								and not plan.has_candle_post_near(cand_top, 64)
+								and not _is_near_any(cand_top, out_lights, MIN_TORCH_DIST_SQ)
+							):
 								top_candidates.append(cand_top)
 						elif is_left_wall(atlas):
 							var adj_lx: int = lx + 1
 							if adj_lx < ChunkRaster.CHUNK_SIZE and not wall_grid.has(Vector2i(adj_lx, ly)) and raster.is_floor_local(adj_lx, ly):
 								var cand_left: Vector2i = Vector2i(target_gx + 1, target_gy)
 								if (
-									not plan.has_candle_post_near(cand_left, 64)
+									not plan.no_prop_cells.has(cand_left)
+									and not plan.has_candle_post_near(cand_left, 64)
 									and not plan.is_spike_cell(cand_left)
 									and not _is_near_any(cand_left, out_lights, MIN_TORCH_DIST_SQ)
 								):
@@ -258,7 +326,8 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan) 
 							if adj_lx >= 0 and not wall_grid.has(Vector2i(adj_lx, ly)) and raster.is_floor_local(adj_lx, ly):
 								var cand_right: Vector2i = Vector2i(target_gx - 1, target_gy)
 								if (
-									not plan.has_candle_post_near(cand_right, 64)
+									not plan.no_prop_cells.has(cand_right)
+									and not plan.has_candle_post_near(cand_right, 64)
 									and not plan.is_spike_cell(cand_right)
 									and not _is_near_any(cand_right, out_lights, MIN_TORCH_DIST_SQ)
 								):
@@ -287,6 +356,11 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan) 
 					out_torches.append(gpos)
 					out_torch_atlas.append(CANDLE_POST_BOTTOM)
 					out_torch_alt_ids.append(0)
+				elif plan.lever_cells.has(gpos):
+					out_torches.append(gpos)
+					out_torch_atlas.append(LEVER_CLOSED)
+					out_torch_alt_ids.append(0)
+					out_lights.append(gpos)
 
 	return {
 		&"floors": out_floors,

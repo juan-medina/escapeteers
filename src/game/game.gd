@@ -52,6 +52,7 @@ const SPIKE_HIT_COOLDOWN: float = 0.65
 
 const UNKNOWN_SCENE: PackedScene = preload("res://character/heroes/unknown/unknown.tscn")
 const COIN_SCENE: PackedScene = preload("res://coin/coin.tscn")
+const KEY_PICKUP_SCENE: PackedScene = preload("res://key_pickup/key_pickup.tscn")
 const LAVA_SLIME_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_slime.tscn")
 const SKELETON_SCENE: PackedScene = preload("res://character/enemies/skeleton/skeleton.tscn")
 const SKELETON_ARCHER_SCENE: PackedScene = preload("res://character/enemies/skeleton_archer/skeleton_archer.tscn")
@@ -69,6 +70,8 @@ var _unrecruited_characters: Array[Unknown] = []
 var _starter_recruits: Array[Unknown] = []
 var _coins: Array[Coin] = []
 var _reroll_coins: int = 0
+var _keys: Array[KeyPickup] = []
+var _collected_keys: Dictionary[WorldPlan.KeyColor, bool] = {}
 var _class_levels: Dictionary[StringName, int] = {}
 var _squad_level: int = 1
 var _current_xp: float = 0.0
@@ -113,8 +116,11 @@ func _ready() -> void:
 	_recruit_panel.initialize()
 	_level_up_panel.initialize()
 
-	_map.generation_progress_updated.connect(_on_map_generation_progress)
+	_map.generation_progress_updated.connect(Transition.set_loading_progress)
 	_map.secret_torches_completed.connect(_on_secret_torches_completed)
+	_map.door_unlocked.connect(_on_door_unlocked)
+	_map.locked_door_bumped.connect(_on_locked_door_bumped)
+	_map.shortcut_opened.connect(_hud.notify_shortcut_opened)
 	await _map.generate_map()
 
 	var starting_data: HeroData = HeroData.get_hero(Transition.starting_hero_id)
@@ -123,7 +129,7 @@ func _ready() -> void:
 	_camera.position = _character.position
 
 	_hud.update_xp(_current_xp, _xp_required, _squad_level)
-	_sync_hud_squad()
+	_hud.update_squad(_squad)
 	_hud.setup_map(_map.plan, _character)
 	_check_room_entry()
 
@@ -139,13 +145,11 @@ func _ready() -> void:
 	_projectile_pool.prewarm(ARROW_SCENE, 30)
 	_projectile_pool.prewarm(BONE_ARROW_SCENE, 30)
 	_projectile_pool.prewarm(LAVA_SPIKE_SCENE, 20)
-	_projectile_pool.prewarm(ICE_SCENE, 15)
-	_projectile_pool.prewarm(HEAL_EFFECT_SCENE, 15)
-	_projectile_pool.prewarm(SMITE_EFFECT_SCENE, 15)
-	_projectile_pool.prewarm(SUMMON_PENTAGRAM_SCENE, 15)
+	for scene: PackedScene in [ICE_SCENE, HEAL_EFFECT_SCENE, SMITE_EFFECT_SCENE, SUMMON_PENTAGRAM_SCENE]:
+		_projectile_pool.prewarm(scene, 15)
 	_spawn_initial_characters()
 	_check_recruitment()
-	_check_coin_pickups()
+	_check_pickups()
 	_register_and_populate_rooms(_map.companion_rooms)
 	while not _pending_spawns.is_empty():
 		var req: PendingSpawn = _pending_spawns.pop_back()
@@ -160,10 +164,6 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	Projectile.set_pool(null)
-
-
-func _on_map_generation_progress(progress: float) -> void:
-	Transition.set_loading_progress(progress)
 
 
 func _on_secret_torches_completed() -> void:
@@ -193,7 +193,8 @@ func _process(delta: float) -> void:
 	_update_followers(delta)
 	_update_spike_hazards(delta)
 	_check_recruitment()
-	_check_coin_pickups()
+	_check_pickups()
+	_map.update_gates(_squad, _collected_keys, delta)
 	_update_enemies()
 	_process_pending_spawns()
 
@@ -247,21 +248,26 @@ static func _get_archetype_title(archetype: WorldPlan.RoomArchetype) -> StringNa
 
 func _spawn_initial_characters() -> void:
 	_starter_recruits.clear()
-	var starter_positions: Array[Vector2] = _map.get_starter_companion_spawn_positions()
-	for pos: Vector2 in starter_positions:
+	for pos: Vector2 in _map.get_starter_companion_spawn_positions():
 		_starter_recruits.append(_spawn_recruit_at(pos))
 
 	for room: Rect2i in _map.companion_rooms:
 		_spawn_companions_for_room(room)
 		_spawn_coins_for_room(room)
 
+	for gate: SectorGatePlanner.SectorGate in _map.plan.sector_gates:
+		var key_node: KeyPickup = KEY_PICKUP_SCENE.instantiate() as KeyPickup
+		_characters.add_child(key_node)
+		key_node.position = _map.map_to_local(gate.key_cell)
+		key_node.setup(gate.color)
+		_keys.append(key_node)
+
 
 func _spawn_companions_for_room(room: Rect2i) -> void:
 	if (_squad.size() + _unrecruited_characters.size()) >= MAX_CHARACTERS:
 		return
 
-	var positions: Array[Vector2] = _map.get_companion_spawn_positions_for_room(room)
-	for pos: Vector2 in positions:
+	for pos: Vector2 in _map.get_companion_spawn_positions_for_room(room):
 		if (_squad.size() + _unrecruited_characters.size()) >= MAX_CHARACTERS:
 			break
 		_spawn_recruit_at(pos)
@@ -277,35 +283,55 @@ func _spawn_recruit_at(pos: Vector2) -> Unknown:
 
 
 func _spawn_coins_for_room(room: Rect2i) -> void:
-	var positions: Array[Vector2] = _map.get_coin_spawn_positions_for_room(room)
-	for pos: Vector2 in positions:
-		_spawn_coin_at(pos)
+	for pos: Vector2 in _map.get_coin_spawn_positions_for_room(room):
+		var coin: Coin = COIN_SCENE.instantiate() as Coin
+		_characters.add_child(coin)
+		coin.position = pos
+		_coins.append(coin)
 
 
-func _spawn_coin_at(pos: Vector2) -> Coin:
-	var coin: Coin = COIN_SCENE.instantiate() as Coin
-	_characters.add_child(coin)
-	coin.position = pos
-	_coins.append(coin)
-	return coin
-
-
-func _check_coin_pickups() -> void:
+func _check_pickups() -> void:
 	if _character.is_dead:
 		return
 	var i: int = _coins.size() - 1
 	while i >= 0:
 		var coin: Coin = _coins[i]
-		for member: Hero in _squad:
-			if member.is_dead:
-				continue
-			if coin.is_touching(member):
-				_coins.remove_at(i)
-				coin.queue_free()
-				_reroll_coins += 1
-				Audio.play_sfx(Audio.Sfx.COIN_PICKUP)
-				break
+		if _is_pickup_touched(coin.position, Coin.PICKUP_DISTANCE):
+			_coins.remove_at(i)
+			coin.queue_free()
+			_reroll_coins += 1
+			Audio.play_sfx(Audio.Sfx.COIN_PICKUP)
 		i -= 1
+
+	var j: int = _keys.size() - 1
+	while j >= 0:
+		var key_node: KeyPickup = _keys[j]
+		if _is_pickup_touched(key_node.position, KeyPickup.PICKUP_DISTANCE):
+			var color: WorldPlan.KeyColor = key_node.key_color
+			_keys.remove_at(j)
+			key_node.queue_free()
+			_collected_keys[color] = true
+			Audio.play_sfx(Audio.Sfx.KEY_PICKUP)
+			_hud.set_key_state(color, true, false)
+			_hud.show_event_toast(&"%s Key Found!" % KeyPickup.get_color_name(color), KeyPickup.get_display_color(color))
+		j -= 1
+
+
+func _is_pickup_touched(pos: Vector2, dist: float) -> bool:
+	var dist_sq: float = dist * dist
+	for member: Hero in _squad:
+		if not member.is_dead and pos.distance_squared_to(member.position) <= dist_sq:
+			return true
+	return false
+
+
+func _on_door_unlocked(color: WorldPlan.KeyColor) -> void:
+	_hud.set_key_state(color, true, true)
+	_hud.show_event_toast(&"%s Door Unlocked!" % KeyPickup.get_color_name(color), KeyPickup.get_display_color(color))
+
+
+func _on_locked_door_bumped(color: WorldPlan.KeyColor) -> void:
+	_hud.show_event_toast(&"Locked - Need %s Key" % KeyPickup.get_color_name(color), KeyPickup.get_display_color(color))
 
 
 func _spawn_hero(hero_data: HeroData, pos: Vector2, is_leader: bool) -> Hero:
@@ -342,12 +368,12 @@ func _register_and_populate_rooms(rooms: Array[Rect2i]) -> void:
 			_room_remaining_enemies[room] = quota
 			_room_spawned_enemies[room] = 0
 		var room_center_world: Vector2 = _map.map_to_local(room.get_center())
-		if _map.is_room_materialized(room) and player_pos.distance_squared_to(room_center_world) <= ROOM_RESPAWN_DIST_SQ:
+		if _map.is_cell_walkable(room.get_center()) and player_pos.distance_squared_to(room_center_world) <= ROOM_RESPAWN_DIST_SQ:
 			_populate_room_enemies(room)
 
 
 func _populate_room_enemies(room: Rect2i) -> void:
-	if not _map.is_room_materialized(room):
+	if not _map.is_cell_walkable(room.get_center()):
 		return
 	var remaining: int = _room_remaining_enemies.get(room, 0)
 	var alive_in_room: int = _room_spawned_enemies.get(room, 0)
@@ -411,7 +437,7 @@ func _respawn_nearby_hibernating_rooms() -> void:
 	for room: Rect2i in _map.companion_rooms:
 		var remaining: int = _room_remaining_enemies.get(room, 0)
 		var spawned: int = _room_spawned_enemies.get(room, 0)
-		if remaining <= spawned or not _map.is_room_materialized(room):
+		if remaining <= spawned or not _map.is_cell_walkable(room.get_center()):
 			continue
 
 		var room_world_center: Vector2 = _map.map_to_local(room.get_center())
@@ -625,31 +651,28 @@ func _get_best_squad_target(enemy: Enemy) -> Hero:
 
 func _on_hero_died(hero: Hero) -> void:
 	Audio.play_sfx(Audio.Sfx.HERO_DOWN)
-	_spike_hit_cooldowns.erase(hero)
 	_squad.erase(hero)
-	for member: Hero in _squad:
-		if member.active_target == hero:
-			member.active_target = null
-	for enemy: Enemy in _enemies:
-		enemy.clear_hero_references(hero)
-	for child: Node in _projectiles.get_children():
-		(child as Projectile).clear_character_references(hero)
+	_clear_dead_hero_references(hero)
 	_rebalance_escort_slots()
-	_sync_hud_squad()
+	_hud.update_squad(_squad)
 
 
 func _on_player_died() -> void:
 	Audio.play_sfx(Audio.Sfx.HERO_DOWN)
 	Audio.stop_music()
-	_spike_hit_cooldowns.erase(_character)
+	_clear_dead_hero_references(_character)
+	_hud.update_squad(_squad)
+
+
+func _clear_dead_hero_references(dead_hero: Hero) -> void:
+	_spike_hit_cooldowns.erase(dead_hero)
 	for member: Hero in _squad:
-		if member.active_target == _character:
+		if member.active_target == dead_hero:
 			member.active_target = null
 	for enemy: Enemy in _enemies:
-		enemy.clear_hero_references(_character)
+		enemy.clear_hero_references(dead_hero)
 	for child: Node in _projectiles.get_children():
-		(child as Projectile).clear_character_references(_character)
-	_sync_hud_squad()
+		(child as Projectile).clear_character_references(dead_hero)
 
 
 func _on_player_death_completed() -> void:
@@ -705,10 +728,6 @@ func _on_hero_recruited(hero_data: HeroData) -> void:
 	get_tree().paused = false
 	_spawn_hero(hero_data, _pending_recruit_pos, false)
 	_rebalance_escort_slots()
-	_sync_hud_squad()
-
-
-func _sync_hud_squad() -> void:
 	_hud.update_squad(_squad)
 
 
@@ -775,7 +794,7 @@ func _on_class_leveled_up(hero_data: HeroData) -> void:
 			member.health = member.max_health
 			member.play_level_up_vfx()
 
-	_sync_hud_squad()
+	_hud.update_squad(_squad)
 
 	get_tree().paused = false
 	if _pending_level_ups > 0:

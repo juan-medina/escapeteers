@@ -161,6 +161,8 @@ func step_game_frame(game: Game, map: Map, bot: AutoplayBot, delta: float, sim_f
 	game._update_enemies()
 	var t3: int = Time.get_ticks_usec()
 	game._check_recruitment()
+	game._check_pickups()
+	map.update_gates(game._squad, game._collected_keys, delta)
 	game._process_pending_spawns()
 	var t4: int = Time.get_ticks_usec()
 	game._update_spike_hazards(delta)

@@ -330,11 +330,35 @@ func _assign_next_goal(game: Game, map: Map, leader: Hero) -> void:
 func _is_room_done(game: Game, room: Rect2i) -> bool:
 	if room == Rect2i() or _skipped_rooms.has(room):
 		return true
+	for gate: SectorGatePlanner.SectorGate in game._map.plan.sector_gates:
+		var needs_key: bool = room == gate.key_room and not game._collected_keys.has(gate.color)
+		var needs_lever: bool = room == gate.key_room and not gate.shortcut_opened and _last_known_room == gate.key_room
+		var needs_door: bool = room == gate.gate_room and game._collected_keys.has(gate.color) and not gate.door_unlocked
+		if needs_key or needs_lever or needs_door:
+			return false
 	if room == game._map.hero_room:
 		return not _has_recruit_in_room(game, room)
 	if game._room_remaining_enemies.has(room):
 		return game._room_remaining_enemies[room] <= 0 and not _has_recruit_in_room(game, room)
 	return false
+
+
+func _get_active_sector_gate(map: Map) -> SectorGatePlanner.SectorGate:
+	for gate: SectorGatePlanner.SectorGate in map.plan.sector_gates:
+		if not gate.door_unlocked:
+			return gate
+	return null
+
+
+func _is_edge_passable(map: Map, room_a: Rect2i, room_b: Rect2i) -> bool:
+	for gate: SectorGatePlanner.SectorGate in map.plan.sector_gates:
+		if not gate.door_unlocked:
+			if (room_a == gate.gate_room and room_b == gate.next_room) or (room_b == gate.gate_room and room_a == gate.next_room):
+				return false
+		if not gate.shortcut_opened:
+			if (room_a == gate.key_room and room_b == gate.gate_room) or (room_b == gate.key_room and room_a == gate.gate_room):
+				return false
+	return true
 
 
 func _has_recruit_in_room(game: Game, room: Rect2i) -> bool:
@@ -351,18 +375,26 @@ func _pick_next_goal_room(game: Game, map: Map, leader: Hero) -> Rect2i:
 	if _last_known_room != Rect2i() and _last_known_room != map.hero_room and not _is_room_done(game, _last_known_room):
 		return _last_known_room
 
+	var active_gate: SectorGatePlanner.SectorGate = _get_active_sector_gate(map)
+	var max_allowed_sector: int = int(active_gate.color) if active_gate != null else 4
 	var cur_depth: int = map.get_room_depth(_last_known_room) if _last_known_room != Rect2i() else 0
 	var need_early_recruits: bool = game._squad.size() < EARLY_RECRUIT_TARGET_SQUAD
 	var best_room: Rect2i = Rect2i()
 	var best_score: float = -INF
 
 	for room: Rect2i in map.plan.rooms:
+		var depth: int = map.get_room_depth(room)
+		if SectorGatePlanner.get_sector_for_depth(depth) > max_allowed_sector:
+			continue
 		if _is_room_done(game, room):
 			continue
-		var depth: int = map.get_room_depth(room)
 		var dist: float = leader.global_position.distance_to(map.map_to_local(room.get_center()))
 		var score: float = 0.0
-		if need_early_recruits and depth <= 2:
+		if active_gate != null and game._collected_keys.has(active_gate.color) and room == active_gate.gate_room:
+			score = 18000.0 - dist * 0.20
+		elif active_gate != null and not game._collected_keys.has(active_gate.color) and not need_early_recruits and room == active_gate.key_room:
+			score = 15000.0 - dist * 0.20
+		elif need_early_recruits and depth <= 2:
 			score = 12000.0 - float(depth) * 100.0 - dist * 0.25
 		elif not _cleared_at_max_depth and depth > cur_depth and depth <= target_max_depth:
 			score = 10000.0 - float(depth - cur_depth) * 500.0 - dist * 0.20
@@ -415,7 +447,7 @@ func _find_room_chain(map: Map, start_room: Rect2i, target_room: Rect2i) -> Arra
 		for n_var: Variant in neighbors:
 			if n_var is Rect2i:
 				var n_room: Rect2i = n_var
-				if not seen.has(n_room):
+				if not seen.has(n_room) and _is_edge_passable(map, curr, n_room):
 					seen[n_room] = true
 					parents[n_room] = curr
 					queue.append(n_room)
@@ -437,13 +469,46 @@ func _decide_move_direction(game: Game, map: Map, leader: Hero, delta: float) ->
 	if nearby_recruit != null:
 		return _steer_toward(map, leader, nearby_recruit.global_position, delta)
 
+	var nearby_key: KeyPickup = _find_nearest_key(game, map, leader)
+	if nearby_key != null:
+		return _steer_toward(map, leader, nearby_key.global_position, delta)
+
 	var combat_target: Enemy = _find_priority_enemy(game, leader)
 	if combat_target != null:
 		return _compute_combat_move(game, map, leader, combat_target, delta)
 
+	var gate_dest: Vector2 = _get_gate_objective_pos(game, map)
+	if gate_dest != Vector2.ZERO:
+		return _steer_toward(map, leader, gate_dest, delta)
+
 	var nav_target: Vector2 = _get_exploration_destination(map, leader)
 	if nav_target != Vector2.ZERO:
 		return _steer_toward(map, leader, nav_target, delta)
+	return Vector2.ZERO
+
+
+func _find_nearest_key(game: Game, map: Map, leader: Hero) -> KeyPickup:
+	var best: KeyPickup = null
+	var best_dist_sq: float = RECRUIT_SEARCH_RADIUS_SQ
+	for candidate: KeyPickup in game._keys:
+		if not is_instance_valid(candidate):
+			continue
+		var d_sq: float = leader.global_position.distance_squared_to(candidate.global_position)
+		if d_sq < best_dist_sq and map.is_cell_walkable(map.local_to_map(candidate.global_position)):
+			best_dist_sq = d_sq
+			best = candidate
+	return best
+
+
+func _get_gate_objective_pos(game: Game, map: Map) -> Vector2:
+	var active_gate: SectorGatePlanner.SectorGate = _get_active_sector_gate(map)
+	if active_gate == null or not game._collected_keys.has(active_gate.color):
+		return Vector2.ZERO
+	if not active_gate.shortcut_opened and _last_known_room == active_gate.key_room:
+		return map.map_to_local(active_gate.lever_cell)
+	if _last_known_room == active_gate.gate_room or _goal_room == active_gate.gate_room:
+		var door_pos: Vector2 = (map.map_to_local(active_gate.door_cells[0]) + map.map_to_local(active_gate.door_cells[1])) * 0.5
+		return door_pos + Vector2(0.0, 12.0)
 	return Vector2.ZERO
 
 

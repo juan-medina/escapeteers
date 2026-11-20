@@ -6,11 +6,17 @@ extends Node2D
 
 signal generation_progress_updated(progress: float)
 signal secret_torches_completed
+signal door_unlocked(color: WorldPlan.KeyColor)
+signal locked_door_bumped(color: WorldPlan.KeyColor)
+signal shortcut_opened(color: WorldPlan.KeyColor)
 
 const ROOM_PADDING: int = 8
 const EXPAND_TRIGGER_DISTANCE_TILES: float = 75.0
 const SECRET_TORCH_COUNT: int = 4
 const SECRET_TORCH_TRIGGER_DIST_SQ: float = 28.0 * 28.0
+const LEVER_TRIGGER_DIST_SQ: float = 18.0 * 18.0
+const DOOR_TRIGGER_DIST_SQ: float = 26.0 * 26.0
+const LOCKED_DOOR_TOAST_COOLDOWN: float = 3.0
 const SPIKE_STAY_DOWN_TIME: float = 2.00
 const SPIKE_UP_1_TIME: float = 0.40
 const SPIKE_UP_2_TIME: float = 0.10
@@ -34,11 +40,17 @@ var _expanded_rooms: Dictionary[Rect2i, bool] = {}
 var _secret_torch_cells: Array[Vector2i] = []
 var _secret_torch_index: int = 0
 var _guaranteed_coin_room: Rect2i = Rect2i()
+var _is_activating_lever: bool = false
+var _locked_door_toast_timer: float = 0.0
 
 @onready var light_manager: LightManager = $Lights
 @onready var _floor: TileMapLayer = $Floor
 @onready var _walls: TileMapLayer = $Walls
 @onready var _decorations: TileMapLayer = $Decorations
+@onready var _shortcut_effect: Node2D = $ShortcutEffect
+@onready var _shortcut_left_wall: Sprite2D = $ShortcutEffect/LeftWall
+@onready var _shortcut_right_wall: Sprite2D = $ShortcutEffect/RightWall
+@onready var _shortcut_dust: CPUParticles2D = $ShortcutEffect/DustParticles
 
 
 func get_hero_spawn_position() -> Vector2:
@@ -146,6 +158,9 @@ func generate_map() -> void:
 	_group_frames = [0, 0, 0, 0]
 	_spike_elapsed = 0.0
 	_expanded_rooms.clear()
+	_is_activating_lever = false
+	_locked_door_toast_timer = 0.0
+	_shortcut_effect.visible = false
 
 	plan.generate()
 	hero_room = plan.hero_room
@@ -173,6 +188,7 @@ func generate_map() -> void:
 			await get_tree().process_frame
 			slice_start_usec = Time.get_ticks_usec()
 
+	SectorGatePlanner.prebake_shortcut_tunnels(plan, chunk_raster)
 	generation_progress_updated.emit(0.75)
 	await get_tree().process_frame
 
@@ -256,8 +272,207 @@ func cancel_secret_torches() -> void:
 		_secret_torch_index = _secret_torch_cells.size()
 
 
-func is_room_materialized(room: Rect2i) -> bool:
-	return is_cell_walkable(room.get_center())
+func update_gates(squad: Array[Hero], collected_keys: Dictionary[WorldPlan.KeyColor, bool], delta: float) -> void:
+	_locked_door_toast_timer = maxf(0.0, _locked_door_toast_timer - delta)
+	if _is_activating_lever:
+		return
+
+	for gate: SectorGatePlanner.SectorGate in plan.sector_gates:
+		if not gate.shortcut_opened and _is_squad_near(squad, _floor.map_to_local(gate.lever_cell), LEVER_TRIGGER_DIST_SQ):
+			_activate_shortcut_lever(gate)
+			return
+		if not gate.door_unlocked:
+			var door_center: Vector2 = (_floor.map_to_local(gate.door_cells[0]) + _floor.map_to_local(gate.door_cells[1])) * 0.5 + Vector2(0.0, 8.0)
+			if _is_squad_near(squad, door_center, DOOR_TRIGGER_DIST_SQ):
+				if collected_keys.has(gate.color):
+					_unlock_door(gate)
+				elif _locked_door_toast_timer <= 0.0:
+					_locked_door_toast_timer = LOCKED_DOOR_TOAST_COOLDOWN
+					locked_door_bumped.emit(gate.color)
+
+
+static func _is_squad_near(squad: Array[Hero], target_pos: Vector2, max_dist_sq: float) -> bool:
+	for member: Hero in squad:
+		if not member.is_dead and member.global_position.distance_squared_to(target_pos) <= max_dist_sq:
+			return true
+	return false
+
+
+func _unlock_door(gate: SectorGatePlanner.SectorGate) -> void:
+	gate.door_unlocked = true
+	var color_idx: int = int(gate.color)
+	var left_cell: Vector2i = gate.door_cells[0]
+	var right_cell: Vector2i = gate.door_cells[1]
+	var top_left: Vector2i = left_cell + Vector2i(0, -1)
+	var top_right: Vector2i = right_cell + Vector2i(0, -1)
+
+	var top_l_atlas: Vector2i = TileClassifier.DOOR_OPEN_TOP_LEFT[color_idx]
+	var top_r_atlas: Vector2i = TileClassifier.DOOR_OPEN_TOP_RIGHT[color_idx]
+	var bot_l_atlas: Vector2i = TileClassifier.DOOR_OPEN_BOTTOM_LEFT[color_idx]
+	var bot_r_atlas: Vector2i = TileClassifier.DOOR_OPEN_BOTTOM_RIGHT[color_idx]
+
+	_walls.set_cell(top_left, TileClassifier.TILE_SET_SOURCE_ID, top_l_atlas, 0)
+	_walls.set_cell(top_right, TileClassifier.TILE_SET_SOURCE_ID, top_r_atlas, 0)
+	_walls.set_cell(left_cell, TileClassifier.TILE_SET_SOURCE_ID, bot_l_atlas, 0)
+	_walls.set_cell(right_cell, TileClassifier.TILE_SET_SOURCE_ID, bot_r_atlas, 0)
+
+	_update_baked_wall_cell(top_left, top_l_atlas, 0)
+	_update_baked_wall_cell(top_right, top_r_atlas, 0)
+	_update_baked_wall_cell(left_cell, bot_l_atlas, 0)
+	_update_baked_wall_cell(right_cell, bot_r_atlas, 0)
+
+	for cell: Vector2i in [left_cell, right_cell, top_left, top_right]:
+		_walkable_cells[cell] = true
+		nav_window.set_cell_walkable(cell, true)
+		_set_baked_walkable(cell, true)
+
+	Audio.play_sfx(Audio.Sfx.DOOR_UNLOCK)
+	door_unlocked.emit(gate.color)
+
+
+func _activate_shortcut_lever(gate: SectorGatePlanner.SectorGate) -> void:
+	gate.shortcut_opened = true
+	_is_activating_lever = true
+	_decorations.set_cell(gate.lever_cell, TileClassifier.TILE_SET_SOURCE_ID, TileClassifier.LEVER_OPEN, 0)
+	_update_baked_decoration_cell(gate.lever_cell, TileClassifier.LEVER_OPEN, 0)
+
+	var w_left: Vector2i = gate.shortcut_wall_cells[0]
+	var w_right: Vector2i = gate.shortcut_wall_cells[1]
+	var f_left: Vector2i = gate.shortcut_flank_cells[0]
+	var f_right: Vector2i = gate.shortcut_flank_cells[1]
+
+	for c: Vector2i in [w_left, w_right, f_left, f_right]:
+		plan.closed_shortcut_walls.erase(c)
+
+	var atlas_l: Vector2i = _walls.get_cell_atlas_coords(w_left)
+	if atlas_l.x < 0:
+		atlas_l = TileClassifier.get_wall_top_for_cell(plan.run_seed, w_left, plan.get_cell_tile_set(w_left))
+	var atlas_r: Vector2i = _walls.get_cell_atlas_coords(w_right)
+	if atlas_r.x < 0:
+		atlas_r = TileClassifier.get_wall_top_for_cell(plan.run_seed, w_right, plan.get_cell_tile_set(w_right))
+
+	_shortcut_left_wall.region_rect = Rect2(Vector2(atlas_l * 16), Vector2(16, 16))
+	_shortcut_right_wall.region_rect = Rect2(Vector2(atlas_r * 16), Vector2(16, 16))
+	_shortcut_effect.position = (_floor.map_to_local(w_left) + _floor.map_to_local(w_right)) * 0.5
+	_shortcut_left_wall.position = Vector2(-8.0, 0.0)
+	_shortcut_left_wall.scale = Vector2.ONE
+	_shortcut_left_wall.modulate = Color.WHITE
+	_shortcut_right_wall.position = Vector2(8.0, 0.0)
+	_shortcut_right_wall.scale = Vector2.ONE
+	_shortcut_right_wall.modulate = Color.WHITE
+	_shortcut_effect.modulate = Color.WHITE
+	_shortcut_effect.visible = true
+
+	for fcell: Vector2i in gate.tunnel_floors:
+		var fatlas: Vector2i = gate.tunnel_floors[fcell]
+		_floor.set_cell(fcell, TileClassifier.TILE_SET_SOURCE_ID, fatlas)
+		_update_baked_floor_cell(fcell, fatlas)
+
+	for ecell: Vector2i in gate.tunnel_erased_walls:
+		_walls.erase_cell(ecell)
+		_update_baked_wall_cell(ecell, Vector2i(-1, -1), 0)
+
+	for wcell: Vector2i in gate.tunnel_walls:
+		var watlas: Vector2i = gate.tunnel_walls[wcell]
+		_walls.set_cell(wcell, TileClassifier.TILE_SET_SOURCE_ID, watlas, 0)
+		_update_baked_wall_cell(wcell, watlas, 0)
+
+	Audio.play_sfx(Audio.Sfx.SHORTCUT_OPEN)
+	shortcut_opened.emit(gate.color)
+
+	get_tree().paused = true
+	var tween: Tween = create_tween()
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tween.tween_property(_shortcut_effect, ^"modulate", Color(2.2, 2.2, 2.2, 1.0), 0.12)
+	tween.parallel().tween_property(_shortcut_left_wall, ^"position:x", -10.0, 0.06)
+	tween.parallel().tween_property(_shortcut_right_wall, ^"position:x", 10.0, 0.06)
+	tween.tween_property(_shortcut_left_wall, ^"position:x", -6.0, 0.06)
+	tween.parallel().tween_property(_shortcut_right_wall, ^"position:x", 6.0, 0.06)
+	tween.tween_callback(_shortcut_dust.restart)
+	tween.tween_property(_shortcut_left_wall, ^"position", Vector2(-12.0, -4.0), 0.45)
+	tween.parallel().tween_property(_shortcut_left_wall, ^"scale", Vector2(0.2, 0.2), 0.45)
+	tween.parallel().tween_property(_shortcut_left_wall, ^"modulate:a", 0.0, 0.45)
+	tween.parallel().tween_property(_shortcut_right_wall, ^"position", Vector2(12.0, -4.0), 0.45)
+	tween.parallel().tween_property(_shortcut_right_wall, ^"scale", Vector2(0.2, 0.2), 0.45)
+	tween.parallel().tween_property(_shortcut_right_wall, ^"modulate:a", 0.0, 0.45)
+	tween.tween_interval(0.15)
+	tween.finished.connect(_on_shortcut_effect_finished.bind(gate.tunnel_walkable))
+
+
+func _on_shortcut_effect_finished(walkable_cells: Array[Vector2i]) -> void:
+	_shortcut_effect.visible = false
+	for cell: Vector2i in walkable_cells:
+		_walkable_cells[cell] = true
+		nav_window.set_cell_walkable(cell, true)
+		_set_baked_walkable(cell, true)
+
+	_is_activating_lever = false
+	get_tree().paused = false
+
+
+func _update_baked_floor_cell(cell: Vector2i, atlas: Vector2i) -> void:
+	var coord: Vector2i = MapStreamer.cell_to_chunk(cell)
+	if not plan.baked_chunks.has(coord):
+		return
+	var data: Dictionary = plan.baked_chunks[coord]
+	var floors: Array[Vector2i] = data[&"floors"]
+	var floor_atlas: Array[Vector2i] = data[&"floor_atlas"]
+	var idx: int = floors.find(cell)
+	if idx != -1:
+		floor_atlas[idx] = atlas
+	else:
+		floors.append(cell)
+		floor_atlas.append(atlas)
+
+
+func _update_baked_wall_cell(cell: Vector2i, atlas: Vector2i, alt_id: int) -> void:
+	var coord: Vector2i = MapStreamer.cell_to_chunk(cell)
+	if not plan.baked_chunks.has(coord):
+		return
+	var data: Dictionary = plan.baked_chunks[coord]
+	var walls: Array[Vector2i] = data[&"walls"]
+	var wall_atlas: Array[Vector2i] = data[&"wall_atlas"]
+	var wall_alt_ids: Array[int] = data[&"wall_alt_ids"]
+	var idx: int = walls.find(cell)
+	if atlas.x == -1:
+		if idx != -1:
+			walls.remove_at(idx)
+			wall_atlas.remove_at(idx)
+			wall_alt_ids.remove_at(idx)
+	elif idx != -1:
+		wall_atlas[idx] = atlas
+		wall_alt_ids[idx] = alt_id
+	else:
+		walls.append(cell)
+		wall_atlas.append(atlas)
+		wall_alt_ids.append(alt_id)
+
+
+func _set_baked_walkable(cell: Vector2i, walkable: bool) -> void:
+	var coord: Vector2i = MapStreamer.cell_to_chunk(cell)
+	if not plan.baked_chunks.has(coord):
+		return
+	var data: Dictionary = plan.baked_chunks[coord]
+	var walk_arr: Array[Vector2i] = data[&"walkable"]
+	if walkable:
+		if not walk_arr.has(cell):
+			walk_arr.append(cell)
+	else:
+		walk_arr.erase(cell)
+
+
+func _update_baked_decoration_cell(cell: Vector2i, atlas: Vector2i, alt_id: int) -> void:
+	var coord: Vector2i = MapStreamer.cell_to_chunk(cell)
+	if not plan.baked_chunks.has(coord):
+		return
+	var data: Dictionary = plan.baked_chunks[coord]
+	var torches: Array[Vector2i] = data[&"torches"]
+	var torch_atlas: Array[Vector2i] = data[&"torch_atlas"]
+	var torch_alt_ids: Array[int] = data[&"torch_alt_ids"]
+	var idx: int = torches.find(cell)
+	if idx != -1:
+		torch_atlas[idx] = atlas
+		torch_alt_ids[idx] = alt_id
 
 
 func expand_frontier_near(player_world_pos: Vector2) -> Array[Rect2i]:
@@ -430,7 +645,7 @@ func _find_coin_cell_for_room(room: Rect2i) -> Vector2i:
 
 
 func _is_valid_coin_cell(cell: Vector2i, center: Vector2i, companions: Array) -> bool:
-	if cell.distance_squared_to(center) < 16 or plan.has_candle_post_near(cell, 4):
+	if cell.distance_squared_to(center) < 16 or plan.has_candle_post_near(cell, 4) or plan.no_prop_cells.has(cell):
 		return false
 	for comp_var: Variant in companions:
 		if comp_var is Vector2i:
