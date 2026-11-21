@@ -36,6 +36,9 @@ var _chunk_segments: Dictionary[Vector2i, PackedVector2Array] = {}
 var _chunk_floor_vertices: Dictionary[Vector2i, PackedVector2Array] = {}
 var _revealed_chunks: Dictionary[Vector2i, bool] = {}
 var _explored_chunks: Dictionary[Vector2i, bool] = {}
+var _unexplored_floor_chunks: Dictionary[Vector2i, PackedVector2Array] = {}
+var _explored_floor_verts: PackedVector2Array = PackedVector2Array()
+var _wall_verts: PackedVector2Array = PackedVector2Array()
 var _discovered_rooms: Dictionary[Rect2i, bool] = {}
 var _cleared_rooms: Dictionary[Rect2i, bool] = {}
 var _room_labels: Dictionary[Rect2i, Label] = {}
@@ -45,6 +48,9 @@ var _anchor_map_pos: Vector2 = Vector2.ZERO
 var _has_anchor: bool = false
 var _is_recentering: bool = false
 var _dirty: bool = false
+var _unexplored_dirty: bool = false
+var _explored_dirty: bool = false
+var _walls_dirty: bool = false
 var _opened_shortcuts: Dictionary[WorldPlan.KeyColor, bool] = {}
 var _collected_keys: Dictionary[WorldPlan.KeyColor, bool] = {}
 var _unlocked_doors: Dictionary[WorldPlan.KeyColor, bool] = {}
@@ -190,7 +196,7 @@ func notify_shortcut_opened(color: WorldPlan.KeyColor) -> void:
 			changed = true
 
 	if changed:
-		_dirty = true
+		_rebuild_cached_buffers_from_revealed()
 		_update_gate_markers_visibility()
 		if visible:
 			_rebuild_meshes()
@@ -252,23 +258,53 @@ func _update_discovery() -> void:
 
 
 func _reveal_chunks_at(player_chunk: Vector2i) -> void:
-	var state_changed: bool = false
+	var markers_changed: bool = false
 	for dy: int in range(-reveal_chunk_radius, reveal_chunk_radius + 1):
 		for dx: int in range(-reveal_chunk_radius, reveal_chunk_radius + 1):
 			var coord: Vector2i = player_chunk + Vector2i(dx, dy)
+			var is_explore: bool = maxi(absi(dx), absi(dy)) <= explore_chunk_radius
 			if not _revealed_chunks.has(coord):
 				_revealed_chunks[coord] = true
-				state_changed = true
+				markers_changed = true
+				if _chunk_segments.has(coord):
+					_wall_verts.append_array(_chunk_segments[coord])
+					_walls_dirty = true
+				if not is_explore and _chunk_floor_vertices.has(coord):
+					_unexplored_floor_chunks[coord] = _chunk_floor_vertices[coord]
+					_unexplored_dirty = true
 
-			if maxi(absi(dx), absi(dy)) <= explore_chunk_radius and not _explored_chunks.has(coord):
+			if is_explore and not _explored_chunks.has(coord):
 				_explored_chunks[coord] = true
-				state_changed = true
+				if _unexplored_floor_chunks.erase(coord):
+					_unexplored_dirty = true
+				if _chunk_floor_vertices.has(coord):
+					_explored_floor_verts.append_array(_chunk_floor_vertices[coord])
+					_explored_dirty = true
 
-	if state_changed:
-		_dirty = true
+	if markers_changed:
 		_update_gate_markers_visibility()
+	if _unexplored_dirty or _explored_dirty or _walls_dirty:
+		_dirty = true
 		if visible:
 			_rebuild_meshes()
+
+
+func _rebuild_cached_buffers_from_revealed() -> void:
+	_unexplored_floor_chunks.clear()
+	_explored_floor_verts.clear()
+	_wall_verts.clear()
+	for coord: Vector2i in _revealed_chunks:
+		if _chunk_floor_vertices.has(coord):
+			if _explored_chunks.has(coord):
+				_explored_floor_verts.append_array(_chunk_floor_vertices[coord])
+			else:
+				_unexplored_floor_chunks[coord] = _chunk_floor_vertices[coord]
+		if _chunk_segments.has(coord):
+			_wall_verts.append_array(_chunk_segments[coord])
+	_unexplored_dirty = true
+	_explored_dirty = true
+	_walls_dirty = true
+	_dirty = true
 
 
 func _rebuild_meshes() -> void:
@@ -276,24 +312,20 @@ func _rebuild_meshes() -> void:
 		return
 	_dirty = false
 
-	var unexp_verts: PackedVector2Array = PackedVector2Array()
-	var exp_verts: PackedVector2Array = PackedVector2Array()
-	var wall_verts: PackedVector2Array = PackedVector2Array()
+	if _unexplored_dirty:
+		_unexplored_dirty = false
+		var unexp_verts: PackedVector2Array = PackedVector2Array()
+		for coord: Vector2i in _unexplored_floor_chunks:
+			unexp_verts.append_array(_unexplored_floor_chunks[coord])
+		_unexplored_floor_mesh.mesh = _create_simple_mesh(unexp_verts, Mesh.PRIMITIVE_TRIANGLES)
 
-	for coord: Vector2i in _revealed_chunks:
-		if _explored_chunks.has(coord):
-			if _chunk_floor_vertices.has(coord):
-				exp_verts.append_array(_chunk_floor_vertices[coord])
-		else:
-			if _chunk_floor_vertices.has(coord):
-				unexp_verts.append_array(_chunk_floor_vertices[coord])
+	if _explored_dirty:
+		_explored_dirty = false
+		_explored_floor_mesh.mesh = _create_simple_mesh(_explored_floor_verts, Mesh.PRIMITIVE_TRIANGLES)
 
-		if _chunk_segments.has(coord):
-			wall_verts.append_array(_chunk_segments[coord])
-
-	_unexplored_floor_mesh.mesh = _create_simple_mesh(unexp_verts, Mesh.PRIMITIVE_TRIANGLES)
-	_explored_floor_mesh.mesh = _create_simple_mesh(exp_verts, Mesh.PRIMITIVE_TRIANGLES)
-	_walls_mesh.mesh = _create_simple_mesh(wall_verts, Mesh.PRIMITIVE_LINES)
+	if _walls_dirty:
+		_walls_dirty = false
+		_walls_mesh.mesh = _create_simple_mesh(_wall_verts, Mesh.PRIMITIVE_LINES)
 
 
 static func _create_simple_mesh(vertices: PackedVector2Array, primitive: Mesh.PrimitiveType) -> ArrayMesh:
@@ -312,9 +344,15 @@ func _build_chunks(plan: WorldPlan) -> void:
 	_explored_floor_mesh.mesh = null
 	_walls_mesh.mesh = null
 	_dirty = false
+	_unexplored_dirty = false
+	_explored_dirty = false
+	_walls_dirty = false
 	_plan = plan
 	_revealed_chunks.clear()
 	_explored_chunks.clear()
+	_unexplored_floor_chunks.clear()
+	_explored_floor_verts.clear()
+	_wall_verts.clear()
 	_discovered_rooms.clear()
 	_cleared_rooms.clear()
 	_room_labels.clear()
@@ -540,9 +578,29 @@ func _extract_chunked_floors(plan: WorldPlan) -> void:
 
 
 func _build_chunk_floor_vertices(coord: Vector2i, plan: WorldPlan) -> PackedVector2Array:
-	var verts: PackedVector2Array = PackedVector2Array()
 	var base_tx: int = coord.x * CHUNK_SIZE_TILES
 	var base_ty: int = coord.y * CHUNK_SIZE_TILES
+	if (
+		plan.is_floor(Vector2i(base_tx, base_ty))
+		and plan.is_floor(Vector2i(base_tx + 1, base_ty))
+		and plan.is_floor(Vector2i(base_tx, base_ty + 1))
+		and plan.is_floor(Vector2i(base_tx + 1, base_ty + 1))
+	):
+		var x0: float = float(base_tx) * TILE_SIZE
+		var y0: float = float(base_ty) * TILE_SIZE
+		var x2: float = float(base_tx + CHUNK_SIZE_TILES) * TILE_SIZE
+		var y2: float = float(base_ty + CHUNK_SIZE_TILES) * TILE_SIZE
+		return PackedVector2Array(
+			[
+				Vector2(x0, y0),
+				Vector2(x2, y0),
+				Vector2(x2, y2),
+				Vector2(x0, y0),
+				Vector2(x2, y2),
+				Vector2(x0, y2),
+			]
+		)
+	var verts: PackedVector2Array = PackedVector2Array()
 	for dy: int in range(CHUNK_SIZE_TILES):
 		var ty: int = base_ty + dy
 		var y0: float = float(ty) * TILE_SIZE

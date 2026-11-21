@@ -37,7 +37,7 @@ class EvictCandidate:
 
 const MAX_CHARACTERS: int = 80
 const MAX_ENEMIES: int = 160
-const MAX_SPAWNS_PER_FRAME: int = 8
+const MAX_SPAWNS_PER_FRAME: int = 3
 const ENEMY_ACTIVE_DIST_SQ: float = 480.0 * 480.0
 const ENEMY_DESPAWN_DIST_SQ: float = 1350.0 * 1350.0
 const ROOM_RESPAWN_DIST_SQ: float = 950.0 * 950.0
