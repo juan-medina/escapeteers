@@ -5,15 +5,16 @@
 		"role": "RANGED",
 		"abbr": "ARCH",
 		"color": "#55a630",
+		"summary": "Long-range knockback sniper",
 		"scene_path": "res://character/heroes/archer/archer.tscn",
 		"health": { "base": 80.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Snipe Arrow",
 				"type": "RANGED",
-				"amount": { "base": 15.0, "growth": 0.10 },
-				"cooldown": { "base": 1.4, "growth": -0.05 },
-				"range": { "base": 140.0, "growth": 0.0 },
+				"amount": { "base": 18.0, "growth": 0.10 },
+				"cooldown": { "base": 1.3, "growth": -0.05 },
+				"range": { "base": 145.0, "growth": 0.0 },
 				"effect": {
 					"type": "KNOCKBACK",
 					"amount": { "base": 260.0, "growth": 0.0 }
@@ -27,30 +28,31 @@
 		"role": "MELEE",
 		"abbr": "AXEM",
 		"color": "#e76f51",
+		"summary": "Sweeping AoE axe cleaves",
 		"scene_path": "res://character/heroes/armored_axeman/armored_axeman.tscn",
-		"health": { "base": 120.0, "growth": 0.10 },
+		"health": { "base": 145.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Axe Chop",
 				"type": "MELEE",
-				"amount": { "base": 10.0, "growth": 0.10 },
-				"cooldown": { "base": 0.5, "growth": -0.03 },
-				"range": { "base": 20.0, "growth": 0.0 },
+				"amount": { "base": 11.0, "growth": 0.10 },
+				"cooldown": { "base": 0.58, "growth": -0.03 },
+				"range": { "base": 22.0, "growth": 0.0 },
 				"effect": {
 					"type": "KNOCKBACK",
-					"amount": { "base": 85.0, "growth": 0.0 }
+					"amount": { "base": 60.0, "growth": 0.0 }
 				}
 			},
 			{
 				"name": "Whirlwind Cleave",
 				"type": "MELEE",
 				"amount": { "base": 25.0, "growth": 0.10 },
-				"cooldown": { "base": 3.5, "growth": -0.05 },
-				"range": { "base": 20.0, "growth": 0.0 },
+				"cooldown": { "base": 3.3, "growth": -0.05 },
+				"range": { "base": 22.0, "growth": 0.0 },
 				"chance": 0.35,
 				"effect": {
 					"type": "KNOCKBACK",
-					"amount": { "base": 260.0, "growth": 0.0 }
+					"amount": { "base": 210.0, "growth": 0.0 }
 				}
 			}
 		]
@@ -61,26 +63,27 @@
 		"role": "MELEE",
 		"abbr": "KNGH",
 		"color": "#3a86ff",
+		"summary": "High-HP tank; taunts & stuns",
 		"scene_path": "res://character/heroes/knight/knight.tscn",
-		"health": { "base": 140.0, "growth": 0.10 },
+		"health": { "base": 270.0, "growth": 0.12 },
 		"skills": [
 			{
 				"name": "Sword Strike",
 				"type": "MELEE",
-				"amount": { "base": 10.0, "growth": 0.10 },
-				"cooldown": { "base": 0.5, "growth": -0.03 },
+				"amount": { "base": 8.0, "growth": 0.10 },
+				"cooldown": { "base": 0.55, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 }
 			},
 			{
 				"name": "Heavy Swing",
 				"type": "MELEE",
-				"amount": { "base": 25.0, "growth": 0.10 },
-				"cooldown": { "base": 3.5, "growth": -0.05 },
+				"amount": { "base": 16.0, "growth": 0.10 },
+				"cooldown": { "base": 3.2, "growth": -0.05 },
 				"range": { "base": 20.0, "growth": 0.0 },
-				"chance": 0.35,
+				"chance": 0.40,
 				"effect": {
-					"type": "KNOCKBACK",
-					"amount": { "base": 260.0, "growth": 0.0 }
+					"type": "STUN",
+					"duration": { "base": 1.5, "growth": 0.0 }
 				}
 			}
 		]
@@ -91,30 +94,31 @@
 		"role": "MELEE",
 		"abbr": "TMPL",
 		"color": "#ffd166",
+		"summary": "Long pike knockback control",
 		"scene_path": "res://character/heroes/knight_templar/knight_templar.tscn",
-		"health": { "base": 130.0, "growth": 0.10 },
+		"health": { "base": 150.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Pike Thrust",
 				"type": "MELEE",
-				"amount": { "base": 10.0, "growth": 0.10 },
-				"cooldown": { "base": 0.5, "growth": -0.03 },
-				"range": { "base": 20.0, "growth": 0.0 },
+				"amount": { "base": 8.0, "growth": 0.10 },
+				"cooldown": { "base": 0.65, "growth": -0.03 },
+				"range": { "base": 22.0, "growth": 0.0 },
 				"effect": {
 					"type": "KNOCKBACK",
-					"amount": { "base": 120.0, "growth": 0.0 }
+					"amount": { "base": 130.0, "growth": 0.0 }
 				}
 			},
 			{
 				"name": "Heavy Smite",
 				"type": "MELEE",
-				"amount": { "base": 25.0, "growth": 0.10 },
+				"amount": { "base": 20.0, "growth": 0.10 },
 				"cooldown": { "base": 3.5, "growth": -0.05 },
-				"range": { "base": 20.0, "growth": 0.0 },
+				"range": { "base": 22.0, "growth": 0.0 },
 				"chance": 0.35,
 				"effect": {
 					"type": "KNOCKBACK",
-					"amount": { "base": 260.0, "growth": 0.0 }
+					"amount": { "base": 280.0, "growth": 0.0 }
 				}
 			}
 		]
@@ -125,6 +129,7 @@
 		"role": "HEALER",
 		"abbr": "PRST",
 		"color": "#e0fbfc",
+		"summary": "Heals squad & stuns foes",
 		"scene_path": "res://character/heroes/priest/priest.tscn",
 		"health": { "base": 80.0, "growth": 0.10 },
 		"skills": [
@@ -154,22 +159,29 @@
 		"role": "HYBRID",
 		"abbr": "SOLD",
 		"color": "#c0392b",
+		"summary": "Marks targets for bonus dmg",
 		"scene_path": "res://character/heroes/soldier/soldier.tscn",
-		"health": { "base": 100.0, "growth": 0.10 },
+		"health": { "base": 115.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Arrow Shot",
 				"type": "RANGED",
-				"amount": { "base": 10.0, "growth": 0.10 },
-				"cooldown": { "base": 1.0, "growth": -0.03 },
-				"range": { "base": 140.0, "growth": 0.0 }
+				"amount": { "base": 7.0, "growth": 0.10 },
+				"cooldown": { "base": 0.9, "growth": -0.04 },
+				"range": { "base": 140.0, "growth": 0.0 },
+				"effect": {
+					"type": "MARK",
+					"amount": { "base": 0.35, "growth": 0.0 },
+					"duration": { "base": 5.0, "growth": 0.0 }
+				}
 			},
 			{
 				"name": "Sword Slash",
 				"type": "MELEE",
 				"amount": { "base": 10.0, "growth": 0.10 },
-				"cooldown": { "base": 0.5, "growth": -0.03 },
-				"range": { "base": 20.0, "growth": 0.0 }
+				"cooldown": { "base": 0.45, "growth": -0.03 },
+				"range": { "base": 22.0, "growth": 0.0 },
+				"leash": 36.0
 			}
 		]
 	},
@@ -179,24 +191,25 @@
 		"role": "MELEE",
 		"abbr": "SWRD",
 		"color": "#2a9d8f",
+		"summary": "Fast multi-hit blade burst",
 		"scene_path": "res://character/heroes/swordsman/swordsman.tscn",
-		"health": { "base": 100.0, "growth": 0.10 },
+		"health": { "base": 125.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Quick Slash",
 				"type": "MELEE",
 				"amount": { "base": 10.0, "growth": 0.10 },
-				"cooldown": { "base": 0.5, "growth": -0.03 },
+				"cooldown": { "base": 0.45, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 }
 			},
 			{
 				"name": "Blade Flurry",
 				"type": "MELEE",
-				"amount": { "base": 8.0, "growth": 0.10 },
+				"amount": { "base": 10.0, "growth": 0.10 },
 				"hits": 3,
-				"cooldown": { "base": 3.5, "growth": -0.05 },
+				"cooldown": { "base": 3.0, "growth": -0.05 },
 				"range": { "base": 20.0, "growth": 0.0 },
-				"chance": 0.35
+				"chance": 0.38
 			}
 		]
 	},
@@ -206,18 +219,20 @@
 		"role": "RANGED",
 		"abbr": "WIZD",
 		"color": "#9b5de5",
+		"summary": "Piercing bolts chill enemies",
 		"scene_path": "res://character/heroes/wizard/wizard.tscn",
 		"health": { "base": 70.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Frost Bolt",
 				"type": "RANGED",
-				"amount": { "base": 8.0, "growth": 0.10 },
-				"cooldown": { "base": 1.4, "growth": -0.05 },
+				"amount": { "base": 10.0, "growth": 0.10 },
+				"cooldown": { "base": 1.25, "growth": -0.05 },
 				"range": { "base": 140.0, "growth": 0.0 },
 				"effect": {
-					"type": "KNOCKBACK",
-					"amount": { "base": 35.0, "growth": 0.0 }
+					"type": "SLOW",
+					"amount": { "base": 0.5, "growth": 0.0 },
+					"duration": { "base": 3.0, "growth": 0.0 }
 				}
 			}
 		]
@@ -228,6 +243,7 @@
 		"role": "MELEE",
 		"abbr": "TRCH",
 		"color": "#ff6b35",
+		"summary": "Burning torch melee strikes",
 		"secret": true,
 		"scene_path": "res://character/heroes/torchero/torchero.tscn",
 		"health": { "base": 140.0, "growth": 0.10 },

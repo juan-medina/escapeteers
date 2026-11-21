@@ -182,7 +182,7 @@ animations = [{
 }],
 "loop": 0,
 "name": &"attack_ranged1",
-"speed": 8.0
+"speed": 10.0
 }, {
 "frames": [{
 "duration": 1.0,

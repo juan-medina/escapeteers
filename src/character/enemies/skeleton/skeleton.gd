@@ -14,6 +14,8 @@ func _ready() -> void:
 
 
 func get_effective_target_dist_sq(hero_candidate: Hero) -> float:
+	if hero_candidate.hero_data != null and hero_candidate.hero_data.id == &"knight":
+		return super.get_effective_target_dist_sq(hero_candidate)
 	var dist_sq: float = global_position.distance_squared_to(hero_candidate.global_position)
 	match hero_candidate.hero_data.role:
 		HeroData.Role.HEALER:

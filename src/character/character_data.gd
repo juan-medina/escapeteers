@@ -16,6 +16,8 @@ enum EffectType {
 	KNOCKBACK,
 	STUN,
 	BURN,
+	MARK,
+	SLOW,
 }
 
 var id: StringName = &""

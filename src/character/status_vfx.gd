@@ -38,12 +38,17 @@ const KB_DUST_COLOR: Color = Color(0.88, 0.82, 0.70, 0.85)
 const KB_SHADOW_COLOR: Color = Color(0.15, 0.12, 0.08, 0.70)
 const KB_SIDE_OFFSETS: Array[float] = [-3.5, 0.0, 3.5]
 
+const MARK_COLOR_OUTER: Color = Color(1.0, 0.22, 0.22, 0.95)
+const MARK_COLOR_CORE: Color = Color(1.0, 0.78, 0.78, 1.0)
+const MARK_COLOR_SHADOW: Color = Color(0.24, 0.02, 0.02, 0.85)
+
 var head_y: float = -8.0
 var feet_y: float = 6.0
 
 var _is_stunned: bool = false
 var _is_burning: bool = false
 var _is_slowed: bool = false
+var _is_marked: bool = false
 var _is_on_screen: bool = true
 var _time: float = 0.0
 var _redraw_timer: float = 0.0
@@ -67,11 +72,12 @@ func set_on_screen(on_screen: bool) -> void:
 	_update_active_state(_is_on_screen)
 
 
-func set_statuses(stunned: bool, burning: bool, slowed: bool) -> void:
-	var changed: bool = (_is_stunned != stunned) or (_is_burning != burning) or (_is_slowed != slowed)
+func set_statuses(stunned: bool, burning: bool, slowed: bool, marked: bool = false) -> void:
+	var changed: bool = (_is_stunned != stunned) or (_is_burning != burning) or (_is_slowed != slowed) or (_is_marked != marked)
 	_is_stunned = stunned
 	_is_burning = burning
 	_is_slowed = slowed
+	_is_marked = marked
 	_update_active_state(changed)
 
 
@@ -99,6 +105,7 @@ func clear() -> void:
 	_is_stunned = false
 	_is_burning = false
 	_is_slowed = false
+	_is_marked = false
 	_burn_pulse = 0.0
 	_kb_timer = 0.0
 	_redraw_timer = 0.0
@@ -108,7 +115,7 @@ func clear() -> void:
 
 
 func _update_active_state(force_redraw: bool) -> void:
-	var any_active: bool = _is_stunned or _is_burning or _is_slowed or (_kb_timer > 0.0)
+	var any_active: bool = _is_stunned or _is_burning or _is_slowed or _is_marked or (_kb_timer > 0.0)
 	visible = any_active and _is_on_screen
 	set_process((any_active and _is_on_screen) or (_kb_timer > 0.0))
 	if not _is_burning:
@@ -142,6 +149,8 @@ func _draw() -> void:
 		_draw_burn_embers()
 	if _is_stunned:
 		_draw_stun_stars()
+	if _is_marked:
+		_draw_hunter_mark()
 
 
 func _draw_knockback_impact() -> void:
@@ -222,3 +231,15 @@ func _draw_stun_stars() -> void:
 		else:
 			draw_rect(Rect2(sx, sy, 2.0, 2.0), STUN_COLOR_OUTER, true)
 			draw_rect(Rect2(sx, sy, 1.0, 1.0), STUN_COLOR_CORE, true)
+
+
+func _draw_hunter_mark() -> void:
+	var bob: float = roundf(sin(_time * 7.0) * 1.0)
+	var cy: float = roundf(head_y - 4.0 + bob)
+	draw_rect(Rect2(-3.0, cy - 3.0, 7.0, 2.0), MARK_COLOR_SHADOW, true)
+	draw_rect(Rect2(-2.0, cy - 1.0, 5.0, 2.0), MARK_COLOR_SHADOW, true)
+	draw_rect(Rect2(-1.0, cy + 1.0, 3.0, 2.0), MARK_COLOR_SHADOW, true)
+	draw_rect(Rect2(-2.0, cy - 3.0, 5.0, 1.0), MARK_COLOR_OUTER, true)
+	draw_rect(Rect2(-1.0, cy - 2.0, 3.0, 2.0), MARK_COLOR_OUTER, true)
+	draw_rect(Rect2(0.0, cy, 1.0, 2.0), MARK_COLOR_OUTER, true)
+	draw_rect(Rect2(0.0, cy - 2.0, 1.0, 2.0), MARK_COLOR_CORE, true)

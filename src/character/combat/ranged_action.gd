@@ -11,6 +11,8 @@ var requires_horizontal_alignment: bool = false
 var horizontal_tolerance: float = 16.0
 var animation_name: StringName = Character.ANIM_ATTACK_RANGED1
 var stun_duration: float = 0.0
+var mark_bonus: float = 0.0
+var mark_duration: float = 0.0
 var spawn_at_target: bool = false
 var show_telegraph: bool = false
 var telegraph_color: Color = Color(1.0, 0.35, 0.2, 0.35)
@@ -89,11 +91,14 @@ func spawn_projectile(user: Character, target: Character) -> Projectile:
 		projectile.damage = damage
 		projectile.knockback = 0.0
 		var enemy: Enemy = target as Enemy
+		var applied_damage: float = enemy.get_effective_damage_taken(damage) if enemy != null else damage
 		if enemy != null and stun_duration > 0.0:
 			enemy.apply_stun(stun_duration)
-		target.take_damage(damage)
+		if enemy != null and mark_duration > 0.0 and mark_bonus > 0.0:
+			enemy.apply_mark(mark_bonus, mark_duration)
+		target.take_damage(applied_damage)
 		if user is Hero and enemy != null:
-			(user as Hero).enemy_hit.emit(enemy, damage, false)
+			(user as Hero).enemy_hit.emit(enemy, applied_damage, false)
 	else:
 		var spawn_pos: Vector2 = user.global_position + Vector2(dir_x * 8.0, 0.0)
 		var fire_dir: Vector2 = Vector2(dir_x, 0.0)
@@ -107,6 +112,8 @@ func spawn_projectile(user: Character, target: Character) -> Projectile:
 		projectile.direction = fire_dir
 		projectile.damage = damage
 		projectile.knockback = knockback
+		projectile.mark_bonus = mark_bonus
+		projectile.mark_duration = mark_duration
 
 	if _telegraph_line != null:
 		_telegraph_line.finish()

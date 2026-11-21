@@ -7,7 +7,15 @@
 - [color=#ffffff][b]Secret Lever Shortcuts:[/b][/color] Pull key-room levers to open hidden shortcut walls.
 
 [color=#e0e0e0][b]Changed[/b][/color]
-- [color=#ffffff][b]Quick Hero Swap:[/b][/color] Retry now jumps straight to hero selection.
+- [color=#ffffff][b]Hero Class Rebalance:[/b][/color]
+  - [b]Knight:[/b] Doubled health, draws monster aggro, and stuns instead of knocking back.
+  - [b]Soldier:[/b] Faster bow shots mark foes for extra damage; shorter melee leash.
+  - [b]Wizard:[/b] Stronger frost bolts now cap chill pierce at two enemies without knockback.
+  - [b]Knight Templar:[/b] Higher health and stronger knockback with slower, lower-damage pike thrusts.
+  - [b]Armored Axeman:[/b] More health, harder axe cleaves, and lighter pushback to keep foes close.
+  - [b]Swordsman:[/b] Extra health, quicker slashes, and a faster, harder-hitting three-hit flurry.
+  - [b]Archer:[/b] Faster, higher-damage snipe arrows with longer range and heavy knockback.
+- [color=#ffffff][b]Quick Hero Swap:[/b][/color] Retry jumps to hero selection with new hero summary cards.
 - [color=#ffffff][b]Snappier Map & Spawns:[/b][/color] Smoother map browsing and monster room ambushes.
 
 [color=#ffffff][b]v0.6.0 - 2026-11-18[/b][/color]
@@ -58,9 +66,9 @@
 [color=#e0e0e0][b]Added[/b][/color]
 - [color=#ffffff][b]Pick Your Leader:[/b][/color] Choose which hero leads the charge.
 - [color=#ffffff][b]New Undead Threats:[/b][/color]
-  • [b]Skeleton Rusher:[/b] Fast boneheads that charge your backline.
-  • [b]Skeleton Archer:[/b] Pesky snipers that shoot and run.
-  • [b]Necromancer:[/b] Creepy summoners raising endless skeleton waves.
+  - [b]Skeleton Rusher:[/b] Fast boneheads that charge your backline.
+  - [b]Skeleton Archer:[/b] Pesky snipers that shoot and run.
+  - [b]Necromancer:[/b] Creepy summoners raising endless skeleton waves.
 - [color=#ffffff][b]Themed Dungeon Rooms:[/b][/color] Slime Pits, Bone Swarms, Archer Garrisons, and Crypts.
 - [color=#ffffff][b]Secret Hero (Torchero):[/b][/color] A mysterious torch-bearer hiding in the dark.
 

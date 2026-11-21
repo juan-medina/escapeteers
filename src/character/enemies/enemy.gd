@@ -27,6 +27,7 @@ const LEVEL_COLOR: Color = Color(1.0, 0.45, 0.35, 1.0)
 const TELEGRAPH_COLOR: Color = Color(1.0, 1.0, 1.0, 0.35)
 const TELEGRAPH_LOCKED_COLOR: Color = Color(1.0, 1.0, 1.0, 0.85)
 const TELEGRAPH_LOCK_TIME: float = 0.25
+const KNIGHT_TAUNT_WEIGHT: float = 0.06
 
 @export var level: int = 1
 
@@ -69,6 +70,8 @@ var _burn_timer: float = 0.0
 var _burn_dps: float = 0.0
 var _burn_tick_timer: float = 0.0
 var _burn_source: Hero = null
+var _mark_timer: float = 0.0
+var _mark_bonus: float = 0.0
 var _is_summoning_in: bool = false
 
 @onready var _status_vfx: StatusVfx = $StatusVfx
@@ -120,10 +123,10 @@ func _set_sleeping(sleeping: bool) -> void:
 		_status_vfx.set_process(false)
 		disable_collisions()
 	else:
-		if not is_stunned() and not _animated_sprite.is_playing():
+		if not _is_stunned() and not _animated_sprite.is_playing():
 			_animated_sprite.play()
 		_status_vfx.set_on_screen(is_on_screen)
-		_status_vfx.set_statuses(is_stunned(), is_burning(), is_slowed())
+		_status_vfx.set_statuses(_is_stunned(), is_burning(), is_slowed(), is_marked())
 		if not is_dead:
 			enable_collisions()
 
@@ -157,7 +160,7 @@ func _physics_process(delta: float) -> void:
 		_burn_tick_timer -= delta
 		if _burn_tick_timer <= 0.0:
 			_burn_tick_timer += BURN_TICK_INTERVAL
-			var tick_dmg: float = _burn_dps * BURN_TICK_INTERVAL
+			var tick_dmg: float = get_effective_damage_taken(_burn_dps * BURN_TICK_INTERVAL)
 			if tick_dmg > 0.0 and not is_dead:
 				var src: Hero = _burn_source
 				_status_vfx.trigger_burn_pulse()
@@ -173,13 +176,20 @@ func _physics_process(delta: float) -> void:
 			_burn_source = null
 			status_changed = true
 
+	if _mark_timer > 0.0:
+		_mark_timer -= delta
+		if _mark_timer <= 0.0:
+			_mark_timer = 0.0
+			_mark_bonus = 0.0
+			status_changed = true
+
 	if status_changed:
 		_update_status_visuals()
 
 	if _is_summoning_in:
 		return
 
-	if is_stunned():
+	if _is_stunned():
 		velocity = _knockback_velocity
 		move_and_slide()
 		return
@@ -232,7 +242,10 @@ func play_summon_intro() -> void:
 
 
 func get_effective_target_dist_sq(hero_candidate: Hero) -> float:
-	return global_position.distance_squared_to(hero_candidate.global_position)
+	var dist_sq: float = global_position.distance_squared_to(hero_candidate.global_position)
+	if hero_candidate.hero_data != null and hero_candidate.hero_data.id == &"knight":
+		return dist_sq * KNIGHT_TAUNT_WEIGHT
+	return dist_sq
 
 
 func set_target_candidate(hero_candidate: Hero) -> void:
@@ -317,6 +330,35 @@ func apply_burn(dps: float, duration: float, source_hero: Hero = null) -> void:
 	_update_status_visuals()
 
 
+func apply_mark(bonus: float, duration: float) -> void:
+	if is_dead or not visible or duration <= 0.0 or bonus <= 0.0:
+		return
+	_set_sleeping(false)
+	_mark_bonus = maxf(_mark_bonus, bonus)
+	_mark_timer = maxf(_mark_timer, duration)
+	_update_status_visuals()
+
+
+func apply_taunt(taunter: Hero) -> void:
+	if is_dead or not visible or not CombatAction.is_valid_target(taunter):
+		return
+	_set_sleeping(false)
+	if target != taunter:
+		target = taunter
+		current_state = State.CHASE
+		_navigator.reset()
+
+
+func is_marked() -> bool:
+	return _mark_timer > 0.0
+
+
+func get_effective_damage_taken(raw_damage: float) -> float:
+	if _mark_timer > 0.0 and _mark_bonus > 0.0:
+		return raw_damage * (1.0 + _mark_bonus)
+	return raw_damage
+
+
 func is_burning() -> bool:
 	return _burn_timer > 0.0
 
@@ -325,7 +367,7 @@ func is_slowed() -> bool:
 	return _slow_timer > 0.0
 
 
-func is_stunned() -> bool:
+func _is_stunned() -> bool:
 	return _stun_timer > 0.0
 
 
@@ -336,8 +378,8 @@ func is_engaged() -> bool:
 
 
 func _update_status_visuals() -> void:
-	_status_vfx.set_statuses(is_stunned(), is_burning(), is_slowed())
-	if is_stunned():
+	_status_vfx.set_statuses(_is_stunned(), is_burning(), is_slowed(), is_marked())
+	if _is_stunned():
 		_animated_sprite.pause()
 	elif not _animated_sprite.is_playing() and not is_dead:
 		_animated_sprite.play()
@@ -644,6 +686,8 @@ func reset_for_pool() -> void:
 	_burn_dps = 0.0
 	_burn_tick_timer = 0.0
 	_burn_source = null
+	_mark_timer = 0.0
+	_mark_bonus = 0.0
 	_knockback_velocity = Vector2.ZERO
 	_navigator.reset()
 	_base_modulate = Color.WHITE
@@ -681,6 +725,8 @@ func _on_death() -> void:
 	_burn_dps = 0.0
 	_burn_tick_timer = 0.0
 	_burn_source = null
+	_mark_timer = 0.0
+	_mark_bonus = 0.0
 	_status_vfx.clear()
 	_base_modulate = Color.WHITE
 	_animated_sprite.modulate = Color.WHITE

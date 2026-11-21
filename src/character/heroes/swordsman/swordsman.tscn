@@ -240,7 +240,7 @@ animations = [{
 }],
 "loop": 0,
 "name": &"attack_melee2",
-"speed": 9.0
+"speed": 13.0
 }, {
 "frames": [{
 "duration": 1.0,

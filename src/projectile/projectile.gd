@@ -24,6 +24,8 @@ static var _pool: EntityPool = null
 
 var direction: Vector2 = Vector2.RIGHT
 var source_hero: Hero = null
+var mark_bonus: float = 0.0
+var mark_duration: float = 0.0
 
 var _elapsed: float = 0.0
 var _is_dying: bool = false
@@ -83,6 +85,8 @@ func launch() -> void:
 
 func reset_for_pool() -> void:
 	source_hero = null
+	mark_bonus = 0.0
+	mark_duration = 0.0
 	direction = Vector2.RIGHT
 	knockback = 0.0
 	_elapsed = 0.0
@@ -131,18 +135,21 @@ func _finish_destroy() -> void:
 
 func _apply_character_hit(target: Node2D) -> void:
 	var enemy: Enemy = target as Enemy
+	var applied_damage: float = enemy.get_effective_damage_taken(damage) if enemy != null else damage
 	if enemy != null and slow_duration > 0.0 and slow_factor > 0.0:
 		enemy.apply_slow(slow_factor, slow_duration)
+	if enemy != null and mark_duration > 0.0 and mark_bonus > 0.0:
+		enemy.apply_mark(mark_bonus, mark_duration)
 
 	var character: Character = target as Character
 	if character != null:
-		character.take_damage(damage)
+		character.take_damage(applied_damage)
 
 	if knockback > 0.0 and enemy != null:
 		enemy.apply_knockback(direction * knockback)
 
 	if source_hero != null and enemy != null:
-		source_hero.enemy_hit.emit(enemy, damage, false)
+		source_hero.enemy_hit.emit(enemy, applied_damage, false)
 
 
 func _on_body_entered(body: Node2D) -> void:

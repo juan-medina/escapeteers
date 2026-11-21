@@ -8,6 +8,8 @@ const COLOR_HP: Color = Color(0.40, 0.95, 0.45)
 const COLOR_DMG: Color = Color(1.0, 0.50, 0.35)
 const COLOR_BURN: Color = Color(1.0, 0.65, 0.20)
 const COLOR_KB: Color = Color(0.90, 0.60, 1.0)
+const COLOR_MARK: Color = Color(1.0, 0.35, 0.35)
+const COLOR_SLOW: Color = Color(0.45, 0.85, 1.0)
 const COOLDOWN_DELTA_EPSILON: float = -0.01
 
 const SKILL_TYPE_NAMES: Dictionary[CharacterData.SkillType, String] = {
@@ -58,6 +60,12 @@ func setup_static(skill: Dictionary) -> void:
 		CharacterData.EffectType.BURN:
 			_effect_label.text = "BURN:"
 			_effect_value.add_theme_color_override(&"font_color", COLOR_BURN)
+		CharacterData.EffectType.MARK:
+			_effect_label.text = "MARK:"
+			_effect_value.add_theme_color_override(&"font_color", COLOR_MARK)
+		CharacterData.EffectType.SLOW:
+			_effect_label.text = "SLOW:"
+			_effect_value.add_theme_color_override(&"font_color", COLOR_SLOW)
 
 
 func update_stats(skill: Dictionary, target_level: int, prev_level: int) -> void:
@@ -101,3 +109,11 @@ func _update_effect_value(cur: Dictionary, prev: Dictionary, has_prev: bool) -> 
 		CharacterData.EffectType.BURN:
 			var base_burn: String = "%d/s (%ds)" % [int(cur_amount), int(cur_dur)]
 			_effect_value.text = format_int_delta(base_burn, cur_amount, prev_amount, has_prev)
+		CharacterData.EffectType.MARK:
+			var cur_pct: float = roundf(cur_amount * 100.0)
+			var prev_pct: float = roundf(prev_amount * 100.0)
+			var base_mark: String = "+%d%% (%ds)" % [int(cur_pct), int(cur_dur)]
+			_effect_value.text = format_int_delta(base_mark, cur_pct, prev_pct, has_prev)
+		CharacterData.EffectType.SLOW:
+			var slow_pct: int = int(roundf((1.0 - cur_amount) * 100.0))
+			_effect_value.text = "%d%% (%ds)" % [slow_pct, int(cur_dur)]

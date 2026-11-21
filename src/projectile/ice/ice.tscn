@@ -77,9 +77,9 @@ speed = 160.0
 damage = 8.0
 lifetime = 3.5
 auto_rotate = false
-slow_factor = 0.4
-slow_duration = 4.0
-max_pierce_count = 0
+slow_factor = 0.5
+slow_duration = 3.0
+max_pierce_count = 2
 has_impact_anim = true
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]

@@ -92,11 +92,16 @@ func apply_hit(user: Character, target: Character) -> bool:
 
 	if target is Enemy:
 		var enemy: Enemy = target as Enemy
+		applied_damage = enemy.get_effective_damage_taken(applied_damage)
 		enemy.apply_knockback(push_dir * applied_knockback)
 		if applied_stun > 0.0:
 			enemy.apply_stun(applied_stun)
 		if applied_burn_dps > 0.0 and applied_burn_duration > 0.0:
 			enemy.apply_burn(applied_burn_dps, applied_burn_duration, user as Hero)
+		if user is Hero:
+			var hero_user: Hero = user as Hero
+			if hero_user.hero_data != null and hero_user.hero_data.id == &"knight":
+				enemy.apply_taunt(hero_user)
 
 	target.take_damage(applied_damage)
 	return true

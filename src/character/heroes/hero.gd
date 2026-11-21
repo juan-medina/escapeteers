@@ -64,6 +64,8 @@ var ranged_knockback: float = 0.0
 var ranged_stun_duration: float = 0.0
 var ranged_burn_dps: float = 0.0
 var ranged_burn_duration: float = 0.0
+var ranged_mark_bonus: float = 0.0
+var ranged_mark_duration: float = 0.0
 var heal_cooldown: float = 2.4
 var heal_amount: float = 20.0
 
@@ -167,13 +169,15 @@ func _setup_actions() -> void:
 		var ranged: RangedAction = RangedAction.new()
 		ranged.projectile_scene = ranged_projectile_scene
 		ranged.range_distance = ranged_range
-		ranged.min_range_distance = ranged_min_range if can_melee else 0.0
+		ranged.min_range_distance = melee_range if can_melee else 0.0
 		ranged.cooldown = ranged_cooldown
 		ranged.damage = ranged_damage
 		ranged.knockback = ranged_knockback
 		ranged.projectile_frame = ranged_frame
 		ranged.animation_name = ranged_animation
 		ranged.stun_duration = ranged_stun_duration
+		ranged.mark_bonus = ranged_mark_bonus
+		ranged.mark_duration = ranged_mark_duration
 		ranged.spawn_at_target = ranged_spawn_at_target
 		ranged.leash_distance = 0.0
 		ranged.check_line_of_sight = true
@@ -339,7 +343,11 @@ func _is_valid_enemy_target(enemy: Enemy) -> bool:
 	return CombatAction.is_valid_target(enemy) and enemy.visible
 
 
-func _is_preferred_target(_enemy: Enemy) -> bool:
+func _is_preferred_target(enemy: Enemy) -> bool:
+	if ranged_mark_duration > 0.0:
+		for action: CombatAction in combat_actions:
+			if action is RangedAction and action.is_ready():
+				return not enemy.is_marked()
 	return true
 
 
@@ -446,8 +454,9 @@ func _on_frame_changed() -> void:
 				var enemy: Enemy = node as Enemy
 				if not _is_valid_enemy_target(enemy):
 					continue
+				var effective_hit_damage: float = enemy.get_effective_damage_taken(hit_damage)
 				if melee.apply_hit(self, enemy):
-					enemy_hit.emit(enemy, hit_damage, is_heavy)
+					enemy_hit.emit(enemy, effective_hit_damage, is_heavy)
 					if melee.hit_effect_scene != null:
 						var effect: Projectile = Projectile.acquire(melee.hit_effect_scene)
 						effect.global_position = enemy.global_position

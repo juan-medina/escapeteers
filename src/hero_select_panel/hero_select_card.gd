@@ -27,6 +27,7 @@ var _hero_data: HeroData = null
 @onready var _name_label: Label = $Margin/VBox/NameLabel
 @onready var _role_label: Label = $Margin/VBox/RoleLabel
 @onready var _hp_value_label: Label = $Margin/VBox/HPRow/HPValue
+@onready var _summary_label: Label = $Margin/VBox/SummaryLabel
 
 
 func initialize() -> void:
@@ -38,6 +39,7 @@ func initialize() -> void:
 	_role_label.add_theme_color_override(&"font_color", ROLE_COLORS[_hero_data.role])
 
 	_hp_value_label.text = &"%d" % int(_hero_data.get_health(1))
+	_summary_label.text = _hero_data.summary
 
 	_preview_sprite.sprite_frames = _hero_data.sprite_frames
 	_sync_sprite_playback()

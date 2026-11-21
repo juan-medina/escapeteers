@@ -18,6 +18,7 @@ static var _heroes_by_role: Array[HeroData] = []
 
 var role: Role = Role.MELEE
 var abbr: String = ""
+var summary: String = ""
 var color: Color = Color.WHITE
 var is_secret: bool = false
 var sprite_frames: SpriteFrames = null
@@ -114,6 +115,7 @@ static func _from_dict(dict: Dictionary) -> HeroData:
 	h.parse_base_fields(dict)
 	h.role = Role[_str_val(dict, &"role")]
 	h.abbr = _str_val(dict, &"abbr")
+	h.summary = _str_val(dict, &"summary")
 	h.color = Color.from_string(_str_val(dict, &"color"), Color.WHITE)
 	h.is_secret = dict.get(&"secret", false) == true
 	h.sprite_frames = extract_sprite_frames(h.scene)
@@ -136,6 +138,8 @@ static func _apply_skill(hero: Hero, prefix: String, skill: Dictionary, level: i
 	hero.set(prefix + "_stun_duration", effect_duration if effect_type == CharacterData.EffectType.STUN else 0.0)
 	hero.set(prefix + "_burn_dps", effect_amount if effect_type == CharacterData.EffectType.BURN else 0.0)
 	hero.set(prefix + "_burn_duration", effect_duration if effect_type == CharacterData.EffectType.BURN else 0.0)
+	hero.set(prefix + "_mark_bonus", effect_amount if effect_type == CharacterData.EffectType.MARK else 0.0)
+	hero.set(prefix + "_mark_duration", effect_duration if effect_type == CharacterData.EffectType.MARK else 0.0)
 	if prefix == "melee1":
 		hero.melee_range = s[&"range"]
 		if skill.has(&"leash"):

@@ -51,28 +51,29 @@ Before entering the dungeon, the player selects a starting hero class to act as 
 #### 1. Archer (Ranged Physical)
 - **Role:** Long-range single-target sniper.
 - **Abilities:**
-  - *Snipe Arrow:* Fires swift arrows at distant targets across long range on a moderate cooldown, inflicting heavy knockback on hit to push advancing enemies away from the squad.
+  - *Snipe Arrow:* Fires high-damage arrows at distant targets across long range, inflicting heavy knockback on hit to push advancing enemies away from the squad.
 - **Positioning:** Stays strictly anchored in formation; requires clear line of sight.
 
 #### 2. Armored Axeman (Melee Brawler)
-- **Role:** Frontline brawler and crowd disruptor.
+- **Role:** Frontline AoE cleaver.
 - **Abilities:**
-  - *Axe Chop:* Rapid melee slashes on a short cooldown with moderate knockback.
-  - *Whirlwind Cleave (Heavy Strike):* Has a chance on attack to unleash a sweeping heavy chop on a longer cooldown, delivering high burst damage and heavy knockback.
-- **Positioning:** Steps out on a melee leash to intercept nearby threats.
+  - *Axe Chop:* Heavy melee cleaves with light stagger knockback to keep enemy packs in swing range.
+  - *Whirlwind Cleave (Heavy Strike):* Has a chance on attack to unleash a sweeping heavy chop on a longer cooldown, delivering high burst damage and strong knockback.
+- **Positioning:** Steps out on a melee leash to cleave nearby threats.
 
-#### 3. Knight (Melee Vanguard)
-- **Role:** Frontline anchor and crowd control pin.
+#### 3. Knight (Melee Tank)
+- **Role:** High-health frontline tank and threat anchor.
 - **Abilities:**
-  - *Sword Strike:* Fast melee slashes on a short cooldown with no knockback, pinning enemies in place for squad focus fire.
-  - *Heavy Swing (Heavy Strike):* Has a chance on attack to deliver a heavy blow on a longer cooldown, dealing high burst damage and strong knockback.
-- **Positioning:** Steps out on a melee leash to lock down advancing targets.
+  - *Passive Taunt:* Naturally draws enemy aggro ahead of fragile backline allies and forces struck targets to focus on the Knight.
+  - *Sword Strike:* Steady melee slashes with no knockback, holding enemies in place for squad focus fire.
+  - *Heavy Swing (Heavy Strike):* Has a chance on attack to deliver a shield-bashing strike on a longer cooldown that stuns nearby enemies instead of knocking them away.
+- **Positioning:** Anchors the frontline arc on a melee leash to absorb incoming pressure.
 
 #### 4. Knight Templar (Melee Shock Infantry)
-- **Role:** Aggressive frontline defender with high-impact displacement.
+- **Role:** Defensive frontline defender specializing in knockback control.
 - **Abilities:**
-  - *Pike Thrust:* Powerful melee thrusts on a short cooldown with strong standard knockback, consistently shoving enemies away.
-  - *Heavy Smite (Heavy Strike):* Has a chance on attack to unleash an empowered strike on a longer cooldown with heavy damage and knockback.
+  - *Pike Thrust:* Long-reach melee thrusts with strong standard knockback, consistently shoving enemy waves away from the squad.
+  - *Heavy Smite (Heavy Strike):* Has a chance on attack to unleash an empowered strike on a longer cooldown with solid damage and heavy knockback.
 - **Positioning:** Steps out on a melee leash to create space for backline allies.
 
 #### 5. Priest (Support Healer & Crowd Control)
@@ -82,25 +83,25 @@ Before entering the dungeon, the player selects a starting hero class to act as 
   - *Holy Smite:* When no urgent triage healing is needed, calls down holy magic on an enemy at range to deal light damage and stun the target.
 - **Positioning:** Stays protected within the core of the formation.
 
-#### 6. Soldier (Hybrid Melee / Ranged)
-- **Role:** Adaptive combatant adjusting to target distance.
+#### 6. Soldier (Hybrid Spotter / Bodyguard)
+- **Role:** Tactical hybrid spotter and close-range defender.
 - **Abilities:**
-  - *Arrow Shot:* Fires ranged arrows on a short cooldown while enemies remain at distance.
-  - *Sword Slash:* Draws a blade and steps out on a melee leash when enemies close in, delivering fast melee slashes with no knockback.
-- **Positioning:** Dynamically transitions between formation archery and leash-based melee combat.
+  - *Arrow Shot:* Fires ranged arrows on a short cooldown, prioritizing unmarked enemies and applying a *Hunter's Mark* debuff that increases all squad damage taken by that target.
+  - *Sword Slash:* Draws a blade when enemies close in, delivering fast melee slashes with no knockback.
+- **Positioning:** Stays close to formation on a short defensive melee leash while keeping distant targets marked.
 
-#### 7. Swordsman (Melee Skirmisher)
-- **Role:** Rapid-strike duelist specializing in multi-hit damage.
+#### 7. Swordsman (Melee Duelist)
+- **Role:** High-tempo rapid-strike melee damage dealer.
 - **Abilities:**
-  - *Quick Slash:* Fast sword slices on a short cooldown with no knockback to maintain pressure.
-  - *Blade Flurry (Heavy Strike):* Has a chance on attack to trigger a multi-hit flurry on a longer cooldown, striking multiple times in rapid succession for heavy compound damage without pushing the target away.
-- **Positioning:** Steps out on a melee leash to shred priority targets.
+  - *Quick Slash:* Fast sword slices on a very short cooldown with no knockback to maintain relentless single-target pressure.
+  - *Blade Flurry (Heavy Strike):* Has a chance on attack to trigger a rapid 3-hit flurry for high burst damage without pushing the target away.
+- **Positioning:** Steps out on a melee leash to shred priority and marked targets.
 
 #### 8. Wizard (Ranged Crowd Control)
-- **Role:** Spellcaster and crowd decelerator.
+- **Role:** Spellcaster and multi-target crowd decelerator.
 - **Abilities:**
-  - *Frost Bolt:* Launches ice missiles at long range on a moderate cooldown with light knockback, smartly prioritizing enemies that are not yet slowed.
-  - *Chill Status Effect:* Afflicts struck targets with a chilling slow, reducing their movement speed for a sustained duration.
+  - *Frost Bolt:* Launches piercing ice missiles that pass through up to two enemies with no knockback, smartly prioritizing targets that are not yet slowed.
+  - *Chill Status Effect:* Afflicts struck targets with a chilling movement slow for a sustained duration.
 - **Positioning:** Stays strictly in formation slot.
 
 ---

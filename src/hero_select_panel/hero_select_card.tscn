@@ -5,9 +5,9 @@
 [ext_resource type="FontFile" uid="uid://bst61g6fxq6sj" path="res://data/assets/pixel_ui_theme/m6x11.ttf" id="3_m6x11"]
 
 [node name="HeroSelectCard" type="Button"]
-custom_minimum_size = Vector2(138, 104)
-offset_right = 138.0
-offset_bottom = 104.0
+custom_minimum_size = Vector2(140, 114)
+offset_right = 140.0
+offset_bottom = 114.0
 focus_mode = 2
 script = ExtResource("1_card")
 
@@ -79,5 +79,14 @@ theme_override_colors/font_color = Color(0.4, 0.95, 0.45, 1)
 theme_override_fonts/font = ExtResource("2_m3x6")
 theme_override_font_sizes/font_size = 16
 text = "140"
+
+[node name="SummaryLabel" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.78, 0.82, 0.88, 1)
+theme_override_fonts/font = ExtResource("2_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "High-HP tank; taunts & stuns"
+horizontal_alignment = 1
 
 [connection signal="pressed" from="." to="." method="_on_pressed"]
