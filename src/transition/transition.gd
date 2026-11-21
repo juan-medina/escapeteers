@@ -13,6 +13,7 @@ const LOADING_SCREEN_SCENE: PackedScene = preload("res://loading_screen/loading_
 const MENU_SCENE: PackedScene = preload("res://menu/menu.tscn")
 
 var starting_hero_id: StringName = &"soldier"
+var select_hero_on_menu: bool = false
 
 var _filler: ColorRect = null
 var _loading_screen: LoadingScreen = null
@@ -69,9 +70,11 @@ func reload_game(hero_id: StringName = &"") -> void:
 	await _change_scene(GAME_SCENE)
 
 
-func go_to_menu() -> void:
+func go_to_menu(select_hero: bool = false) -> void:
 	if not _begin_transition():
 		return
+
+	select_hero_on_menu = select_hero
 
 	await fade_to_black(SCENE_FADE_DURATION)
 	await _change_scene(MENU_SCENE)

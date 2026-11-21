@@ -6,7 +6,7 @@ extends UiPanel
 
 
 func _on_retry_pressed() -> void:
-	await Transition.reload_game()
+	await Transition.go_to_menu(true)
 
 
 func _on_back_to_menu_pressed() -> void:

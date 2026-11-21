@@ -98,6 +98,9 @@ func _get_start_panel() -> UiPanel:
 		_changelog_panel.mark_seen()
 		_changelog_panel.back_button_text = &"Continue"
 		return _changelog_panel
+	if Transition.select_hero_on_menu:
+		Transition.select_hero_on_menu = false
+		return _hero_select_panel
 	return _main_menu_panel
 
 
