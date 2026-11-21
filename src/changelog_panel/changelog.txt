@@ -8,6 +8,7 @@
 
 [color=#e0e0e0][b]Changed[/b][/color]
 - [color=#ffffff][b]Quick Hero Swap:[/b][/color] Retry now jumps straight to hero selection.
+- [color=#ffffff][b]Snappier Map & Spawns:[/b][/color] Smoother map browsing and monster room ambushes.
 
 [color=#ffffff][b]v0.6.0 - 2026-11-18[/b][/color]
 
