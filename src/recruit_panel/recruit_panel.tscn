@@ -1,10 +1,11 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://recruit_panel/recruit_panel.gd" id="1_panel"]
-[ext_resource type="PackedScene" path="res://unit_card/unit_card.tscn" id="2_card"]
+[ext_resource type="PackedScene" uid="uid://cdmqnyn1xgdbq" path="res://unit_card/unit_card.tscn" id="2_card"]
 [ext_resource type="FontFile" uid="uid://bg6arvysy4jwv" path="res://data/assets/pixel_ui_theme/m6x11plus.ttf" id="3_m6x11plus"]
 [ext_resource type="Texture2D" uid="uid://bew3b5nrsmhiw" path="res://data/assets/map/tiles/Tileset.png" id="4_tileset"]
 [ext_resource type="FontFile" uid="uid://bst61g6fxq6sj" path="res://data/assets/pixel_ui_theme/m6x11.ttf" id="5_m6x11"]
+[ext_resource type="PackedScene" path="res://unit_card/unit_details_panel.tscn" id="6_details"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_coin_0"]
 atlas = ExtResource("4_tileset")
@@ -72,7 +73,7 @@ layout_mode = 2
 
 [node name="VBox" type="VBoxContainer" parent="Center/Panel"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 alignment = 1
 
 [node name="Title" type="Label" parent="Center/Panel/VBox"]
@@ -82,9 +83,9 @@ theme_override_font_sizes/font_size = 18
 text = "Choose a Companion"
 horizontal_alignment = 1
 
-[node name="CardsContainer" type="VBoxContainer" parent="Center/Panel/VBox"]
+[node name="CardsContainer" type="HBoxContainer" parent="Center/Panel/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 12
 alignment = 1
 
 [node name="ArcherCard" parent="Center/Panel/VBox/CardsContainer" instance=ExtResource("2_card")]
@@ -132,6 +133,9 @@ visible = false
 layout_mode = 2
 hero_id = &"torchero"
 
+[node name="UnitDetailsPanel" parent="Center/Panel/VBox" instance=ExtResource("6_details")]
+layout_mode = 2
+
 [node name="RerollRow" type="HBoxContainer" parent="Center/Panel/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 8
@@ -161,12 +165,21 @@ layout_mode = 2
 text = "Reroll (1)"
 
 [connection signal="chosen" from="Center/Panel/VBox/CardsContainer/ArcherCard" to="." method="_on_card_chosen"]
+[connection signal="inspected" from="Center/Panel/VBox/CardsContainer/ArcherCard" to="." method="_on_card_inspected"]
 [connection signal="chosen" from="Center/Panel/VBox/CardsContainer/ArmoredAxemanCard" to="." method="_on_card_chosen"]
+[connection signal="inspected" from="Center/Panel/VBox/CardsContainer/ArmoredAxemanCard" to="." method="_on_card_inspected"]
 [connection signal="chosen" from="Center/Panel/VBox/CardsContainer/KnightCard" to="." method="_on_card_chosen"]
+[connection signal="inspected" from="Center/Panel/VBox/CardsContainer/KnightCard" to="." method="_on_card_inspected"]
 [connection signal="chosen" from="Center/Panel/VBox/CardsContainer/KnightTemplarCard" to="." method="_on_card_chosen"]
+[connection signal="inspected" from="Center/Panel/VBox/CardsContainer/KnightTemplarCard" to="." method="_on_card_inspected"]
 [connection signal="chosen" from="Center/Panel/VBox/CardsContainer/PriestCard" to="." method="_on_card_chosen"]
+[connection signal="inspected" from="Center/Panel/VBox/CardsContainer/PriestCard" to="." method="_on_card_inspected"]
 [connection signal="chosen" from="Center/Panel/VBox/CardsContainer/SoldierCard" to="." method="_on_card_chosen"]
+[connection signal="inspected" from="Center/Panel/VBox/CardsContainer/SoldierCard" to="." method="_on_card_inspected"]
 [connection signal="chosen" from="Center/Panel/VBox/CardsContainer/SwordsmanCard" to="." method="_on_card_chosen"]
+[connection signal="inspected" from="Center/Panel/VBox/CardsContainer/SwordsmanCard" to="." method="_on_card_inspected"]
 [connection signal="chosen" from="Center/Panel/VBox/CardsContainer/WizardCard" to="." method="_on_card_chosen"]
+[connection signal="inspected" from="Center/Panel/VBox/CardsContainer/WizardCard" to="." method="_on_card_inspected"]
 [connection signal="chosen" from="Center/Panel/VBox/CardsContainer/TorcheroCard" to="." method="_on_card_chosen"]
+[connection signal="inspected" from="Center/Panel/VBox/CardsContainer/TorcheroCard" to="." method="_on_card_inspected"]
 [connection signal="pressed" from="Center/Panel/VBox/RerollRow/RerollButton" to="." method="_on_reroll_pressed"]

@@ -1,0 +1,86 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://unit_card/unit_details_panel.gd" id="1_details"]
+[ext_resource type="PackedScene" path="res://unit_card/skill_column.tscn" id="2_skill"]
+[ext_resource type="FontFile" uid="uid://bst61g6fxq6sj" path="res://data/assets/pixel_ui_theme/m6x11.ttf" id="3_m6x11"]
+
+[node name="UnitDetailsPanel" type="PanelContainer"]
+custom_minimum_size = Vector2(552, 152)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("1_details")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 4
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="HeaderRow" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="NameLabel" type="Label" parent="Margin/VBox/HeaderRow"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_fonts/font = ExtResource("3_m6x11")
+theme_override_font_sizes/font_size = 16
+text = "Knight"
+
+[node name="RoleLabel" type="Label" parent="Margin/VBox/HeaderRow"]
+layout_mode = 2
+mouse_filter = 2
+text = "[Melee]"
+
+[node name="DescriptionLabel" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.82, 0.86, 0.92, 1)
+autowrap_mode = 3
+
+[node name="PassiveRow" type="HBoxContainer" parent="Margin/VBox"]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="PassiveNameLabel" type="Label" parent="Margin/VBox/PassiveRow"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+text = "Passive - Taunt:"
+
+[node name="PassiveDescLabel" type="Label" parent="Margin/VBox/PassiveRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.9, 0.92, 0.96, 1)
+autowrap_mode = 3
+
+[node name="HSeparator" type="HSeparator" parent="Margin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="SkillsRow" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="Skill1Column" parent="Margin/VBox/SkillsRow" instance=ExtResource("2_skill")]
+layout_mode = 2
+
+[node name="VSeparator" type="VSeparator" parent="Margin/VBox/SkillsRow"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Skill2Column" parent="Margin/VBox/SkillsRow" instance=ExtResource("2_skill")]
+layout_mode = 2

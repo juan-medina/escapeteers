@@ -9,6 +9,7 @@ enum SkillType {
 	RANGED,
 	HEAL,
 	SUMMON,
+	PASSIVE,
 }
 
 enum EffectType {
@@ -22,6 +23,7 @@ enum EffectType {
 
 var id: StringName = &""
 var name: String = ""
+var description: String = ""
 var scene_path: String = ""
 var scene: PackedScene = null
 
@@ -84,8 +86,10 @@ static func eval_skill(skill: Dictionary, level: int) -> Dictionary:
 		effect_duration = eval_stat(effect.get(&"duration"), level, 0.0)
 	return {
 		&"name": _str_val(skill, &"name"),
+		&"description": _str_val(skill, &"description"),
 		&"type": skill[&"type"],
 		&"hits": int(_float_val(skill, &"hits", 1.0)),
+		&"has_chance": skill.has(&"chance"),
 		&"amount": eval_stat(skill.get(&"amount"), level, 10.0),
 		&"cooldown": eval_stat(skill.get(&"cooldown"), level, 1.0),
 		&"range": eval_stat(skill.get(&"range"), level, 20.0),
@@ -139,6 +143,7 @@ static func extract_sprite_frames(packed_scene: PackedScene) -> SpriteFrames:
 func parse_base_fields(dict: Dictionary) -> void:
 	id = StringName(_str_val(dict, &"id"))
 	name = _str_val(dict, &"name")
+	description = _str_val(dict, &"description")
 	scene_path = _str_val(dict, &"scene_path")
 	scene = load(scene_path) as PackedScene
 
@@ -166,3 +171,19 @@ func get_health(level: int = 1) -> float:
 
 func get_speed(level: int = 1) -> float:
 	return eval_stat(speed_stat, level, 100.0)
+
+
+func get_active_skills() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for skill: Dictionary in skills:
+		if skill[&"type"] != SkillType.PASSIVE:
+			result.append(skill)
+	return result
+
+
+func get_passive_skills() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for skill: Dictionary in skills:
+		if skill[&"type"] == SkillType.PASSIVE:
+			result.append(skill)
+	return result

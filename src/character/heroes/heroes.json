@@ -6,12 +6,14 @@
 		"abbr": "ARCH",
 		"color": "#55a630",
 		"summary": "Long-range knockback sniper",
+		"description": "Long-range sniper who fires high-damage arrows that shove approaching foes away.",
 		"scene_path": "res://character/heroes/archer/archer.tscn",
 		"health": { "base": 80.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Snipe Arrow",
 				"type": "RANGED",
+				"description": "Heavy knockback shoves distant foes back.",
 				"amount": { "base": 18.0, "growth": 0.10 },
 				"cooldown": { "base": 1.3, "growth": -0.05 },
 				"range": { "base": 145.0, "growth": 0.0 },
@@ -29,12 +31,14 @@
 		"abbr": "AXEM",
 		"color": "#e76f51",
 		"summary": "Sweeping AoE axe cleaves",
+		"description": "Frontline cleaver who swings heavy axes into enemy packs with sweeping burst chops.",
 		"scene_path": "res://character/heroes/armored_axeman/armored_axeman.tscn",
 		"health": { "base": 145.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Axe Chop",
 				"type": "MELEE",
+				"description": "Light stagger keeps enemy packs in reach.",
 				"amount": { "base": 11.0, "growth": 0.10 },
 				"cooldown": { "base": 0.58, "growth": -0.03 },
 				"range": { "base": 22.0, "growth": 0.0 },
@@ -46,6 +50,7 @@
 			{
 				"name": "Whirlwind Cleave",
 				"type": "MELEE",
+				"description": "Sweeping burst chop with strong knockback.",
 				"amount": { "base": 25.0, "growth": 0.10 },
 				"cooldown": { "base": 3.3, "growth": -0.05 },
 				"range": { "base": 22.0, "growth": 0.0 },
@@ -64,12 +69,14 @@
 		"abbr": "KNGH",
 		"color": "#3a86ff",
 		"summary": "High-HP tank; taunts & stuns",
+		"description": "High-health frontline tank who draws enemy aggro and stuns nearby threats.",
 		"scene_path": "res://character/heroes/knight/knight.tscn",
 		"health": { "base": 270.0, "growth": 0.12 },
 		"skills": [
 			{
 				"name": "Sword Strike",
 				"type": "MELEE",
+				"description": "Steady melee slash with no pushback.",
 				"amount": { "base": 8.0, "growth": 0.10 },
 				"cooldown": { "base": 0.55, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 }
@@ -77,6 +84,7 @@
 			{
 				"name": "Heavy Swing",
 				"type": "MELEE",
+				"description": "Shield-bashing strike that stuns nearby foes.",
 				"amount": { "base": 16.0, "growth": 0.10 },
 				"cooldown": { "base": 3.2, "growth": -0.05 },
 				"range": { "base": 20.0, "growth": 0.0 },
@@ -85,6 +93,11 @@
 					"type": "STUN",
 					"duration": { "base": 1.5, "growth": 0.0 }
 				}
+			},
+			{
+				"name": "Taunt",
+				"type": "PASSIVE",
+				"description": "Naturally draws enemy aggro and forces struck foes to focus Knight."
 			}
 		]
 	},
@@ -95,12 +108,14 @@
 		"abbr": "TMPL",
 		"color": "#ffd166",
 		"summary": "Long pike knockback control",
+		"description": "Defensive shock fighter who uses long-reach pike thrusts to push waves back.",
 		"scene_path": "res://character/heroes/knight_templar/knight_templar.tscn",
 		"health": { "base": 150.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Pike Thrust",
 				"type": "MELEE",
+				"description": "Long-reach thrust that pushes enemies away.",
 				"amount": { "base": 8.0, "growth": 0.10 },
 				"cooldown": { "base": 0.65, "growth": -0.03 },
 				"range": { "base": 22.0, "growth": 0.0 },
@@ -112,6 +127,7 @@
 			{
 				"name": "Heavy Smite",
 				"type": "MELEE",
+				"description": "Empowered strike with heavy knockback.",
 				"amount": { "base": 20.0, "growth": 0.10 },
 				"cooldown": { "base": 3.5, "growth": -0.05 },
 				"range": { "base": 22.0, "growth": 0.0 },
@@ -130,12 +146,14 @@
 		"abbr": "PRST",
 		"color": "#e0fbfc",
 		"summary": "Heals squad & stuns foes",
+		"description": "Backline support who prioritizes healing wounded allies and stuns foes between heals.",
 		"scene_path": "res://character/heroes/priest/priest.tscn",
 		"health": { "base": 80.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Divine Heal",
 				"type": "HEAL",
+				"description": "Restores health to the most wounded ally.",
 				"amount": { "base": 20.0, "growth": 0.10 },
 				"cooldown": { "base": 5.0, "growth": -0.05 },
 				"range": { "base": 140.0, "growth": 0.0 }
@@ -143,6 +161,7 @@
 			{
 				"name": "Holy Smite",
 				"type": "RANGED",
+				"description": "Strikes a distant enemy and stuns them.",
 				"amount": { "base": 5.0, "growth": 0.10 },
 				"cooldown": { "base": 2.5, "growth": -0.05 },
 				"range": { "base": 140.0, "growth": 0.0 },
@@ -160,12 +179,14 @@
 		"abbr": "SOLD",
 		"color": "#c0392b",
 		"summary": "Marks targets for bonus dmg",
+		"description": "Tactical spotter who marks distant enemies for bonus squad damage and guards close range.",
 		"scene_path": "res://character/heroes/soldier/soldier.tscn",
 		"health": { "base": 115.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Arrow Shot",
 				"type": "RANGED",
+				"description": "Prioritizes unmarked foes; marked targets take extra squad damage.",
 				"amount": { "base": 7.0, "growth": 0.10 },
 				"cooldown": { "base": 0.9, "growth": -0.04 },
 				"range": { "base": 140.0, "growth": 0.0 },
@@ -178,6 +199,7 @@
 			{
 				"name": "Sword Slash",
 				"type": "MELEE",
+				"description": "Fast close-range blade defense.",
 				"amount": { "base": 10.0, "growth": 0.10 },
 				"cooldown": { "base": 0.45, "growth": -0.03 },
 				"range": { "base": 22.0, "growth": 0.0 },
@@ -192,12 +214,14 @@
 		"abbr": "SWRD",
 		"color": "#2a9d8f",
 		"summary": "Fast multi-hit blade burst",
+		"description": "Rapid-strike duelist who delivers relentless sword slashes and fast three-hit flurries.",
 		"scene_path": "res://character/heroes/swordsman/swordsman.tscn",
 		"health": { "base": 125.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Quick Slash",
 				"type": "MELEE",
+				"description": "Rapid single-target strikes with no knockback.",
 				"amount": { "base": 10.0, "growth": 0.10 },
 				"cooldown": { "base": 0.45, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 }
@@ -205,6 +229,7 @@
 			{
 				"name": "Blade Flurry",
 				"type": "MELEE",
+				"description": "Unleashes 3 rapid hits without pushing foes away.",
 				"amount": { "base": 10.0, "growth": 0.10 },
 				"hits": 3,
 				"cooldown": { "base": 3.0, "growth": -0.05 },
@@ -220,12 +245,14 @@
 		"abbr": "WIZD",
 		"color": "#9b5de5",
 		"summary": "Piercing bolts chill enemies",
+		"description": "Backline spellcaster whose piercing frost bolts chill and slow advancing groups.",
 		"scene_path": "res://character/heroes/wizard/wizard.tscn",
 		"health": { "base": 70.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Frost Bolt",
 				"type": "RANGED",
+				"description": "Pierces up to 2 enemies and slows their movement.",
 				"amount": { "base": 10.0, "growth": 0.10 },
 				"cooldown": { "base": 1.25, "growth": -0.05 },
 				"range": { "base": 140.0, "growth": 0.0 },
@@ -244,6 +271,7 @@
 		"abbr": "TRCH",
 		"color": "#ff6b35",
 		"summary": "Burning torch melee strikes",
+		"description": "Secret torch-bearer who lights the darkness and ignites unburned foes with fire.",
 		"secret": true,
 		"scene_path": "res://character/heroes/torchero/torchero.tscn",
 		"health": { "base": 140.0, "growth": 0.10 },
@@ -251,6 +279,7 @@
 			{
 				"name": "Torch Strike",
 				"type": "MELEE",
+				"description": "Ignites struck enemies for fire damage over time.",
 				"amount": { "base": 12.0, "growth": 0.10 },
 				"cooldown": { "base": 0.5, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 },
@@ -259,6 +288,11 @@
 					"amount": { "base": 6.0, "growth": 0.10 },
 					"duration": 6.0
 				}
+			},
+			{
+				"name": "Torchlight",
+				"type": "PASSIVE",
+				"description": "Lights nearby darkness and prioritizes igniting unburned enemies."
 			}
 		]
 	}

@@ -11,10 +11,22 @@ const MAX_CHOICES: int = 3
 
 var _cards_by_id: Dictionary[StringName, UnitCard] = {}
 var _current_choice_ids: Array[StringName] = []
+var _visible_cards: Array[UnitCard] = []
+var _last_inspected_card: UnitCard = null
 
-@onready var _cards_container: VBoxContainer = $Center/Panel/VBox/CardsContainer
+@onready var _cards_container: HBoxContainer = $Center/Panel/VBox/CardsContainer
+@onready var _details_panel: UnitDetailsPanel = $Center/Panel/VBox/UnitDetailsPanel
 @onready var _coin_count_label: Label = $Center/Panel/VBox/RerollRow/CoinCountLabel
 @onready var _reroll_button: Button = $Center/Panel/VBox/RerollRow/RerollButton
+
+
+static func _build_level_weights(candidates: Array[HeroData], class_levels: Dictionary[StringName, int]) -> Array[float]:
+	var weights: Array[float] = []
+	for hero: HeroData in candidates:
+		var raw_lvl: int = class_levels.get(hero.id, 1)
+		var lvl: int = maxi(raw_lvl, 1)
+		weights.append(1.0 / float(lvl))
+	return weights
 
 
 func _ready() -> void:
@@ -48,6 +60,8 @@ func _apply_choices(choices: Array[HeroData], class_levels: Dictionary[StringNam
 	for card: UnitCard in _cards_by_id.values():
 		card.visible = false
 	_current_choice_ids.clear()
+	_visible_cards.clear()
+	_last_inspected_card = null
 
 	var choice_count: int = mini(choices.size(), MAX_CHOICES)
 	for i: int in range(choice_count):
@@ -59,14 +73,43 @@ func _apply_choices(choices: Array[HeroData], class_levels: Dictionary[StringNam
 		_cards_container.move_child(card, i)
 		card.update_stats(cur_lvl + 1, count, cur_lvl)
 		card.visible = true
+		_visible_cards.append(card)
 		if i == 0:
-			first_focus = card.get_recruit_button()
+			first_focus = card
+
+	if not _visible_cards.is_empty():
+		_last_inspected_card = _visible_cards[0]
+		_visible_cards[0].emit_inspected()
 
 
 func _update_reroll_ui(reroll_coins: int, can_reroll: bool) -> void:
 	_coin_count_label.text = &"Coins: %d" % reroll_coins
 	_reroll_button.disabled = not (can_reroll and reroll_coins > 0)
 	_reroll_button.focus_mode = Control.FOCUS_NONE if _reroll_button.disabled else Control.FOCUS_ALL
+	_update_focus_neighbors()
+
+
+func _update_focus_neighbors() -> void:
+	var count: int = _visible_cards.size()
+	var bottom_path: NodePath = _reroll_button.get_path() if not _reroll_button.disabled else NodePath()
+	for i: int in range(count):
+		var card: UnitCard = _visible_cards[i]
+		var left_idx: int = (i - 1 + count) % count
+		var right_idx: int = (i + 1) % count
+		card.focus_neighbor_left = _visible_cards[left_idx].get_path() if count > 1 else NodePath()
+		card.focus_neighbor_right = _visible_cards[right_idx].get_path() if count > 1 else NodePath()
+		card.focus_neighbor_top = NodePath()
+		card.focus_neighbor_bottom = bottom_path
+
+	_update_reroll_top_neighbor()
+
+
+func _update_reroll_top_neighbor() -> void:
+	if _reroll_button.disabled or _visible_cards.is_empty():
+		_reroll_button.focus_neighbor_top = NodePath()
+		return
+	var target: UnitCard = _last_inspected_card if (_last_inspected_card != null and _last_inspected_card.visible) else _visible_cards[0]
+	_reroll_button.focus_neighbor_top = target.get_path()
 
 
 func _roll_choices(class_levels: Dictionary[StringName, int], unit_counts: Dictionary[StringName, int]) -> Array[HeroData]:
@@ -100,18 +143,15 @@ func _roll_reroll_choices(class_levels: Dictionary[StringName, int], unit_counts
 	return choices
 
 
-static func _build_level_weights(candidates: Array[HeroData], class_levels: Dictionary[StringName, int]) -> Array[float]:
-	var weights: Array[float] = []
-	for hero: HeroData in candidates:
-		var raw_lvl: int = class_levels.get(hero.id, 1)
-		var lvl: int = maxi(raw_lvl, 1)
-		weights.append(1.0 / float(lvl))
-	return weights
-
-
 func _on_card_chosen(hero_data: HeroData) -> void:
 	visible = false
 	class_leveled_up.emit(hero_data)
+
+
+func _on_card_inspected(hero_data: HeroData, target_level: int, prev_level: int) -> void:
+	_details_panel.show_hero(hero_data, target_level, prev_level)
+	_last_inspected_card = _cards_by_id[hero_data.id]
+	_update_reroll_top_neighbor()
 
 
 func _on_reroll_pressed() -> void:

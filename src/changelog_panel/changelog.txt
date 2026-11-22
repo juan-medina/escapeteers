@@ -7,6 +7,7 @@
 - [color=#ffffff][b]Secret Lever Shortcuts:[/b][/color] Pull key-room levers to open hidden shortcut walls.
 
 [color=#e0e0e0][b]Changed[/b][/color]
+- [color=#ffffff][b]Clearer Draft Cards:[/b][/color] Redesigned hero cards with full skill details.
 - [color=#ffffff][b]Hero Class Rebalance:[/b][/color]
   - [b]Knight:[/b] Doubled health, draws monster aggro, and stuns instead of knocking back.
   - [b]Soldier:[/b] Faster bow shots mark foes for extra damage; shorter melee leash.
