@@ -60,6 +60,9 @@ var _hud_door_indicators: Array[Node2D] = []
 var _hud_door_arrows: Array[Node2D] = []
 var _hud_key_indicators: Array[Node2D] = []
 var _hud_key_arrows: Array[Node2D] = []
+var _visibility: MapVisibility = MapVisibility.new()
+var _visited_fov_chunks: Dictionary[Vector2i, bool] = {}
+var _fov_chunks: Dictionary[Vector2i, bool] = {}
 
 @onready var _chunks_container: Node2D = $Chunks
 @onready var _unexplored_floor_mesh: MeshInstance2D = $Chunks/UnexploredFloorMesh
@@ -166,6 +169,7 @@ func set_squad_level(squad_level: int) -> void:
 
 
 func set_key_state(color: WorldPlan.KeyColor, collected: bool, used: bool) -> void:
+	var newly_unlocked: bool = used and not _unlocked_doors.has(color)
 	if collected:
 		_collected_keys[color] = true
 	else:
@@ -175,6 +179,14 @@ func set_key_state(color: WorldPlan.KeyColor, collected: bool, used: bool) -> vo
 	else:
 		_unlocked_doors.erase(color)
 	_update_gate_markers_visibility()
+	if newly_unlocked and _plan != null:
+		for gate: SectorGatePlanner.SectorGate in _plan.sector_gates:
+			if gate.color == color:
+				_visibility.open_door(gate)
+		_visited_fov_chunks.clear()
+		_last_revealed_chunk = Vector2i(2147483647, 2147483647)
+		if is_instance_valid(_target):
+			_update_discovery()
 
 
 func notify_shortcut_opened(color: WorldPlan.KeyColor) -> void:
@@ -185,6 +197,7 @@ func notify_shortcut_opened(color: WorldPlan.KeyColor) -> void:
 	for gate: SectorGatePlanner.SectorGate in _plan.sector_gates:
 		if gate.color != color:
 			continue
+		_visibility.open_shortcut(gate)
 		for coord: Vector2i in gate.opened_map_chunk_coords:
 			if gate.opened_map_floors.has(coord):
 				_chunk_floor_vertices[coord] = gate.opened_map_floors[coord]
@@ -195,11 +208,15 @@ func notify_shortcut_opened(color: WorldPlan.KeyColor) -> void:
 			_revealed_chunks[coord] = true
 			changed = true
 
+	_visited_fov_chunks.clear()
+	_last_revealed_chunk = Vector2i(2147483647, 2147483647)
 	if changed:
 		_rebuild_cached_buffers_from_revealed()
 		_update_gate_markers_visibility()
 		if visible:
 			_rebuild_meshes()
+	if is_instance_valid(_target):
+		_update_discovery()
 
 
 func get_room_color(room: Rect2i) -> Color:
@@ -254,32 +271,43 @@ func _update_discovery() -> void:
 	if cur_chunk == _last_revealed_chunk:
 		return
 	_last_revealed_chunk = cur_chunk
-	_reveal_chunks_at(cur_chunk)
+	if _visited_fov_chunks.has(cur_chunk):
+		return
+	_visited_fov_chunks[cur_chunk] = true
+	var origin_tile: Vector2i = Vector2i(floori(_target.global_position.x / TILE_SIZE), floori(_target.global_position.y / TILE_SIZE))
+	_reveal_chunks_at(origin_tile)
 
 
-func _reveal_chunks_at(player_chunk: Vector2i) -> void:
+func _reveal_chunks_at(origin_tile: Vector2i) -> void:
+	(
+		_visibility
+		. compute_fov(
+			origin_tile,
+			reveal_chunk_radius * CHUNK_SIZE_TILES,
+			explore_chunk_radius * CHUNK_SIZE_TILES,
+			_fov_chunks,
+		)
+	)
 	var markers_changed: bool = false
-	for dy: int in range(-reveal_chunk_radius, reveal_chunk_radius + 1):
-		for dx: int in range(-reveal_chunk_radius, reveal_chunk_radius + 1):
-			var coord: Vector2i = player_chunk + Vector2i(dx, dy)
-			var is_explore: bool = maxi(absi(dx), absi(dy)) <= explore_chunk_radius
-			if not _revealed_chunks.has(coord):
-				_revealed_chunks[coord] = true
-				markers_changed = true
-				if _chunk_segments.has(coord):
-					_wall_verts.append_array(_chunk_segments[coord])
-					_walls_dirty = true
-				if not is_explore and _chunk_floor_vertices.has(coord):
-					_unexplored_floor_chunks[coord] = _chunk_floor_vertices[coord]
-					_unexplored_dirty = true
+	for coord: Vector2i in _fov_chunks:
+		var is_explore: bool = _fov_chunks[coord]
+		if not _revealed_chunks.has(coord):
+			_revealed_chunks[coord] = true
+			markers_changed = true
+			if _chunk_segments.has(coord):
+				_wall_verts.append_array(_chunk_segments[coord])
+				_walls_dirty = true
+			if not is_explore and _chunk_floor_vertices.has(coord):
+				_unexplored_floor_chunks[coord] = _chunk_floor_vertices[coord]
+				_unexplored_dirty = true
 
-			if is_explore and not _explored_chunks.has(coord):
-				_explored_chunks[coord] = true
-				if _unexplored_floor_chunks.erase(coord):
-					_unexplored_dirty = true
-				if _chunk_floor_vertices.has(coord):
-					_explored_floor_verts.append_array(_chunk_floor_vertices[coord])
-					_explored_dirty = true
+		if is_explore and not _explored_chunks.has(coord):
+			_explored_chunks[coord] = true
+			if _unexplored_floor_chunks.erase(coord):
+				_unexplored_dirty = true
+			if _chunk_floor_vertices.has(coord):
+				_explored_floor_verts.append_array(_chunk_floor_vertices[coord])
+				_explored_dirty = true
 
 	if markers_changed:
 		_update_gate_markers_visibility()
@@ -361,6 +389,8 @@ func _build_chunks(plan: WorldPlan) -> void:
 	_opened_shortcuts.clear()
 	_collected_keys.clear()
 	_unlocked_doors.clear()
+	_visited_fov_chunks.clear()
+	_fov_chunks.clear()
 	for marker: Node2D in _door_markers:
 		marker.visible = false
 	for marker: Node2D in _key_markers:
@@ -372,10 +402,12 @@ func _build_chunks(plan: WorldPlan) -> void:
 	_last_revealed_chunk = Vector2i(2147483647, 2147483647)
 
 	if plan.carve_rects.is_empty():
+		_visibility.setup(null)
 		for label: Label in _label_pool:
 			label.visible = false
 		return
 
+	_visibility.setup(plan)
 	map_scale = float(pixels_per_tile) / TILE_SIZE
 	_chunks_container.scale = Vector2(map_scale, map_scale)
 	_extract_chunked_floors(plan)
