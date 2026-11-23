@@ -139,6 +139,7 @@ func generate(seed_val: int = 0, max_depth: int = 12) -> void:
 	_prune_clipped_pillars()
 	_color_room_graph()
 	_eliminate_narrow_gaps()
+	_assign_wing_tile_sets()
 	for room: Rect2i in rooms:
 		_plan_candle_posts_for_room(room)
 	SectorGatePlanner.plan_spike_traps(self)
@@ -920,3 +921,57 @@ func _commit_spike_cells(cells: Array[Vector2i]) -> void:
 	for cell: Vector2i in cells:
 		_spike_cells[cell] = group_id
 		spike_tile_sets[cell] = get_cell_tile_set(cell)
+
+
+func _assign_wing_tile_sets() -> void:
+	var hubs: Array[Rect2i] = [hero_room]
+	var gate_parent_for_hub: Dictionary[Rect2i, Rect2i] = {}
+	for gate: SectorGatePlanner.SectorGate in sector_gates:
+		gate_parent_for_hub[gate.next_room] = gate.gate_room
+		hubs.append(gate.next_room)
+
+	for hub: Rect2i in hubs:
+		var hub_sector: int = _room_sectors.get(hub, 0)
+		if hub != hero_room:
+			var prev_gate_room: Rect2i = gate_parent_for_hub.get(hub, Rect2i())
+			var prev_ts: int = _room_tile_sets.get(prev_gate_room, -1)
+			var hub_pool: Array[int] = _build_shuffled_tile_set_pool(prev_ts)
+			_room_tile_sets[hub] = hub_pool[0]
+
+		var hub_ts: int = _room_tile_sets.get(hub, 0)
+		var wing_roots: Array[Rect2i] = []
+		for child_var: Variant in get_child_rooms(hub):
+			if child_var is Rect2i:
+				var child: Rect2i = child_var
+				if _room_sectors.get(child, -1) == hub_sector:
+					wing_roots.append(child)
+
+		var wing_pool: Array[int] = _build_shuffled_tile_set_pool(hub_ts)
+		for i: int in range(wing_roots.size()):
+			var wing_ts: int = hub_ts if hub_sector >= 4 else wing_pool[i % wing_pool.size()]
+			_propagate_wing_tile_set(wing_roots[i], hub_sector, wing_ts)
+
+
+func _build_shuffled_tile_set_pool(excluded: int) -> Array[int]:
+	var pool: Array[int] = []
+	for ts: int in range(TILE_SET_COUNT):
+		if ts != excluded:
+			pool.append(ts)
+	for i: int in range(pool.size() - 1, 0, -1):
+		var swap_idx: int = _rng.randi_range(0, i)
+		var tmp: int = pool[i]
+		pool[i] = pool[swap_idx]
+		pool[swap_idx] = tmp
+	return pool
+
+
+func _propagate_wing_tile_set(root_room: Rect2i, sector_idx: int, tile_set: int) -> void:
+	var stack: Array[Rect2i] = [root_room]
+	while not stack.is_empty():
+		var cur: Rect2i = stack.pop_back()
+		_room_tile_sets[cur] = tile_set
+		for child_var: Variant in get_child_rooms(cur):
+			if child_var is Rect2i:
+				var child: Rect2i = child_var
+				if _room_sectors.get(child, -1) == sector_idx:
+					stack.append(child)
