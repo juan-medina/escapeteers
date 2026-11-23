@@ -19,6 +19,7 @@ class SectorGate:
 	var shortcut_flank_cells: Array[Vector2i] = []
 	var lever_cell: Vector2i = Vector2i.ZERO
 	var shortcut_corridor_rects: Array[Rect2i] = []
+	var shortcut_waypoints: Array[Vector2i] = []
 	var tunnel_floors: Dictionary[Vector2i, Vector2i] = {}
 	var tunnel_walls: Dictionary[Vector2i, Vector2i] = {}
 	var tunnel_erased_walls: Array[Vector2i] = []
@@ -31,6 +32,8 @@ class SectorGate:
 
 
 const GATE_DEPTHS: Array[int] = [2, 5, 8, 11]
+const MIN_KEY_HOPS: int = 4
+const MAX_KEY_EXTEND_STEPS: int = 4
 
 
 static func get_sector_for_depth(depth: int) -> int:
@@ -45,129 +48,339 @@ static func get_sector_for_depth(depth: int) -> int:
 	return 4
 
 
-static func build_sector_gate(plan: WorldPlan, frontier_rooms: Array[Rect2i], current_depth: int) -> Array[Rect2i]:
+static func build_sector_gate(
+	plan: WorldPlan,
+	sector_rooms: Array[Rect2i],
+	entry_room: Rect2i,
+	sector_idx: int,
+	current_depth: int,
+) -> Rect2i:
 	var gate_idx: int = GATE_DEPTHS.find(current_depth)
 	if gate_idx < 0:
-		return []
+		return Rect2i()
 
 	var gate_color: WorldPlan.KeyColor = gate_idx as WorldPlan.KeyColor
-	var gate_room: Rect2i = _pick_gate_room(plan, frontier_rooms, current_depth)
+	var bfs_rooms: Array[Rect2i] = sector_rooms.duplicate()
+	if not bfs_rooms.has(entry_room):
+		bfs_rooms.append(entry_room)
+	var dist_from_entry: Dictionary[Rect2i, int] = _bfs_sector_distances(plan, entry_room, bfs_rooms)
+	var gate_room: Rect2i = _pick_gate_room(plan, sector_rooms, entry_room, dist_from_entry)
 	if gate_room.size == Vector2i.ZERO:
-		return []
+		return Rect2i()
 
-	var key_room: Rect2i = _ensure_key_room(plan, gate_room, current_depth, gate_idx)
+	var dist_from_gate: Dictionary[Rect2i, int] = _bfs_sector_distances(plan, gate_room, bfs_rooms)
+	var key_room: Rect2i = _ensure_key_room(
+		plan,
+		gate_room,
+		entry_room,
+		sector_rooms,
+		bfs_rooms,
+		dist_from_gate,
+		dist_from_entry,
+		sector_idx,
+		current_depth,
+	)
+
 	var gate: SectorGate = SectorGate.new()
 	gate.color = gate_color
 	gate.gate_depth = current_depth
 	gate.gate_room = gate_room
 	gate.key_room = key_room
 
-	_setup_shortcut_and_key(plan, gate, key_room, gate_room)
-	var next_room: Rect2i = _spawn_next_sector_room(plan, gate, gate_room, current_depth + 1)
+	var next_room: Rect2i = _spawn_next_sector_room(plan, gate, gate_room, current_depth + 1, sector_idx + 1)
 	if next_room.size == Vector2i.ZERO:
-		return []
-
+		return Rect2i()
 	gate.next_room = next_room
+
+	_setup_shortcut_and_key(plan, gate, key_room, gate_room, sector_idx)
+	_add_safe_sector_loops(plan, gate, sector_rooms, bfs_rooms, gate_room, key_room, sector_idx)
+	if key_room != gate_room:
+		plan._add_neighbor_edge(key_room, gate_room)
 	plan.sector_gates.append(gate)
 	_register_gate_tiles_and_no_prop(plan, gate)
-	return [next_room]
+	return next_room
 
 
-static func _pick_gate_room(plan: WorldPlan, frontier_rooms: Array[Rect2i], current_depth: int) -> Rect2i:
-	var pool: Array[Rect2i] = frontier_rooms
+static func _bfs_sector_distances(plan: WorldPlan, origin: Rect2i, sector_rooms: Array[Rect2i]) -> Dictionary[Rect2i, int]:
+	var allowed: Dictionary[Rect2i, bool] = {origin: true}
+	for r: Rect2i in sector_rooms:
+		allowed[r] = true
+
+	var dists: Dictionary[Rect2i, int] = {origin: 0}
+	var queue: Array[Rect2i] = [origin]
+	var head: int = 0
+	while head < queue.size():
+		var cur: Rect2i = queue[head]
+		head += 1
+		var cur_dist: int = dists[cur]
+		var neighbors: Array = plan._room_neighbors.get(cur, [])
+		for n_var: Variant in neighbors:
+			if n_var is Rect2i:
+				var n_room: Rect2i = n_var
+				if allowed.has(n_room) and not dists.has(n_room):
+					dists[n_room] = cur_dist + 1
+					queue.append(n_room)
+	return dists
+
+
+static func _get_sector_degree(plan: WorldPlan, room: Rect2i, sector_rooms: Array[Rect2i]) -> int:
+	var deg: int = 0
+	var neighbors: Array = plan._room_neighbors.get(room, [])
+	for n_var: Variant in neighbors:
+		if n_var is Rect2i:
+			var n_room: Rect2i = n_var
+			if sector_rooms.has(n_room) or n_room == plan.hero_room:
+				deg += 1
+	return deg
+
+
+static func _has_clear_north_wall_strip(plan: WorldPlan, room: Rect2i, height: int = 6) -> bool:
+	var door_x: int = room.get_center().x - 1
+	var door_y: int = room.position.y
+	var probe: Rect2i = Rect2i(door_x - 3, door_y - height, 8, height)
+	if plan._is_outside_world_bounds(probe):
+		return false
+	return not plan.spatial_grid.intersects_any(probe, plan.carve_rects, 0)
+
+
+static func _has_clear_north_gate_space(plan: WorldPlan, room: Rect2i, probe_height: int) -> bool:
+	if not _has_clear_north_wall_strip(plan, room, 6):
+		return false
+	var probe_rect: Rect2i = Rect2i(room.get_center().x - 18, room.position.y - 14 - probe_height, 36, probe_height)
+	if plan._is_outside_world_bounds(probe_rect) or plan.hero_room.grow(4).intersects(probe_rect):
+		return false
+	if plan._room_grid.intersects_any(probe_rect, plan.rooms, 4):
+		return false
+	return not WorldPlan._intersects_any_rect(probe_rect.grow(2), plan._corridor_rects)
+
+
+static func _pick_gate_room(plan: WorldPlan, sector_rooms: Array[Rect2i], entry_room: Rect2i, dist_from_entry: Dictionary[Rect2i, int]) -> Rect2i:
+	var pool: Array[Rect2i] = []
+	for probe_h: int in [44, 24, 0]:
+		for r: Rect2i in sector_rooms:
+			if r == entry_room or r == plan.hero_room:
+				continue
+			var ok: bool = _has_clear_north_gate_space(plan, r, probe_h) if probe_h > 0 else _has_clear_north_wall_strip(plan, r, 6)
+			if ok:
+				pool.append(r)
+		if not pool.is_empty():
+			break
+
 	if pool.is_empty():
-		pool = plan.get_depth_rooms(current_depth)
-	if pool.is_empty():
-		return Rect2i()
+		return sector_rooms[0] if not sector_rooms.is_empty() else Rect2i()
 
 	var best: Rect2i = pool[0]
-	var best_score: int = best.position.y * 10 + absi(best.get_center().x)
+	var best_score: int = _score_gate_candidate(best, dist_from_entry)
 	for r: Rect2i in pool:
-		var score: int = r.position.y * 10 + absi(r.get_center().x)
+		var score: int = _score_gate_candidate(r, dist_from_entry)
 		if score < best_score:
 			best_score = score
 			best = r
 	return best
 
 
-static func _ensure_key_room(plan: WorldPlan, gate_room: Rect2i, current_depth: int, sector_idx: int) -> Rect2i:
-	var candidates: Array[Rect2i] = []
-	for r: Rect2i in plan.rooms:
-		if r == gate_room:
+static func _score_gate_candidate(room: Rect2i, dist_from_entry: Dictionary[Rect2i, int]) -> int:
+	var entry_bonus: int = -120 if dist_from_entry.get(room, 0) >= 2 else 0
+	return room.position.y * 10 + absi(room.get_center().x) + entry_bonus
+
+
+static func _ensure_key_room(
+	plan: WorldPlan,
+	gate_room: Rect2i,
+	entry_room: Rect2i,
+	sector_rooms: Array[Rect2i],
+	bfs_rooms: Array[Rect2i],
+	dist_from_gate: Dictionary[Rect2i, int],
+	dist_from_entry: Dictionary[Rect2i, int],
+	sector_idx: int,
+	current_depth: int,
+) -> Rect2i:
+	var valid: Array[Rect2i] = _collect_valid_key_candidates(plan, gate_room, entry_room, sector_rooms)
+	var max_dist: int = _max_candidate_dist(valid, dist_from_gate)
+
+	for step: int in range(MAX_KEY_EXTEND_STEPS + 1):
+		if not valid.is_empty() and (step >= MAX_KEY_EXTEND_STEPS or max_dist >= MIN_KEY_HOPS):
+			break
+		var ext: Rect2i = _spawn_key_wing_extension(plan, gate_room, entry_room, sector_rooms, dist_from_gate, sector_idx, current_depth)
+		if ext.size == Vector2i.ZERO:
+			break
+		sector_rooms.append(ext)
+		bfs_rooms.append(ext)
+		dist_from_gate = _bfs_sector_distances(plan, gate_room, bfs_rooms)
+		dist_from_entry = _bfs_sector_distances(plan, entry_room, bfs_rooms)
+		valid = _collect_valid_key_candidates(plan, gate_room, entry_room, sector_rooms)
+		max_dist = _max_candidate_dist(valid, dist_from_gate)
+
+	if valid.is_empty():
+		for r: Rect2i in sector_rooms:
+			if r != gate_room and r != entry_room and r != plan.hero_room:
+				valid.append(r)
+		if valid.is_empty():
+			return gate_room
+
+	return _pick_best_key_room(plan, gate_room, sector_rooms, valid, dist_from_gate, dist_from_entry)
+
+
+static func _collect_valid_key_candidates(
+	plan: WorldPlan,
+	gate_room: Rect2i,
+	entry_room: Rect2i,
+	sector_rooms: Array[Rect2i],
+) -> Array[Rect2i]:
+	var valid: Array[Rect2i] = []
+	for r: Rect2i in sector_rooms:
+		if r == gate_room or r == entry_room or r == plan.hero_room:
 			continue
-		if get_sector_for_depth(plan.get_room_depth(r)) == sector_idx:
-			candidates.append(r)
+		if _has_clear_north_wall_strip(plan, r, 6):
+			valid.append(r)
+	return valid
 
-	var same_depth_count: int = 0
+
+static func _max_candidate_dist(candidates: Array[Rect2i], dist_from_gate: Dictionary[Rect2i, int]) -> int:
+	var best: int = -1
 	for r: Rect2i in candidates:
-		if plan.get_room_depth(r) == current_depth:
-			same_depth_count += 1
+		var d: int = dist_from_gate.get(r, -1)
+		if d > best:
+			best = d
+	return best
 
-	if same_depth_count == 0:
-		var wing: Rect2i = _spawn_lateral_wing_room(plan, gate_room, current_depth)
-		if wing.size != Vector2i.ZERO:
-			candidates.append(wing)
 
-	if candidates.is_empty():
-		return gate_room
-
+static func _pick_best_key_room(
+	plan: WorldPlan,
+	gate_room: Rect2i,
+	sector_rooms: Array[Rect2i],
+	candidates: Array[Rect2i],
+	dist_from_gate: Dictionary[Rect2i, int],
+	dist_from_entry: Dictionary[Rect2i, int],
+) -> Rect2i:
 	var gate_center: Vector2i = gate_room.get_center()
 	var best: Rect2i = candidates[0]
 	var best_score: int = -999999999
+
 	for r: Rect2i in candidates:
-		var r_depth: int = plan.get_room_depth(r)
-		var depth_bonus: int = 10000 if r_depth == current_depth else r_depth * 500
-		var lateral_sep: int = absi(r.get_center().x - gate_center.x) * 20
-		var north_penalty: int = maxi(0, gate_room.position.y - r.position.y) * 50
-		var score: int = depth_bonus + lateral_sep - north_penalty
+		var hop_dist: int = dist_from_gate.get(r, 1)
+		var reach_bonus: int = 3000 if hop_dist >= MIN_KEY_HOPS else 0
+		var hop_score: int = mini(hop_dist, 6) * 700
+		var leaf_bonus: int = 600 if _get_sector_degree(plan, r, sector_rooms) <= 1 else 0
+		var entry_sep: int = 200 if dist_from_entry.get(r, 0) >= 2 else 0
+		var euclid_dist: int = int(roundf(Vector2(r.get_center()).distance_to(Vector2(gate_center))))
+		var north_penalty: int = 400 if r.position.y < gate_room.position.y - 4 else 0
+		var score: int = reach_bonus + hop_score + leaf_bonus + entry_sep - euclid_dist * 8 - north_penalty
 		if score > best_score:
 			best_score = score
 			best = r
 	return best
 
 
-static func _spawn_lateral_wing_room(plan: WorldPlan, gate_room: Rect2i, target_depth: int) -> Rect2i:
-	var parent_room: Rect2i = _find_parent_for_wing(plan, gate_room, target_depth)
-	var min_size: Vector2i = plan._get_min_size_for_depth(target_depth)
-	var max_size: Vector2i = plan._get_max_size_for_depth(target_depth)
-	var dist_range: Vector2 = plan._get_step_distance_for_depth(target_depth)
-	var base_center: Vector2 = Vector2(parent_room.get_center())
-	var prefer_side: float = -1.0 if gate_room.get_center().x >= 0 else 1.0
+static func _spawn_key_wing_extension(
+	plan: WorldPlan,
+	gate_room: Rect2i,
+	entry_room: Rect2i,
+	sector_rooms: Array[Rect2i],
+	dist_from_gate: Dictionary[Rect2i, int],
+	sector_idx: int,
+	target_depth: int,
+) -> Rect2i:
+	var tried: Dictionary[Rect2i, bool] = {}
+	var south_limit_y: int = (plan.hero_room.end.y + 45) if sector_idx == 0 else (entry_room.end.y + 25)
+	var gate_center: Vector2 = Vector2(gate_room.get_center())
 
-	for attempt: int in range(WorldPlan.MAX_PLACEMENT_ATTEMPTS * 2):
-		var side_dir: float = prefer_side if attempt < WorldPlan.MAX_PLACEMENT_ATTEMPTS else -prefer_side
-		var angle: float = -PI * 0.5 + side_dir * plan._rng.randf_range(0.75, 1.35)
-		var step_dist: float = plan._rng.randf_range(dist_range.x, dist_range.y + 16.0)
-		var size: Vector2i = Vector2i(plan._rng.randi_range(min_size.x, max_size.x), plan._rng.randi_range(min_size.y, max_size.y))
-		var center_pos: Vector2 = base_center + Vector2.from_angle(angle) * step_dist
-		var top_left: Vector2i = Vector2i(center_pos.round()) - Vector2i(Vector2(size) * 0.5)
-		var candidate: Rect2i = Rect2i(top_left, size)
-		if candidate.position.y < gate_room.position.y + 4:
-			continue
-		if plan._is_outside_world_bounds(candidate) or plan._overlaps_any_room(candidate):
-			continue
-		if not plan.room_children.has(parent_room):
-			plan.room_children[parent_room] = []
-		plan.room_children[parent_room].append(candidate)
-		plan._add_neighbor_edge(parent_room, candidate)
-		plan._add_room(candidate, target_depth)
-		plan._carve_corridor(parent_room.get_center(), candidate.get_center())
-		return candidate
+	for _pick: int in range(sector_rooms.size()):
+		var best_p: Rect2i = Rect2i()
+		var best_score: int = -999999
+		for r: Rect2i in sector_rooms:
+			if r == gate_room or tried.has(r) or not dist_from_gate.has(r):
+				continue
+			var s: int = dist_from_gate[r] * 10 - _get_sector_degree(plan, r, sector_rooms)
+			if s > best_score:
+				best_score = s
+				best_p = r
+		if best_p.size == Vector2i.ZERO:
+			break
+		tried[best_p] = true
+		var away_dir: Vector2 = Vector2(best_p.get_center()) - gate_center
+		var away_angle: float = away_dir.angle() if away_dir.length_squared() > 1.0 else (-PI * 0.85 if best_p.get_center().x <= 0 else -PI * 0.15)
+		for attempt: int in range(28):
+			var spread: float = 0.75 if attempt < 16 else 1.55
+			var angle: float = away_angle + plan._rng.randf_range(-spread, spread)
+			var wing: Rect2i = plan._try_place_maze_child(best_p, sector_idx, target_depth, angle, south_limit_y, true)
+			if wing.size != Vector2i.ZERO:
+				return wing
 	return Rect2i()
 
 
-static func _find_parent_for_wing(plan: WorldPlan, gate_room: Rect2i, target_depth: int) -> Rect2i:
-	for p: Rect2i in plan.room_children:
-		var children: Array = plan.room_children[p]
-		if children.has(gate_room):
-			return p
-	var prev_rooms: Array[Rect2i] = plan.get_depth_rooms(target_depth - 1)
-	if not prev_rooms.is_empty():
-		return prev_rooms[0]
-	return plan.hero_room
+static func _add_safe_sector_loops(
+	plan: WorldPlan,
+	gate: SectorGate,
+	sector_rooms: Array[Rect2i],
+	bfs_rooms: Array[Rect2i],
+	gate_room: Rect2i,
+	key_room: Rect2i,
+	sector_idx: int,
+) -> void:
+	var pairs: Array[Array] = []
+	for i: int in range(sector_rooms.size()):
+		var room_a: Rect2i = sector_rooms[i]
+		if room_a == key_room:
+			continue
+		for j: int in range(i + 1, sector_rooms.size()):
+			var room_b: Rect2i = sector_rooms[j]
+			if room_b == key_room:
+				continue
+			var neighbors_a: Array = plan._room_neighbors.get(room_a, [])
+			if neighbors_a.has(room_b):
+				continue
+			var d: float = Vector2(room_a.get_center()).distance_to(Vector2(room_b.get_center()))
+			if d <= WorldPlan.LOOP_CONNECT_MAX_DISTANCE:
+				pairs.append([room_a, room_b])
+
+	if pairs.is_empty():
+		return
+
+	for i: int in range(pairs.size() - 1, 0, -1):
+		var swap_idx: int = plan._rng.randi_range(0, i)
+		var tmp: Array = pairs[i]
+		pairs[i] = pairs[swap_idx]
+		pairs[swap_idx] = tmp
+
+	var dist_from_gate: Dictionary[Rect2i, int] = _bfs_sector_distances(plan, gate_room, bfs_rooms)
+	var dist_from_key: Dictionary[Rect2i, int] = _bfs_sector_distances(plan, key_room, bfs_rooms)
+	var added: int = 0
+
+	for pair: Array in pairs:
+		if added >= WorldPlan.MAX_LOOPS_PER_SECTOR:
+			break
+		var room_a: Rect2i = pair[0]
+		var room_b: Rect2i = pair[1]
+		var path_a: int = dist_from_key.get(room_a, 999) + 1 + dist_from_gate.get(room_b, 999)
+		var path_b: int = dist_from_key.get(room_b, 999) + 1 + dist_from_gate.get(room_a, 999)
+		if mini(path_a, path_b) < MIN_KEY_HOPS:
+			continue
+		var segs: Array[Dictionary] = RoomLayout.plan_corridor(plan, room_a, room_b, [], sector_idx, true)
+		if segs.is_empty() or _corridor_hits_shortcut(segs, gate.shortcut_corridor_rects):
+			continue
+		RoomLayout.commit_corridor(plan, segs, sector_idx)
+		plan._add_neighbor_edge(room_a, room_b)
+		added += 1
+		dist_from_gate = _bfs_sector_distances(plan, gate_room, bfs_rooms)
+		dist_from_key = _bfs_sector_distances(plan, key_room, bfs_rooms)
 
 
-static func _setup_shortcut_and_key(plan: WorldPlan, gate: SectorGate, key_room: Rect2i, gate_room: Rect2i) -> void:
+static func _corridor_hits_shortcut(segs: Array[Dictionary], shortcut_rects: Array[Rect2i]) -> bool:
+	for seg: Dictionary in segs:
+		var r: Rect2i = seg[&"rect"]
+		if WorldPlan._intersects_any_rect(r.grow(2), shortcut_rects):
+			return true
+	return false
+
+
+static func _setup_shortcut_and_key(
+	plan: WorldPlan,
+	gate: SectorGate,
+	key_room: Rect2i,
+	gate_room: Rect2i,
+	sector_idx: int,
+) -> void:
 	var exit_x: int = key_room.get_center().x - 1
 	var exit_y: int = key_room.position.y
 	gate.shortcut_wall_cells = [Vector2i(exit_x, exit_y), Vector2i(exit_x + 1, exit_y)]
@@ -181,70 +394,260 @@ static func _setup_shortcut_and_key(plan: WorldPlan, gate: SectorGate, key_room:
 
 	var neck_top_y: int = exit_y - 5
 	var shortcut_neck: Rect2i = Rect2i(exit_x, neck_top_y, 2, 6)
-	plan.protected_neck_rects.append(Rect2i(exit_x - 3, neck_top_y - 1, 8, 7))
+	var own_neck_guard: Rect2i = Rect2i(exit_x - 3, neck_top_y - 1, 8, 7)
 	gate.shortcut_corridor_rects.append(shortcut_neck)
 
 	if key_room == gate_room:
+		plan.protected_neck_rects.append(own_neck_guard)
 		return
 
-	var from_west: bool = exit_x <= gate_room.get_center().x
-	var side_x: int = (gate_room.position.x - 5) if from_west else (gate_room.end.x + 4)
-	var entry_y: int = clampi(gate_room.get_center().y, gate_room.position.y + 5, gate_room.end.y - 5)
-	var gate_wall_x: int = (gate_room.position.x - 1) if from_west else gate_room.end.x
-	gate.gate_entry_cell = Vector2i(gate_wall_x, entry_y)
-
-	var turn_y: int = neck_top_y
-	if turn_y >= gate_room.end.y and turn_y <= gate_room.end.y + 3:
-		turn_y = gate_room.end.y + 4
-		var ext_rect: Rect2i = Rect2i(exit_x, neck_top_y, 2, turn_y - neck_top_y + 1)
-		gate.shortcut_corridor_rects.append(ext_rect)
-
-	var leg1: Rect2i = _make_horiz_corridor_rect(exit_x, side_x, turn_y, 1)
-	var leg2: Rect2i = _make_vert_corridor_rect(turn_y, entry_y, side_x, 1)
-	var leg3: Rect2i = _make_horiz_corridor_rect(side_x, gate_room.get_center().x, entry_y, 2)
-
-	for seg: Rect2i in [leg1, leg2, leg3]:
+	var chosen: Dictionary = _pick_best_shortcut_route(plan, gate, key_room, gate_room, sector_idx, exit_x, neck_top_y)
+	plan.protected_neck_rects.append(own_neck_guard)
+	gate.gate_entry_cell = chosen[&"entry_cell"]
+	gate.shortcut_waypoints = chosen[&"waypoints"]
+	var tunnel_segs: Array[Rect2i] = chosen[&"segs"]
+	for seg: Rect2i in tunnel_segs:
 		plan._corridor_rects.append(seg)
+		plan._corridor_sectors.append(sector_idx)
 		gate.shortcut_corridor_rects.append(seg)
 
-	plan._add_neighbor_edge(key_room, gate_room)
+
+static func _pick_best_shortcut_route(
+	plan: WorldPlan,
+	gate: SectorGate,
+	key_room: Rect2i,
+	gate_room: Rect2i,
+	sector_idx: int,
+	exit_x: int,
+	neck_top_y: int,
+) -> Dictionary:
+	var prefer_west: bool = exit_x <= gate_room.get_center().x
+	var side_choices: Array[bool] = [prefer_west, not prefer_west]
+	var entry_y: int = gate_room.get_center().y
+	var turn_ys: Array[int] = [
+		neck_top_y,
+		mini(neck_top_y, entry_y),
+		mini(neck_top_y, gate_room.position.y - 10),
+		mini(neck_top_y, gate_room.position.y - 22),
+		neck_top_y - 12,
+		neck_top_y - 26,
+		mini(neck_top_y, gate.next_room.position.y - 6),
+	]
+	var best_route: Dictionary = {}
+	var best_score: int = 999999999
+
+	for from_west: bool in side_choices:
+		var near_x: int = (gate_room.position.x - 5) if from_west else (gate_room.end.x + 4)
+		var clear_x: int = mini(near_x, gate.next_room.position.x - 6) if from_west else maxi(near_x, gate.next_room.end.x + 5)
+		var side_xs: Array[int] = [near_x]
+		if near_x != clear_x:
+			side_xs.append(clear_x)
+		var gate_wall_x: int = (gate_room.position.x - 1) if from_west else gate_room.end.x
+		var gate_inside_x: int = (gate_room.position.x + 2) if from_west else (gate_room.end.x - 3)
+		for side_x: int in side_xs:
+			for turn_y: int in turn_ys:
+				var segs: Array[Rect2i] = _build_shortcut_route_rects(exit_x, neck_top_y, turn_y, side_x, entry_y, gate_inside_x)
+				if not _is_shortcut_route_valid(plan, gate, segs, key_room, gate_room, sector_idx):
+					continue
+				var score: int = _score_shortcut_route(plan, gate, segs, key_room, gate_room, gate_wall_x, entry_y)
+				if score < best_score:
+					best_score = score
+					var wps: Array[Vector2i] = [
+						Vector2i(exit_x, neck_top_y + 5),
+						Vector2i(exit_x, turn_y),
+						Vector2i(side_x, turn_y),
+						Vector2i(side_x, entry_y),
+						Vector2i(gate_inside_x, entry_y),
+					]
+					best_route = {&"segs": segs, &"entry_cell": Vector2i(gate_wall_x, entry_y), &"waypoints": wps}
+
+	if not best_route.is_empty():
+		return best_route
+
+	var fb_west_x: int = mini(gate_room.position.x - 5, gate.next_room.position.x - 6)
+	var fb_east_x: int = maxi(gate_room.end.x + 4, gate.next_room.end.x + 5)
+	var fb_side: int = fb_west_x if prefer_west else fb_east_x
+	var fb_wall: int = (gate_room.position.x - 1) if prefer_west else gate_room.end.x
+	var fb_in: int = (gate_room.position.x + 2) if prefer_west else (gate_room.end.x - 3)
+	var fb_y: int = mini(neck_top_y, gate.next_room.position.y - 6)
+	var fb_segs: Array[Rect2i] = _build_shortcut_route_rects(exit_x, neck_top_y, fb_y, fb_side, entry_y, fb_in)
+	var fb_wps: Array[Vector2i] = [
+		Vector2i(exit_x, neck_top_y + 5),
+		Vector2i(exit_x, fb_y),
+		Vector2i(fb_side, fb_y),
+		Vector2i(fb_side, entry_y),
+		Vector2i(fb_in, entry_y),
+	]
+	return {&"segs": fb_segs, &"entry_cell": Vector2i(fb_wall, entry_y), &"waypoints": fb_wps}
 
 
-static func _spawn_next_sector_room(plan: WorldPlan, gate: SectorGate, gate_room: Rect2i, next_depth: int) -> Rect2i:
+static func _build_shortcut_route_rects(
+	exit_x: int,
+	neck_top_y: int,
+	turn_y: int,
+	side_x: int,
+	entry_y: int,
+	gate_inside_x: int,
+) -> Array[Rect2i]:
+	var segs: Array[Rect2i] = []
+	if turn_y < neck_top_y:
+		segs.append(_make_vert_corridor_rect(turn_y, neck_top_y, exit_x, 1))
+	var leg1_start_x: int = exit_x if side_x > exit_x else (exit_x + 1)
+	segs.append(_make_horiz_corridor_rect(leg1_start_x, side_x, turn_y, 1))
+	segs.append(_make_vert_corridor_rect(turn_y, entry_y, side_x, 1))
+	segs.append(_make_horiz_corridor_rect(side_x, gate_inside_x, entry_y, 2))
+	return segs
+
+
+static func _is_shortcut_route_valid(
+	plan: WorldPlan,
+	gate: SectorGate,
+	segs: Array[Rect2i],
+	key_room: Rect2i,
+	gate_room: Rect2i,
+	sector_idx: int,
+) -> bool:
+	var last_idx: int = segs.size() - 1
+	for i: int in range(segs.size()):
+		var r: Rect2i = segs[i]
+		if plan._is_outside_world_bounds(r) or r.intersects(gate.next_room.grow(2)) or r.intersects(key_room.grow(1)):
+			return false
+		if i < last_idx and r.intersects(gate_room.grow(1)):
+			return false
+		if WorldPlan._intersects_any_rect(r.grow(1), plan.protected_neck_rects):
+			return false
+		if _hits_other_sector_geometry(plan, r, sector_idx):
+			return false
+	return true
+
+
+static func _hits_other_sector_geometry(plan: WorldPlan, rect: Rect2i, sector_idx: int) -> bool:
+	var padded: Rect2i = rect.grow(2)
+	if sector_idx != 0 and plan.hero_room.intersects(padded):
+		return true
+	for r_id: int in plan._room_grid.get_candidate_ids_for_rect(padded):
+		if r_id >= 0 and r_id < plan.rooms.size():
+			var other: Rect2i = plan.rooms[r_id]
+			if plan._room_sectors.get(other, 0) != sector_idx and other.intersects(padded):
+				return true
+	for c_idx: int in range(plan._corridor_rects.size()):
+		if plan._corridor_sectors[c_idx] != sector_idx and plan._corridor_rects[c_idx].intersects(padded):
+			return true
+	return false
+
+
+static func _score_shortcut_route(
+	plan: WorldPlan,
+	gate: SectorGate,
+	segs: Array[Rect2i],
+	key_room: Rect2i,
+	gate_room: Rect2i,
+	gate_wall_x: int,
+	entry_y: int,
+) -> int:
+	var score: int = 0
+	var last_idx: int = segs.size() - 1
+	for i: int in range(segs.size()):
+		var r: Rect2i = segs[i]
+		score += r.size.x + r.size.y
+		if r.position.y < gate.next_room.position.y:
+			score += 50000
+		for r_id: int in plan._room_grid.get_candidate_ids_for_rect(r):
+			if r_id >= 0 and r_id < plan.rooms.size():
+				var other: Rect2i = plan.rooms[r_id]
+				if other == key_room or (i == last_idx and other == gate_room):
+					continue
+				if other.intersects(r):
+					score += 10000
+		for c_rect: Rect2i in plan._corridor_rects:
+			if c_rect.intersects(r):
+				score += 2000
+	if plan.is_floor(Vector2i(gate_wall_x, entry_y)):
+		score += 50
+	return score
+
+
+static func _spawn_next_sector_room(
+	plan: WorldPlan,
+	gate: SectorGate,
+	gate_room: Rect2i,
+	next_depth: int,
+	next_sector: int,
+) -> Rect2i:
 	var door_x: int = gate_room.get_center().x - 1
 	var door_y: int = gate_room.position.y
 	gate.door_cells = [Vector2i(door_x, door_y), Vector2i(door_x + 1, door_y)]
 
-	var door_neck: Rect2i = Rect2i(door_x, door_y - 5, 2, 6)
-	plan._add_carve_rect(door_neck)
-	plan.protected_neck_rects.append(Rect2i(door_x - 3, door_y - 6, 8, 7))
-
-	var min_size: Vector2i = plan._get_min_size_for_depth(next_depth)
-	var max_size: Vector2i = plan._get_max_size_for_depth(next_depth)
-	var x_offsets: Array[int] = [0, -6, 6, -12, 12, -18, 18, -24, 24]
-	var y_extras: Array[int] = [0, 8, 16, 24, 32, 40, 52]
+	var x_offsets: Array[int] = [0, -6, 6, -12, 12, -18, 18, -24, 24, -32, 32]
+	var y_extras: Array[int] = [0, 8, 16, 24, 32, 40, 52, 66]
 
 	for y_extra: int in y_extras:
 		for x_off: int in x_offsets:
-			var size: Vector2i = Vector2i(plan._rng.randi_range(min_size.x, max_size.x), plan._rng.randi_range(min_size.y, max_size.y))
-			var bottom_y: int = door_y - 12 - y_extra
+			var size: Vector2i = RoomLayout.roll_room_size(plan._rng, next_depth)
+			var bottom_y: int = door_y - 14 - y_extra
 			var top_left: Vector2i = Vector2i(gate_room.get_center().x + x_off - int(float(size.x) * 0.5), bottom_y - size.y)
 			var candidate: Rect2i = Rect2i(top_left, size)
 			if plan._is_outside_world_bounds(candidate) or plan._overlaps_any_room(candidate):
 				continue
+
+			var dest_center: Vector2i = candidate.get_center()
+			var mid_y: int = bottom_y + 5
+			if _next_room_entry_blocked(plan, gate_room, candidate, door_x, door_y, mid_y, dest_center):
+				continue
+
+			var door_neck: Rect2i = Rect2i(door_x, door_y - 5, 2, 6)
+			plan._add_carve_rect(door_neck)
+			plan.protected_neck_rects.append(Rect2i(door_x - 3, door_y - 6, 8, 7))
 			if not plan.room_children.has(gate_room):
 				plan.room_children[gate_room] = []
 			plan.room_children[gate_room].append(candidate)
 			plan._add_neighbor_edge(gate_room, candidate)
-			plan._add_room(candidate, next_depth)
+			plan._add_room(candidate, next_depth, next_sector)
 
-			var dest_center: Vector2i = candidate.get_center()
-			plan._add_vertical_corridor_rect(door_y - 5, dest_center.y, door_x, 2)
-			if dest_center.x != door_x:
-				plan._add_horizontal_corridor_rect(door_x, dest_center.x, dest_center.y, 2)
+			if dest_center.x == door_x:
+				plan._add_vertical_corridor_rect(door_y - 5, dest_center.y, door_x, 2, next_sector)
+			else:
+				plan._add_vertical_corridor_rect(door_y - 5, mid_y, door_x, 2, next_sector)
+				plan._add_horizontal_corridor_rect(door_x, dest_center.x, mid_y, 2, next_sector)
+				plan._add_vertical_corridor_rect(mid_y, dest_center.y, dest_center.x, 2, next_sector)
 			return candidate
 
 	return Rect2i()
+
+
+static func _next_room_entry_blocked(
+	plan: WorldPlan,
+	gate_room: Rect2i,
+	candidate: Rect2i,
+	door_x: int,
+	door_y: int,
+	mid_y: int,
+	dest_center: Vector2i,
+) -> bool:
+	var segs: Array[Rect2i] = []
+	if dest_center.x == door_x:
+		segs.append(_make_vert_corridor_rect(door_y - 5, dest_center.y, door_x, 2))
+	else:
+		segs.append(_make_vert_corridor_rect(door_y - 5, mid_y, door_x, 2))
+		segs.append(_make_horiz_corridor_rect(door_x, dest_center.x, mid_y, 2))
+		segs.append(_make_vert_corridor_rect(mid_y, dest_center.y, dest_center.x, 2))
+
+	for i: int in range(segs.size()):
+		var seg: Rect2i = segs[i]
+		if plan._is_outside_world_bounds(seg) or seg.grow(2).intersects(plan.hero_room):
+			return true
+		if i > 0 and seg.intersects(gate_room.grow(1)):
+			return true
+		if i < segs.size() - 1 and seg.intersects(candidate):
+			return true
+		for r_id: int in plan._room_grid.get_candidate_ids_for_rect(seg.grow(2)):
+			if r_id >= 0 and r_id < plan.rooms.size():
+				var other: Rect2i = plan.rooms[r_id]
+				if other != gate_room and other.intersects(seg.grow(2)):
+					return true
+		if WorldPlan._intersects_any_rect(seg.grow(2), plan._corridor_rects):
+			return true
+	return false
 
 
 static func _find_safe_key_cell(plan: WorldPlan, key_room: Rect2i, lever_cell: Vector2i) -> Vector2i:
@@ -262,9 +665,7 @@ static func _find_safe_key_cell(plan: WorldPlan, key_room: Rect2i, lever_cell: V
 		var cand: Vector2i = center + off
 		if not plan.is_floor(cand) or not plan.is_floor(cand + Vector2i(0, -1)):
 			continue
-		if cand.distance_squared_to(lever_cell) < 9:
-			continue
-		if plan._is_near_pillar(cand, 1):
+		if cand.distance_squared_to(lever_cell) < 9 or plan._is_near_pillar(cand, 1):
 			continue
 		var near_spawn: bool = false
 		for s_var: Variant in spawns:
@@ -275,7 +676,8 @@ static func _find_safe_key_cell(plan: WorldPlan, key_room: Rect2i, lever_cell: V
 					break
 		if not near_spawn:
 			return cand
-	return center + Vector2i(0, 2)
+	var fallback: Vector2i = center + Vector2i(0, 2)
+	return fallback if plan.is_floor(fallback) else center
 
 
 static func _register_gate_tiles_and_no_prop(plan: WorldPlan, gate: SectorGate) -> void:

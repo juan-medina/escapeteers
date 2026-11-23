@@ -219,7 +219,7 @@ func _tick_running(delta: float) -> void:
 		if _game._character.health < floor_hp:
 			_game._character.health = floor_hp
 
-	if _game._character.is_dead or _game._game_over_dialog.visible:
+	if _game._character.is_dead or (_game._pause_overlay.visible and _game._pause_overlay._game_over_dialog.visible):
 		_finish_current_run("leader_dead")
 		return
 

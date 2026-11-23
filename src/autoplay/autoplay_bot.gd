@@ -48,6 +48,7 @@ var _repath_timer: float = 0.0
 var _strafe_sign: float = 1.0
 var _strafe_timer: float = 0.0
 var _map_toggle_timer: float = MAP_CLOSED_DURATION
+var _shortcut_waypoints: Array[Vector2] = []
 
 
 func setup(map: Map, policy: String, max_depth: int) -> void:
@@ -59,6 +60,7 @@ func setup(map: Map, policy: String, max_depth: int) -> void:
 	_last_known_room = map.hero_room
 	_goal_room = Rect2i()
 	_room_path.clear()
+	_shortcut_waypoints.clear()
 	_room_stall_timer = 0.0
 	_last_room_remaining = -1
 	_skipped_rooms.clear()
@@ -291,9 +293,13 @@ func _update_room_progress(game: Game, map: Map, leader: Hero, delta: float) -> 
 	if _last_known_room != map.hero_room and not _is_room_done(game, _last_known_room) and _goal_room != _last_known_room:
 		_goal_room = _last_known_room
 		_room_path = [_goal_room]
+		_shortcut_waypoints.clear()
 		_room_stall_timer = 0.0
 		_last_room_remaining = -1
 		return
+
+	if _last_known_room == _goal_room:
+		_shortcut_waypoints.clear()
 
 	if _goal_room == Rect2i() or _is_room_done(game, _goal_room):
 		_assign_next_goal(game, map, leader)
@@ -323,8 +329,30 @@ func _assign_next_goal(game: Game, map: Map, leader: Hero) -> void:
 			break
 	_goal_room = next_target
 	_room_path = chain.slice(0, target_idx + 1) if not chain.is_empty() else [next_target]
+	_shortcut_waypoints.clear()
+	if not _room_path.is_empty():
+		_populate_shortcut_waypoints(map, _last_known_room, _room_path[0])
 	_room_stall_timer = 0.0
 	_last_room_remaining = -1
+
+
+func _populate_shortcut_waypoints(map: Map, from_room: Rect2i, to_room: Rect2i) -> void:
+	for gate: SectorGatePlanner.SectorGate in map.plan.sector_gates:
+		if not gate.shortcut_opened or gate.key_room != from_room or gate.gate_room != to_room:
+			continue
+		if gate.shortcut_waypoints.is_empty():
+			return
+		_shortcut_waypoints.append(map.map_to_local(gate.shortcut_waypoints[0]))
+		for i: int in range(gate.shortcut_waypoints.size() - 1):
+			var p0: Vector2i = gate.shortcut_waypoints[i]
+			var p1: Vector2i = gate.shortcut_waypoints[i + 1]
+			var diff: Vector2 = Vector2(p1 - p0)
+			var steps: int = maxi(1, ceili(diff.length() / 28.0))
+			for s_idx: int in range(1, steps + 1):
+				var t: float = float(s_idx) / float(steps)
+				var cell: Vector2i = Vector2i((Vector2(p0) + diff * t).round())
+				_shortcut_waypoints.append(map.map_to_local(cell))
+		return
 
 
 func _is_room_done(game: Game, room: Rect2i) -> bool:
@@ -506,7 +534,7 @@ func _get_gate_objective_pos(game: Game, map: Map) -> Vector2:
 		return Vector2.ZERO
 	if not active_gate.shortcut_opened and _last_known_room == active_gate.key_room:
 		return map.map_to_local(active_gate.lever_cell)
-	if _last_known_room == active_gate.gate_room or _goal_room == active_gate.gate_room:
+	if _last_known_room == active_gate.gate_room:
 		var door_pos: Vector2 = (map.map_to_local(active_gate.door_cells[0]) + map.map_to_local(active_gate.door_cells[1])) * 0.5
 		return door_pos + Vector2(0.0, 12.0)
 	return Vector2.ZERO
@@ -600,10 +628,20 @@ func _pick_safe_kite_direction(map: Map, pos: Vector2, away_dir: Vector2) -> Vec
 
 
 func _get_exploration_destination(map: Map, leader: Hero) -> Vector2:
+	while not _shortcut_waypoints.is_empty():
+		if leader.global_position.distance_squared_to(_shortcut_waypoints[0]) <= ROOM_ARRIVE_DIST_SQ:
+			_shortcut_waypoints.remove_at(0)
+		else:
+			return _shortcut_waypoints[0]
+
 	while not _room_path.is_empty():
 		var hop_center: Vector2 = map.map_to_local(_room_path[0].get_center())
 		if leader.global_position.distance_squared_to(hop_center) <= ROOM_ARRIVE_DIST_SQ and _room_path.size() > 1:
+			var popped: Rect2i = _room_path[0]
 			_room_path.remove_at(0)
+			_populate_shortcut_waypoints(map, popped, _room_path[0])
+			if not _shortcut_waypoints.is_empty():
+				return _shortcut_waypoints[0]
 		else:
 			return hop_center
 

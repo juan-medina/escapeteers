@@ -19,6 +19,7 @@
   - [b]Archer:[/b] Faster, higher-damage snipe arrows with longer range and heavy knockback.
 - [color=#ffffff][b]Quick Hero Swap:[/b][/color] Retry jumps to hero selection with new hero summary cards.
 - [color=#ffffff][b]Snappier Map & Spawns:[/b][/color] Smoother map browsing and monster room ambushes.
+- [color=#ffffff][b]Winding Maze Dungeons:[/b][/color] Deeper labyrinths, varied rooms, and distant keys.
 
 [color=#ffffff][b]v0.6.0 - 2026-11-18[/b][/color]
 
