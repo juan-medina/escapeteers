@@ -83,15 +83,18 @@ func spawn_projectile(user: Character, target: Character) -> Projectile:
 
 	var dir_x: float = -1.0 if target.global_position.x < user.global_position.x else 1.0
 	var projectile: Projectile = Projectile.acquire(projectile_scene)
+	var scaled_damage: float = damage
 	if user is Hero:
-		projectile.source_hero = user as Hero
+		var hero_user: Hero = user as Hero
+		projectile.source_hero = hero_user
+		scaled_damage *= hero_user.damage_multiplier
 	if spawn_at_target:
 		projectile.global_position = target.global_position
 		projectile.direction = Vector2.ZERO
-		projectile.damage = damage
+		projectile.damage = scaled_damage
 		projectile.knockback = 0.0
 		var enemy: Enemy = target as Enemy
-		var applied_damage: float = enemy.get_effective_damage_taken(damage) if enemy != null else damage
+		var applied_damage: float = enemy.get_effective_damage_taken(scaled_damage) if enemy != null else scaled_damage
 		if enemy != null and stun_duration > 0.0:
 			enemy.apply_stun(stun_duration)
 		if enemy != null and mark_duration > 0.0 and mark_bonus > 0.0:
@@ -110,7 +113,7 @@ func spawn_projectile(user: Character, target: Character) -> Projectile:
 				fire_dir = diff.normalized()
 		projectile.global_position = spawn_pos
 		projectile.direction = fire_dir
-		projectile.damage = damage
+		projectile.damage = scaled_damage
 		projectile.knockback = knockback
 		projectile.mark_bonus = mark_bonus
 		projectile.mark_duration = mark_duration

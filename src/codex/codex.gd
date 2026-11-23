@@ -11,6 +11,8 @@ const KEY_DISCOVERED_HEROES: StringName = &"discovered_heroes"
 const KEY_VIEWED_HEROES: StringName = &"viewed_heroes"
 const KEY_DISCOVERED_ENEMIES: StringName = &"discovered_enemies"
 const KEY_VIEWED_ENEMIES: StringName = &"viewed_enemies"
+const KEY_DISCOVERED_ITEMS: StringName = &"discovered_items"
+const KEY_VIEWED_ITEMS: StringName = &"viewed_items"
 
 const DEFAULT_HERO_IDS: Array[StringName] = [
 	&"archer",
@@ -27,6 +29,8 @@ var _discovered_heroes: Dictionary[StringName, bool] = {}
 var _viewed_heroes: Dictionary[StringName, bool] = {}
 var _discovered_enemies: Dictionary[StringName, bool] = {}
 var _viewed_enemies: Dictionary[StringName, bool] = {}
+var _discovered_items: Dictionary[StringName, bool] = {}
+var _viewed_items: Dictionary[StringName, bool] = {}
 
 
 func _ready() -> void:
@@ -51,6 +55,14 @@ func is_enemy_unread(enemy_id: StringName) -> bool:
 	return _discovered_enemies.has(enemy_id) and not _viewed_enemies.has(enemy_id)
 
 
+func is_item_discovered(item_id: StringName) -> bool:
+	return _discovered_items.has(item_id)
+
+
+func is_item_unread(item_id: StringName) -> bool:
+	return _discovered_items.has(item_id) and not _viewed_items.has(item_id)
+
+
 func has_unread_heroes() -> bool:
 	for hero_id: StringName in _discovered_heroes:
 		if not _viewed_heroes.has(hero_id):
@@ -65,8 +77,15 @@ func has_unread_enemies() -> bool:
 	return false
 
 
+func has_unread_items() -> bool:
+	for item_id: StringName in _discovered_items:
+		if not _viewed_items.has(item_id):
+			return true
+	return false
+
+
 func has_any_unread() -> bool:
-	return has_unread_heroes() or has_unread_enemies()
+	return has_unread_heroes() or has_unread_enemies() or has_unread_items()
 
 
 func discover_hero(hero_id: StringName) -> void:
@@ -85,6 +104,14 @@ func discover_enemy(enemy_id: StringName) -> void:
 	unread_changed.emit()
 
 
+func discover_item(item_id: StringName) -> void:
+	if item_id.is_empty() or _discovered_items.has(item_id):
+		return
+	_discovered_items[item_id] = true
+	_save()
+	unread_changed.emit()
+
+
 func mark_hero_viewed(hero_id: StringName) -> void:
 	if not _discovered_heroes.has(hero_id) or _viewed_heroes.has(hero_id):
 		return
@@ -97,6 +124,14 @@ func mark_enemy_viewed(enemy_id: StringName) -> void:
 	if not _discovered_enemies.has(enemy_id) or _viewed_enemies.has(enemy_id):
 		return
 	_viewed_enemies[enemy_id] = true
+	_save()
+	unread_changed.emit()
+
+
+func mark_item_viewed(item_id: StringName) -> void:
+	if not _discovered_items.has(item_id) or _viewed_items.has(item_id):
+		return
+	_viewed_items[item_id] = true
 	_save()
 	unread_changed.emit()
 
@@ -120,6 +155,8 @@ func _load() -> void:
 	_read_id_set(config, KEY_VIEWED_HEROES, _viewed_heroes)
 	_read_id_set(config, KEY_DISCOVERED_ENEMIES, _discovered_enemies)
 	_read_id_set(config, KEY_VIEWED_ENEMIES, _viewed_enemies)
+	_read_id_set(config, KEY_DISCOVERED_ITEMS, _discovered_items)
+	_read_id_set(config, KEY_VIEWED_ITEMS, _viewed_items)
 	_seed_default_heroes()
 
 
@@ -129,6 +166,8 @@ func _save() -> void:
 	config.set_value(SECTION_PROGRESS, KEY_VIEWED_HEROES, _dict_to_packed_array(_viewed_heroes))
 	config.set_value(SECTION_PROGRESS, KEY_DISCOVERED_ENEMIES, _dict_to_packed_array(_discovered_enemies))
 	config.set_value(SECTION_PROGRESS, KEY_VIEWED_ENEMIES, _dict_to_packed_array(_viewed_enemies))
+	config.set_value(SECTION_PROGRESS, KEY_DISCOVERED_ITEMS, _dict_to_packed_array(_discovered_items))
+	config.set_value(SECTION_PROGRESS, KEY_VIEWED_ITEMS, _dict_to_packed_array(_viewed_items))
 
 	var err: Error = config.save(SAVE_PATH)
 	if err != OK:

@@ -25,6 +25,7 @@ const SPIKE_DOWN_2_TIME: float = 0.10
 const SPIKE_DOWN_1_TIME: float = 0.10
 const SPIKE_CYCLE_DURATION: float = 3.80
 const COIN_ROOM_CHANCE: float = 0.30
+const POTION_ROOM_CHANCE: float = 0.22
 
 var plan: WorldPlan = WorldPlan.new()
 var streamer: MapStreamer = MapStreamer.new()
@@ -40,6 +41,7 @@ var _expanded_rooms: Dictionary[Rect2i, bool] = {}
 var _secret_torch_cells: Array[Vector2i] = []
 var _secret_torch_index: int = 0
 var _guaranteed_coin_room: Rect2i = Rect2i()
+var _guaranteed_potion_room: Rect2i = Rect2i()
 var _is_activating_lever: bool = false
 var _locked_door_toast_timer: float = 0.0
 
@@ -169,9 +171,14 @@ func generate_map() -> void:
 	var depth_1_rooms: Array[Rect2i] = plan.get_depth_rooms(1)
 	companion_rooms.append_array(depth_1_rooms)
 	_guaranteed_coin_room = Rect2i()
+	_guaranteed_potion_room = Rect2i()
 	if not depth_1_rooms.is_empty():
 		var pick_idx: int = TileClassifier.cell_hash(plan.run_seed, 71, 97) % depth_1_rooms.size()
 		_guaranteed_coin_room = depth_1_rooms[pick_idx]
+		var potion_pick_idx: int = TileClassifier.cell_hash(plan.run_seed, 113, 59) % depth_1_rooms.size()
+		if depth_1_rooms.size() > 1 and depth_1_rooms[potion_pick_idx] == _guaranteed_coin_room:
+			potion_pick_idx = (potion_pick_idx + 1) % depth_1_rooms.size()
+		_guaranteed_potion_room = depth_1_rooms[potion_pick_idx]
 
 	generation_progress_updated.emit(0.20)
 	await get_tree().process_frame
@@ -613,22 +620,45 @@ func _setup_secret_torches() -> void:
 		light_manager.set_light_blinking(_secret_torch_cells[0], true)
 
 
-func get_coin_spawn_positions_for_room(room: Rect2i) -> Array[Vector2]:
-	var positions: Array[Vector2] = []
+func get_room_pickups(room: Rect2i) -> Dictionary:
+	var coins: Array[Vector2] = []
+	var potions: Array[Dictionary] = []
 	if room == hero_room or room.size.x < 8 or room.size.y < 8:
-		return positions
-	var is_guaranteed: bool = room == _guaranteed_coin_room
-	var roll: int = TileClassifier.cell_hash(plan.run_seed, room.position.x, room.position.y) % 100
-	if not is_guaranteed and float(roll) >= COIN_ROOM_CHANCE * 100.0:
-		return positions
+		return {&"coins": coins, &"potions": potions}
 
-	var cell: Vector2i = _find_coin_cell_for_room(room)
-	if cell.x != 2147483647:
-		positions.append(_floor.map_to_local(cell))
-	return positions
+	var coin_roll: int = TileClassifier.cell_hash(plan.run_seed, room.position.x, room.position.y) % 100
+	if room == _guaranteed_coin_room or float(coin_roll) < COIN_ROOM_CHANCE * 100.0:
+		var coin_cell: Vector2i = _find_coin_cell_for_room(room)
+		if coin_cell.x != 2147483647:
+			coins.append(_floor.map_to_local(coin_cell))
+
+	var potion_roll: int = TileClassifier.cell_hash(plan.run_seed, room.position.x + 19, room.position.y + 43) % 100
+	if room == _guaranteed_potion_room or float(potion_roll) < POTION_ROOM_CHANCE * 100.0:
+		var potion_cell: Vector2i = _find_potion_cell_for_room(room)
+		if potion_cell.x != 2147483647:
+			var type_roll: int = TileClassifier.cell_hash(plan.run_seed, room.position.x + 13, room.position.y + 29) % 100
+			var potion_type: PotionPickup.PotionType = PotionPickup.PotionType.XP
+			if type_roll < 35:
+				potion_type = PotionPickup.PotionType.HEALTH
+			elif type_roll < 60:
+				potion_type = PotionPickup.PotionType.HASTE
+			elif type_roll < 80:
+				potion_type = PotionPickup.PotionType.FURY
+			potions.append({&"pos": _floor.map_to_local(potion_cell), &"type": potion_type})
+
+	return {&"coins": coins, &"potions": potions}
 
 
 func _find_coin_cell_for_room(room: Rect2i) -> Vector2i:
+	return _find_pickup_cell_for_room(room, 0, Vector2i(2147483647, 2147483647))
+
+
+func _find_potion_cell_for_room(room: Rect2i) -> Vector2i:
+	var coin_cell: Vector2i = _find_coin_cell_for_room(room)
+	return _find_pickup_cell_for_room(room, 1009, coin_cell)
+
+
+func _find_pickup_cell_for_room(room: Rect2i, seed_offset: int, avoid_cell: Vector2i) -> Vector2i:
 	var inner: Rect2i = room.grow(-3)
 	if inner.size.x <= 0 or inner.size.y <= 0:
 		return Vector2i(2147483647, 2147483647)
@@ -636,9 +666,11 @@ func _find_coin_cell_for_room(room: Rect2i) -> Vector2i:
 	var center: Vector2i = room.get_center()
 	var companions: Array = plan.get_companion_spawns_for_room(room)
 	for attempt: int in range(40):
-		var hx: int = TileClassifier.cell_hash(plan.run_seed + attempt * 17, room.position.x, room.position.y)
-		var hy: int = TileClassifier.cell_hash(plan.run_seed + attempt * 31, room.end.x, room.end.y)
+		var hx: int = TileClassifier.cell_hash(plan.run_seed + seed_offset + attempt * 17, room.position.x, room.position.y)
+		var hy: int = TileClassifier.cell_hash(plan.run_seed + seed_offset + attempt * 31, room.end.x, room.end.y)
 		var cell: Vector2i = Vector2i(inner.position.x + (hx % inner.size.x), inner.position.y + (hy % inner.size.y))
+		if avoid_cell.x != 2147483647 and cell.distance_squared_to(avoid_cell) < 9:
+			continue
 		if _is_valid_coin_cell(cell, center, companions):
 			return cell
 	return Vector2i(2147483647, 2147483647)

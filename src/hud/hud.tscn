@@ -25,6 +25,22 @@ region = Rect2(112, 480, 16, 16)
 atlas = ExtResource("6_tileset")
 region = Rect2(144, 464, 16, 16)
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_health_potion"]
+atlas = ExtResource("6_tileset")
+region = Rect2(256, 384, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_haste_potion"]
+atlas = ExtResource("6_tileset")
+region = Rect2(240, 368, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_fury_potion"]
+atlas = ExtResource("6_tileset")
+region = Rect2(208, 384, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_xp_potion"]
+atlas = ExtResource("6_tileset")
+region = Rect2(224, 368, 16, 16)
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_room_toast"]
 content_margin_left = 8.0
 content_margin_top = 2.0
@@ -76,6 +92,82 @@ show_percentage = false
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
 text = "0 / 50"
+
+[node name="BuffBar" type="HBoxContainer" parent="Margin/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="HealBadge" type="HBoxContainer" parent="Margin/HBox/BuffBar"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Icon" type="TextureRect" parent="Margin/HBox/BuffBar/HealBadge"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+texture = SubResource("AtlasTexture_health_potion")
+stretch_mode = 3
+
+[node name="TimerLabel" type="Label" parent="Margin/HBox/BuffBar/HealBadge"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.38, 0.42, 1)
+theme_override_fonts/font = ExtResource("5_m6x11")
+theme_override_font_sizes/font_size = 16
+text = "+HP"
+
+[node name="HasteBadge" type="HBoxContainer" parent="Margin/HBox/BuffBar"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Icon" type="TextureRect" parent="Margin/HBox/BuffBar/HasteBadge"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+texture = SubResource("AtlasTexture_haste_potion")
+stretch_mode = 3
+
+[node name="TimerLabel" type="Label" parent="Margin/HBox/BuffBar/HasteBadge"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.85, 1, 1)
+theme_override_fonts/font = ExtResource("5_m6x11")
+theme_override_font_sizes/font_size = 16
+text = "12s"
+
+[node name="FuryBadge" type="HBoxContainer" parent="Margin/HBox/BuffBar"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Icon" type="TextureRect" parent="Margin/HBox/BuffBar/FuryBadge"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+texture = SubResource("AtlasTexture_fury_potion")
+stretch_mode = 3
+
+[node name="TimerLabel" type="Label" parent="Margin/HBox/BuffBar/FuryBadge"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.84, 0.28, 1)
+theme_override_fonts/font = ExtResource("5_m6x11")
+theme_override_font_sizes/font_size = 16
+text = "12s"
+
+[node name="XpBadge" type="HBoxContainer" parent="Margin/HBox/BuffBar"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Icon" type="TextureRect" parent="Margin/HBox/BuffBar/XpBadge"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+texture = SubResource("AtlasTexture_xp_potion")
+stretch_mode = 3
+
+[node name="TimerLabel" type="Label" parent="Margin/HBox/BuffBar/XpBadge"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.82, 0.48, 1, 1)
+theme_override_fonts/font = ExtResource("5_m6x11")
+theme_override_font_sizes/font_size = 16
+text = "+XP"
 
 [node name="KeyBar" type="HBoxContainer" parent="Margin/HBox"]
 layout_mode = 2

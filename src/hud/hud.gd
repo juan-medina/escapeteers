@@ -19,6 +19,8 @@ var _display_xp: float = 0.0
 var _display_max_xp: float = 50.0
 var _movement_hint_dismissed: bool = false
 var _room_toast_tween: Tween = null
+var _last_haste_secs: int = -1
+var _last_fury_secs: int = -1
 
 @onready var _damage_meter: DamageMeter = $DamageMeter
 @onready var _squad_grid: SquadGrid = $SquadGrid
@@ -26,6 +28,12 @@ var _room_toast_tween: Tween = null
 @onready var _level_badge: Label = $Margin/HBox/LevelBadge
 @onready var _xp_bar: ProgressBar = $Margin/HBox/XPBar
 @onready var _xp_text: Label = $Margin/HBox/XPText
+@onready var _heal_badge: HBoxContainer = $Margin/HBox/BuffBar/HealBadge
+@onready var _haste_badge: HBoxContainer = $Margin/HBox/BuffBar/HasteBadge
+@onready var _haste_label: Label = $Margin/HBox/BuffBar/HasteBadge/TimerLabel
+@onready var _fury_badge: HBoxContainer = $Margin/HBox/BuffBar/FuryBadge
+@onready var _fury_label: Label = $Margin/HBox/BuffBar/FuryBadge/TimerLabel
+@onready var _xp_badge: HBoxContainer = $Margin/HBox/BuffBar/XpBadge
 @onready var _map_hint: Label = $MapHint
 @onready var _movement_hint: Label = $MovementHint
 @onready var _room_toast: PanelContainer = $RoomToast
@@ -119,7 +127,26 @@ func record_damage(class_id: StringName, amount: float) -> void:
 
 func setup_map(plan: WorldPlan, target: Hero) -> void:
 	_reset_keys()
+	update_potion_buffs(0.0, 0.0)
 	_map_overlay.setup(plan, target)
+
+
+func update_potion_buffs(haste_remaining: float, fury_remaining: float, heal_active: bool = false, xp_active: bool = false) -> void:
+	_heal_badge.visible = heal_active
+	_xp_badge.visible = xp_active
+	var haste_secs: int = ceili(haste_remaining) if haste_remaining > 0.0 else 0
+	if haste_secs != _last_haste_secs:
+		_last_haste_secs = haste_secs
+		_haste_badge.visible = haste_secs > 0
+		if haste_secs > 0:
+			_haste_label.text = &"%ds" % haste_secs
+
+	var fury_secs: int = ceili(fury_remaining) if fury_remaining > 0.0 else 0
+	if fury_secs != _last_fury_secs:
+		_last_fury_secs = fury_secs
+		_fury_badge.visible = fury_secs > 0
+		if fury_secs > 0:
+			_fury_label.text = &"%ds" % fury_secs
 
 
 func set_key_state(color: WorldPlan.KeyColor, collected: bool, used: bool) -> void:

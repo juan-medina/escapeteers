@@ -70,6 +70,7 @@ var _unrecruited_characters: Array[Unknown] = []
 var _starter_recruits: Array[Unknown] = []
 var _coins: Array[Coin] = []
 var _reroll_coins: int = 0
+var _potion_manager: PotionManager = PotionManager.new()
 var _keys: Array[KeyPickup] = []
 var _collected_keys: Dictionary[WorldPlan.KeyColor, bool] = {}
 var _class_levels: Dictionary[StringName, int] = {}
@@ -113,6 +114,7 @@ func _ready() -> void:
 
 	await HeroData.initialize()
 	await EnemyData.initialize()
+	await CodexItemsPanel.initialize_data()
 	await CodexMechanicsPanel.initialize_data()
 	_recruit_panel.initialize()
 	_level_up_panel.initialize()
@@ -122,7 +124,8 @@ func _ready() -> void:
 	_map.secret_torches_completed.connect(_on_secret_torches_completed)
 	_map.door_unlocked.connect(_on_door_unlocked)
 	_map.locked_door_bumped.connect(_on_locked_door_bumped)
-	_map.shortcut_opened.connect(_hud.notify_shortcut_opened)
+	_map.shortcut_opened.connect(_potion_manager.on_shortcut_opened.bind(_map))
+	_potion_manager.setup(_characters, _projectiles, _hud, HEAL_EFFECT_SCENE)
 	await _map.generate_map()
 
 	var starting_data: HeroData = HeroData.get_hero(Transition.starting_hero_id)
@@ -191,6 +194,9 @@ func _process(delta: float) -> void:
 		_map.update_streaming(_character.global_position, _character.velocity)
 
 	_map.update_spikes(delta)
+	var potion_xp: float = _potion_manager.update_buffs(delta, _squad, _character)
+	if potion_xp > 0.0:
+		_add_squad_xp(potion_xp)
 	_update_squad_speed(delta)
 	_update_followers(delta)
 	_update_spike_hazards(delta)
@@ -206,7 +212,7 @@ func _update_map_streaming() -> void:
 	if not new_rooms.is_empty():
 		for room: Rect2i in new_rooms:
 			_spawn_companions_for_room(room)
-			_spawn_coins_for_room(room)
+			_spawn_pickups_for_room(room)
 		_register_and_populate_rooms(new_rooms)
 
 	_respawn_nearby_hibernating_rooms()
@@ -255,7 +261,7 @@ func _spawn_initial_characters() -> void:
 
 	for room: Rect2i in _map.companion_rooms:
 		_spawn_companions_for_room(room)
-		_spawn_coins_for_room(room)
+		_spawn_pickups_for_room(room)
 
 	for gate: SectorGatePlanner.SectorGate in _map.plan.sector_gates:
 		var key_node: KeyPickup = KEY_PICKUP_SCENE.instantiate() as KeyPickup
@@ -284,31 +290,35 @@ func _spawn_recruit_at(pos: Vector2) -> Unknown:
 	return ch
 
 
-func _spawn_coins_for_room(room: Rect2i) -> void:
-	for pos: Vector2 in _map.get_coin_spawn_positions_for_room(room):
+func _spawn_pickups_for_room(room: Rect2i) -> void:
+	var pickups: Dictionary = _map.get_room_pickups(room)
+	var coin_positions: Array[Vector2] = pickups[&"coins"]
+	for pos: Vector2 in coin_positions:
 		var coin: Coin = COIN_SCENE.instantiate() as Coin
 		_characters.add_child(coin)
 		coin.position = pos
 		_coins.append(coin)
+	var potion_spawns: Array[Dictionary] = pickups[&"potions"]
+	_potion_manager.spawn_list(potion_spawns)
 
 
 func _check_pickups() -> void:
 	if _character.is_dead:
 		return
-	var i: int = _coins.size() - 1
-	while i >= 0:
+	for i: int in range(_coins.size() - 1, -1, -1):
 		var coin: Coin = _coins[i]
-		if _is_pickup_touched(coin.position, Coin.PICKUP_DISTANCE):
+		if PotionManager.is_squad_touching(_squad, coin.position, Coin.PICKUP_DISTANCE):
 			_coins.remove_at(i)
 			coin.queue_free()
 			_reroll_coins += 1
+			Codex.discover_item(&"reroll_coin")
 			Audio.play_sfx(Audio.Sfx.COIN_PICKUP)
-		i -= 1
 
-	var j: int = _keys.size() - 1
-	while j >= 0:
+	_potion_manager.check_pickups(_squad, _character, _xp_required)
+
+	for j: int in range(_keys.size() - 1, -1, -1):
 		var key_node: KeyPickup = _keys[j]
-		if _is_pickup_touched(key_node.position, KeyPickup.PICKUP_DISTANCE):
+		if PotionManager.is_squad_touching(_squad, key_node.position, KeyPickup.PICKUP_DISTANCE):
 			var color: WorldPlan.KeyColor = key_node.key_color
 			_keys.remove_at(j)
 			key_node.queue_free()
@@ -316,15 +326,6 @@ func _check_pickups() -> void:
 			Audio.play_sfx(Audio.Sfx.KEY_PICKUP)
 			_hud.set_key_state(color, true, false)
 			_hud.show_event_toast(&"%s Key Found!" % KeyPickup.get_color_name(color), KeyPickup.get_display_color(color))
-		j -= 1
-
-
-func _is_pickup_touched(pos: Vector2, dist: float) -> bool:
-	var dist_sq: float = dist * dist
-	for member: Hero in _squad:
-		if not member.is_dead and pos.distance_squared_to(member.position) <= dist_sq:
-			return true
-	return false
 
 
 func _on_door_unlocked(color: WorldPlan.KeyColor) -> void:
@@ -341,6 +342,7 @@ func _spawn_hero(hero_data: HeroData, pos: Vector2, is_leader: bool) -> Hero:
 	var hero_level: int = _class_levels.get(hero_data.id, 1)
 	var hero: Hero = hero_data.scene.instantiate() as Hero
 	hero_data.apply_to_hero(hero, hero_level)
+	_potion_manager.apply_buffs_to_hero(hero)
 	if is_leader:
 		hero.name = &"Character"
 	_characters.add_child(hero)
@@ -947,9 +949,10 @@ func _update_squad_speed(delta: float) -> void:
 		_continuous_move_timer = 0.0
 		_squad_speed = BASE_SQUAD_SPEED
 
+	var effective_speed: float = _squad_speed * _potion_manager.get_speed_multiplier()
 	for member: Hero in _squad:
 		if not member.is_dead:
-			member.speed = _squad_speed
+			member.speed = effective_speed
 
 
 func _update_spike_hazards(delta: float) -> void:

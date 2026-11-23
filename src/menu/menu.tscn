@@ -14,6 +14,7 @@
 [ext_resource type="PackedScene" path="res://codex_panel/codex_heroes_panel.tscn" id="12_codex_heroes"]
 [ext_resource type="PackedScene" path="res://codex_panel/codex_enemies_panel.tscn" id="13_codex_enemies"]
 [ext_resource type="PackedScene" path="res://codex_panel/codex_mechanics_panel.tscn" id="14_codex_mechanics"]
+[ext_resource type="PackedScene" path="res://codex_panel/codex_items_panel.tscn" id="15_codex_items"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_torch_0"]
 atlas = ExtResource("9_tileset")
@@ -219,6 +220,10 @@ layout_mode = 2
 visible = false
 layout_mode = 2
 
+[node name="CodexItemsPanel" parent="Center" instance=ExtResource("15_codex_items")]
+visible = false
+layout_mode = 2
+
 [node name="CodexMechanicsPanel" parent="Center" instance=ExtResource("14_codex_mechanics")]
 visible = false
 layout_mode = 2
@@ -241,7 +246,9 @@ layout_mode = 2
 [connection signal="back_requested" from="Center/CodexPanel" to="." method="_on_codex_back_requested"]
 [connection signal="enemies_requested" from="Center/CodexPanel" to="." method="_on_codex_enemies_requested"]
 [connection signal="heroes_requested" from="Center/CodexPanel" to="." method="_on_codex_heroes_requested"]
+[connection signal="items_requested" from="Center/CodexPanel" to="." method="_on_codex_items_requested"]
 [connection signal="mechanics_requested" from="Center/CodexPanel" to="." method="_on_codex_mechanics_requested"]
 [connection signal="back_requested" from="Center/CodexHeroesPanel" to="." method="_on_codex_subpanel_back_requested"]
 [connection signal="back_requested" from="Center/CodexEnemiesPanel" to="." method="_on_codex_subpanel_back_requested"]
+[connection signal="back_requested" from="Center/CodexItemsPanel" to="." method="_on_codex_subpanel_back_requested"]
 [connection signal="back_requested" from="Center/CodexMechanicsPanel" to="." method="_on_codex_subpanel_back_requested"]

@@ -80,6 +80,8 @@ var is_moving: bool = false
 var move_direction: Vector2 = Vector2.RIGHT
 var crescent_blend: float = 0.0
 var active_target: Character = null
+var attack_speed_multiplier: float = 1.0
+var damage_multiplier: float = 1.0
 
 var _elapsed_time: float = 0.0
 var _pos_history: Array[Vector2] = []
@@ -115,7 +117,7 @@ func _process(delta: float) -> void:
 	if is_dead:
 		return
 
-	_update_combat_cooldowns(delta)
+	_update_combat_cooldowns(delta * attack_speed_multiplier)
 
 	_check_auto_attack()
 
@@ -330,6 +332,7 @@ func _check_auto_attack() -> void:
 		_hit_applied_this_attack = false
 		_hits_applied_frames.clear()
 		selected_action.execute(self, active_target)
+		_animated_sprite.speed_scale = attack_speed_multiplier
 		if selected_action is MeleeAction:
 			melee_attack_started.emit(animation)
 			Audio.play_sfx(Audio.Sfx.MELEE_SWOOSH)
@@ -431,7 +434,7 @@ func _on_frame_changed() -> void:
 		var melee: MeleeAction = current_action as MeleeAction
 		var is_heavy: bool = melee.current_is_heavy
 		var should_hit: bool = false
-		var hit_damage: float = melee.heavy_damage if is_heavy else melee.damage
+		var hit_damage: float = (melee.heavy_damage if is_heavy else melee.damage) * damage_multiplier
 
 		if is_heavy and not melee2_hit_frames.is_empty():
 			for hit_frame: int in melee2_hit_frames:

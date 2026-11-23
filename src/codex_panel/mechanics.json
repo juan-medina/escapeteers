@@ -81,6 +81,11 @@
 				"text": "Gather spinning gold coins hidden in chambers to reroll Recruit or Level-Up offers."
 			},
 			{
+				"name": "Dungeon Potions",
+				"color": "#59d9ff",
+				"text": "Walk over scattered flasks for instant squad effects. Collect each variety to log it under Codex Items."
+			},
+			{
 				"name": "Leader's Fate",
 				"color": "#ff6666",
 				"text": "Fallen companions are lost for the run, and the expedition ends immediately if your leader falls."

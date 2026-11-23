@@ -67,6 +67,40 @@ func show_enemy(enemy_data: EnemyData) -> void:
 	_show_active_skills(enemy_data.get_active_skills())
 
 
+func show_item(item: Dictionary) -> void:
+	var item_color: Color = Color.from_string(CharacterData._str_val(item, &"color"), Color.WHITE)
+	var tag: String = CharacterData._str_val(item, &"tag")
+	_name_label.text = CharacterData._str_val(item, &"name")
+	_name_label.add_theme_color_override(&"font_color", item_color)
+	_tag_label.text = "[%s]" % tag
+	_tag_label.add_theme_color_override(&"font_color", item_color)
+	_tag_label.visible = not tag.is_empty()
+
+	var desc: String = CharacterData._str_val(item, &"description")
+	_overview_label.text = desc
+	_overview_label.visible = not desc.is_empty()
+
+	var where_found: String = CharacterData._str_val(item, &"where_found")
+	if where_found.is_empty():
+		_behavior_row.visible = false
+	else:
+		_behavior_name_label.text = &"Found In:"
+		_behavior_desc_label.text = where_found
+		_behavior_row.visible = true
+
+	var effect_title: String = CharacterData._str_val(item, &"effect_title")
+	var effect_desc: String = CharacterData._str_val(item, &"effect_desc")
+	_h_separator.visible = not effect_title.is_empty()
+	if effect_title.is_empty():
+		_skill1_box.visible = false
+	else:
+		_skill1_title.text = "%s:" % effect_title
+		_skill1_desc.text = effect_desc
+		_skill1_desc.visible = not effect_desc.is_empty()
+		_skill1_box.visible = true
+	_skill2_box.visible = false
+
+
 func show_locked(hint: String) -> void:
 	_name_label.text = &"???"
 	_name_label.add_theme_color_override(&"font_color", LOCKED_TITLE_COLOR)

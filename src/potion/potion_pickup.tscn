@@ -1,0 +1,72 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://potion/potion_pickup.gd" id="1_potion"]
+[ext_resource type="Script" path="res://character/ground_indicator.gd" id="2_ind"]
+[ext_resource type="Texture2D" uid="uid://bew3b5nrsmhiw" path="res://data/assets/map/tiles/Tileset.png" id="3_tileset"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_health"]
+atlas = ExtResource("3_tileset")
+region = Rect2(256, 384, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_haste"]
+atlas = ExtResource("3_tileset")
+region = Rect2(240, 368, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_fury"]
+atlas = ExtResource("3_tileset")
+region = Rect2(208, 384, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_xp"]
+atlas = ExtResource("3_tileset")
+region = Rect2(224, 368, 16, 16)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_potion"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_health")
+}],
+"loop": true,
+"name": &"health",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_haste")
+}],
+"loop": true,
+"name": &"haste",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_fury")
+}],
+"loop": true,
+"name": &"fury",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_xp")
+}],
+"loop": true,
+"name": &"xp",
+"speed": 1.0
+}]
+
+[node name="PotionPickup" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_potion")
+
+[node name="GroundIndicator" type="Node2D" parent="."]
+position = Vector2(0, 4)
+script = ExtResource("2_ind")
+radius_x = 5.5
+radius_y = 2.8
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+position = Vector2(0, -3)
+sprite_frames = SubResource("SpriteFrames_potion")
+animation = &"health"
+autoplay = "health"

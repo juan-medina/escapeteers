@@ -38,6 +38,10 @@
 [ext_resource type="AudioStreamWAV" path="res://data/assets/sounds/Key_Pickup.wav" id="36_key_pickup"]
 [ext_resource type="AudioStreamWAV" path="res://data/assets/sounds/Door_Unlock.wav" id="37_door_unlock"]
 [ext_resource type="AudioStreamWAV" path="res://data/assets/sounds/Shortcut_Open.wav" id="38_shortcut_open"]
+[ext_resource type="AudioStreamWAV" path="res://data/assets/sounds/Potion_Health.wav" id="39_potion_health"]
+[ext_resource type="AudioStreamWAV" path="res://data/assets/sounds/Potion_Haste.wav" id="40_potion_haste"]
+[ext_resource type="AudioStreamWAV" path="res://data/assets/sounds/Potion_Fury.wav" id="41_potion_fury"]
+[ext_resource type="AudioStreamWAV" path="res://data/assets/sounds/Potion_Xp.wav" id="42_potion_xp"]
 
 [sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_spike_trap"]
 playback_mode = 0
@@ -174,6 +178,22 @@ bus = &"Sfx"
 
 [node name="CoinPickup" type="AudioStreamPlayer" parent="ChannelStinger"]
 stream = ExtResource("35_coin_pickup")
+bus = &"Sfx"
+
+[node name="PotionHealth" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("39_potion_health")
+bus = &"Sfx"
+
+[node name="PotionHaste" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("40_potion_haste")
+bus = &"Sfx"
+
+[node name="PotionFury" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("41_potion_fury")
+bus = &"Sfx"
+
+[node name="PotionXp" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("42_potion_xp")
 bus = &"Sfx"
 
 [node name="KeyPickup" type="AudioStreamPlayer" parent="ChannelStinger"]

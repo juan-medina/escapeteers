@@ -12,6 +12,7 @@ const LOCKED_TEXT_COLOR: Color = Color(0.50, 0.54, 0.62, 1.0)
 @export var entry_id: StringName = &""
 
 var _sprite_frames: SpriteFrames = null
+var _anim_name: StringName = Character.ANIM_IDLE
 var _display_name: String = ""
 var _display_color: Color = Color.WHITE
 var _discovered: bool = false
@@ -42,6 +43,15 @@ func setup_enemy() -> void:
 	_preview_sprite.sprite_frames = _sprite_frames
 
 
+func setup_item(item_name: String, color: Color, frames: SpriteFrames, anim_name: StringName) -> void:
+	_sprite_frames = frames
+	_anim_name = anim_name
+	_display_name = item_name
+	_display_color = color
+	_preview_sprite.sprite_frames = _sprite_frames
+	_preview_sprite.scale = Vector2(2.0, 2.0)
+
+
 func refresh_state(discovered: bool, unread: bool) -> void:
 	_discovered = discovered
 	if _discovered:
@@ -65,9 +75,9 @@ func _sync_sprite_playback() -> void:
 	if _sprite_frames == null:
 		return
 	if is_visible_in_tree() and _discovered:
-		_preview_sprite.play(Character.ANIM_IDLE)
+		_preview_sprite.play(_anim_name)
 	else:
-		_preview_sprite.animation = Character.ANIM_IDLE
+		_preview_sprite.animation = _anim_name
 		_preview_sprite.frame = 0
 		_preview_sprite.pause()
 

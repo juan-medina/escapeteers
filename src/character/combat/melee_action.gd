@@ -81,6 +81,8 @@ func apply_hit(user: Character, target: Character) -> bool:
 		return false
 
 	var applied_damage: float = heavy_damage if current_is_heavy else damage
+	if user is Hero:
+		applied_damage *= (user as Hero).damage_multiplier
 	var applied_knockback: float = heavy_knockback if current_is_heavy else knockback
 	var applied_stun: float = heavy_stun_duration if current_is_heavy else stun_duration
 	var applied_burn_dps: float = heavy_burn_dps if current_is_heavy else burn_dps

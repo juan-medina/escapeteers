@@ -1,0 +1,62 @@
+{
+	"reroll_coin": {
+		"name": "Reroll Coin",
+		"tag": "Draft Pickup",
+		"color": "#ffcf40",
+		"scene_path": "res://coin/coin.tscn",
+		"anim_name": "idle",
+		"description": "A gleaming dungeon coin spent to refresh hero draft offers.",
+		"where_found": "Scattered sparingly in dungeon chambers, with one guaranteed near the entrance.",
+		"effect_title": "Draft Reroll",
+		"effect_desc": "Spend on the Recruit or Level-Up screen to roll a fresh set of hero choices.",
+		"unlock_hint": "Undiscovered item. Explore dungeon chambers to find this pickup."
+	},
+	"potion_health": {
+		"name": "Health Potion",
+		"tag": "Squad Heal",
+		"color": "#ff616b",
+		"scene_path": "res://potion/potion_pickup.tscn",
+		"anim_name": "health",
+		"description": "A ruby flask that knits wounds across the entire fellowship.",
+		"where_found": "Scattered across dungeon chambers.",
+		"effect_title": "Healing Surge",
+		"effect_desc": "Restores 40% max HP to all living squad members across 4 rapid waves on walk-over.",
+		"unlock_hint": "Undiscovered item. Explore dungeon chambers to find this flask."
+	},
+	"potion_haste": {
+		"name": "Speed Potion",
+		"tag": "Timed Buff",
+		"color": "#59d9ff",
+		"scene_path": "res://potion/potion_pickup.tscn",
+		"anim_name": "haste",
+		"description": "An azure elixir that accelerates both footing and strikes.",
+		"where_found": "Scattered across dungeon chambers and waiting inside every opened shortcut tunnel.",
+		"effect_title": "Squad Haste",
+		"effect_desc": "Boosts movement speed by 40% and attack speed by 30% for 12 seconds.",
+		"unlock_hint": "Undiscovered item. Explore dungeon chambers or opened shortcuts to find this flask."
+	},
+	"potion_fury": {
+		"name": "Fury Potion",
+		"tag": "Timed Buff",
+		"color": "#ffd647",
+		"scene_path": "res://potion/potion_pickup.tscn",
+		"anim_name": "fury",
+		"description": "A golden draught that empowers every blade, arrow, and spell.",
+		"where_found": "Scattered across dungeon chambers.",
+		"effect_title": "Squad Fury",
+		"effect_desc": "Increases all squad attack damage by 35% for 12 seconds.",
+		"unlock_hint": "Undiscovered item. Explore dungeon chambers to find this flask."
+	},
+	"potion_xp": {
+		"name": "XP Elixir",
+		"tag": "Experience",
+		"color": "#d17aff",
+		"scene_path": "res://potion/potion_pickup.tscn",
+		"anim_name": "xp",
+		"description": "A violet flask brimming with distilled battle wisdom.",
+		"where_found": "Scattered across dungeon chambers.",
+		"effect_title": "Experience Surge",
+		"effect_desc": "Pours 35% of a level's XP into your squad bar across 5 rapid pulses.",
+		"unlock_hint": "Undiscovered item. Explore dungeon chambers to find this flask."
+	}
+}

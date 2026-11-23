@@ -12,6 +12,7 @@ var _codex_return_panel: UiPanel = null
 @onready var _codex_panel: CodexPanel = $Center/CodexPanel
 @onready var _codex_heroes_panel: CodexHeroesPanel = $Center/CodexHeroesPanel
 @onready var _codex_enemies_panel: CodexEnemiesPanel = $Center/CodexEnemiesPanel
+@onready var _codex_items_panel: CodexItemsPanel = $Center/CodexItemsPanel
 @onready var _codex_mechanics_panel: CodexMechanicsPanel = $Center/CodexMechanicsPanel
 
 
@@ -25,6 +26,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func initialize() -> void:
 	_codex_heroes_panel.initialize()
 	_codex_enemies_panel.initialize()
+	_codex_items_panel.initialize()
 	_codex_mechanics_panel.initialize()
 
 
@@ -87,6 +89,10 @@ func _on_codex_heroes_requested() -> void:
 
 func _on_codex_enemies_requested() -> void:
 	show_panel(_codex_enemies_panel)
+
+
+func _on_codex_items_requested() -> void:
+	show_panel(_codex_items_panel)
 
 
 func _on_codex_mechanics_requested() -> void:

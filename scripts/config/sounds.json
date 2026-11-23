@@ -205,7 +205,7 @@
     {
       "input": "src/data/raw/sounds/Coin_Pickup.wav",
       "output": "src/data/assets/sounds/Coin_Pickup.wav",
-      "tier": "heavy"
+      "tier": "critical"
     },
     {
       "input": "src/data/raw/sounds/Key_Pickup.wav",
@@ -221,6 +221,26 @@
       "input": "src/data/raw/sounds/Shortcut_Open.wav",
       "output": "src/data/assets/sounds/Shortcut_Open.wav",
       "tier": "critical"
+    },
+    {
+      "input": "src/data/raw/sounds/Potion_Health.wav",
+      "output": "src/data/assets/sounds/Potion_Health.wav",
+      "tier": "heavy"
+    },
+    {
+      "input": "src/data/raw/sounds/Potion_Haste.wav",
+      "output": "src/data/assets/sounds/Potion_Haste.wav",
+      "tier": "heavy"
+    },
+    {
+      "input": "src/data/raw/sounds/Potion_Fury.wav",
+      "output": "src/data/assets/sounds/Potion_Fury.wav",
+      "tier": "heavy"
+    },
+    {
+      "input": "src/data/raw/sounds/Potion_Xp.wav",
+      "output": "src/data/assets/sounds/Potion_Xp.wav",
+      "tier": "heavy"
     }
   ]
 }
