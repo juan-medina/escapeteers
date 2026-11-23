@@ -2,66 +2,60 @@
 
 [ext_resource type="Script" path="res://game_over_dialog/game_over_dialog.gd" id="1_gov"]
 [ext_resource type="FontFile" uid="uid://bg6arvysy4jwv" path="res://data/assets/pixel_ui_theme/m6x11plus.ttf" id="2_m6x11plus"]
+[ext_resource type="PackedScene" path="res://codex_panel/unread_badge.tscn" id="3_badge"]
 
-[node name="GameOverDialog" type="Control" node_paths=PackedStringArray("first_focus")]
+[node name="GameOverDialog" type="PanelContainer" node_paths=PackedStringArray("first_focus")]
 process_mode = 3
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
 script = ExtResource("1_gov")
-first_focus = NodePath("Center/Panel/VBox/Buttons/Retry")
+first_focus = NodePath("VBox/Buttons/Retry")
 
-[node name="Center" type="CenterContainer" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Panel" type="PanelContainer" parent="Center"]
-layout_mode = 2
-
-[node name="VBox" type="VBoxContainer" parent="Center/Panel"]
+[node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="Title" type="Label" parent="Center/Panel/VBox"]
+[node name="Title" type="Label" parent="VBox"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_m6x11plus")
 theme_override_font_sizes/font_size = 18
 text = "Game Over"
 horizontal_alignment = 1
 
-[node name="Body" type="Label" parent="Center/Panel/VBox"]
+[node name="Body" type="Label" parent="VBox"]
 layout_mode = 2
 text = "Your leader has fallen."
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="HSeparator" type="HSeparator" parent="Center/Panel/VBox"]
+[node name="HSeparator" type="HSeparator" parent="VBox"]
 layout_mode = 2
 
-[node name="Buttons" type="HBoxContainer" parent="Center/Panel/VBox"]
+[node name="Buttons" type="HBoxContainer" parent="VBox"]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="Retry" type="Button" parent="Center/Panel/VBox/Buttons"]
+[node name="Retry" type="Button" parent="VBox/Buttons"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Retry"
 
-[node name="BackToMenu" type="Button" parent="Center/Panel/VBox/Buttons"]
+[node name="Codex" type="Button" parent="VBox/Buttons"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Codex"
+
+[node name="UnreadBadge" parent="VBox/Buttons/Codex" instance=ExtResource("3_badge")]
+layout_mode = 1
+
+[node name="BackToMenu" type="Button" parent="VBox/Buttons"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Main Menu"
 
-[connection signal="pressed" from="Center/Panel/VBox/Buttons/Retry" to="." method="_on_retry_pressed"]
-[connection signal="pressed" from="Center/Panel/VBox/Buttons/BackToMenu" to="." method="_on_back_to_menu_pressed"]
+[connection signal="pressed" from="VBox/Buttons/Retry" to="." method="_on_retry_pressed"]
+[connection signal="pressed" from="VBox/Buttons/Codex" to="." method="_on_codex_pressed"]
+[connection signal="pressed" from="VBox/Buttons/BackToMenu" to="." method="_on_back_to_menu_pressed"]

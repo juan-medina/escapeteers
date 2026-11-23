@@ -5,6 +5,7 @@
 [ext_resource type="Texture2D" uid="uid://bew3b5nrsmhiw" path="res://data/assets/map/tiles/Tileset.png" id="3_tileset"]
 [ext_resource type="Texture2D" uid="uid://b4raa08tvtlmw" path="res://data/assets/character/heroes/torchero/torchero.png" id="4_torchero"]
 [ext_resource type="Texture2D" uid="uid://cd8wqoflbfbrv" path="res://map/light_texture.tres" id="5_light"]
+[ext_resource type="PackedScene" path="res://codex_panel/unread_badge.tscn" id="6_badge"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_root"]
 
@@ -166,7 +167,7 @@ first_focus = NodePath("VBox/MenuBox/ButtonsVBox/Play")
 
 [node name="VBox" type="VBoxContainer" parent="." unique_id=1194357424]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 12
 alignment = 1
 
 [node name="LogoStage" type="Control" parent="VBox" unique_id=182382626]
@@ -279,7 +280,7 @@ size_flags_horizontal = 4
 
 [node name="ButtonsVBox" type="VBoxContainer" parent="VBox/MenuBox" unique_id=308937908]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 6
 alignment = 1
 
 [node name="Play" type="Button" parent="VBox/MenuBox/ButtonsVBox" unique_id=402006900]
@@ -287,6 +288,15 @@ custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Play"
+
+[node name="Codex" type="Button" parent="VBox/MenuBox/ButtonsVBox"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Codex"
+
+[node name="UnreadBadge" parent="VBox/MenuBox/ButtonsVBox/Codex" instance=ExtResource("6_badge")]
+layout_mode = 1
 
 [node name="Settings" type="Button" parent="VBox/MenuBox/ButtonsVBox" unique_id=2141789090]
 custom_minimum_size = Vector2(100, 0)
@@ -317,6 +327,7 @@ shortcut = SubResource("Shortcut_back")
 text = "Exit"
 
 [connection signal="pressed" from="VBox/MenuBox/ButtonsVBox/Play" to="." method="_on_play_pressed"]
+[connection signal="pressed" from="VBox/MenuBox/ButtonsVBox/Codex" to="." method="_on_codex_pressed"]
 [connection signal="pressed" from="VBox/MenuBox/ButtonsVBox/Settings" to="." method="_on_settings_pressed"]
 [connection signal="pressed" from="VBox/MenuBox/ButtonsVBox/About" to="." method="_on_about_pressed"]
 [connection signal="pressed" from="VBox/MenuBox/ButtonsVBox/Changelog" to="." method="_on_changelog_pressed"]

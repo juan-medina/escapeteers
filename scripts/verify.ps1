@@ -52,12 +52,27 @@ try {
         }
     }
 
-    # 3. Godot check-only (run once for the project)
-    Write-Host "Running Godot compiler check..." -ForegroundColor Cyan
-    godot --headless --path src --audio-driver Dummy --check-only -d --quit
+    # 3. Godot class cache refresh + check-only (run once for the project)
+    Write-Host "Refreshing Godot class cache..." -ForegroundColor Cyan
+    "quit" | godot --headless --path src --audio-driver Dummy --import --quit
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "godot check-only failed"
+        Write-Error "godot --import failed"
         exit $LASTEXITCODE
+    }
+
+    Write-Host "Running Godot compiler check..." -ForegroundColor Cyan
+    $checkOutput = "quit" | godot --headless --path src --audio-driver Dummy --check-only -d --quit 2>&1
+    $checkExit = $LASTEXITCODE
+    foreach ($line in $checkOutput) {
+        Write-Host $line
+    }
+    $checkText = ($checkOutput | Out-String)
+    if ($checkExit -ne 0 -or $checkText -match "Debugger Break|Parser Error|SCRIPT ERROR:") {
+        Write-Error "godot check-only failed"
+        if ($checkExit -ne 0) {
+            exit $checkExit
+        }
+        exit 1
     }
 
     Write-Host "All files verified successfully!" -ForegroundColor Green

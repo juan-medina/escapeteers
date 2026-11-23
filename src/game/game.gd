@@ -101,7 +101,7 @@ var _last_player_cell: Vector2i = Vector2i(2147483647, 2147483647)
 @onready var _hud: Hud = $Hud
 @onready var _recruit_panel: RecruitPanel = $Overlays/RecruitPanel
 @onready var _level_up_panel: LevelUpPanel = $Overlays/LevelUpPanel
-@onready var _game_over_dialog: GameOverDialog = $Overlays/GameOverDialog
+@onready var _pause_overlay: PauseOverlay = $PauseOverlay
 
 
 func _ready() -> void:
@@ -113,8 +113,10 @@ func _ready() -> void:
 
 	await HeroData.initialize()
 	await EnemyData.initialize()
+	await CodexMechanicsPanel.initialize_data()
 	_recruit_panel.initialize()
 	_level_up_panel.initialize()
+	_pause_overlay.initialize()
 
 	_map.generation_progress_updated.connect(Transition.set_loading_progress)
 	_map.secret_torches_completed.connect(_on_secret_torches_completed)
@@ -335,6 +337,7 @@ func _on_locked_door_bumped(color: WorldPlan.KeyColor) -> void:
 
 
 func _spawn_hero(hero_data: HeroData, pos: Vector2, is_leader: bool) -> Hero:
+	Codex.discover_hero(hero_data.id)
 	var hero_level: int = _class_levels.get(hero_data.id, 1)
 	var hero: Hero = hero_data.scene.instantiate() as Hero
 	hero_data.apply_to_hero(hero, hero_level)
@@ -678,9 +681,7 @@ func _clear_dead_hero_references(dead_hero: Hero) -> void:
 func _on_player_death_completed() -> void:
 	Audio.play_sfx(Audio.Sfx.GAME_OVER)
 	Audio.stop_music()
-	_game_over_dialog.visible = true
-	_game_over_dialog.grab_first_focus()
-	get_tree().paused = true
+	_pause_overlay.open_game_over()
 
 
 func _check_recruitment() -> void:
@@ -732,6 +733,7 @@ func _on_hero_recruited(hero_data: HeroData) -> void:
 
 
 func _on_hero_enemy_hit(enemy: Enemy, damage: float, is_heavy: bool, hero: Hero) -> void:
+	Codex.discover_enemy(enemy.enemy_id)
 	_hud.record_damage(hero.hero_data.id, damage)
 	_reset_combat_cooldown()
 	Audio.play_sfx(Audio.Sfx.HEAVY_IMPACT if is_heavy else Audio.Sfx.HIT_IMPACT)

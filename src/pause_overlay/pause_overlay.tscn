@@ -3,6 +3,11 @@
 [ext_resource type="Script" path="res://pause_overlay/pause_overlay.gd" id="1_eh0lt"]
 [ext_resource type="PackedScene" path="res://pause_panel/pause_panel.tscn" id="2_2626e"]
 [ext_resource type="PackedScene" path="res://settings_panel/settings_panel.tscn" id="3_5xdq4"]
+[ext_resource type="PackedScene" path="res://game_over_dialog/game_over_dialog.tscn" id="4_game_over"]
+[ext_resource type="PackedScene" path="res://codex_panel/codex_panel.tscn" id="5_codex"]
+[ext_resource type="PackedScene" path="res://codex_panel/codex_heroes_panel.tscn" id="6_codex_heroes"]
+[ext_resource type="PackedScene" path="res://codex_panel/codex_enemies_panel.tscn" id="7_codex_enemies"]
+[ext_resource type="PackedScene" path="res://codex_panel/codex_mechanics_panel.tscn" id="8_codex_mechanics"]
 
 [node name="PauseOverlay" type="CanvasLayer"]
 process_mode = 3
@@ -33,6 +38,35 @@ layout_mode = 2
 visible = false
 layout_mode = 2
 
+[node name="GameOverDialog" parent="Center" instance=ExtResource("4_game_over")]
+visible = false
+layout_mode = 2
+
+[node name="CodexPanel" parent="Center" instance=ExtResource("5_codex")]
+visible = false
+layout_mode = 2
+
+[node name="CodexHeroesPanel" parent="Center" instance=ExtResource("6_codex_heroes")]
+visible = false
+layout_mode = 2
+
+[node name="CodexEnemiesPanel" parent="Center" instance=ExtResource("7_codex_enemies")]
+visible = false
+layout_mode = 2
+
+[node name="CodexMechanicsPanel" parent="Center" instance=ExtResource("8_codex_mechanics")]
+visible = false
+layout_mode = 2
+
+[connection signal="codex_requested" from="Center/PausePanel" to="." method="_on_pause_panel_codex_requested"]
 [connection signal="resume_requested" from="Center/PausePanel" to="." method="_on_resume_requested"]
 [connection signal="settings_requested" from="Center/PausePanel" to="." method="_on_pause_panel_settings_requested"]
 [connection signal="back_requested" from="Center/SettingsPanel" to="." method="_on_settings_panel_back_requested"]
+[connection signal="codex_requested" from="Center/GameOverDialog" to="." method="_on_game_over_codex_requested"]
+[connection signal="back_requested" from="Center/CodexPanel" to="." method="_on_codex_back_requested"]
+[connection signal="enemies_requested" from="Center/CodexPanel" to="." method="_on_codex_enemies_requested"]
+[connection signal="heroes_requested" from="Center/CodexPanel" to="." method="_on_codex_heroes_requested"]
+[connection signal="mechanics_requested" from="Center/CodexPanel" to="." method="_on_codex_mechanics_requested"]
+[connection signal="back_requested" from="Center/CodexHeroesPanel" to="." method="_on_codex_subpanel_back_requested"]
+[connection signal="back_requested" from="Center/CodexEnemiesPanel" to="." method="_on_codex_subpanel_back_requested"]
+[connection signal="back_requested" from="Center/CodexMechanicsPanel" to="." method="_on_codex_subpanel_back_requested"]

@@ -19,6 +19,7 @@ static var _heroes_by_role: Array[HeroData] = []
 var role: Role = Role.MELEE
 var abbr: String = ""
 var summary: String = ""
+var codex: String = ""
 var color: Color = Color.WHITE
 var is_secret: bool = false
 var sprite_frames: SpriteFrames = null
@@ -116,6 +117,7 @@ static func _from_dict(dict: Dictionary) -> HeroData:
 	h.role = Role[_str_val(dict, &"role")]
 	h.abbr = _str_val(dict, &"abbr")
 	h.summary = _str_val(dict, &"summary")
+	h.codex = _str_val(dict, &"codex")
 	h.color = Color.from_string(_str_val(dict, &"color"), Color.WHITE)
 	h.is_secret = dict.get(&"secret", false) == true
 	h.sprite_frames = extract_sprite_frames(h.scene)

@@ -6,14 +6,15 @@
 		"abbr": "ARCH",
 		"color": "#55a630",
 		"summary": "Long-range knockback sniper",
-		"description": "Long-range sniper who fires high-damage arrows that shove approaching foes away.",
+		"description": "Deadly marksman who picks off distant foes with high-impact arrows.",
+		"codex": "A keen-eyed sharpshooter who holds the backline and never breaks formation. Looses high-damage arrows across open line of sight to drive advancing foes back.",
 		"scene_path": "res://character/heroes/archer/archer.tscn",
 		"health": { "base": 80.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Snipe Arrow",
 				"type": "RANGED",
-				"description": "Heavy knockback shoves distant foes back.",
+				"description": "High-damage arrow that inflicts heavy knockback.",
 				"amount": { "base": 18.0, "growth": 0.10 },
 				"cooldown": { "base": 1.3, "growth": -0.05 },
 				"range": { "base": 145.0, "growth": 0.0 },
@@ -30,15 +31,16 @@
 		"role": "MELEE",
 		"abbr": "AXEM",
 		"color": "#e76f51",
-		"summary": "Sweeping AoE axe cleaves",
-		"description": "Frontline cleaver who swings heavy axes into enemy packs with sweeping burst chops.",
+		"summary": "Heavy frontline AoE cleaver",
+		"description": "Heavy vanguard who carves through enemy packs with sweeping axe cleaves.",
+		"codex": "An ironclad vanguard who steps forward to meet oncoming hordes head-on. Cuts through tight enemy groups with heavy cleaves and punishing knockback bursts.",
 		"scene_path": "res://character/heroes/armored_axeman/armored_axeman.tscn",
 		"health": { "base": 145.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Axe Chop",
 				"type": "MELEE",
-				"description": "Light stagger keeps enemy packs in reach.",
+				"description": "Wide melee cleave with light knockback.",
 				"amount": { "base": 11.0, "growth": 0.10 },
 				"cooldown": { "base": 0.58, "growth": -0.03 },
 				"range": { "base": 22.0, "growth": 0.0 },
@@ -50,7 +52,7 @@
 			{
 				"name": "Whirlwind Cleave",
 				"type": "MELEE",
-				"description": "Sweeping burst chop with strong knockback.",
+				"description": "Sweeping AoE cleave dealing heavy damage and strong knockback.",
 				"amount": { "base": 25.0, "growth": 0.10 },
 				"cooldown": { "base": 3.3, "growth": -0.05 },
 				"range": { "base": 22.0, "growth": 0.0 },
@@ -68,15 +70,16 @@
 		"role": "MELEE",
 		"abbr": "KNGH",
 		"color": "#3a86ff",
-		"summary": "High-HP tank; taunts & stuns",
-		"description": "High-health frontline tank who draws enemy aggro and stuns nearby threats.",
+		"summary": "Sturdy tank; taunts & stuns",
+		"description": "Armored guardian who draws enemy aggro and stuns threats at close range.",
+		"codex": "A steadfast bastion of steel who anchors the frontline and draws enemy aggro away from backline allies. Endures heavy punishment while stunning nearby foes.",
 		"scene_path": "res://character/heroes/knight/knight.tscn",
 		"health": { "base": 270.0, "growth": 0.12 },
 		"skills": [
 			{
 				"name": "Sword Strike",
 				"type": "MELEE",
-				"description": "Steady melee slash with no pushback.",
+				"description": "Disciplined melee slash that holds the line.",
 				"amount": { "base": 8.0, "growth": 0.10 },
 				"cooldown": { "base": 0.55, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 }
@@ -84,7 +87,7 @@
 			{
 				"name": "Heavy Swing",
 				"type": "MELEE",
-				"description": "Shield-bashing strike that stuns nearby foes.",
+				"description": "Shield-bashing blow that stuns nearby foes.",
 				"amount": { "base": 16.0, "growth": 0.10 },
 				"cooldown": { "base": 3.2, "growth": -0.05 },
 				"range": { "base": 20.0, "growth": 0.0 },
@@ -97,7 +100,7 @@
 			{
 				"name": "Taunt",
 				"type": "PASSIVE",
-				"description": "Naturally draws enemy aggro and forces struck foes to focus Knight."
+				"description": "Draws nearby enemy aggro and forces struck foes to focus the Knight."
 			}
 		]
 	},
@@ -107,15 +110,16 @@
 		"role": "MELEE",
 		"abbr": "TMPL",
 		"color": "#ffd166",
-		"summary": "Long pike knockback control",
-		"description": "Defensive shock fighter who uses long-reach pike thrusts to push waves back.",
+		"summary": "Polearm knockback defender",
+		"description": "Stalwart polearm warrior who keeps swarms at bay with forceful pike thrusts.",
+		"codex": "A sworn defender of the fellowship who guards the vanguard with a long-reach pike. Repels advancing waves with relentless knockback strikes.",
 		"scene_path": "res://character/heroes/knight_templar/knight_templar.tscn",
 		"health": { "base": 150.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Pike Thrust",
 				"type": "MELEE",
-				"description": "Long-reach thrust that pushes enemies away.",
+				"description": "Long-reach melee thrust with strong knockback.",
 				"amount": { "base": 8.0, "growth": 0.10 },
 				"cooldown": { "base": 0.65, "growth": -0.03 },
 				"range": { "base": 22.0, "growth": 0.0 },
@@ -127,7 +131,7 @@
 			{
 				"name": "Heavy Smite",
 				"type": "MELEE",
-				"description": "Empowered strike with heavy knockback.",
+				"description": "Empowered polearm strike dealing high damage and heavy knockback.",
 				"amount": { "base": 20.0, "growth": 0.10 },
 				"cooldown": { "base": 3.5, "growth": -0.05 },
 				"range": { "base": 22.0, "growth": 0.0 },
@@ -145,8 +149,9 @@
 		"role": "HEALER",
 		"abbr": "PRST",
 		"color": "#e0fbfc",
-		"summary": "Heals squad & stuns foes",
-		"description": "Backline support who prioritizes healing wounded allies and stuns foes between heals.",
+		"summary": "Party healer & ranged stun",
+		"description": "Devoted cleric who mends wounded allies and smites foes with holy light.",
+		"codex": "A sacred caretaker sheltered at the heart of the formation. Prioritizes critically wounded allies in combat, mends the party between fights, and calls down stunning light when allies are safe.",
 		"scene_path": "res://character/heroes/priest/priest.tscn",
 		"health": { "base": 80.0, "growth": 0.10 },
 		"skills": [
@@ -161,7 +166,7 @@
 			{
 				"name": "Holy Smite",
 				"type": "RANGED",
-				"description": "Strikes a distant enemy and stuns them.",
+				"description": "Calls down holy light from afar, damaging and stunning a foe.",
 				"amount": { "base": 5.0, "growth": 0.10 },
 				"cooldown": { "base": 2.5, "growth": -0.05 },
 				"range": { "base": 140.0, "growth": 0.0 },
@@ -178,15 +183,16 @@
 		"role": "HYBRID",
 		"abbr": "SOLD",
 		"color": "#c0392b",
-		"summary": "Marks targets for bonus dmg",
-		"description": "Tactical spotter who marks distant enemies for bonus squad damage and guards close range.",
+		"summary": "Marks foes for bonus damage",
+		"description": "Versatile skirmisher who marks distant foes for bonus party damage and fights up close.",
+		"codex": "A seasoned tactician who fights close to the leader. Fires arrows at unmarked foes so the entire party deals bonus damage, drawing a swift blade whenever enemies close in.",
 		"scene_path": "res://character/heroes/soldier/soldier.tscn",
 		"health": { "base": 115.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Arrow Shot",
 				"type": "RANGED",
-				"description": "Prioritizes unmarked foes; marked targets take extra squad damage.",
+				"description": "Prioritizes unmarked foes, applying Mark for bonus party damage.",
 				"amount": { "base": 7.0, "growth": 0.10 },
 				"cooldown": { "base": 0.9, "growth": -0.04 },
 				"range": { "base": 140.0, "growth": 0.0 },
@@ -199,7 +205,7 @@
 			{
 				"name": "Sword Slash",
 				"type": "MELEE",
-				"description": "Fast close-range blade defense.",
+				"description": "Swift close-range sword strike against nearby foes.",
 				"amount": { "base": 10.0, "growth": 0.10 },
 				"cooldown": { "base": 0.45, "growth": -0.03 },
 				"range": { "base": 22.0, "growth": 0.0 },
@@ -213,15 +219,16 @@
 		"role": "MELEE",
 		"abbr": "SWRD",
 		"color": "#2a9d8f",
-		"summary": "Fast multi-hit blade burst",
-		"description": "Rapid-strike duelist who delivers relentless sword slashes and fast three-hit flurries.",
+		"summary": "Rapid multi-hit melee duelist",
+		"description": "Agile duelist who overwhelms targets with fast slashes and three-hit flurries.",
+		"codex": "A swift blademaster who darts from the frontline to cut down priority targets. Chains relentless sword strikes into devastating three-hit bursts.",
 		"scene_path": "res://character/heroes/swordsman/swordsman.tscn",
 		"health": { "base": 125.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Quick Slash",
 				"type": "MELEE",
-				"description": "Rapid single-target strikes with no knockback.",
+				"description": "Fast single-target sword strike on a short cooldown.",
 				"amount": { "base": 10.0, "growth": 0.10 },
 				"cooldown": { "base": 0.45, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 }
@@ -229,7 +236,7 @@
 			{
 				"name": "Blade Flurry",
 				"type": "MELEE",
-				"description": "Unleashes 3 rapid hits without pushing foes away.",
+				"description": "Unleashes a rapid 3-hit combo for high burst damage.",
 				"amount": { "base": 10.0, "growth": 0.10 },
 				"hits": 3,
 				"cooldown": { "base": 3.0, "growth": -0.05 },
@@ -244,15 +251,16 @@
 		"role": "RANGED",
 		"abbr": "WIZD",
 		"color": "#9b5de5",
-		"summary": "Piercing bolts chill enemies",
-		"description": "Backline spellcaster whose piercing frost bolts chill and slow advancing groups.",
+		"summary": "Piercing frost bolts that slow",
+		"description": "Arcane caster whose piercing frost bolts chill and slow advancing packs.",
+		"codex": "A scholar of frost magic who holds the backline and seeks out unchilled foes. Launches piercing ice bolts through up to two enemies to slow their advance.",
 		"scene_path": "res://character/heroes/wizard/wizard.tscn",
 		"health": { "base": 70.0, "growth": 0.10 },
 		"skills": [
 			{
 				"name": "Frost Bolt",
 				"type": "RANGED",
-				"description": "Pierces up to 2 enemies and slows their movement.",
+				"description": "Pierces up to 2 foes, inflicting Slow.",
 				"amount": { "base": 10.0, "growth": 0.10 },
 				"cooldown": { "base": 1.25, "growth": -0.05 },
 				"range": { "base": 140.0, "growth": 0.0 },
@@ -270,8 +278,10 @@
 		"role": "MELEE",
 		"abbr": "TRCH",
 		"color": "#ff6b35",
-		"summary": "Burning torch melee strikes",
-		"description": "Secret torch-bearer who lights the darkness and ignites unburned foes with fire.",
+		"summary": "Flame-bearing burn brawler",
+		"description": "Mysterious flame-bearer who lights dark halls and ignites foes with burn.",
+		"codex": "An enigmatic wanderer carrying an undying ember into the abyss. Illuminates surrounding darkness and seeks out unburned foes to set packs ablaze.",
+		"unlock_hint": "A hidden ally awaits. Some forgotten flames still sleep in the dark...",
 		"secret": true,
 		"scene_path": "res://character/heroes/torchero/torchero.tscn",
 		"health": { "base": 140.0, "growth": 0.10 },
@@ -279,7 +289,7 @@
 			{
 				"name": "Torch Strike",
 				"type": "MELEE",
-				"description": "Ignites struck enemies for fire damage over time.",
+				"description": "Fiery melee strike that inflicts Burn damage over time.",
 				"amount": { "base": 12.0, "growth": 0.10 },
 				"cooldown": { "base": 0.5, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 },
@@ -292,7 +302,7 @@
 			{
 				"name": "Torchlight",
 				"type": "PASSIVE",
-				"description": "Lights nearby darkness and prioritizes igniting unburned enemies."
+				"description": "Illuminates nearby darkness and prioritizes igniting unburned foes."
 			}
 		]
 	}

@@ -7,7 +7,6 @@
 [ext_resource type="PackedScene" uid="uid://c6sfl12l8kd1o" path="res://hud/hud.tscn" id="6_hud"]
 [ext_resource type="PackedScene" path="res://recruit_panel/recruit_panel.tscn" id="7_recruit"]
 [ext_resource type="PackedScene" path="res://level_up_panel/level_up_panel.tscn" id="8_level_up"]
-[ext_resource type="PackedScene" path="res://game_over_dialog/game_over_dialog.tscn" id="9_game_over"]
 
 [node name="Game" type="Node2D" unique_id=676083646]
 script = ExtResource("1_game")
@@ -24,9 +23,6 @@ layer = 1000
 visible = false
 
 [node name="LevelUpPanel" parent="Overlays" instance=ExtResource("8_level_up")]
-visible = false
-
-[node name="GameOverDialog" parent="Overlays" instance=ExtResource("9_game_over")]
 visible = false
 
 [node name="Map" parent="." instance=ExtResource("2_map")]

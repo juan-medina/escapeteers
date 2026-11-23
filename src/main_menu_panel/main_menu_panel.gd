@@ -5,6 +5,7 @@ class_name MainMenuPanel
 extends UiPanel
 
 signal play_requested
+signal codex_requested
 signal settings_requested
 signal about_requested
 signal changelog_requested
@@ -34,6 +35,7 @@ var _idle_timer: float = 0.0
 @onready var _torchero: AnimatedSprite2D = $VBox/LogoStage/Torchero
 @onready var _torchero_embers: CPUParticles2D = $VBox/LogoStage/Torchero/TorcheroEmbers
 @onready var _torchero_light: PointLight2D = $VBox/LogoStage/Torchero/TorcheroLight
+@onready var _codex_badge: Control = $VBox/MenuBox/ButtonsVBox/Codex/UnreadBadge
 @onready var _exit_separator: HSeparator = $VBox/MenuBox/ButtonsVBox/HSeparator
 @onready var _exit_button: Button = $VBox/MenuBox/ButtonsVBox/Exit
 
@@ -43,6 +45,8 @@ func _ready() -> void:
 	if OS.has_feature(&"web"):
 		_exit_separator.visible = false
 		_exit_button.visible = false
+	Codex.unread_changed.connect(_sync_codex_badge)
+	_sync_codex_badge()
 	_set_stage_active(is_visible_in_tree())
 
 
@@ -52,6 +56,7 @@ func _notification(what: int) -> void:
 		_set_stage_active(active)
 		if active:
 			Audio.play_music(false)
+			_sync_codex_badge()
 
 
 func _process(delta: float) -> void:
@@ -102,8 +107,16 @@ func _set_stage_active(active: bool) -> void:
 		_torchero.pause()
 
 
+func _sync_codex_badge() -> void:
+	_codex_badge.visible = Codex.has_any_unread()
+
+
 func _on_play_pressed() -> void:
 	play_requested.emit()
+
+
+func _on_codex_pressed() -> void:
+	codex_requested.emit()
 
 
 func _on_settings_pressed() -> void:

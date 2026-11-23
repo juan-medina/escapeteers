@@ -36,6 +36,7 @@ Audio="*res://audio/audio.gd"
 Transition="*res://transition/transition.gd"
 InputManager="*res://input_manager/input_manager.gd"
 Alerts="*res://alerts/alerts.gd"
+Codex="*res://codex/codex.gd"
 
 [debug]
 

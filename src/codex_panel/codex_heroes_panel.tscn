@@ -1,0 +1,136 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://codex_panel/codex_heroes_panel.gd" id="1_panel"]
+[ext_resource type="PackedScene" path="res://codex_panel/codex_entry_card.tscn" id="2_card"]
+[ext_resource type="PackedScene" path="res://codex_panel/codex_details_panel.tscn" id="3_details"]
+[ext_resource type="FontFile" uid="uid://bg6arvysy4jwv" path="res://data/assets/pixel_ui_theme/m6x11plus.ttf" id="4_m6x11plus"]
+
+[sub_resource type="InputEventAction" id="InputEventAction_pause"]
+device = -1
+action = &"pause"
+
+[sub_resource type="InputEventAction" id="InputEventAction_back"]
+device = -1
+action = &"back"
+
+[sub_resource type="Shortcut" id="Shortcut_back"]
+events = [SubResource("InputEventAction_pause"), SubResource("InputEventAction_back")]
+
+[node name="CodexHeroesPanel" type="PanelContainer" node_paths=PackedStringArray("cards_container", "details_panel", "first_focus", "back_button")]
+script = ExtResource("1_panel")
+cards_container = NodePath("VBox/Grid")
+details_panel = NodePath("VBox/CodexDetailsPanel")
+first_focus = NodePath("VBox/Grid/Card1")
+back_button = NodePath("VBox/Buttons/Back")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="Title" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_m6x11plus")
+theme_override_font_sizes/font_size = 18
+text = "Codex - Heroes"
+horizontal_alignment = 1
+
+[node name="Grid" type="GridContainer" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 4
+columns = 5
+
+[node name="Card1" parent="VBox/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+focus_neighbor_left = NodePath("../Card5")
+focus_neighbor_right = NodePath("../Card2")
+focus_neighbor_bottom = NodePath("../Card6")
+entry_id = &"armored_axeman"
+
+[node name="Card2" parent="VBox/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+focus_neighbor_left = NodePath("../Card1")
+focus_neighbor_right = NodePath("../Card3")
+focus_neighbor_bottom = NodePath("../Card7")
+entry_id = &"knight"
+
+[node name="Card3" parent="VBox/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+focus_neighbor_left = NodePath("../Card2")
+focus_neighbor_right = NodePath("../Card4")
+focus_neighbor_bottom = NodePath("../Card8")
+entry_id = &"knight_templar"
+
+[node name="Card4" parent="VBox/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+focus_neighbor_left = NodePath("../Card3")
+focus_neighbor_right = NodePath("../Card5")
+focus_neighbor_bottom = NodePath("../Card9")
+entry_id = &"swordsman"
+
+[node name="Card5" parent="VBox/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+focus_neighbor_left = NodePath("../Card4")
+focus_neighbor_right = NodePath("../Card6")
+focus_neighbor_bottom = NodePath("../Card9")
+entry_id = &"archer"
+
+[node name="Card6" parent="VBox/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+focus_neighbor_left = NodePath("../Card5")
+focus_neighbor_top = NodePath("../Card1")
+focus_neighbor_right = NodePath("../Card7")
+focus_neighbor_bottom = NodePath("../../Buttons/Back")
+entry_id = &"wizard"
+
+[node name="Card7" parent="VBox/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+focus_neighbor_left = NodePath("../Card6")
+focus_neighbor_top = NodePath("../Card2")
+focus_neighbor_right = NodePath("../Card8")
+focus_neighbor_bottom = NodePath("../../Buttons/Back")
+entry_id = &"priest"
+
+[node name="Card8" parent="VBox/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+focus_neighbor_left = NodePath("../Card7")
+focus_neighbor_top = NodePath("../Card3")
+focus_neighbor_right = NodePath("../Card9")
+focus_neighbor_bottom = NodePath("../../Buttons/Back")
+entry_id = &"soldier"
+
+[node name="Card9" parent="VBox/Grid" instance=ExtResource("2_card")]
+layout_mode = 2
+focus_neighbor_left = NodePath("../Card8")
+focus_neighbor_top = NodePath("../Card4")
+focus_neighbor_right = NodePath("../Card1")
+focus_neighbor_bottom = NodePath("../../Buttons/Back")
+entry_id = &"torchero"
+
+[node name="CodexDetailsPanel" parent="VBox" instance=ExtResource("3_details")]
+layout_mode = 2
+
+[node name="Buttons" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 8
+
+[node name="Back" type="Button" parent="VBox/Buttons" groups=["ui_return"]]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+focus_neighbor_top = NodePath("../../Grid/Card1")
+shortcut = SubResource("Shortcut_back")
+text = "Back"
+
+[connection signal="inspected" from="VBox/Grid/Card1" to="." method="_on_card_inspected"]
+[connection signal="inspected" from="VBox/Grid/Card2" to="." method="_on_card_inspected"]
+[connection signal="inspected" from="VBox/Grid/Card3" to="." method="_on_card_inspected"]
+[connection signal="inspected" from="VBox/Grid/Card4" to="." method="_on_card_inspected"]
+[connection signal="inspected" from="VBox/Grid/Card5" to="." method="_on_card_inspected"]
+[connection signal="inspected" from="VBox/Grid/Card6" to="." method="_on_card_inspected"]
+[connection signal="inspected" from="VBox/Grid/Card7" to="." method="_on_card_inspected"]
+[connection signal="inspected" from="VBox/Grid/Card8" to="." method="_on_card_inspected"]
+[connection signal="inspected" from="VBox/Grid/Card9" to="." method="_on_card_inspected"]
+[connection signal="pressed" from="VBox/Buttons/Back" to="." method="_on_back_pressed"]

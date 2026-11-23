@@ -1,0 +1,116 @@
+{
+	"status_effects": {
+		"title": "Status Effects",
+		"summary": "Combat effects and crowd control applied by hero skills across the battlefield.",
+		"entries": [
+			{
+				"name": "Knockback",
+				"color": "#e699ff",
+				"text": "Forces enemies backward on hit, creating breathing room for the party."
+			},
+			{
+				"name": "Stun",
+				"color": "#ffe066",
+				"text": "Incapacitates a foe briefly, halting movement and canceling telegraphed attacks mid-cast."
+			},
+			{
+				"name": "Slow",
+				"color": "#73d9ff",
+				"text": "Chills enemies with frost, reducing movement speed so rushers fall behind."
+			},
+			{
+				"name": "Burn",
+				"color": "#ffa633",
+				"text": "Ignites targets with fire, dealing steady damage over time until the flames fade."
+			},
+			{
+				"name": "Mark",
+				"color": "#ff5959",
+				"text": "Marks a foe so it takes bonus damage from all party attacks."
+			},
+			{
+				"name": "Taunt",
+				"color": "#3a86ff",
+				"text": "Draws enemy aggro, compelling nearby and struck foes to target the Knight."
+			}
+		]
+	},
+	"formation": {
+		"title": "Formation",
+		"summary": "Guide only your leader - the fellowship holds formation and fights automatically around you.",
+		"entries": [
+			{
+				"name": "Vanguard & Backline",
+				"color": "#66e0a3",
+				"text": "Healers and Ranged allies shelter in the inner rear rings while Melee warriors shield the outer front arc."
+			},
+			{
+				"name": "Marching Formation",
+				"color": "#99d6ff",
+				"text": "Standing ground forms a protective circle; moving parts the vanguard and trails allies behind in a crescent."
+			},
+			{
+				"name": "Frontline & Anchors",
+				"color": "#ffd166",
+				"text": "Melee heroes step out to engage nearby foes and regroup as you move; Ranged and Healers hold their posts."
+			},
+			{
+				"name": "Travel Sprint",
+				"color": "#ff9e64",
+				"text": "Out of combat, steady movement builds sprint speed to cross cleared chambers swiftly."
+			}
+		]
+	},
+	"squad_and_leveling": {
+		"title": "Squad & Leveling",
+		"summary": "Expand your fellowship by rescuing lost survivors and upgrading hero classes with battle XP.",
+		"entries": [
+			{
+				"name": "Rescuing Survivors",
+				"color": "#66e0a3",
+				"text": "Reach stranded survivors in dungeon rooms to draft a new ally. Offers favor underrepresented classes."
+			},
+			{
+				"name": "Class Leveling",
+				"color": "#ffd166",
+				"text": "Defeating foes fills squad XP. Upgrading a class restores that class to full health and empowers current and future members."
+			},
+			{
+				"name": "Reroll Coins",
+				"color": "#ffcf40",
+				"text": "Gather spinning gold coins hidden in chambers to reroll Recruit or Level-Up offers."
+			},
+			{
+				"name": "Leader's Fate",
+				"color": "#ff6666",
+				"text": "Fallen companions are lost for the run, and the expedition ends immediately if your leader falls."
+			}
+		]
+	},
+	"keys_and_traps": {
+		"title": "Keys & Traps",
+		"summary": "Ascend deeper north by claiming sector keys, opening shortcuts, and navigating dungeon hazards.",
+		"entries": [
+			{
+				"name": "Sector Keys & Doors",
+				"color": "#6cc6ff",
+				"text": "Colored doors seal deeper dungeon sectors. Explore side branches to claim the matching key and unlock passage."
+			},
+			{
+				"name": "Shortcut Levers",
+				"color": "#ffd166",
+				"text": "Key chambers conceal wall levers that open direct passages back toward the locked sector door."
+			},
+			{
+				"name": "Spike Traps",
+				"color": "#ff7070",
+				"text": "Timed floor spikes erupt in cycles, harming heroes and monsters alike. Take wide turns so trailing allies stay safe."
+			},
+			{
+				"name": "Dungeon Map",
+				"color": "#a8e6cf",
+				"text": "Open the map to survey explored rooms, danger levels, remaining foes, keys, and sealed doors."
+			}
+		]
+	}
+}

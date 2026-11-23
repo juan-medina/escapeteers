@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://pause_panel/pause_panel.gd" id="1_jp402"]
 [ext_resource type="FontFile" uid="uid://bg6arvysy4jwv" path="res://data/assets/pixel_ui_theme/m6x11plus.ttf" id="2_m6x11plus"]
+[ext_resource type="PackedScene" path="res://codex_panel/unread_badge.tscn" id="3_badge"]
 
 [sub_resource type="InputEventAction" id="InputEventAction_pause"]
 device = -1
@@ -35,6 +36,13 @@ layout_mode = 2
 shortcut = SubResource("Shortcut_back")
 text = "Resume"
 
+[node name="Codex" type="Button" parent="VBox"]
+layout_mode = 2
+text = "Codex"
+
+[node name="UnreadBadge" parent="VBox/Codex" instance=ExtResource("3_badge")]
+layout_mode = 1
+
 [node name="Settings" type="Button" parent="VBox"]
 layout_mode = 2
 text = "Settings"
@@ -47,5 +55,6 @@ layout_mode = 2
 text = "Back to Menu"
 
 [connection signal="pressed" from="VBox/Resume" to="." method="_on_resume_pressed"]
+[connection signal="pressed" from="VBox/Codex" to="." method="_on_codex_pressed"]
 [connection signal="pressed" from="VBox/Settings" to="." method="_on_settings_pressed"]
 [connection signal="pressed" from="VBox/BackToMenu" to="." method="_on_back_to_menu_pressed"]

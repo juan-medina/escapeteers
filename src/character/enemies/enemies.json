@@ -2,6 +2,11 @@
 	"lava_slime": {
 		"id": "lava_slime",
 		"name": "Lava Slime",
+		"role": "Skirmisher",
+		"color": "#ff7b3b",
+		"description": "A molten ooze born in the dungeon's deeper vents. Resilient and slow, it guards chambers and hurls searing spikes across open lanes.",
+		"behavior": "Pursues the nearest hero. Can only launch Lava Spikes when aligned horizontally; sidestep up or down to break its aim.",
+		"unlock_hint": "Undiscovered foe. Explore the dungeon to encounter this creature.",
 		"scene_path": "res://character/enemies/lava_slime/lava_slime.tscn",
 		"health": { "base": 160.0, "growth": 0.16 },
 		"speed": { "base": 35.0, "growth": 0.03 },
@@ -11,6 +16,7 @@
 			{
 				"name": "Slime Melee",
 				"type": "MELEE",
+				"description": "Heavy close-range slam against adjacent heroes.",
 				"amount": { "base": 8.0, "growth": 0.16 },
 				"cooldown": { "base": 1.5, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 }
@@ -18,6 +24,7 @@
 			{
 				"name": "Lava Spike",
 				"type": "RANGED",
+				"description": "Telegraphed molten projectile fired along horizontal line of sight.",
 				"amount": { "base": 5.0, "growth": 0.16 },
 				"cooldown": { "base": 1.5, "growth": -0.03 },
 				"range": { "base": 135.0, "growth": 0.0 },
@@ -28,6 +35,11 @@
 	"skeleton": {
 		"id": "skeleton",
 		"name": "Skeleton",
+		"role": "Melee Rusher",
+		"color": "#d8dce8",
+		"description": "Restless bones animated by dark will. Swift and relentless, they surge through dungeon halls or rise anew from dark rituals.",
+		"behavior": "Rushes past frontliners to hunt Healers and Ranged allies first, unless a Knight's Taunt draws its aggro.",
+		"unlock_hint": "Undiscovered foe. Explore the dungeon to encounter this creature.",
 		"scene_path": "res://character/enemies/skeleton/skeleton.tscn",
 		"health": { "base": 95.0, "growth": 0.16 },
 		"speed": { "base": 80.0, "growth": 0.03 },
@@ -37,6 +49,7 @@
 			{
 				"name": "Bone Slash",
 				"type": "MELEE",
+				"description": "Fast close-range strike against nearby heroes.",
 				"amount": { "base": 9.0, "growth": 0.16 },
 				"cooldown": { "base": 1.1, "growth": -0.03 },
 				"range": { "base": 22.0, "growth": 0.0 }
@@ -44,6 +57,7 @@
 			{
 				"name": "Bone Cleave",
 				"type": "MELEE",
+				"description": "Heavy overhead strike that deals high burst damage.",
 				"amount": { "base": 18.0, "growth": 0.16 },
 				"cooldown": { "base": 3.5, "growth": -0.05 },
 				"range": { "base": 22.0, "growth": 0.0 },
@@ -54,6 +68,11 @@
 	"skeleton_archer": {
 		"id": "skeleton_archer",
 		"name": "Skeleton Archer",
+		"role": "Ranged",
+		"color": "#e6d39c",
+		"description": "A skeletal marksman that loiters at the edge of battle, loosing bone-tipped shafts from safety.",
+		"behavior": "Kites backward whenever heroes approach, maintaining distance between telegraphed arrow volleys.",
+		"unlock_hint": "Undiscovered foe. Explore the dungeon to encounter this creature.",
 		"scene_path": "res://character/enemies/skeleton_archer/skeleton_archer.tscn",
 		"health": { "base": 55.0, "growth": 0.12 },
 		"speed": { "base": 45.0, "growth": 0.03 },
@@ -63,6 +82,7 @@
 			{
 				"name": "Bone Arrow",
 				"type": "RANGED",
+				"description": "Telegraphed long-range shot fired along clear line of sight.",
 				"amount": { "base": 5.0, "growth": 0.12 },
 				"cooldown": { "base": 1.8, "growth": -0.03 },
 				"range": { "base": 130.0, "growth": 0.0 },
@@ -73,6 +93,11 @@
 	"necromancer": {
 		"id": "necromancer",
 		"name": "Necromancer",
+		"role": "Summoner",
+		"color": "#b37aff",
+		"description": "A robed dark mage who commands the restless dead from the rear, steadily overwhelming careless parties.",
+		"behavior": "Retreats away from approaching heroes while channeling summoning circles that raise weaker undead minions until slain.",
+		"unlock_hint": "Undiscovered foe. Deeper chambers north hide unseen threats.",
 		"scene_path": "res://character/enemies/necromancer/necromancer.tscn",
 		"health": { "base": 175.0, "growth": 0.16 },
 		"speed": { "base": 42.0, "growth": 0.03 },
@@ -82,6 +107,7 @@
 			{
 				"name": "Raise Undead",
 				"type": "SUMMON",
+				"description": "Conjures pentagrams that summon Skeleton and Skeleton Archer minions.",
 				"amount": 2,
 				"cooldown": { "base": 2.0, "growth": -0.04 },
 				"range": { "base": 180.0, "growth": 0.0 }

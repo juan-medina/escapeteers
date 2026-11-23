@@ -265,6 +265,7 @@ func set_target_candidate(hero_candidate: Hero) -> void:
 		target = hero_candidate
 		current_state = State.CHASE
 		_navigator.reset()
+		Codex.discover_enemy(enemy_id)
 	elif target != hero_candidate:
 		var candidate_eff_sq: float = get_effective_target_dist_sq(hero_candidate)
 		var current_eff_sq: float = get_effective_target_dist_sq(target)

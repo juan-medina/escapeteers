@@ -10,6 +10,10 @@
 [ext_resource type="TileSet" uid="uid://dynugnietdfql" path="res://map/dungeon.tres" id="8_dungeon"]
 [ext_resource type="Texture2D" uid="uid://bew3b5nrsmhiw" path="res://data/assets/map/tiles/Tileset.png" id="9_tileset"]
 [ext_resource type="Texture2D" uid="uid://cd8wqoflbfbrv" path="res://map/light_texture.tres" id="10_light"]
+[ext_resource type="PackedScene" path="res://codex_panel/codex_panel.tscn" id="11_codex"]
+[ext_resource type="PackedScene" path="res://codex_panel/codex_heroes_panel.tscn" id="12_codex_heroes"]
+[ext_resource type="PackedScene" path="res://codex_panel/codex_enemies_panel.tscn" id="13_codex_enemies"]
+[ext_resource type="PackedScene" path="res://codex_panel/codex_mechanics_panel.tscn" id="14_codex_mechanics"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_torch_0"]
 atlas = ExtResource("9_tileset")
@@ -203,12 +207,30 @@ layout_mode = 2
 visible = false
 layout_mode = 2
 
+[node name="CodexPanel" parent="Center" instance=ExtResource("11_codex")]
+visible = false
+layout_mode = 2
+
+[node name="CodexHeroesPanel" parent="Center" instance=ExtResource("12_codex_heroes")]
+visible = false
+layout_mode = 2
+
+[node name="CodexEnemiesPanel" parent="Center" instance=ExtResource("13_codex_enemies")]
+visible = false
+layout_mode = 2
+
+[node name="CodexMechanicsPanel" parent="Center" instance=ExtResource("14_codex_mechanics")]
+visible = false
+layout_mode = 2
+
 [connection signal="about_requested" from="Center/MainMenuPanel" to="." method="_on_about_requested"]
 [connection signal="changelog_requested" from="Center/MainMenuPanel" to="." method="_on_changelog_requested"]
+[connection signal="codex_requested" from="Center/MainMenuPanel" to="." method="_on_main_menu_codex_requested"]
 [connection signal="exit_requested" from="Center/MainMenuPanel" to="." method="_on_exit_requested"]
 [connection signal="play_requested" from="Center/MainMenuPanel" to="." method="_on_play_requested"]
 [connection signal="settings_requested" from="Center/MainMenuPanel" to="." method="_on_settings_requested"]
 [connection signal="back_requested" from="Center/HeroSelectPanel" to="." method="_on_panel_back_requested"]
+[connection signal="codex_requested" from="Center/HeroSelectPanel" to="." method="_on_hero_select_codex_requested"]
 [connection signal="hero_selected" from="Center/HeroSelectPanel" to="." method="_on_hero_selected"]
 [connection signal="back_requested" from="Center/SettingsPanel" to="." method="_on_panel_back_requested"]
 [connection signal="back_requested" from="Center/AboutPanel" to="." method="_on_panel_back_requested"]
@@ -216,3 +238,10 @@ layout_mode = 2
 [connection signal="back_requested" from="Center/ChangelogPanel" to="." method="_on_panel_back_requested"]
 [connection signal="accepted" from="Center/EulaScreen" to="." method="_on_eula_accepted"]
 [connection signal="back_requested" from="Center/EulaScreen" to="." method="_on_eula_back_requested"]
+[connection signal="back_requested" from="Center/CodexPanel" to="." method="_on_codex_back_requested"]
+[connection signal="enemies_requested" from="Center/CodexPanel" to="." method="_on_codex_enemies_requested"]
+[connection signal="heroes_requested" from="Center/CodexPanel" to="." method="_on_codex_heroes_requested"]
+[connection signal="mechanics_requested" from="Center/CodexPanel" to="." method="_on_codex_mechanics_requested"]
+[connection signal="back_requested" from="Center/CodexHeroesPanel" to="." method="_on_codex_subpanel_back_requested"]
+[connection signal="back_requested" from="Center/CodexEnemiesPanel" to="." method="_on_codex_subpanel_back_requested"]
+[connection signal="back_requested" from="Center/CodexMechanicsPanel" to="." method="_on_codex_subpanel_back_requested"]

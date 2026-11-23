@@ -16,6 +16,7 @@ const WALL_LIGHT_ENERGY: float = 2.8
 const POST_LIGHT_ENERGY: float = 2.6
 
 var _time: float = 0.0
+var _codex_return_panel: UiPanel = null
 
 @onready var _floor_layer: TileMapLayer = $Backdrop/Floor
 @onready var _walls_layer: TileMapLayer = $Backdrop/Walls
@@ -29,12 +30,21 @@ var _time: float = 0.0
 @onready var _about_panel: AboutPanel = $Center/AboutPanel
 @onready var _changelog_panel: ChangelogPanel = $Center/ChangelogPanel
 @onready var _eula_screen: EulaScreen = $Center/EulaScreen
+@onready var _codex_panel: CodexPanel = $Center/CodexPanel
+@onready var _codex_heroes_panel: CodexHeroesPanel = $Center/CodexHeroesPanel
+@onready var _codex_enemies_panel: CodexEnemiesPanel = $Center/CodexEnemiesPanel
+@onready var _codex_mechanics_panel: CodexMechanicsPanel = $Center/CodexMechanicsPanel
 
 
 func _ready() -> void:
 	_build_backdrop_room()
 	await HeroData.initialize()
+	await EnemyData.initialize()
+	await CodexMechanicsPanel.initialize_data()
 	_hero_select_panel.initialize()
+	_codex_heroes_panel.initialize()
+	_codex_enemies_panel.initialize()
+	_codex_mechanics_panel.initialize()
 	get_tree().create_timer(NOTIFICATION_DELAY).timeout.connect(InputManager.enable_notifications)
 	if not _eula_screen.is_accepted():
 		_show_first(_eula_screen)
@@ -143,3 +153,37 @@ func _on_exit_requested() -> void:
 
 func _on_panel_back_requested() -> void:
 	show_panel(_main_menu_panel)
+
+
+func _open_codex(from_panel: UiPanel) -> void:
+	_codex_return_panel = from_panel
+	_codex_panel.reset_focus_target()
+	show_panel(_codex_panel)
+
+
+func _on_main_menu_codex_requested() -> void:
+	_open_codex(_main_menu_panel)
+
+
+func _on_hero_select_codex_requested() -> void:
+	_open_codex(_hero_select_panel)
+
+
+func _on_codex_back_requested() -> void:
+	show_panel(_codex_return_panel)
+
+
+func _on_codex_heroes_requested() -> void:
+	show_panel(_codex_heroes_panel)
+
+
+func _on_codex_enemies_requested() -> void:
+	show_panel(_codex_enemies_panel)
+
+
+func _on_codex_mechanics_requested() -> void:
+	show_panel(_codex_mechanics_panel)
+
+
+func _on_codex_subpanel_back_requested() -> void:
+	show_panel(_codex_panel)

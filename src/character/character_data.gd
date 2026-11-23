@@ -24,6 +24,7 @@ enum EffectType {
 var id: StringName = &""
 var name: String = ""
 var description: String = ""
+var unlock_hint: String = ""
 var scene_path: String = ""
 var scene: PackedScene = null
 
@@ -144,6 +145,7 @@ func parse_base_fields(dict: Dictionary) -> void:
 	id = StringName(_str_val(dict, &"id"))
 	name = _str_val(dict, &"name")
 	description = _str_val(dict, &"description")
+	unlock_hint = _str_val(dict, &"unlock_hint")
 	scene_path = _str_val(dict, &"scene_path")
 	scene = load(scene_path) as PackedScene
 

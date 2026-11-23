@@ -8,6 +8,10 @@ const ENEMIES_JSON_PATH: StringName = &"res://character/enemies/enemies.json"
 
 static var _cached_enemies: Dictionary[StringName, EnemyData] = {}
 
+var role: String = ""
+var color: Color = Color.WHITE
+var behavior: String = ""
+var sprite_frames: SpriteFrames = null
 var detection_range_stat: Dictionary = {}
 var xp_stat: Dictionary = {}
 
@@ -25,6 +29,10 @@ static func initialize() -> void:
 static func _from_dict(dict: Dictionary) -> EnemyData:
 	var e: EnemyData = EnemyData.new()
 	e.parse_base_fields(dict)
+	e.role = _str_val(dict, &"role")
+	e.color = Color.from_string(_str_val(dict, &"color"), Color.WHITE)
+	e.behavior = _str_val(dict, &"behavior")
+	e.sprite_frames = extract_sprite_frames(e.scene)
 	e.detection_range_stat = _dict_val(dict, &"detection_range")
 	e.xp_stat = _dict_val(dict, &"xp")
 	return e

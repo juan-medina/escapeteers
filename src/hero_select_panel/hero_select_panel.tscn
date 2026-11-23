@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://hero_select_panel/hero_select_panel.gd" id="1_panel"]
 [ext_resource type="PackedScene" path="res://hero_select_panel/hero_select_card.tscn" id="2_card"]
 [ext_resource type="FontFile" uid="uid://bg6arvysy4jwv" path="res://data/assets/pixel_ui_theme/m6x11plus.ttf" id="3_m6x11plus"]
+[ext_resource type="PackedScene" path="res://codex_panel/unread_badge.tscn" id="4_badge"]
 
 [sub_resource type="InputEventAction" id="InputEventAction_pause"]
 device = -1
@@ -71,12 +72,12 @@ hero_id = &"wizard"
 
 [node name="Card7" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
 layout_mode = 2
-focus_neighbor_bottom = NodePath("../../../Buttons/Back")
+focus_neighbor_bottom = NodePath("../../../Buttons/Codex")
 hero_id = &"priest"
 
 [node name="Card8" parent="VBox/GridMargin/Grid" instance=ExtResource("2_card")]
 layout_mode = 2
-focus_neighbor_bottom = NodePath("../../../Buttons/Back")
+focus_neighbor_bottom = NodePath("../../../Buttons/Codex")
 hero_id = &"soldier"
 
 [node name="Buttons" type="HBoxContainer" parent="VBox"]
@@ -88,8 +89,19 @@ theme_override_constants/separation = 8
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 focus_neighbor_top = NodePath("../../GridMargin/Grid/Card6")
+focus_neighbor_right = NodePath("../Codex")
 shortcut = SubResource("Shortcut_back")
 text = "Back"
+
+[node name="Codex" type="Button" parent="VBox/Buttons"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+focus_neighbor_left = NodePath("../Back")
+focus_neighbor_top = NodePath("../../GridMargin/Grid/Card7")
+text = "Codex"
+
+[node name="UnreadBadge" parent="VBox/Buttons/Codex" instance=ExtResource("4_badge")]
+layout_mode = 1
 
 [connection signal="chosen" from="VBox/GridMargin/Grid/Card1" to="." method="_on_card_chosen"]
 [connection signal="chosen" from="VBox/GridMargin/Grid/Card2" to="." method="_on_card_chosen"]
@@ -100,3 +112,4 @@ text = "Back"
 [connection signal="chosen" from="VBox/GridMargin/Grid/Card7" to="." method="_on_card_chosen"]
 [connection signal="chosen" from="VBox/GridMargin/Grid/Card8" to="." method="_on_card_chosen"]
 [connection signal="pressed" from="VBox/Buttons/Back" to="." method="_on_back_pressed"]
+[connection signal="pressed" from="VBox/Buttons/Codex" to="." method="_on_codex_pressed"]
