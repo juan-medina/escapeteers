@@ -17,7 +17,7 @@ const BOB_AMPLITUDE: float = 1.5
 const BOB_SPEED: float = 4.0
 
 const HEALTH_TICK_COUNT: int = 4
-const HEALTH_TICK_RATIO: float = 0.10
+const HEALTH_TICK_RATIO: float = 0.11
 const HEALTH_TICK_INTERVAL: float = 0.50
 const HASTE_DURATION: float = 12.0
 const HASTE_SPEED_MULTIPLIER: float = 1.40

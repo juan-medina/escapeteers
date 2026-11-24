@@ -25,7 +25,7 @@ const SPIKE_DOWN_2_TIME: float = 0.10
 const SPIKE_DOWN_1_TIME: float = 0.10
 const SPIKE_CYCLE_DURATION: float = 3.80
 const COIN_ROOM_CHANCE: float = 0.30
-const POTION_ROOM_CHANCE: float = 0.22
+const POTION_ROOM_CHANCE: float = 0.30
 const SHORTCUT_TILE_BATCH_SIZE: int = 64
 const SHORTCUT_IMMEDIATE_RADIUS_SQ: int = 64
 
@@ -806,9 +806,9 @@ func get_room_pickups(room: Rect2i) -> Dictionary:
 			var potion_type: PotionPickup.PotionType = PotionPickup.PotionType.XP
 			if type_roll < 35:
 				potion_type = PotionPickup.PotionType.HEALTH
-			elif type_roll < 60:
+			elif type_roll < 55:
 				potion_type = PotionPickup.PotionType.HASTE
-			elif type_roll < 80:
+			elif type_roll < 75:
 				potion_type = PotionPickup.PotionType.FURY
 			potions.append({&"pos": _floor.map_to_local(potion_cell), &"type": potion_type})
 

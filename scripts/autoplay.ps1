@@ -4,6 +4,8 @@
 param(
     [ValidateSet("perf", "balance", "matrix", "watch")]
     [string]$Mode = "perf",
+    [ValidateSet("all", "balanced", "mono", "comps")]
+    [string]$MatrixSet = "all",
     [string]$Build = "balanced",
     [string]$Leader = "knight",
     [int]$Seeds = 0,
@@ -12,6 +14,7 @@ param(
     [int]$MaxFrames = -1,
     [double]$Speed = 0.0,
     [string]$Immortal = "",
+    [int]$Jobs = 0,
     [string]$Out = "",
     [switch]$Gpu
 )
@@ -56,6 +59,9 @@ $userArgs = @(
     "--seed=$effectiveSeed",
     "--max_depth=$MaxDepth"
 )
+if ($Mode -eq "matrix") {
+    $userArgs += "--matrix_set=$MatrixSet"
+}
 
 if ($MaxFrames -ge 0) {
     $userArgs += "--max_frames=$MaxFrames"
@@ -93,12 +99,56 @@ $godotArgs += "res://autoplay/autoplay_runner.tscn"
 $godotArgs += "--"
 $godotArgs += $userArgs
 
+$effectiveJobs = if ($Jobs -gt 0) {
+    $Jobs
+} elseif ($Mode -eq "matrix" -and -Not $Gpu) {
+    [Math]::Min(8, [Environment]::ProcessorCount)
+} else {
+    1
+}
+
 Push-Location $repoRoot
 try {
     $classCache = Join-Path $repoRoot "src\.godot\global_script_class_cache.cfg"
     if (-Not (Test-Path $classCache) -or -Not (Select-String -Path $classCache -Pattern "AutoplayRunner" -Quiet)) {
         Write-Host "Refreshing Godot script class cache..." -ForegroundColor Yellow
         & godot --headless --path src --audio-driver Dummy --import | Out-Null
+    }
+    if ($effectiveJobs -gt 1 -and ($Mode -eq "balance" -or $Mode -eq "matrix") -and -Not $Gpu) {
+        $python = Join-Path $repoRoot ".venv\Scripts\python.exe"
+        if (-Not (Test-Path $python)) {
+            $python = "python"
+        }
+        $godotBin = (Get-Command godot).Source
+        $parallelScript = Join-Path $PSScriptRoot "autoplay_parallel.py"
+        $pyArgs = @(
+            $parallelScript,
+            "--mode", $Mode,
+            "--matrix-set", $MatrixSet,
+            "--leader", $Leader,
+            "--build", $Build,
+            "--seeds", $effectiveSeeds,
+            "--seed", $effectiveSeed,
+            "--max-depth", $MaxDepth,
+            "--jobs", $effectiveJobs,
+            "--godot-bin", $godotBin
+        )
+        if ($MaxFrames -ge 0) {
+            $pyArgs += @("--max-frames", $MaxFrames)
+        }
+        if ($Speed -gt 0.0) {
+            $pyArgs += @("--speed", $Speed)
+        }
+        if ($Immortal -ne "") {
+            $pyArgs += @("--immortal", $Immortal)
+        }
+        if ($Out -ne "") {
+            $resolvedOut = if ([System.IO.Path]::IsPathRooted($Out)) { $Out } else { Join-Path $repoRoot $Out }
+            $pyArgs += @("--out", $resolvedOut)
+        }
+        Write-Host "Running Autoplay Parallel [$Mode/$MatrixSet] (jobs=$effectiveJobs seeds=$effectiveSeeds seed=$effectiveSeed)..." -ForegroundColor Cyan
+        & $python @pyArgs
+        exit $LASTEXITCODE
     }
     Write-Host "Running Autoplay [$Mode] (leader=$Leader build=$Build seeds=$effectiveSeeds seed=$effectiveSeed)..." -ForegroundColor Cyan
     & godot @godotArgs

@@ -9,15 +9,15 @@
 		"description": "Deadly marksman who picks off distant foes with high-impact arrows.",
 		"codex": "A keen-eyed sharpshooter who holds the backline and never breaks formation. Looses high-damage arrows across open line of sight to drive advancing foes back.",
 		"scene_path": "res://character/heroes/archer/archer.tscn",
-		"health": { "base": 80.0, "growth": 0.10 },
+		"health": { "base": 85.0, "growth": 0.11 },
 		"skills": [
 			{
 				"name": "Snipe Arrow",
 				"type": "RANGED",
 				"description": "High-damage arrow that inflicts heavy knockback.",
-				"amount": { "base": 18.0, "growth": 0.10 },
+				"amount": { "base": 20.0, "growth": 0.11 },
 				"cooldown": { "base": 1.3, "growth": -0.05 },
-				"range": { "base": 145.0, "growth": 0.0 },
+				"range": { "base": 150.0, "growth": 0.0 },
 				"effect": {
 					"type": "KNOCKBACK",
 					"amount": { "base": 260.0, "growth": 0.0 }
@@ -35,13 +35,13 @@
 		"description": "Heavy vanguard who carves through enemy packs with sweeping axe cleaves.",
 		"codex": "An ironclad vanguard who steps forward to meet oncoming hordes head-on. Cuts through tight enemy groups with heavy cleaves and punishing knockback bursts.",
 		"scene_path": "res://character/heroes/armored_axeman/armored_axeman.tscn",
-		"health": { "base": 145.0, "growth": 0.10 },
+		"health": { "base": 155.0, "growth": 0.11 },
 		"skills": [
 			{
 				"name": "Axe Chop",
 				"type": "MELEE",
 				"description": "Wide melee cleave with light knockback.",
-				"amount": { "base": 11.0, "growth": 0.10 },
+				"amount": { "base": 12.0, "growth": 0.11 },
 				"cooldown": { "base": 0.58, "growth": -0.03 },
 				"range": { "base": 22.0, "growth": 0.0 },
 				"effect": {
@@ -53,7 +53,7 @@
 				"name": "Whirlwind Cleave",
 				"type": "MELEE",
 				"description": "Sweeping AoE cleave dealing heavy damage and strong knockback.",
-				"amount": { "base": 25.0, "growth": 0.10 },
+				"amount": { "base": 25.0, "growth": 0.11 },
 				"cooldown": { "base": 3.3, "growth": -0.05 },
 				"range": { "base": 22.0, "growth": 0.0 },
 				"chance": 0.35,
@@ -74,13 +74,13 @@
 		"description": "Armored guardian who draws enemy aggro and stuns threats at close range.",
 		"codex": "A steadfast bastion of steel who anchors the frontline and draws enemy aggro away from backline allies. Endures heavy punishment while stunning nearby foes.",
 		"scene_path": "res://character/heroes/knight/knight.tscn",
-		"health": { "base": 270.0, "growth": 0.12 },
+		"health": { "base": 300.0, "growth": 0.13 },
 		"skills": [
 			{
 				"name": "Sword Strike",
 				"type": "MELEE",
 				"description": "Disciplined melee slash that holds the line.",
-				"amount": { "base": 8.0, "growth": 0.10 },
+				"amount": { "base": 8.0, "growth": 0.11 },
 				"cooldown": { "base": 0.55, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 }
 			},
@@ -88,13 +88,13 @@
 				"name": "Heavy Swing",
 				"type": "MELEE",
 				"description": "Shield-bashing blow that stuns nearby foes.",
-				"amount": { "base": 16.0, "growth": 0.10 },
+				"amount": { "base": 16.0, "growth": 0.11 },
 				"cooldown": { "base": 3.2, "growth": -0.05 },
 				"range": { "base": 20.0, "growth": 0.0 },
 				"chance": 0.40,
 				"effect": {
 					"type": "STUN",
-					"duration": { "base": 1.5, "growth": 0.0 }
+					"duration": { "base": 1.8, "growth": 0.0 }
 				}
 			},
 			{
@@ -114,13 +114,13 @@
 		"description": "Stalwart polearm warrior who keeps swarms at bay with forceful pike thrusts.",
 		"codex": "A sworn defender of the fellowship who guards the vanguard with a long-reach pike. Repels advancing waves with relentless knockback strikes.",
 		"scene_path": "res://character/heroes/knight_templar/knight_templar.tscn",
-		"health": { "base": 150.0, "growth": 0.10 },
+		"health": { "base": 165.0, "growth": 0.11 },
 		"skills": [
 			{
 				"name": "Pike Thrust",
 				"type": "MELEE",
 				"description": "Long-reach melee thrust with strong knockback.",
-				"amount": { "base": 8.0, "growth": 0.10 },
+				"amount": { "base": 9.0, "growth": 0.11 },
 				"cooldown": { "base": 0.65, "growth": -0.03 },
 				"range": { "base": 22.0, "growth": 0.0 },
 				"effect": {
@@ -132,7 +132,7 @@
 				"name": "Heavy Smite",
 				"type": "MELEE",
 				"description": "Empowered polearm strike dealing high damage and heavy knockback.",
-				"amount": { "base": 20.0, "growth": 0.10 },
+				"amount": { "base": 20.0, "growth": 0.11 },
 				"cooldown": { "base": 3.5, "growth": -0.05 },
 				"range": { "base": 22.0, "growth": 0.0 },
 				"chance": 0.35,
@@ -153,21 +153,21 @@
 		"description": "Devoted cleric who mends wounded allies and smites foes with holy light.",
 		"codex": "A sacred caretaker sheltered at the heart of the formation. Prioritizes critically wounded allies in combat, mends the party between fights, and calls down stunning light when allies are safe.",
 		"scene_path": "res://character/heroes/priest/priest.tscn",
-		"health": { "base": 80.0, "growth": 0.10 },
+		"health": { "base": 80.0, "growth": 0.11 },
 		"skills": [
 			{
 				"name": "Divine Heal",
 				"type": "HEAL",
 				"description": "Restores health to the most wounded ally.",
-				"amount": { "base": 20.0, "growth": 0.10 },
-				"cooldown": { "base": 5.0, "growth": -0.05 },
+				"amount": { "base": 24.0, "growth": 0.11 },
+				"cooldown": { "base": 3.0, "growth": -0.05 },
 				"range": { "base": 140.0, "growth": 0.0 }
 			},
 			{
 				"name": "Holy Smite",
 				"type": "RANGED",
 				"description": "Calls down holy light from afar, damaging and stunning a foe.",
-				"amount": { "base": 5.0, "growth": 0.10 },
+				"amount": { "base": 5.0, "growth": 0.11 },
 				"cooldown": { "base": 2.5, "growth": -0.05 },
 				"range": { "base": 140.0, "growth": 0.0 },
 				"effect": {
@@ -187,26 +187,26 @@
 		"description": "Versatile skirmisher who marks distant foes for bonus party damage and fights up close.",
 		"codex": "A seasoned tactician who fights close to the leader. Fires arrows at unmarked foes so the entire party deals bonus damage, drawing a swift blade whenever enemies close in.",
 		"scene_path": "res://character/heroes/soldier/soldier.tscn",
-		"health": { "base": 115.0, "growth": 0.10 },
+		"health": { "base": 125.0, "growth": 0.11 },
 		"skills": [
 			{
 				"name": "Arrow Shot",
 				"type": "RANGED",
 				"description": "Prioritizes unmarked foes, applying Mark for bonus party damage.",
-				"amount": { "base": 7.0, "growth": 0.10 },
+				"amount": { "base": 7.0, "growth": 0.11 },
 				"cooldown": { "base": 0.9, "growth": -0.04 },
 				"range": { "base": 140.0, "growth": 0.0 },
 				"effect": {
 					"type": "MARK",
-					"amount": { "base": 0.35, "growth": 0.0 },
-					"duration": { "base": 5.0, "growth": 0.0 }
+					"amount": { "base": 0.45, "growth": 0.0 },
+					"duration": { "base": 6.5, "growth": 0.0 }
 				}
 			},
 			{
 				"name": "Sword Slash",
 				"type": "MELEE",
 				"description": "Swift close-range sword strike against nearby foes.",
-				"amount": { "base": 10.0, "growth": 0.10 },
+				"amount": { "base": 10.0, "growth": 0.11 },
 				"cooldown": { "base": 0.45, "growth": -0.03 },
 				"range": { "base": 22.0, "growth": 0.0 },
 				"leash": 36.0
@@ -223,25 +223,25 @@
 		"description": "Agile duelist who overwhelms targets with fast slashes and three-hit flurries.",
 		"codex": "A swift blademaster who darts from the frontline to cut down priority targets. Chains relentless sword strikes into devastating three-hit bursts.",
 		"scene_path": "res://character/heroes/swordsman/swordsman.tscn",
-		"health": { "base": 125.0, "growth": 0.10 },
+		"health": { "base": 135.0, "growth": 0.11 },
 		"skills": [
 			{
 				"name": "Quick Slash",
 				"type": "MELEE",
 				"description": "Fast single-target sword strike on a short cooldown.",
-				"amount": { "base": 10.0, "growth": 0.10 },
-				"cooldown": { "base": 0.45, "growth": -0.03 },
+				"amount": { "base": 12.0, "growth": 0.11 },
+				"cooldown": { "base": 0.42, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 }
 			},
 			{
 				"name": "Blade Flurry",
 				"type": "MELEE",
 				"description": "Unleashes a rapid 3-hit combo for high burst damage.",
-				"amount": { "base": 10.0, "growth": 0.10 },
+				"amount": { "base": 13.0, "growth": 0.11 },
 				"hits": 3,
 				"cooldown": { "base": 3.0, "growth": -0.05 },
 				"range": { "base": 20.0, "growth": 0.0 },
-				"chance": 0.38
+				"chance": 0.42
 			}
 		]
 	},
@@ -253,16 +253,16 @@
 		"color": "#9b5de5",
 		"summary": "Piercing frost bolts that slow",
 		"description": "Arcane caster whose piercing frost bolts chill and slow advancing packs.",
-		"codex": "A scholar of frost magic who holds the backline and seeks out unchilled foes. Launches piercing ice bolts through up to two enemies to slow their advance.",
+		"codex": "A scholar of frost magic who holds the backline and seeks out unchilled foes. Launches piercing ice bolts through up to three enemies to slow their advance.",
 		"scene_path": "res://character/heroes/wizard/wizard.tscn",
-		"health": { "base": 70.0, "growth": 0.10 },
+		"health": { "base": 80.0, "growth": 0.11 },
 		"skills": [
 			{
 				"name": "Frost Bolt",
 				"type": "RANGED",
-				"description": "Pierces up to 2 foes, inflicting Slow.",
-				"amount": { "base": 10.0, "growth": 0.10 },
-				"cooldown": { "base": 1.25, "growth": -0.05 },
+				"description": "Pierces up to 3 foes, inflicting Slow.",
+				"amount": { "base": 14.0, "growth": 0.11 },
+				"cooldown": { "base": 0.95, "growth": -0.05 },
 				"range": { "base": 140.0, "growth": 0.0 },
 				"effect": {
 					"type": "SLOW",
@@ -284,18 +284,18 @@
 		"unlock_hint": "A hidden ally awaits. Some forgotten flames still sleep in the dark...",
 		"secret": true,
 		"scene_path": "res://character/heroes/torchero/torchero.tscn",
-		"health": { "base": 140.0, "growth": 0.10 },
+		"health": { "base": 150.0, "growth": 0.11 },
 		"skills": [
 			{
 				"name": "Torch Strike",
 				"type": "MELEE",
 				"description": "Fiery melee strike that inflicts Burn damage over time.",
-				"amount": { "base": 12.0, "growth": 0.10 },
+				"amount": { "base": 12.0, "growth": 0.11 },
 				"cooldown": { "base": 0.5, "growth": -0.03 },
 				"range": { "base": 20.0, "growth": 0.0 },
 				"effect": {
 					"type": "BURN",
-					"amount": { "base": 6.0, "growth": 0.10 },
+					"amount": { "base": 6.0, "growth": 0.11 },
 					"duration": 6.0
 				}
 			},

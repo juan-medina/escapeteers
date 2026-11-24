@@ -164,6 +164,10 @@ func _handle_paused_panels(game: Game) -> void:
 	while game.get_tree().paused and guard < 8:
 		guard += 1
 		if game._recruit_panel.visible:
+			if game._reroll_coins > 0 and not game._recruit_panel._reroll_button.disabled:
+				if _should_reroll_recruit(game._recruit_panel._cards_by_id, game):
+					game._on_recruit_reroll_requested()
+					continue
 			var chosen_id: StringName = _pick_visible_card(game._recruit_panel._cards_by_id, game, false)
 			if chosen_id == &"":
 				break
@@ -175,6 +179,17 @@ func _handle_paused_panels(game: Game) -> void:
 			game._level_up_panel._on_card_chosen(HeroData.get_hero(chosen_id))
 		else:
 			break
+
+
+func _should_reroll_recruit(cards_by_id: Dictionary[StringName, UnitCard], game: Game) -> bool:
+	if build_policy.begins_with("mono:"):
+		var mono_id: StringName = StringName(build_policy.substr(5))
+		return not cards_by_id.has(mono_id) or not cards_by_id[mono_id].visible
+	if build_policy == "balanced" and game._squad.size() >= 3:
+		var counts: Dictionary[StringName, int] = game._get_squad_unit_counts()
+		if not counts.has(&"priest") or counts[&"priest"] == 0:
+			return not cards_by_id.has(&"priest") or not cards_by_id[&"priest"].visible
+	return false
 
 
 func _pick_visible_card(cards_by_id: Dictionary[StringName, UnitCard], game: Game, is_level_up: bool) -> StringName:
@@ -329,10 +344,22 @@ func _update_room_progress(game: Game, map: Map, leader: Hero, delta: float) -> 
 	if _room_stall_timer >= ROOM_STALL_TIMEOUT:
 		_cached_path = PackedVector2Array()
 		_room_stall_timer = 0.0
-		if _shortcut_waypoints.is_empty():
-			if not _is_progression_room(game, _goal_room):
-				_skipped_rooms[_goal_room] = true
-			_assign_next_goal(game, map, leader)
+		if not _shortcut_waypoints.is_empty():
+			_shortcut_waypoints.remove_at(0)
+			return
+		if _is_progression_room(game, _goal_room):
+			if _last_known_room == _goal_room:
+				var obj_pos: Vector2 = _get_gate_objective_pos(game, map)
+				if obj_pos != Vector2.ZERO:
+					leader.global_position = map.clamp_to_walkable(obj_pos)
+			elif not _room_path.is_empty():
+				var hop: Rect2i = _room_path[0]
+				var hop_rem: int = game._room_remaining_enemies.get(hop, 1)
+				if hop == map.hero_room or hop_rem <= 0:
+					leader.global_position = map.clamp_to_walkable(map.map_to_local(hop.get_center()))
+		else:
+			_skipped_rooms[_goal_room] = true
+		_assign_next_goal(game, map, leader)
 
 
 func _assign_next_goal(game: Game, map: Map, leader: Hero) -> void:
@@ -557,6 +584,8 @@ func _decide_move_direction(game: Game, map: Map, leader: Hero, delta: float) ->
 		var nearby_key: KeyPickup = _find_nearest_key(game, map, leader)
 		if nearby_key != null:
 			steer_dest = nearby_key.global_position
+		else:
+			steer_dest = _find_nearest_potion(game, map, leader, true)
 
 	if steer_dest != Vector2.ZERO:
 		return _steer_toward(map, leader, steer_dest, delta)
@@ -566,7 +595,10 @@ func _decide_move_direction(game: Game, map: Map, leader: Hero, delta: float) ->
 		if combat_target != null:
 			return _compute_combat_move(game, map, leader, combat_target, delta)
 
-	steer_dest = _get_gate_objective_pos(game, map)
+	if _shortcut_waypoints.is_empty():
+		steer_dest = _find_nearest_coin_or_potion(game, map, leader)
+	if steer_dest == Vector2.ZERO:
+		steer_dest = _get_gate_objective_pos(game, map)
 	if steer_dest == Vector2.ZERO:
 		steer_dest = _get_exploration_destination(map, leader)
 	if steer_dest != Vector2.ZERO:
@@ -577,6 +609,68 @@ func _decide_move_direction(game: Game, map: Map, leader: Hero, delta: float) ->
 		if fallback_target != null:
 			return _compute_combat_move(game, map, leader, fallback_target, delta)
 	return Vector2.ZERO
+
+
+func _is_pickup_reachable(map: Map, leader: Hero, pos: Vector2) -> bool:
+	var cell: Vector2i = map.local_to_map(pos)
+	if not map.is_cell_walkable(cell):
+		return false
+	var room: Rect2i = map.plan.get_room_at(cell)
+	if not _is_room_in_unlocked_sector(map, room):
+		return false
+	if room != _last_known_room and room != _goal_room and not SquadNavigator.has_line_of_sight(leader, pos):
+		return false
+	return true
+
+
+func _get_squad_hp_ratio(game: Game) -> float:
+	var hp_sum: float = 0.0
+	var max_sum: float = 0.0
+	for member: Hero in game._squad:
+		if is_instance_valid(member) and not member.is_dead:
+			hp_sum += member.health
+			max_sum += member.max_health
+	return hp_sum / maxf(1.0, max_sum)
+
+
+func _find_nearest_potion(game: Game, map: Map, leader: Hero, combat_priority: bool) -> Vector2:
+	var leader_hp_ratio: float = leader.health / maxf(1.0, leader.max_health)
+	var squad_hp_ratio: float = _get_squad_hp_ratio(game)
+	var best_pos: Vector2 = Vector2.ZERO
+	var best_dist_sq: float = RECRUIT_SEARCH_RADIUS_SQ
+	for potion: PotionPickup in game._potion_manager._potions:
+		if not is_instance_valid(potion):
+			continue
+		if potion.potion_type == PotionPickup.PotionType.HEALTH:
+			if combat_priority and leader_hp_ratio >= 0.80 and squad_hp_ratio >= 0.85:
+				continue
+			if not combat_priority and squad_hp_ratio >= 0.96:
+				continue
+		var d_sq: float = leader.global_position.distance_squared_to(potion.global_position)
+		if d_sq < best_dist_sq and _is_pickup_reachable(map, leader, potion.global_position):
+			best_dist_sq = d_sq
+			best_pos = potion.global_position
+	return best_pos
+
+
+func _find_nearest_coin(game: Game, map: Map, leader: Hero) -> Vector2:
+	var best_pos: Vector2 = Vector2.ZERO
+	var best_dist_sq: float = RECRUIT_SEARCH_RADIUS_SQ
+	for coin: Coin in game._coins:
+		if not is_instance_valid(coin):
+			continue
+		var d_sq: float = leader.global_position.distance_squared_to(coin.global_position)
+		if d_sq < best_dist_sq and _is_pickup_reachable(map, leader, coin.global_position):
+			best_dist_sq = d_sq
+			best_pos = coin.global_position
+	return best_pos
+
+
+func _find_nearest_coin_or_potion(game: Game, map: Map, leader: Hero) -> Vector2:
+	var pot_pos: Vector2 = _find_nearest_potion(game, map, leader, false)
+	if pot_pos != Vector2.ZERO:
+		return pot_pos
+	return _find_nearest_coin(game, map, leader)
 
 
 func _find_nearest_key(game: Game, map: Map, leader: Hero) -> KeyPickup:
@@ -745,6 +839,7 @@ func _get_exploration_destination(map: Map, leader: Hero) -> Vector2:
 	while not _shortcut_waypoints.is_empty():
 		if leader.global_position.distance_squared_to(_shortcut_waypoints[0]) <= ROOM_ARRIVE_DIST_SQ:
 			_shortcut_waypoints.remove_at(0)
+			_room_stall_timer = 0.0
 		else:
 			return _shortcut_waypoints[0]
 
@@ -765,24 +860,31 @@ func _get_exploration_destination(map: Map, leader: Hero) -> Vector2:
 	return Vector2.ZERO
 
 
-func get_gate_progress_tag(game: Game, map: Map) -> String:
+func get_keys_mask(game: Game) -> String:
 	var color_chars: Array[String] = ["B", "G", "Y", "R"]
 	var keys_str: String = ""
-	var doors_str: String = ""
 	for i: int in range(color_chars.size()):
 		var kc: WorldPlan.KeyColor = i as WorldPlan.KeyColor
 		if game._collected_keys.has(kc):
 			keys_str += color_chars[i]
+	return keys_str if keys_str != "" else "-"
+
+
+func get_doors_mask(map: Map) -> String:
+	var color_chars: Array[String] = ["B", "G", "Y", "R"]
+	var doors_str: String = ""
+	for i: int in range(color_chars.size()):
+		var kc: WorldPlan.KeyColor = i as WorldPlan.KeyColor
 		for gate: SectorGatePlanner.SectorGate in map.plan.sector_gates:
 			if gate.color == kc and gate.door_unlocked:
 				doors_str += color_chars[i]
 				break
-	if keys_str == "":
-		keys_str = "-"
-	if doors_str == "":
-		doors_str = "-"
+	return doors_str if doors_str != "" else "-"
+
+
+func get_gate_progress_tag(game: Game, map: Map) -> String:
 	var goal_d: int = map.get_room_depth(_goal_room) if _goal_room != Rect2i() else -1
-	return "keys=%s doors=%s goalD=%d" % [keys_str, doors_str, goal_d]
+	return "keys=%s doors=%s goalD=%d" % [get_keys_mask(game), get_doors_mask(map), goal_d]
 
 
 func _steer_toward(map: Map, leader: Hero, world_dest: Vector2, delta: float) -> Vector2:
@@ -848,12 +950,16 @@ func _update_stuck_recovery(map: Map, leader: Hero, move_dir: Vector2, delta: fl
 
 	if _stuck_timer >= STUCK_UNSTICK_TIME:
 		_stuck_timer = 0.0
-		if not _cached_path.is_empty():
+		if not _shortcut_waypoints.is_empty() and _cached_path.size() <= 2:
+			leader.global_position = map.clamp_to_walkable(_shortcut_waypoints[0])
+			if leader.global_position.distance_squared_to(_shortcut_waypoints[0]) <= ROOM_ARRIVE_DIST_SQ:
+				_shortcut_waypoints.remove_at(0)
+				_room_stall_timer = 0.0
+			_cached_path = PackedVector2Array()
+		elif not _cached_path.is_empty():
 			var step_idx: int = mini(8 if rush_deep else 2, _cached_path.size() - 1)
 			leader.global_position = map.clamp_to_walkable(_cached_path[step_idx])
 			_cached_path = PackedVector2Array()
-		elif rush_deep and not _shortcut_waypoints.is_empty():
-			leader.global_position = map.clamp_to_walkable(_shortcut_waypoints[0])
 		else:
 			leader.global_position = map.clamp_to_walkable(leader.global_position + move_dir * 24.0)
 		_anchor_pos = leader.global_position

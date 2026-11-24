@@ -38,6 +38,8 @@ class EvictCandidate:
 const MAX_CHARACTERS: int = 80
 const MAX_ENEMIES: int = 160
 const MAX_SPAWNS_PER_FRAME: int = 3
+const MAX_SUMMONS_PER_ROOM: int = 6
+const MAX_ALIVE_FOR_SUMMON: int = 20
 const ENEMY_ACTIVE_DIST_SQ: float = 420.0 * 420.0
 const ENEMY_DESPAWN_DIST_SQ: float = 1350.0 * 1350.0
 const ENEMY_SCAN_STRIDE: int = 6
@@ -84,6 +86,7 @@ var _enemies: Array[Enemy] = []
 var _room_remaining_enemies: Dictionary[Rect2i, int] = {}
 var _room_spawned_enemies: Dictionary[Rect2i, int] = {}
 var _room_spawned_necros: Dictionary[Rect2i, int] = {}
+var _room_summoned_enemies: Dictionary[Rect2i, int] = {}
 var _stream_timer: float = 0.0
 var _entity_pool: EntityPool = EntityPool.new()
 var _projectile_pool: EntityPool = EntityPool.new()
@@ -503,12 +506,19 @@ func _reclaim_distant_enemies_for_room(target_room: Rect2i, target_room_dist_sq:
 		reclaimed += 1
 
 
+static func _decrement_room_count(counts: Dictionary[Rect2i, int], room: Rect2i) -> void:
+	if counts.has(room):
+		counts[room] = maxi(0, counts[room] - 1)
+
+
 func _despawn_enemy(enemy: Enemy) -> void:
 	var room: Rect2i = enemy.home_room
-	if _room_spawned_enemies.has(room):
-		_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
-	if enemy is Necromancer and _room_spawned_necros.has(room):
-		_room_spawned_necros[room] = maxi(0, _room_spawned_necros[room] - 1)
+	if enemy.is_minion:
+		_decrement_room_count(_room_summoned_enemies, room)
+	else:
+		_decrement_room_count(_room_spawned_enemies, room)
+		if enemy is Necromancer:
+			_decrement_room_count(_room_spawned_necros, room)
 	_spike_hit_cooldowns.erase(enemy)
 	_entity_pool.release(enemy)
 	_enemies.erase(enemy)
@@ -531,7 +541,7 @@ func _pick_enemy_scene_for_room(room: Rect2i, depth: int) -> PackedScene:
 		WorldPlan.RoomArchetype.ARCHER_GARRISON:
 			result = SKELETON_ARCHER_SCENE if randf() < 0.65 else SKELETON_SCENE
 		WorldPlan.RoomArchetype.NECRO_CRYPT:
-			var max_necros: int = 1 if depth <= 4 else 2
+			var max_necros: int = 1 if depth <= 6 else 2
 			var spawned_necros: int = _room_spawned_necros.get(room, 0)
 			if spawned_necros < max_necros:
 				_room_spawned_necros[room] = spawned_necros + 1
@@ -542,7 +552,9 @@ func _pick_enemy_scene_for_room(room: Rect2i, depth: int) -> PackedScene:
 
 
 func _on_enemy_minion_summon_requested(pos: Vector2, room: Rect2i, enemy_level: int) -> void:
-	if _enemies.size() >= MAX_ENEMIES:
+	var summoned: int = _room_summoned_enemies.get(room, 0)
+	var spawned: int = _room_spawned_enemies.get(room, 0)
+	if _enemies.size() >= MAX_ENEMIES or summoned >= MAX_SUMMONS_PER_ROOM or (spawned + summoned) >= MAX_ALIVE_FOR_SUMMON:
 		return
 	var cell: Vector2i = _map.local_to_map(pos)
 	if not _map.is_cell_walkable(cell):
@@ -550,12 +562,7 @@ func _on_enemy_minion_summon_requested(pos: Vector2, room: Rect2i, enemy_level: 
 	var pentagram: Projectile = Projectile.acquire(SUMMON_PENTAGRAM_SCENE)
 	pentagram.global_position = pos
 	pentagram.launch()
-
-	if _room_remaining_enemies.has(room):
-		_room_remaining_enemies[room] += 1
-	if _room_spawned_enemies.has(room):
-		_room_spawned_enemies[room] += 1
-
+	_room_summoned_enemies[room] = summoned + 1
 	var minion_scene: PackedScene = SKELETON_ARCHER_SCENE if randf() < 0.30 else SKELETON_SCENE
 	_spawn_enemy_at(pos, room, minion_scene, enemy_level, true)
 
@@ -569,13 +576,14 @@ func _on_enemy_died(enemy: Enemy) -> void:
 	for child: Node in _projectiles.get_children():
 		(child as Projectile).clear_character_references(enemy)
 	var room: Rect2i = enemy.home_room
-	if _room_remaining_enemies.has(room):
-		_room_remaining_enemies[room] = maxi(0, _room_remaining_enemies[room] - 1)
-		if _room_remaining_enemies[room] <= 0:
-			_hud.set_room_cleared(room, true)
-	if _room_spawned_enemies.has(room):
-		_room_spawned_enemies[room] = maxi(0, _room_spawned_enemies[room] - 1)
-
+	if enemy.is_minion:
+		_decrement_room_count(_room_summoned_enemies, room)
+	else:
+		if _room_remaining_enemies.has(room):
+			_room_remaining_enemies[room] = maxi(0, _room_remaining_enemies[room] - 1)
+			if _room_remaining_enemies[room] <= 0:
+				_hud.set_room_cleared(room, true)
+		_decrement_room_count(_room_spawned_enemies, room)
 	_add_squad_xp(enemy.xp_value)
 	_reset_combat_cooldown()
 
@@ -750,7 +758,7 @@ func _get_squad_unit_counts() -> Dictionary[StringName, int]:
 
 
 static func _get_xp_required_for_level(lvl: int) -> float:
-	return 50.0 + float(lvl - 1) * 40.0 + float((lvl - 1) * (lvl - 1)) * 10.0
+	return 50.0 + float(lvl - 1) * 38.0 + float((lvl - 1) * (lvl - 1)) * 5.5
 
 
 func _add_squad_xp(amount: float) -> void:
@@ -867,36 +875,28 @@ func _rebalance_escort_slots() -> void:
 	var backline_idx: int = 0
 	var frontline_idx: int = 0
 	var total_assigned: int = 0
-
 	while backline_idx < backline.size() or frontline_idx < frontline.size():
 		var ring_cap: int = SquadMember.RING_BASE_CAPACITY * (ring + 1)
 		var ring_backline: Array[Hero] = []
 		var ring_frontline: Array[Hero] = []
-
 		while backline_idx < backline.size() and (ring_backline.size() + ring_frontline.size()) < ring_cap:
 			ring_backline.append(backline[backline_idx])
 			backline_idx += 1
-
 		while frontline_idx < frontline.size() and (ring_backline.size() + ring_frontline.size()) < ring_cap:
 			ring_frontline.append(frontline[frontline_idx])
 			frontline_idx += 1
-
 		var b_count: int = ring_backline.size()
 		var f_count: int = ring_frontline.size()
-
 		var b_angles: Array[float] = _calculate_arc_angles(b_count, false)
 		var f_angles: Array[float] = _calculate_arc_angles(f_count, true)
-
 		for i: int in range(b_count):
 			var follower: Hero = ring_backline[i]
 			follower.squad_member.assign_formation_slot(ring, b_angles[i], total_assigned, false)
 			total_assigned += 1
-
 		for i: int in range(f_count):
 			var follower: Hero = ring_frontline[i]
 			follower.squad_member.assign_formation_slot(ring, f_angles[i], total_assigned, true)
 			total_assigned += 1
-
 		ring += 1
 
 

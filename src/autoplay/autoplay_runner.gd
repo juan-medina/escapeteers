@@ -24,6 +24,7 @@ const MATRIX_HEROES: Array[String] = [
 ]
 
 var _mode: String = "perf"
+var _matrix_set: String = "all"
 var _seeds_count: int = 3
 var _base_seed: int = 12345
 var _leader_id: String = "knight"
@@ -92,6 +93,7 @@ func _parse_args() -> void:
 			args[raw.substr(2, eq_idx - 2)] = raw.substr(eq_idx + 1)
 
 	_mode = _get_arg(args, "mode", "perf").to_lower()
+	_matrix_set = _get_arg(args, "matrix_set", "all").to_lower()
 	_base_seed = int(_get_arg(args, "seed", "12345"))
 	_leader_id = _get_arg(args, "leader", "knight")
 	_build_policy = _get_arg(args, "build", "balanced")
@@ -101,7 +103,7 @@ func _parse_args() -> void:
 	var default_seeds: int = 3 if _mode == "perf" else (1 if _mode == "watch" else 10)
 	_seeds_count = maxi(1, int(_get_arg(args, "seeds", str(default_seeds))))
 
-	var default_frames: int = 9000 if _mode == "perf" else (0 if _mode == "watch" else 18000)
+	var default_frames: int = 9000 if _mode == "perf" else (0 if _mode == "watch" else 108000)
 	_max_frames = int(_get_arg(args, "max_frames", str(default_frames)))
 
 	var default_speed: float = 2.0 if _mode == "watch" else 1.0
@@ -121,14 +123,17 @@ static func _get_arg(args: Dictionary[String, String], key: String, fallback: St
 func _build_run_queue() -> void:
 	_run_queue.clear()
 	if _mode == "matrix":
-		var configs: Array[Dictionary] = [
-			{&"leader": "knight", &"build": "balanced"},
-			{&"leader": "knight", &"build": "melee_stack"},
-			{&"leader": "archer", &"build": "ranged_kite"},
-			{&"leader": "knight", &"build": "random"},
-		]
-		for hero_id: String in MATRIX_HEROES:
-			configs.append({&"leader": hero_id, &"build": "mono:" + hero_id})
+		var configs: Array[Dictionary] = []
+		if _matrix_set == "all" or _matrix_set == "balanced":
+			for hero_id: String in MATRIX_HEROES:
+				configs.append({&"leader": hero_id, &"build": "balanced"})
+		if _matrix_set == "all" or _matrix_set == "comps":
+			configs.append({&"leader": "knight", &"build": "melee_stack"})
+			configs.append({&"leader": "archer", &"build": "ranged_kite"})
+			configs.append({&"leader": "knight", &"build": "random"})
+		if _matrix_set == "all" or _matrix_set == "mono":
+			for hero_id: String in MATRIX_HEROES:
+				configs.append({&"leader": hero_id, &"build": "mono:" + hero_id})
 
 		for cfg: Dictionary in configs:
 			for i: int in range(_seeds_count):
@@ -258,7 +263,7 @@ func _finish_current_run(reason: String) -> void:
 
 	var summary: Dictionary = {}
 	if is_instance_valid(_game) and _map != null:
-		summary = _balance.finish_run(_bot, _game, _map)
+		summary = _balance.finish_run(_bot, _game, _map, reason)
 
 	if not summary.is_empty():
 		var gate_tag: String = _bot.get_gate_progress_tag(_game, _map)

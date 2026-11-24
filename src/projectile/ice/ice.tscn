@@ -79,7 +79,7 @@ lifetime = 3.5
 auto_rotate = false
 slow_factor = 0.5
 slow_duration = 3.0
-max_pierce_count = 2
+max_pierce_count = 3
 has_impact_anim = true
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]

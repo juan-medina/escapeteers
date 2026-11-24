@@ -13,11 +13,13 @@
 - [color=#ffffff][b]Hero Class Rebalance:[/b][/color]
   - [b]Knight:[/b] Doubled health, draws monster aggro, and stuns instead of knocking back.
   - [b]Soldier:[/b] Faster bow shots mark foes for extra damage; shorter melee leash.
-  - [b]Wizard:[/b] Stronger frost bolts now cap chill pierce at two enemies without knockback.
+  - [b]Wizard:[/b] Stronger frost bolts now cap chill pierce at three enemies without knockback.
   - [b]Knight Templar:[/b] Higher health and stronger knockback with slower, lower-damage pike thrusts.
   - [b]Armored Axeman:[/b] More health, harder axe cleaves, and lighter pushback to keep foes close.
   - [b]Swordsman:[/b] Extra health, quicker slashes, and a faster, harder-hitting three-hit flurry.
   - [b]Archer:[/b] Faster, higher-damage snipe arrows with longer range and heavy knockback.
+  - [b]Priest:[/b] Much faster, stronger heals to keep squads alive.
+- [color=#ffffff][b]Dungeon Balance Pass:[/b][/color] Fairer deeper hordes, smoother leveling, and more potions.
 - [color=#ffffff][b]Quick Hero Swap:[/b][/color] Retry jumps to hero selection with new hero summary cards.
 - [color=#ffffff][b]Snappier Map & Spawns:[/b][/color] Smoother map browsing and monster room ambushes.
 - [color=#ffffff][b]Winding Maze Dungeons:[/b][/color] Deeper themed wings with varied room shapes.

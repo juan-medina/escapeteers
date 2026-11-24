@@ -65,7 +65,7 @@ func update(game: Game, map: Map, delta: float) -> void:
 	_track_rooms(game, map)
 
 
-func finish_run(bot: AutoplayBot, game: Game, map: Map) -> Dictionary:
+func finish_run(bot: AutoplayBot, game: Game, map: Map, reason: String = "") -> Dictionary:
 	var leader_dead: bool = not is_instance_valid(game._character) or game._character.is_dead
 	var max_depth: int = bot.max_depth_reached
 	var rooms_entered: int = _cur_room_records.size()
@@ -73,6 +73,13 @@ func finish_run(bot: AutoplayBot, game: Game, map: Map) -> Dictionary:
 	for rec: Dictionary in _cur_room_records.values():
 		if rec[&"cleared"]:
 			rooms_cleared += 1
+
+	var doors_unlocked: int = 0
+	for gate: SectorGatePlanner.SectorGate in map.plan.sector_gates:
+		if gate.door_unlocked:
+			doors_unlocked += 1
+	var doors_mask: String = bot.get_doors_mask(map)
+	var keys_mask: String = bot.get_keys_mask(game)
 
 	var final_class_stats: Dictionary = {}
 	for cid: StringName in _cur_class_stats:
@@ -114,8 +121,12 @@ func finish_run(bot: AutoplayBot, game: Game, map: Map) -> Dictionary:
 		&"leader": String(_cur_leader),
 		&"build": _cur_build,
 		&"won": bot.has_won and not leader_dead,
+		&"reason": reason,
 		&"leader_dead": leader_dead,
 		&"death_cause": String(_cur_death_cause),
+		&"doors_unlocked": doors_unlocked,
+		&"doors_mask": doors_mask,
+		&"keys_mask": keys_mask,
 		&"max_depth": max_depth,
 		&"rooms_entered": rooms_entered,
 		&"rooms_cleared": rooms_cleared,
@@ -137,7 +148,12 @@ func build_report_dict() -> Dictionary:
 		&"run_count": _runs.size(),
 		&"runs": _runs,
 		&"builds": _aggregate_by_build(),
+		&"reasons": _aggregate_reasons(_runs),
+		&"death_causes": _aggregate_death_causes(_runs),
+		&"door_funnel": _aggregate_door_funnel(_runs),
 		&"classes": _aggregate_classes(_runs),
+		&"classes_balanced": _aggregate_classes(_filter_runs_by_build("balanced", false)),
+		&"classes_mono": _aggregate_classes(_filter_runs_by_build("mono:", true)),
 		&"depths": _aggregate_depths(_runs),
 		&"archetypes": _aggregate_archetypes(_runs),
 	}
@@ -146,14 +162,24 @@ func build_report_dict() -> Dictionary:
 func print_balance_report(title: String = "AUTOPLAY BALANCE REPORT") -> void:
 	var report: Dictionary = build_report_dict()
 	var builds: Array[Dictionary] = report[&"builds"]
+	var reasons: Dictionary[String, int] = report[&"reasons"]
+	var death_causes: Array[Dictionary] = report[&"death_causes"]
+	var door_funnel: Dictionary[String, int] = report[&"door_funnel"]
 	var classes: Array[Dictionary] = report[&"classes"]
+	var classes_bal: Array[Dictionary] = report[&"classes_balanced"]
+	var classes_mono: Array[Dictionary] = report[&"classes_mono"]
 	var depths: Array[Dictionary] = report[&"depths"]
 	var archetypes: Array[Dictionary] = report[&"archetypes"]
 
 	print(&"\n================ %s ================" % title)
 	print(&"Runs Completed: %d" % _runs.size())
+	_print_summary_blocks(reasons, death_causes, door_funnel)
 	_print_build_table(builds)
-	_print_class_table(classes)
+	if not classes_bal.is_empty() and not classes_mono.is_empty():
+		_print_class_table(classes_bal, "CLASS BALANCE BREAKDOWN (BALANCED RUNS)")
+		_print_class_table(classes_mono, "CLASS BALANCE BREAKDOWN (MONO RUNS)")
+	else:
+		_print_class_table(classes, "CLASS BALANCE BREAKDOWN")
 	_print_archetype_table(archetypes)
 	_print_depth_table(depths)
 	print(&"===========================================================\n")
@@ -331,6 +357,59 @@ static func _sum_squad_max_hp(game: Game) -> float:
 	return total
 
 
+func _filter_runs_by_build(pattern: String, is_prefix: bool) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for run: Dictionary in _runs:
+		var build_str: String = run[&"build"]
+		if (is_prefix and build_str.begins_with(pattern)) or (not is_prefix and build_str == pattern):
+			out.append(run)
+	return out
+
+
+static func _aggregate_reasons(runs: Array[Dictionary]) -> Dictionary[String, int]:
+	var counts: Dictionary[String, int] = {}
+	for run: Dictionary in runs:
+		var r_reason: String = run.get(&"reason", "")
+		var key: String = r_reason if r_reason != "" else ("won" if run[&"won"] else "leader_dead")
+		var prev: int = counts.get(key, 0)
+		counts[key] = prev + 1
+	return counts
+
+
+static func _aggregate_death_causes(runs: Array[Dictionary]) -> Array[Dictionary]:
+	var counts: Dictionary[String, int] = {}
+	for run: Dictionary in runs:
+		if not run[&"leader_dead"]:
+			continue
+		var cause: String = run[&"death_cause"]
+		var prev: int = counts.get(cause, 0)
+		counts[cause] = prev + 1
+	var out: Array[Dictionary] = []
+	for cause: String in counts:
+		out.append({&"cause": cause, &"count": counts[cause]})
+	out.sort_custom(_compare_count_desc)
+	return out
+
+
+static func _compare_count_desc(a: Dictionary, b: Dictionary) -> bool:
+	var ca: int = a[&"count"]
+	var cb: int = b[&"count"]
+	return ca > cb
+
+
+static func _aggregate_door_funnel(runs: Array[Dictionary]) -> Dictionary[String, int]:
+	var funnel: Dictionary[String, int] = {"B": 0, "G": 0, "Y": 0, "R": 0, "D12": 0}
+	var door_keys: Array[String] = ["B", "G", "Y", "R"]
+	for run: Dictionary in runs:
+		var mask: String = run.get(&"doors_mask", "-")
+		for key: String in door_keys:
+			if mask.contains(key):
+				funnel[key] += 1
+		if run[&"won"]:
+			funnel["D12"] += 1
+	return funnel
+
+
 func _aggregate_by_build() -> Array[Dictionary]:
 	var groups: Dictionary[String, Array] = {}
 	for run: Dictionary in _runs:
@@ -345,21 +424,28 @@ func _aggregate_by_build() -> Array[Dictionary]:
 		var n: int = runs_arr.size()
 		var wins: int = 0
 		var sum_depth: float = 0.0
+		var sum_doors: float = 0.0
 		var sum_cleared: float = 0.0
 		var sum_time: float = 0.0
 		var sum_squad: float = 0.0
 		var sum_dmg: float = 0.0
 		var sum_combat_sec: float = 0.0
 		var sum_deaths: int = 0
+		var frame_limits: int = 0
 		for r_var: Variant in runs_arr:
 			var r: Dictionary = r_var
 			if r[&"won"]:
 				wins += 1
 			var r_depth: float = r[&"max_depth"]
+			var r_doors: int = r.get(&"doors_unlocked", 0)
 			var r_cleared: float = r[&"rooms_cleared"]
 			var r_time: float = r[&"duration_sec"]
 			var r_squad: float = r[&"final_squad_size"]
+			var r_reason: String = r.get(&"reason", "")
+			if r_reason == "frame_limit":
+				frame_limits += 1
 			sum_depth += r_depth
+			sum_doors += float(r_doors)
 			sum_cleared += r_cleared
 			sum_time += r_time
 			sum_squad += r_squad
@@ -381,11 +467,13 @@ func _aggregate_by_build() -> Array[Dictionary]:
 					&"runs": n,
 					&"win_pct": float(wins) / float(maxi(1, n)) * 100.0,
 					&"avg_depth": sum_depth / float(maxi(1, n)),
+					&"avg_doors": sum_doors / float(maxi(1, n)),
 					&"avg_cleared": sum_cleared / float(maxi(1, n)),
 					&"avg_time": sum_time / float(maxi(1, n)),
 					&"avg_squad": sum_squad / float(maxi(1, n)),
 					&"avg_unit_dps": sum_dmg / maxf(1.0, sum_combat_sec),
 					&"avg_deaths": float(sum_deaths) / float(maxi(1, n)),
+					&"frame_limits": frame_limits,
 				}
 			)
 		)
@@ -565,29 +653,53 @@ static func _finalize_room_buckets(buckets: Dictionary[String, Array], sort_by_k
 	return out
 
 
+static func _print_summary_blocks(reasons: Dictionary[String, int], death_causes: Array[Dictionary], door_funnel: Dictionary[String, int]) -> void:
+	var reason_parts: Array[String] = []
+	for key: String in reasons:
+		reason_parts.append("%s=%d" % [key, reasons[key]])
+	print(&"End Reasons: %s" % ", ".join(reason_parts))
+
+	var cause_parts: Array[String] = []
+	for item: Dictionary in death_causes:
+		var cause: String = item[&"cause"]
+		var cnt: int = item[&"count"]
+		cause_parts.append("%s=%d" % [cause, cnt])
+	if not cause_parts.is_empty():
+		print(&"Death Causes: %s" % ", ".join(cause_parts))
+
+	print(
+		(
+			&"Sector Door Funnel: B=%d  G=%d  Y=%d  R=%d  D12Win=%d"
+			% [door_funnel["B"], door_funnel["G"], door_funnel["Y"], door_funnel["R"], door_funnel["D12"]]
+		)
+	)
+
+
 static func _print_build_table(builds: Array[Dictionary]) -> void:
 	print(&"\nBUILD LEADERBOARD:")
-	print(&"  %-24s  Runs   Win%%  AvgDepth  Cleared  AvgTime  Squad  UnitDPS  Deaths" % "Leader | Build")
+	print(&"  %-30s  Runs   Win%%  AvgDepth  Doors  Cleared  AvgTime  Squad  UnitDPS  Deaths  FLim" % "Leader | Build")
 	for b: Dictionary in builds:
 		print(
 			(
-				&"  %-24s  %4d  %5.1f     %5.1f    %5.1f   %6.1fs   %4.1f   %6.1f   %5.1f"
+				&"  %-30s  %4d  %5.1f     %5.1f   %4.1f    %5.1f   %6.1fs   %4.1f   %6.1f   %5.1f  %4d"
 				% [
 					b[&"key"],
 					b[&"runs"],
 					b[&"win_pct"],
 					b[&"avg_depth"],
+					b[&"avg_doors"],
 					b[&"avg_cleared"],
 					b[&"avg_time"],
 					b[&"avg_squad"],
 					b[&"avg_unit_dps"],
 					b[&"avg_deaths"],
+					b[&"frame_limits"],
 				]
 			)
 		)
 
 
-static func _print_class_table(classes: Array[Dictionary]) -> void:
+static func _print_class_table(classes: Array[Dictionary], title: String = "CLASS BALANCE BREAKDOWN") -> void:
 	if classes.is_empty():
 		return
 	var avg_dps: float = 0.0
@@ -596,7 +708,7 @@ static func _print_class_table(classes: Array[Dictionary]) -> void:
 		avg_dps += c_dps
 	avg_dps /= float(maxi(1, classes.size()))
 
-	print(&"\nCLASS BALANCE BREAKDOWN (Combat Unit DPS avg=%.1f):" % avg_dps)
+	print(&"\n%s (Combat Unit DPS avg=%.1f):" % [title, avg_dps])
 	print(&"  %-16s  Picks  AvgLv  UnitDPS   Heal/s  DmgTaken/u  Death%%   Flag" % "Class")
 	for c: Dictionary in classes:
 		var dps: float = c[&"combat_dps"]
