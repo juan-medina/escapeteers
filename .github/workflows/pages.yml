@@ -9,23 +9,16 @@ on:
             - main
     workflow_dispatch:
 
-permissions:
-    contents: read
-    pages: write
-    id-token: write
-
 concurrency:
     group: pages
     cancel-in-progress: true
 
 jobs:
-    deploy:
-        name: Build and deploy
+    build:
+        name: Build
         runs-on: ubuntu-latest
-
-        environment:
-            name: github-pages
-            url: ${{ steps.deployment.outputs.page_url }}
+        permissions:
+            contents: read
 
         steps:
             -   name: Checkout game
@@ -84,6 +77,37 @@ jobs:
                 uses: actions/upload-pages-artifact@v3
                 with:
                     path: bin/web
+
+    deploy:
+        name: Deploy
+        needs: build
+        runs-on: ubuntu-latest
+        permissions:
+            actions: read
+            pages: write
+            id-token: write
+
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+
+        steps:
+            # actions/deploy-pages fails immediately if GitHub has not finished
+            # indexing the freshly uploaded artifact, so poll until it appears.
+            -   name: Wait for Pages artifact
+                env:
+                    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                run: |
+                    for i in $(seq 1 15); do
+                        count=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts?name=github-pages" --jq '.total_count' 2>/dev/null || echo 0)
+                        if [ "${count:-0}" -ge 1 ] 2>/dev/null; then
+                            echo "Artifact is indexed (attempt $i)"
+                            exit 0
+                        fi
+                        echo "Artifact not visible yet (attempt $i), retrying in 2s..."
+                        sleep 2
+                    done
+                    echo "::warning::Artifact still not visible after 30s; proceeding to deploy anyway"
 
             -   name: Deploy to Pages
                 id: deployment
