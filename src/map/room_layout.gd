@@ -29,6 +29,18 @@ const PROFILE_THRESHOLD_WIDE: int = 67
 const PROFILE_THRESHOLD_TALL: int = 89
 
 
+static func get_archetype_title(archetype: WorldPlan.RoomArchetype) -> StringName:
+	var title: StringName = &"Slime Pit"
+	match archetype:
+		WorldPlan.RoomArchetype.BONE_SWARM:
+			title = &"Bone Swarm"
+		WorldPlan.RoomArchetype.ARCHER_GARRISON:
+			title = &"Archer Garrison"
+		WorldPlan.RoomArchetype.NECRO_CRYPT:
+			title = &"Necro Crypt"
+	return title
+
+
 static func roll_room_size(rng: RandomNumberGenerator, depth: int) -> Vector2i:
 	var tier: int = 1 if depth <= 1 else (2 if depth <= 3 else 3)
 	var bonus: int = mini(maxi(0, depth - 4) * 2, 8) if tier == 3 else 0
@@ -585,3 +597,48 @@ static func _hits_other_room_or_sector_corridor(
 		if plan._corridor_sectors[c_idx] != sector_idx and plan._corridor_rects[c_idx].intersects(corr_padded):
 			return true
 	return false
+
+
+static func eliminate_narrow_gaps(plan: WorldPlan) -> void:
+	var bridges_to_add: Array[Rect2i] = []
+	for i: int in range(plan.carve_rects.size()):
+		var rect_a: Rect2i = plan.carve_rects[i]
+		var query_rect: Rect2i = rect_a.grow(3)
+		var candidates: Array[int] = plan.spatial_grid.get_candidate_ids_for_rect(query_rect)
+
+		for j: int in candidates:
+			if j <= i or j >= plan.carve_rects.size():
+				continue
+			var rect_b: Rect2i = plan.carve_rects[j]
+			_try_add_horizontal_bridge(rect_a, rect_b, bridges_to_add)
+			_try_add_horizontal_bridge(rect_b, rect_a, bridges_to_add)
+			_try_add_vertical_bridge(rect_a, rect_b, bridges_to_add)
+			_try_add_vertical_bridge(rect_b, rect_a, bridges_to_add)
+
+	for bridge: Rect2i in bridges_to_add:
+		if (
+			not WorldPlan._intersects_any_rect(bridge, plan._all_pillars)
+			and not WorldPlan._intersects_any_rect(bridge, plan._cut_corner_rects)
+			and not WorldPlan._intersects_any_rect(bridge, plan.protected_neck_rects)
+		):
+			plan._add_carve_rect(bridge)
+
+
+static func _try_add_horizontal_bridge(left_rect: Rect2i, right_rect: Rect2i, bridges: Array[Rect2i]) -> void:
+	var gap: int = right_rect.position.x - left_rect.end.x
+	if gap <= 0 or gap > 2:
+		return
+	var ov_y_start: int = maxi(left_rect.position.y, right_rect.position.y)
+	var ov_y_end: int = mini(left_rect.end.y, right_rect.end.y)
+	if ov_y_end > ov_y_start:
+		bridges.append(Rect2i(left_rect.end.x, ov_y_start, gap, ov_y_end - ov_y_start))
+
+
+static func _try_add_vertical_bridge(top_rect: Rect2i, bottom_rect: Rect2i, bridges: Array[Rect2i]) -> void:
+	var gap: int = bottom_rect.position.y - top_rect.end.y
+	if gap <= 0 or gap > 2:
+		return
+	var ov_x_start: int = maxi(top_rect.position.x, bottom_rect.position.x)
+	var ov_x_end: int = mini(top_rect.end.x, bottom_rect.end.x)
+	if ov_x_end > ov_x_start:
+		bridges.append(Rect2i(ov_x_start, top_rect.end.y, ov_x_end - ov_x_start, gap))

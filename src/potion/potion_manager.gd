@@ -49,8 +49,8 @@ func spawn_list(spawns: Array[Dictionary]) -> void:
 func on_shortcut_opened(color: WorldPlan.KeyColor, map: Map) -> void:
 	_hud.notify_shortcut_opened(color)
 	for gate: SectorGatePlanner.SectorGate in map.plan.sector_gates:
-		if gate.color == color:
-			if gate.key_room == gate.gate_room or gate.shortcut_wall_cells.size() < 2:
+		if gate.color == color and gate.has_shortcut:
+			if gate.key_room == gate.shortcut_target_room or gate.shortcut_wall_cells.size() < 2:
 				return
 			var pos_a: Vector2 = map.map_to_local(gate.shortcut_wall_cells[0] + Vector2i(0, -2))
 			var pos_b: Vector2 = map.map_to_local(gate.shortcut_wall_cells[1] + Vector2i(0, -2))

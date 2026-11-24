@@ -90,6 +90,8 @@ var _corridor_sectors: Array[int] = []
 var _all_pillars: Array[Rect2i] = []
 var _cut_corner_rects: Array[Rect2i] = []
 var _next_spike_group: int = 0
+var _sector_x_bound_side: int = 0
+var _sector_x_bound_val: int = 0
 
 
 func generate(seed_val: int = 0, max_depth: int = 12) -> void:
@@ -133,16 +135,20 @@ func generate(seed_val: int = 0, max_depth: int = 12) -> void:
 	_all_pillars.clear()
 	_cut_corner_rects.clear()
 	_next_spike_group = 0
+	_sector_x_bound_side = 0
+	_sector_x_bound_val = 0
 
 	_create_hero_room()
-	_generate_sectors(max_depth)
+	SectorGatePlanner.generate_dungeon_sectors(self, max_depth)
 	_prune_clipped_pillars()
 	_color_room_graph()
-	_eliminate_narrow_gaps()
+	RoomLayout.eliminate_narrow_gaps(self)
 	_assign_wing_tile_sets()
 	for room: Rect2i in rooms:
 		_plan_candle_posts_for_room(room)
-	SectorGatePlanner.plan_spike_traps(self)
+	SpikePlanner.plan_spike_traps(self)
+	if not SectorGatePlanner.verify_solvability(self):
+		push_error(&"WorldPlan solvability check failed for seed %d" % run_seed)
 
 
 func is_floor(cell: Vector2i) -> bool:
@@ -185,6 +191,13 @@ func get_room_archetype(room: Rect2i) -> RoomArchetype:
 	if _room_archetypes.has(room):
 		return _room_archetypes[room]
 	return RoomArchetype.SLIME_PIT
+
+
+func are_all_doors_unlocked(color: KeyColor) -> bool:
+	for gate: SectorGatePlanner.SectorGate in sector_gates:
+		if gate.color == color and not gate.door_unlocked:
+			return false
+	return true
 
 
 func get_room_tile_set(room: Rect2i) -> int:
@@ -439,44 +452,43 @@ func _create_hero_room() -> void:
 	_add_carve_rect(hero_room)
 
 
-func _generate_sectors(target_max_depth: int) -> void:
-	var max_sector: int = SectorGatePlanner.get_sector_for_depth(target_max_depth)
-	var entry_room: Rect2i = hero_room
+func _build_sector_rooms(
+	entry_room: Rect2i,
+	sector_idx: int,
+	target_max_depth: int,
+	horizontal_bias: int = 0,
+	split_x: int = 0,
+) -> Array[Rect2i]:
+	var sector_rooms: Array[Rect2i] = []
+	var hop_from_entry: Dictionary[Rect2i, int] = {entry_room: 0}
+	if sector_idx > 0:
+		sector_rooms.append(entry_room)
 
-	for sector_idx: int in range(max_sector + 1):
-		var sector_rooms: Array[Rect2i] = []
-		var hop_from_entry: Dictionary[Rect2i, int] = {entry_room: 0}
-		if sector_idx > 0:
-			sector_rooms.append(entry_room)
-
-		var target_count: int = SECTOR_TARGET_ROOMS[mini(sector_idx, SECTOR_TARGET_ROOMS.size() - 1)]
-		var south_limit_y: int = (hero_room.end.y + 45) if sector_idx == 0 else (entry_room.end.y + 25)
-		var active_tips: Array[Rect2i] = _create_sector_wings(
-			entry_room,
-			sector_idx,
-			target_count,
-			target_max_depth,
-			sector_rooms,
-			hop_from_entry,
-			south_limit_y,
-		)
-		_grow_sector_maze(
-			entry_room,
-			sector_idx,
-			target_count,
-			target_max_depth,
-			sector_rooms,
-			hop_from_entry,
-			active_tips,
-			south_limit_y,
-		)
-
-		if sector_idx < SectorGatePlanner.GATE_DEPTHS.size() and SectorGatePlanner.GATE_DEPTHS[sector_idx] < target_max_depth:
-			var gate_depth: int = SectorGatePlanner.GATE_DEPTHS[sector_idx]
-			var next_entry: Rect2i = SectorGatePlanner.build_sector_gate(self, sector_rooms, entry_room, sector_idx, gate_depth)
-			if next_entry.size == Vector2i.ZERO:
-				break
-			entry_room = next_entry
+	var target_count: int = SECTOR_TARGET_ROOMS[mini(sector_idx, SECTOR_TARGET_ROOMS.size() - 1)]
+	var south_limit_y: int = (hero_room.end.y + 45) if sector_idx == 0 else (entry_room.end.y + 25)
+	var active_tips: Array[Rect2i] = _create_sector_wings(
+		entry_room,
+		sector_idx,
+		target_count,
+		target_max_depth,
+		sector_rooms,
+		hop_from_entry,
+		south_limit_y,
+		horizontal_bias,
+	)
+	_grow_sector_maze(
+		entry_room,
+		sector_idx,
+		target_count,
+		target_max_depth,
+		sector_rooms,
+		hop_from_entry,
+		active_tips,
+		south_limit_y,
+		horizontal_bias,
+		split_x,
+	)
+	return sector_rooms
 
 
 func _create_sector_wings(
@@ -487,9 +499,14 @@ func _create_sector_wings(
 	sector_rooms: Array[Rect2i],
 	hop_from_entry: Dictionary[Rect2i, int],
 	south_limit_y: int,
+	horizontal_bias: int = 0,
 ) -> Array[Rect2i]:
 	var wings: Array[Rect2i] = []
 	var wing_angles: Array[float] = [-PI * 0.88, -PI * 0.5, -PI * 0.12]
+	if horizontal_bias < 0:
+		wing_angles = [-PI * 0.92, -PI * 0.72, -PI * 0.52]
+	elif horizontal_bias > 0:
+		wing_angles = [-PI * 0.48, -PI * 0.28, -PI * 0.08]
 	var desired_wings: int = INITIAL_ROOM_COUNT if sector_idx == 0 else mini(target_count - sector_rooms.size(), INITIAL_ROOM_COUNT)
 
 	var starter_archetypes: Array[RoomArchetype] = [
@@ -549,6 +566,8 @@ func _grow_sector_maze(
 	hop_from_entry: Dictionary[Rect2i, int],
 	active_tips: Array[Rect2i],
 	south_limit_y: int,
+	horizontal_bias: int = 0,
+	split_x: int = 0,
 ) -> void:
 	if active_tips.is_empty() and sector_idx > 0:
 		active_tips.append(entry_room)
@@ -568,7 +587,7 @@ func _grow_sector_maze(
 		var placed: bool = false
 
 		for _attempt: int in range(20):
-			var angle: float = _pick_maze_angle(parent)
+			var angle: float = _pick_maze_angle(parent, horizontal_bias, split_x)
 			var cand: Rect2i = _try_place_maze_child(parent, sector_idx, child_depth, angle, south_limit_y, false)
 			if cand.size != Vector2i.ZERO:
 				sector_rooms.append(cand)
@@ -608,7 +627,7 @@ func _get_room_degree(room: Rect2i) -> int:
 	return _room_neighbors[room].size()
 
 
-func _pick_maze_angle(parent: Rect2i) -> float:
+func _pick_maze_angle(parent: Rect2i, horizontal_bias: int = 0, split_x: int = 0) -> float:
 	var in_dir: Vector2 = _room_in_dirs.get(parent, Vector2.UP)
 	var base_angle: float = in_dir.angle()
 	var roll: float = _rng.randf()
@@ -624,10 +643,21 @@ func _pick_maze_angle(parent: Rect2i) -> float:
 		angle = base_angle + sign_dir * _rng.randf_range(1.85, 2.35)
 
 	var cx: int = parent.get_center().x
-	if absi(cx) > 380 and _rng.randf() < 0.65:
-		var inward_angle: float = -PI * 0.25 if cx < 0 else -PI * 0.75
+	if horizontal_bias != 0 and (cx - split_x) * horizontal_bias < 12:
+		var bias_angle: float = -PI * 0.78 if horizontal_bias < 0 else -PI * 0.22
+		angle = lerp_angle(angle, bias_angle, 0.55)
+	if absi(cx) > 520 and _rng.randf() < 0.65:
+		var inward_angle: float = (-PI * 0.5) if _sector_x_bound_side != 0 else (-PI * 0.25 if cx < 0 else -PI * 0.75)
 		angle = lerp_angle(angle, inward_angle, 0.65)
 	return angle
+
+
+func _is_outside_sector_x_bound(rect: Rect2i) -> bool:
+	if _sector_x_bound_side < 0:
+		return rect.end.x > _sector_x_bound_val
+	if _sector_x_bound_side > 0:
+		return rect.position.x < _sector_x_bound_val
+	return false
 
 
 func _try_place_maze_child(
@@ -647,7 +677,12 @@ func _try_place_maze_child(
 	var top_left: Vector2i = Vector2i(center_pos.round()) - Vector2i(Vector2(size) * 0.5)
 	var candidate: Rect2i = Rect2i(top_left, size)
 
-	if candidate.end.y > south_limit_y or _is_outside_world_bounds(candidate) or _overlaps_any_room(candidate):
+	if (
+		candidate.end.y > south_limit_y
+		or _is_outside_world_bounds(candidate)
+		or _is_outside_sector_x_bound(candidate)
+		or _overlaps_any_room(candidate)
+	):
 		return Rect2i()
 
 	var shape: RoomShape = RoomLayout.pick_room_shape(_rng, size)
@@ -655,6 +690,10 @@ func _try_place_maze_child(
 	var segs: Array[Dictionary] = RoomLayout.plan_corridor(self, parent_room, candidate, cutouts, sector_idx, false)
 	if segs.is_empty():
 		return Rect2i()
+	for seg: Dictionary in segs:
+		var seg_rect: Rect2i = seg[&"rect"]
+		if _is_outside_sector_x_bound(seg_rect):
+			return Rect2i()
 
 	if require_clear_north:
 		var n_probe: Rect2i = Rect2i(candidate.get_center().x - 4, candidate.position.y - 6, 8, 6)
@@ -838,31 +877,6 @@ func _add_vertical_corridor_rect(y_start: int, y_end: int, x: int, half_width: i
 	_corridor_segments.append({&"is_horizontal": false, &"min": min_y, &"max": max_y, &"fixed": x, &"half_width": half_width})
 
 
-func _eliminate_narrow_gaps() -> void:
-	var bridges_to_add: Array[Rect2i] = []
-	for i: int in range(carve_rects.size()):
-		var rect_a: Rect2i = carve_rects[i]
-		var query_rect: Rect2i = rect_a.grow(3)
-		var candidates: Array[int] = spatial_grid.get_candidate_ids_for_rect(query_rect)
-
-		for j: int in candidates:
-			if j <= i or j >= carve_rects.size():
-				continue
-			var rect_b: Rect2i = carve_rects[j]
-			_try_add_horizontal_bridge(rect_a, rect_b, bridges_to_add)
-			_try_add_horizontal_bridge(rect_b, rect_a, bridges_to_add)
-			_try_add_vertical_bridge(rect_a, rect_b, bridges_to_add)
-			_try_add_vertical_bridge(rect_b, rect_a, bridges_to_add)
-
-	for bridge: Rect2i in bridges_to_add:
-		if (
-			not _intersects_any_rect(bridge, _all_pillars)
-			and not _intersects_any_rect(bridge, _cut_corner_rects)
-			and not _intersects_any_rect(bridge, protected_neck_rects)
-		):
-			_add_carve_rect(bridge)
-
-
 static func _intersects_any_point(point: Vector2i, rects: Array[Rect2i]) -> bool:
 	for other: Rect2i in rects:
 		if other.has_point(point):
@@ -877,29 +891,9 @@ static func _intersects_any_rect(rect: Rect2i, rects: Array[Rect2i]) -> bool:
 	return false
 
 
-static func _try_add_horizontal_bridge(left_rect: Rect2i, right_rect: Rect2i, bridges: Array[Rect2i]) -> void:
-	var gap: int = right_rect.position.x - left_rect.end.x
-	if gap <= 0 or gap > 2:
-		return
-	var ov_y_start: int = maxi(left_rect.position.y, right_rect.position.y)
-	var ov_y_end: int = mini(left_rect.end.y, right_rect.end.y)
-	if ov_y_end > ov_y_start:
-		bridges.append(Rect2i(left_rect.end.x, ov_y_start, gap, ov_y_end - ov_y_start))
-
-
-static func _try_add_vertical_bridge(top_rect: Rect2i, bottom_rect: Rect2i, bridges: Array[Rect2i]) -> void:
-	var gap: int = bottom_rect.position.y - top_rect.end.y
-	if gap <= 0 or gap > 2:
-		return
-	var ov_x_start: int = maxi(top_rect.position.x, bottom_rect.position.x)
-	var ov_x_end: int = mini(top_rect.end.x, bottom_rect.end.x)
-	if ov_x_end > ov_x_start:
-		bridges.append(Rect2i(ov_x_start, top_rect.end.y, ov_x_end - ov_x_start, gap))
-
-
 func _compute_companion_spawns_for_room(room: Rect2i) -> Array[Vector2i]:
-	var positions: Array[Vector2i] = []
 	var center_cell: Vector2i = room.get_center()
+	var positions: Array[Vector2i] = []
 	var tier: int = get_room_tier(room)
 
 	positions.append(center_cell)

@@ -237,21 +237,9 @@ func _check_room_entry() -> void:
 
 	var room_level: int = clampi(_map.get_room_depth(room), 1, 12)
 	var remaining: int = _room_remaining_enemies.get(room, _map.get_room_enemy_quota(room))
-	var archetype_name: StringName = _get_archetype_title(_map.plan.get_room_archetype(room))
+	var archetype_name: StringName = RoomLayout.get_archetype_title(_map.plan.get_room_archetype(room))
 	var title: String = &"%s - Lv. %d" % [archetype_name, room_level]
 	_hud.notify_room_entered(room, title, remaining <= 0)
-
-
-static func _get_archetype_title(archetype: WorldPlan.RoomArchetype) -> StringName:
-	var title: StringName = &"Slime Pit"
-	match archetype:
-		WorldPlan.RoomArchetype.BONE_SWARM:
-			title = &"Bone Swarm"
-		WorldPlan.RoomArchetype.ARCHER_GARRISON:
-			title = &"Archer Garrison"
-		WorldPlan.RoomArchetype.NECRO_CRYPT:
-			title = &"Necro Crypt"
-	return title
 
 
 func _spawn_initial_characters() -> void:
@@ -264,6 +252,8 @@ func _spawn_initial_characters() -> void:
 		_spawn_pickups_for_room(room)
 
 	for gate: SectorGatePlanner.SectorGate in _map.plan.sector_gates:
+		if not gate.has_key:
+			continue
 		var key_node: KeyPickup = KEY_PICKUP_SCENE.instantiate() as KeyPickup
 		_characters.add_child(key_node)
 		key_node.position = _map.map_to_local(gate.key_cell)
@@ -328,9 +318,10 @@ func _check_pickups() -> void:
 			_hud.show_event_toast(&"%s Key Found!" % KeyPickup.get_color_name(color), KeyPickup.get_display_color(color))
 
 
-func _on_door_unlocked(color: WorldPlan.KeyColor) -> void:
-	_hud.set_key_state(color, true, true)
-	_hud.show_event_toast(&"%s Door Unlocked!" % KeyPickup.get_color_name(color), KeyPickup.get_display_color(color))
+func _on_door_unlocked(gate: SectorGatePlanner.SectorGate) -> void:
+	var all_unlocked: bool = _map.plan.are_all_doors_unlocked(gate.color)
+	_hud.notify_door_unlocked(gate, all_unlocked)
+	_hud.show_event_toast(&"%s Door Unlocked!" % KeyPickup.get_color_name(gate.color), KeyPickup.get_display_color(gate.color))
 
 
 func _on_locked_door_bumped(color: WorldPlan.KeyColor) -> void:

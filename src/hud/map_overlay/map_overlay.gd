@@ -53,9 +53,9 @@ var _explored_dirty: bool = false
 var _walls_dirty: bool = false
 var _opened_shortcuts: Dictionary[WorldPlan.KeyColor, bool] = {}
 var _collected_keys: Dictionary[WorldPlan.KeyColor, bool] = {}
-var _unlocked_doors: Dictionary[WorldPlan.KeyColor, bool] = {}
-var _door_world_positions: Array[Vector2] = [Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO]
-var _key_world_positions: Array[Vector2] = [Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO]
+var _door_entries: Array[Dictionary] = []
+var _key_entries: Array[Dictionary] = []
+var _pulse_time: float = 0.0
 var _hud_door_indicators: Array[Node2D] = []
 var _hud_door_arrows: Array[Node2D] = []
 var _hud_key_indicators: Array[Node2D] = []
@@ -71,13 +71,19 @@ var _fov_chunks: Dictionary[Vector2i, bool] = {}
 @onready var _room_labels_container: Node2D = $RoomLabels
 @onready var _gate_markers_container: Node2D = $GateMarkers
 @onready var _player_marker: Node2D = $PlayerMarker
-@onready var _door_markers: Array[Node2D] = [
+@onready var _door_markers: Array[Sprite2D] = [
 	$GateMarkers/BlueDoorMarker,
 	$GateMarkers/GreenDoorMarker,
 	$GateMarkers/YellowDoorMarker,
 	$GateMarkers/RedDoorMarker,
 ]
-@onready var _key_markers: Array[Node2D] = [
+@onready var _door_rings: Array[Line2D] = [
+	$GateMarkers/BlueDoorMarker/HighlightRing,
+	$GateMarkers/GreenDoorMarker/HighlightRing,
+	$GateMarkers/YellowDoorMarker/HighlightRing,
+	$GateMarkers/RedDoorMarker/HighlightRing,
+]
+@onready var _key_markers: Array[Sprite2D] = [
 	$GateMarkers/BlueKeyMarker,
 	$GateMarkers/GreenKeyMarker,
 	$GateMarkers/YellowKeyMarker,
@@ -98,11 +104,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	_pulse_time += delta
 	if not is_instance_valid(_target):
 		return
 	_update_discovery()
 	if visible:
 		_update_view(delta)
+		_update_matching_door_pulses()
 	_update_hud_edge_indicators()
 
 
@@ -168,25 +176,22 @@ func set_squad_level(squad_level: int) -> void:
 		_update_room_label(room)
 
 
-func set_key_state(color: WorldPlan.KeyColor, collected: bool, used: bool) -> void:
-	var newly_unlocked: bool = used and not _unlocked_doors.has(color)
+func set_key_state(color: WorldPlan.KeyColor, collected: bool, _used: bool) -> void:
 	if collected:
 		_collected_keys[color] = true
 	else:
 		_collected_keys.erase(color)
-	if used:
-		_unlocked_doors[color] = true
-	else:
-		_unlocked_doors.erase(color)
 	_update_gate_markers_visibility()
-	if newly_unlocked and _plan != null:
-		for gate: SectorGatePlanner.SectorGate in _plan.sector_gates:
-			if gate.color == color:
-				_visibility.open_door(gate)
+
+
+func notify_door_unlocked(gate: SectorGatePlanner.SectorGate) -> void:
+	if _plan != null:
+		_visibility.open_door(gate)
 		_visited_fov_chunks.clear()
 		_last_revealed_chunk = Vector2i(2147483647, 2147483647)
-		if is_instance_valid(_target):
-			_update_discovery()
+	_update_gate_markers_visibility()
+	if _plan != null and is_instance_valid(_target):
+		_update_discovery()
 
 
 func notify_shortcut_opened(color: WorldPlan.KeyColor) -> void:
@@ -195,7 +200,7 @@ func notify_shortcut_opened(color: WorldPlan.KeyColor) -> void:
 	_opened_shortcuts[color] = true
 	var changed: bool = false
 	for gate: SectorGatePlanner.SectorGate in _plan.sector_gates:
-		if gate.color != color:
+		if gate.color != color or not gate.has_shortcut:
 			continue
 		_visibility.open_shortcut(gate)
 		for coord: Vector2i in gate.opened_map_chunk_coords:
@@ -388,15 +393,20 @@ func _build_chunks(plan: WorldPlan) -> void:
 	_chunk_floor_vertices.clear()
 	_opened_shortcuts.clear()
 	_collected_keys.clear()
-	_unlocked_doors.clear()
+	_door_entries.clear()
+	_key_entries.clear()
+	_pulse_time = 0.0
 	_visited_fov_chunks.clear()
 	_fov_chunks.clear()
-	for marker: Node2D in _door_markers:
+	for marker: Sprite2D in _door_markers:
 		marker.visible = false
-	for marker: Node2D in _key_markers:
+	for ring: Line2D in _door_rings:
+		ring.visible = false
+	for marker: Sprite2D in _key_markers:
 		marker.visible = false
 	for ind: Node2D in _hud_door_indicators:
 		ind.visible = false
+		ind.scale = Vector2.ONE
 	for ind: Node2D in _hud_key_indicators:
 		ind.visible = false
 	_last_revealed_chunk = Vector2i(2147483647, 2147483647)
@@ -422,15 +432,18 @@ func _build_gate_markers_and_opened_tunnels(plan: WorldPlan) -> void:
 		if color_idx >= 0 and color_idx < _door_markers.size():
 			var door_mid: Vector2 = (Vector2(gate.door_cells[0]) + Vector2(gate.door_cells[1])) * 0.5 + Vector2(0.5, 0.5)
 			var door_world: Vector2 = door_mid * TILE_SIZE
-			_door_world_positions[color_idx] = door_world
-			_door_markers[color_idx].position = (door_world * map_scale).round()
-		if color_idx >= 0 and color_idx < _key_markers.size():
+			var marker: Sprite2D = _door_markers[color_idx]
+			var ring: Line2D = _door_rings[color_idx]
+			marker.position = (door_world * map_scale).round()
+			_door_entries.append({&"gate": gate, &"marker": marker, &"ring": ring, &"world_pos": door_world})
+		if gate.has_key and color_idx >= 0 and color_idx < _key_markers.size():
 			var key_mid: Vector2 = Vector2(gate.key_cell) + Vector2(0.5, 0.5)
 			var key_world: Vector2 = key_mid * TILE_SIZE
-			_key_world_positions[color_idx] = key_world
-			_key_markers[color_idx].position = (key_world * map_scale).round()
+			var key_marker: Sprite2D = _key_markers[color_idx]
+			key_marker.position = (key_world * map_scale).round()
+			_key_entries.append({&"gate": gate, &"marker": key_marker, &"world_pos": key_world})
 
-		if gate.key_room == gate.gate_room or gate.shortcut_corridor_rects.is_empty():
+		if not gate.has_shortcut or gate.key_room == gate.shortcut_target_room or gate.shortcut_corridor_rects.is_empty():
 			continue
 		_build_opened_tunnel_map_data(plan, gate)
 
@@ -491,15 +504,37 @@ func _build_opened_tunnel_map_data(plan: WorldPlan, gate: SectorGatePlanner.Sect
 func _update_gate_markers_visibility() -> void:
 	if _plan == null:
 		return
-	for gate: SectorGatePlanner.SectorGate in _plan.sector_gates:
-		var color_idx: int = int(gate.color)
-		if color_idx >= 0 and color_idx < _door_markers.size():
-			var door_chunk: Vector2i = _cell_to_map_chunk(gate.door_cells[0])
-			_door_markers[color_idx].visible = _revealed_chunks.has(door_chunk) and not _unlocked_doors.has(gate.color)
-		if color_idx >= 0 and color_idx < _key_markers.size():
-			var key_chunk: Vector2i = _cell_to_map_chunk(gate.key_cell)
-			_key_markers[color_idx].visible = _revealed_chunks.has(key_chunk) and not _collected_keys.has(gate.color)
+	for entry: Dictionary in _door_entries:
+		var gate: SectorGatePlanner.SectorGate = entry[&"gate"]
+		var marker: Sprite2D = entry[&"marker"]
+		var ring: Line2D = entry[&"ring"]
+		var c0: Vector2i = _cell_to_map_chunk(gate.door_cells[0])
+		var c1: Vector2i = _cell_to_map_chunk(gate.door_cells[1])
+		var is_revealed: bool = _revealed_chunks.has(c0) or _revealed_chunks.has(c1)
+		marker.visible = is_revealed and not gate.door_unlocked
+		var is_ready: bool = marker.visible and _collected_keys.has(gate.color)
+		ring.visible = is_ready
+		marker.scale = Vector2.ONE
+		marker.self_modulate.a = 1.0 if is_ready else 0.85
+
+	for entry: Dictionary in _key_entries:
+		var gate: SectorGatePlanner.SectorGate = entry[&"gate"]
+		var marker: Sprite2D = entry[&"marker"]
+		var key_chunk: Vector2i = _cell_to_map_chunk(gate.key_cell)
+		marker.visible = _revealed_chunks.has(key_chunk) and not _collected_keys.has(gate.color)
+
 	_update_hud_edge_indicators()
+
+
+func _update_matching_door_pulses() -> void:
+	var pulse: float = 0.5 + 0.5 * sin(_pulse_time * 6.0)
+	for entry: Dictionary in _door_entries:
+		var marker: Sprite2D = entry[&"marker"]
+		var ring: Line2D = entry[&"ring"]
+		if ring.visible:
+			ring.scale = Vector2.ONE * lerpf(0.92, 1.28, pulse)
+			ring.modulate.a = lerpf(0.55, 1.0, pulse)
+			marker.scale = Vector2.ONE * lerpf(1.0, 1.12, pulse)
 
 
 func _update_hud_edge_indicators() -> void:
@@ -514,20 +549,56 @@ func _update_hud_edge_indicators() -> void:
 		maxf(min_bound.x, size.x - HUD_EDGE_MARGIN_RIGHT),
 		maxf(min_bound.y, size.y - HUD_EDGE_MARGIN_BOTTOM),
 	)
+	var pulse: float = 0.5 + 0.5 * sin(_pulse_time * 6.0)
 	for i: int in range(_door_markers.size()):
+		var target_color: WorldPlan.KeyColor = i as WorldPlan.KeyColor
+		var best_pos: Vector2 = Vector2.ZERO
+		var has_door: bool = false
+		var best_off_screen: bool = false
+		var best_dist_sq: float = INF
+		if is_instance_valid(_target):
+			for entry: Dictionary in _door_entries:
+				var gate: SectorGatePlanner.SectorGate = entry[&"gate"]
+				var marker: Sprite2D = entry[&"marker"]
+				if gate.color != target_color or not marker.visible:
+					continue
+				var world_pos: Vector2 = entry[&"world_pos"]
+				var screen_pos: Vector2 = (size * 0.5) + (world_pos - _target.global_position)
+				var is_off: bool = not on_screen_rect.has_point(screen_pos)
+				var d_sq: float = _target.global_position.distance_squared_to(world_pos)
+				if not has_door or (is_off and not best_off_screen) or (is_off == best_off_screen and d_sq < best_dist_sq):
+					has_door = true
+					best_off_screen = is_off
+					best_dist_sq = d_sq
+					best_pos = world_pos
 		_update_hud_indicator(
-			_door_markers[i].visible,
-			_door_world_positions[i],
+			has_door,
+			best_pos,
 			_hud_door_indicators[i],
 			_hud_door_arrows[i],
 			on_screen_rect,
 			min_bound,
 			max_bound,
 		)
+		if _hud_door_indicators[i].visible and _collected_keys.has(target_color):
+			_hud_door_indicators[i].scale = Vector2.ONE * lerpf(1.0, 1.16, pulse)
+		else:
+			_hud_door_indicators[i].scale = Vector2.ONE
+
 	for i: int in range(_key_markers.size()):
+		var target_color: WorldPlan.KeyColor = i as WorldPlan.KeyColor
+		var key_pos: Vector2 = Vector2.ZERO
+		var has_key: bool = false
+		for entry: Dictionary in _key_entries:
+			var gate: SectorGatePlanner.SectorGate = entry[&"gate"]
+			var marker: Sprite2D = entry[&"marker"]
+			if gate.color == target_color and marker.visible:
+				has_key = true
+				key_pos = entry[&"world_pos"]
+				break
 		_update_hud_indicator(
-			_key_markers[i].visible,
-			_key_world_positions[i],
+			has_key,
+			key_pos,
 			_hud_key_indicators[i],
 			_hud_key_arrows[i],
 			on_screen_rect,

@@ -157,6 +157,14 @@ func set_key_state(color: WorldPlan.KeyColor, collected: bool, used: bool) -> vo
 	_map_overlay.set_key_state(color, collected, used)
 
 
+func notify_door_unlocked(gate: SectorGatePlanner.SectorGate, all_color_doors_unlocked: bool) -> void:
+	var idx: int = int(gate.color)
+	if idx >= 0 and idx < _key_icons.size():
+		_key_icons[idx].visible = true
+		_key_icons[idx].modulate = KEY_USED_COLOR if all_color_doors_unlocked else KEY_COLLECTED_COLOR
+	_map_overlay.notify_door_unlocked(gate)
+
+
 func notify_shortcut_opened(color: WorldPlan.KeyColor) -> void:
 	_map_overlay.notify_shortcut_opened(color)
 	show_event_toast(&"Shortcut Opened!", Color(0.95, 0.90, 0.45, 1.0))

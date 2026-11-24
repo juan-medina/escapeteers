@@ -338,7 +338,7 @@ func _assign_next_goal(game: Game, map: Map, leader: Hero) -> void:
 
 func _populate_shortcut_waypoints(map: Map, from_room: Rect2i, to_room: Rect2i) -> void:
 	for gate: SectorGatePlanner.SectorGate in map.plan.sector_gates:
-		if not gate.shortcut_opened or gate.key_room != from_room or gate.gate_room != to_room:
+		if not gate.has_shortcut or not gate.shortcut_opened or gate.key_room != from_room or gate.shortcut_target_room != to_room:
 			continue
 		if gate.shortcut_waypoints.is_empty():
 			return
@@ -359,8 +359,8 @@ func _is_room_done(game: Game, room: Rect2i) -> bool:
 	if room == Rect2i() or _skipped_rooms.has(room):
 		return true
 	for gate: SectorGatePlanner.SectorGate in game._map.plan.sector_gates:
-		var needs_key: bool = room == gate.key_room and not game._collected_keys.has(gate.color)
-		var needs_lever: bool = room == gate.key_room and not gate.shortcut_opened and _last_known_room == gate.key_room
+		var needs_key: bool = gate.has_key and room == gate.key_room and not game._collected_keys.has(gate.color)
+		var needs_lever: bool = gate.has_shortcut and room == gate.key_room and not gate.shortcut_opened and _last_known_room == gate.key_room
 		var needs_door: bool = room == gate.gate_room and game._collected_keys.has(gate.color) and not gate.door_unlocked
 		if needs_key or needs_lever or needs_door:
 			return false
@@ -383,10 +383,17 @@ func _is_edge_passable(map: Map, room_a: Rect2i, room_b: Rect2i) -> bool:
 		if not gate.door_unlocked:
 			if (room_a == gate.gate_room and room_b == gate.next_room) or (room_b == gate.gate_room and room_a == gate.next_room):
 				return false
-		if not gate.shortcut_opened:
-			if (room_a == gate.key_room and room_b == gate.gate_room) or (room_b == gate.key_room and room_a == gate.gate_room):
+		if gate.has_shortcut and not gate.shortcut_opened:
+			if (room_a == gate.key_room and room_b == gate.shortcut_target_room) or (room_b == gate.key_room and room_a == gate.shortcut_target_room):
 				return false
 	return true
+
+
+func _is_room_locked(map: Map, room: Rect2i) -> bool:
+	for gate: SectorGatePlanner.SectorGate in map.plan.sector_gates:
+		if not gate.door_unlocked and gate.next_room == room:
+			return true
+	return false
 
 
 func _has_recruit_in_room(game: Game, room: Rect2i) -> bool:
@@ -414,7 +421,7 @@ func _pick_next_goal_room(game: Game, map: Map, leader: Hero) -> Rect2i:
 		var depth: int = map.get_room_depth(room)
 		if SectorGatePlanner.get_sector_for_depth(depth) > max_allowed_sector:
 			continue
-		if _is_room_done(game, room):
+		if _is_room_locked(map, room) or _is_room_done(game, room):
 			continue
 		var dist: float = leader.global_position.distance_to(map.map_to_local(room.get_center()))
 		var score: float = 0.0
@@ -530,13 +537,16 @@ func _find_nearest_key(game: Game, map: Map, leader: Hero) -> KeyPickup:
 
 func _get_gate_objective_pos(game: Game, map: Map) -> Vector2:
 	var active_gate: SectorGatePlanner.SectorGate = _get_active_sector_gate(map)
-	if active_gate == null or not game._collected_keys.has(active_gate.color):
-		return Vector2.ZERO
-	if not active_gate.shortcut_opened and _last_known_room == active_gate.key_room:
-		return map.map_to_local(active_gate.lever_cell)
-	if _last_known_room == active_gate.gate_room:
-		var door_pos: Vector2 = (map.map_to_local(active_gate.door_cells[0]) + map.map_to_local(active_gate.door_cells[1])) * 0.5
-		return door_pos + Vector2(0.0, 12.0)
+	if active_gate != null and game._collected_keys.has(active_gate.color):
+		if active_gate.has_shortcut and not active_gate.shortcut_opened and _last_known_room == active_gate.key_room:
+			return map.map_to_local(active_gate.lever_cell)
+		if _last_known_room == active_gate.gate_room:
+			var door_pos: Vector2 = (map.map_to_local(active_gate.door_cells[0]) + map.map_to_local(active_gate.door_cells[1])) * 0.5
+			return door_pos + Vector2(0.0, 12.0)
+	for gate: SectorGatePlanner.SectorGate in map.plan.sector_gates:
+		if not gate.door_unlocked and _last_known_room == gate.gate_room and game._collected_keys.has(gate.color):
+			var d_pos: Vector2 = (map.map_to_local(gate.door_cells[0]) + map.map_to_local(gate.door_cells[1])) * 0.5
+			return d_pos + Vector2(0.0, 12.0)
 	return Vector2.ZERO
 
 

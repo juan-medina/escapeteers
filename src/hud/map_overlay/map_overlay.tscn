@@ -34,20 +34,48 @@ visible = false
 modulate = Color(0.25, 0.68, 1, 0.95)
 texture = ExtResource("2_door_icon")
 
+[node name="HighlightRing" type="Line2D" parent="GateMarkers/BlueDoorMarker"]
+visible = false
+points = PackedVector2Array(0, -9, 7, -6, 9, 0, 7, 6, 0, 9, -7, 6, -9, 0, -7, -6)
+closed = true
+width = 1.5
+default_color = Color(1, 1, 1, 0.95)
+
 [node name="GreenDoorMarker" type="Sprite2D" parent="GateMarkers"]
 visible = false
 modulate = Color(0.3, 0.92, 0.48, 0.95)
 texture = ExtResource("2_door_icon")
+
+[node name="HighlightRing" type="Line2D" parent="GateMarkers/GreenDoorMarker"]
+visible = false
+points = PackedVector2Array(0, -9, 7, -6, 9, 0, 7, 6, 0, 9, -7, 6, -9, 0, -7, -6)
+closed = true
+width = 1.5
+default_color = Color(1, 1, 1, 0.95)
 
 [node name="YellowDoorMarker" type="Sprite2D" parent="GateMarkers"]
 visible = false
 modulate = Color(1, 0.86, 0.25, 0.95)
 texture = ExtResource("2_door_icon")
 
+[node name="HighlightRing" type="Line2D" parent="GateMarkers/YellowDoorMarker"]
+visible = false
+points = PackedVector2Array(0, -9, 7, -6, 9, 0, 7, 6, 0, 9, -7, 6, -9, 0, -7, -6)
+closed = true
+width = 1.5
+default_color = Color(1, 1, 1, 0.95)
+
 [node name="RedDoorMarker" type="Sprite2D" parent="GateMarkers"]
 visible = false
 modulate = Color(1, 0.35, 0.35, 0.95)
 texture = ExtResource("2_door_icon")
+
+[node name="HighlightRing" type="Line2D" parent="GateMarkers/RedDoorMarker"]
+visible = false
+points = PackedVector2Array(0, -9, 7, -6, 9, 0, 7, 6, 0, 9, -7, 6, -9, 0, -7, -6)
+closed = true
+width = 1.5
+default_color = Color(1, 1, 1, 0.95)
 
 [node name="BlueKeyMarker" type="Sprite2D" parent="GateMarkers"]
 visible = false

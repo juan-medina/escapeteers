@@ -6,7 +6,7 @@ extends Node2D
 
 signal generation_progress_updated(progress: float)
 signal secret_torches_completed
-signal door_unlocked(color: WorldPlan.KeyColor)
+signal door_unlocked(gate: SectorGatePlanner.SectorGate)
 signal locked_door_bumped(color: WorldPlan.KeyColor)
 signal shortcut_opened(color: WorldPlan.KeyColor)
 
@@ -285,7 +285,7 @@ func update_gates(squad: Array[Hero], collected_keys: Dictionary[WorldPlan.KeyCo
 		return
 
 	for gate: SectorGatePlanner.SectorGate in plan.sector_gates:
-		if not gate.shortcut_opened and _is_squad_near(squad, _floor.map_to_local(gate.lever_cell), LEVER_TRIGGER_DIST_SQ):
+		if gate.has_shortcut and not gate.shortcut_opened and _is_squad_near(squad, _floor.map_to_local(gate.lever_cell), LEVER_TRIGGER_DIST_SQ):
 			_activate_shortcut_lever(gate)
 			return
 		if not gate.door_unlocked:
@@ -334,7 +334,7 @@ func _unlock_door(gate: SectorGatePlanner.SectorGate) -> void:
 		_set_baked_walkable(cell, true)
 
 	Audio.play_sfx(Audio.Sfx.DOOR_UNLOCK)
-	door_unlocked.emit(gate.color)
+	door_unlocked.emit(gate)
 
 
 func _activate_shortcut_lever(gate: SectorGatePlanner.SectorGate) -> void:
