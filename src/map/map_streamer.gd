@@ -141,6 +141,67 @@ func get_chunk_coord(cell: Vector2i) -> Vector2i:
 	return cell_to_chunk(cell)
 
 
+func is_chunk_loaded(coord: Vector2i) -> bool:
+	return _loaded_chunks.has(coord) or _is_active_job_coord(_active_load_job, coord)
+
+
+func sync_loaded_chunk_arrays(coord: Vector2i, data: Dictionary) -> void:
+	if not _loaded_chunks.has(coord):
+		return
+	var loaded: Dictionary = _loaded_chunks[coord]
+	loaded[&"floors"] = data[&"floors"]
+	loaded[&"walls"] = data[&"walls"]
+	loaded[&"walkable"] = data[&"walkable"]
+	loaded[&"walkable_rects"] = data[&"walkable_rects"]
+
+
+func add_loaded_chunk_walkable(coord: Vector2i, cells: Array[Vector2i]) -> void:
+	if not _loaded_chunks.has(coord) or cells.is_empty():
+		return
+	var loaded: Dictionary = _loaded_chunks[coord]
+	var walk_arr: Array[Vector2i] = loaded[&"walkable"]
+	var existing: Dictionary[Vector2i, bool] = {}
+	for wcell: Vector2i in walk_arr:
+		existing[wcell] = true
+	var added: bool = false
+	for cell: Vector2i in cells:
+		if not existing.has(cell):
+			existing[cell] = true
+			walk_arr.append(cell)
+			added = true
+	if added:
+		loaded[&"walkable_rects"] = TileClassifier.build_walkable_rects(coord, walk_arr)
+
+
+func populate_nav_region(astar: AStarGrid2D, region: Rect2i) -> void:
+	var min_chunk: Vector2i = cell_to_chunk(region.position)
+	var max_chunk: Vector2i = cell_to_chunk(region.end - Vector2i.ONE)
+
+	for cy: int in range(min_chunk.y, max_chunk.y + 1):
+		for cx: int in range(min_chunk.x, max_chunk.x + 1):
+			var coord: Vector2i = Vector2i(cx, cy)
+			if not _loaded_chunks.has(coord):
+				continue
+			var rects: Array[Rect2i] = _loaded_chunks[coord][&"walkable_rects"]
+			var interior: bool = cx > min_chunk.x and cx < max_chunk.x and cy > min_chunk.y and cy < max_chunk.y
+			for r: Rect2i in rects:
+				if interior:
+					astar.fill_solid_region(r, false)
+				else:
+					var clipped: Rect2i = r.intersection(region)
+					if clipped.has_area():
+						astar.fill_solid_region(clipped, false)
+
+	if _active_load_job != null and _active_load_job.phase == 5:
+		var jc: Vector2i = _active_load_job.coord
+		if jc.x >= min_chunk.x and jc.x <= max_chunk.x and jc.y >= min_chunk.y and jc.y <= max_chunk.y:
+			var walk_arr: Array[Vector2i] = _active_load_job.data[&"walkable"]
+			for i: int in range(_active_load_job.idx):
+				var fpos: Vector2i = walk_arr[i]
+				if region.has_point(fpos):
+					astar.set_point_solid(fpos, false)
+
+
 func _has_pending_work() -> bool:
 	return _active_load_job != null or not _load_queue.is_empty() or _active_evict_job != null or not _evict_queue.is_empty()
 
@@ -259,6 +320,7 @@ func _store_empty_chunk(coord: Vector2i) -> void:
 		&"torches": [] as Array[Vector2i],
 		&"lights": [] as Array[Vector2i],
 		&"walkable": [] as Array[Vector2i],
+		&"walkable_rects": [] as Array[Rect2i],
 	}
 
 
@@ -271,6 +333,7 @@ func _commit_loaded_job(job: StreamJob) -> void:
 		&"torches": data[&"torches"],
 		&"lights": job.spawned_lights,
 		&"walkable": data[&"walkable"],
+		&"walkable_rects": data[&"walkable_rects"],
 	}
 
 

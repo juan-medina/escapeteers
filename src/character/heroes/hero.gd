@@ -19,8 +19,9 @@ const PLAYER_HURTBOX_RADIUS: float = 3.5
 const COMPANION_HURTBOX_RADIUS: float = 4.5
 const HERO_MELEE_VERTICAL_TOLERANCE: float = 12.0
 const HEAL_TRIAGE_THRESHOLD: float = 0.75
-const _GROUP_ENEMIES: StringName = &"enemies"
 const _GROUP_HEROES: StringName = &"heroes"
+
+static var active_heroes: Array[Hero] = []
 
 @export var level: int = 1:
 	set(value):
@@ -90,6 +91,7 @@ var _history_head: int = 0
 var _history_count: int = 0
 var _hit_applied_this_attack: bool = false
 var _hits_applied_frames: Array[int] = []
+var _active_hero_index: int = -1
 
 @onready var _ground_indicator: GroundIndicator = $GroundIndicator
 @onready var _hero_vfx: HeroVfx = $HeroVfx
@@ -111,6 +113,10 @@ func _ready() -> void:
 	_update_level_display()
 	_animated_sprite.frame_changed.connect(_on_frame_changed)
 	_setup_actions()
+
+
+func _exit_tree() -> void:
+	_unregister_active_hero()
 
 
 func _process(delta: float) -> void:
@@ -365,19 +371,25 @@ func _find_closest_enemy() -> Enemy:
 	var leash_sq: float = leash * leash
 	var anchor_pos: Vector2 = get_anchor_position()
 	var enforce_leash: bool = not is_player and not can_ranged and leash > 0.0
+	var self_pos: Vector2 = global_position
 
-	for node: Node in get_tree().get_nodes_in_group(_GROUP_ENEMIES):
-		var enemy: Enemy = node as Enemy
+	for enemy: Enemy in Enemy.active_enemies:
 		if not _is_valid_enemy_target(enemy):
 			continue
 
-		var dist_to_self_sq: float = global_position.distance_squared_to(enemy.global_position)
+		var enemy_pos: Vector2 = enemy.global_position
 		if enforce_leash:
-			if anchor_pos.distance_squared_to(enemy.global_position) > leash_sq:
+			if absf(enemy_pos.x - anchor_pos.x) > leash or absf(enemy_pos.y - anchor_pos.y) > leash:
 				continue
-		elif dist_to_self_sq > max_detection_sq:
-			continue
+			if anchor_pos.distance_squared_to(enemy_pos) > leash_sq:
+				continue
+		else:
+			if absf(enemy_pos.x - self_pos.x) > max_detection or absf(enemy_pos.y - self_pos.y) > max_detection:
+				continue
+			if self_pos.distance_squared_to(enemy_pos) > max_detection_sq:
+				continue
 
+		var dist_to_self_sq: float = self_pos.distance_squared_to(enemy_pos)
 		if _is_preferred_target(enemy):
 			if dist_to_self_sq < min_preferred_dist_sq:
 				min_preferred_dist_sq = dist_to_self_sq
@@ -398,11 +410,8 @@ func _find_injured_ally(max_health_ratio: float = HEAL_TRIAGE_THRESHOLD) -> Hero
 	var max_detection: float = heal_range
 	var max_detection_sq: float = max_detection * max_detection
 
-	for node: Node in get_tree().get_nodes_in_group(_GROUP_HEROES):
-		var ally: Hero = node as Hero
+	for ally: Hero in active_heroes:
 		if not CombatAction.is_valid_target(ally):
-			continue
-		if not ally.is_player and ally.squad_member == null:
 			continue
 		if ally.health >= ally.max_health:
 			continue
@@ -453,8 +462,8 @@ func _on_frame_changed() -> void:
 				if strike_dir.length_squared() < 0.01:
 					strike_dir = Vector2.LEFT if flip_h else Vector2.RIGHT
 				_hero_vfx.trigger_knockback_strike(strike_dir, is_heavy)
-			for node: Node in get_tree().get_nodes_in_group(_GROUP_ENEMIES):
-				var enemy: Enemy = node as Enemy
+			var hit_candidates: Array[Enemy] = Enemy.active_enemies.duplicate()
+			for enemy: Enemy in hit_candidates:
 				if not _is_valid_enemy_target(enemy):
 					continue
 				var effective_hit_damage: float = enemy.get_effective_damage_taken(hit_damage)
@@ -491,6 +500,7 @@ func _on_frame_changed() -> void:
 
 
 func _on_death() -> void:
+	_unregister_active_hero()
 	active_target = null
 	current_action = null
 	remove_from_group(_GROUP_HEROES)
@@ -610,8 +620,12 @@ func _update_active_mode() -> void:
 		if not _animated_sprite.is_playing() and not is_dead:
 			_animated_sprite.play()
 		if not is_dead:
+			_register_active_hero()
 			enable_collisions()
+		else:
+			_unregister_active_hero()
 	else:
+		_unregister_active_hero()
 		set_process(false)
 		set_physics_process(false)
 		disable_collisions()
@@ -620,6 +634,25 @@ func _update_active_mode() -> void:
 				_animated_sprite.play()
 		else:
 			_animated_sprite.pause()
+
+
+func _register_active_hero() -> void:
+	if _active_hero_index != -1:
+		return
+	_active_hero_index = active_heroes.size()
+	active_heroes.append(self)
+
+
+func _unregister_active_hero() -> void:
+	if _active_hero_index == -1:
+		return
+	var last_idx: int = active_heroes.size() - 1
+	if _active_hero_index != last_idx:
+		var swapped: Hero = active_heroes[last_idx]
+		active_heroes[_active_hero_index] = swapped
+		swapped._active_hero_index = _active_hero_index
+	active_heroes.pop_back()
+	_active_hero_index = -1
 
 
 func is_visible_on_screen() -> bool:

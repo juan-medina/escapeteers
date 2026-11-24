@@ -195,7 +195,7 @@ func _tick_loading() -> void:
 	var leader: String = _current_run_cfg[&"leader"]
 	var build: String = _current_run_cfg[&"build"]
 
-	_bot.setup(_map, build, _max_depth)
+	_bot.setup(_map, build, _max_depth, _mode == "perf")
 	_balance.begin_run(_game, _map, run_seed, StringName(leader), build)
 
 	if _profile_enabled:
@@ -214,10 +214,12 @@ func _tick_running(delta: float) -> void:
 		_finish_current_run("invalid_state")
 		return
 
-	if _immortal and not _game._character.is_dead:
-		var floor_hp: float = _game._character.max_health * 0.65
-		if _game._character.health < floor_hp:
-			_game._character.health = floor_hp
+	if _immortal:
+		for member: Hero in _game._squad:
+			if is_instance_valid(member) and not member.is_dead:
+				var floor_hp: float = member.max_health * 0.65
+				if member.health < floor_hp:
+					member.health = floor_hp
 
 	if _game._character.is_dead or (_game._pause_overlay.visible and _game._pause_overlay._game_over_dialog.visible):
 		_finish_current_run("leader_dead")
@@ -259,9 +261,10 @@ func _finish_current_run(reason: String) -> void:
 		summary = _balance.finish_run(_bot, _game, _map)
 
 	if not summary.is_empty():
+		var gate_tag: String = _bot.get_gate_progress_tag(_game, _map)
 		print(
 			(
-				&"[Autoplay %d/%d] seed=%d %s|%s -> depth=%d cleared=%d squad=%d lv=%d time=%.1fs reason=%s"
+				&"[Autoplay %d/%d] seed=%d %s|%s -> depth=%d cleared=%d squad=%d lv=%d time=%.1fs reason=%s %s"
 				% [
 					_run_index,
 					_total_runs,
@@ -274,6 +277,7 @@ func _finish_current_run(reason: String) -> void:
 					summary[&"squad_level"],
 					summary[&"duration_sec"],
 					reason,
+					gate_tag,
 				]
 			)
 		)

@@ -24,6 +24,7 @@ class SectorGate:
 	var tunnel_walls: Dictionary[Vector2i, Vector2i] = {}
 	var tunnel_erased_walls: Array[Vector2i] = []
 	var tunnel_walkable: Array[Vector2i] = []
+	var tunnel_chunk_diffs: Dictionary[Vector2i, Dictionary] = {}
 	var opened_map_chunk_coords: Array[Vector2i] = []
 	var opened_map_floors: Dictionary[Vector2i, PackedVector2Array] = {}
 	var opened_map_walls: Dictionary[Vector2i, PackedVector2Array] = {}

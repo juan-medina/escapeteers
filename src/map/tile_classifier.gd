@@ -85,6 +85,8 @@ const DOOR_OPEN_BOTTOM_RIGHT: Array[Vector2i] = [
 const LEVER_CLOSED: Vector2i = Vector2i(5, 31)
 const LEVER_OPEN: Vector2i = Vector2i(6, 31)
 
+static var _rect_grid: PackedByteArray = PackedByteArray()
+
 
 static func cell_hash(run_seed: int, gx: int, gy: int) -> int:
 	var h: int = run_seed
@@ -149,6 +151,54 @@ static func _to_base_coords(atlas: Vector2i) -> Vector2i:
 	return Vector2i(-1, -1)
 
 
+static func build_walkable_rects(coord: Vector2i, walkable: Array[Vector2i]) -> Array[Rect2i]:
+	var out_rects: Array[Rect2i] = []
+	if walkable.is_empty():
+		return out_rects
+
+	var grid_size: int = ChunkRaster.CHUNK_SIZE
+	var total_cells: int = grid_size * grid_size
+	if _rect_grid.size() != total_cells:
+		_rect_grid.resize(total_cells)
+	_rect_grid.fill(0)
+
+	var origin: Vector2i = coord * grid_size
+	for cell: Vector2i in walkable:
+		var lx: int = cell.x - origin.x
+		var ly: int = cell.y - origin.y
+		if lx >= 0 and lx < grid_size and ly >= 0 and ly < grid_size:
+			_rect_grid[ly * grid_size + lx] = 1
+
+	var prev_runs: Dictionary[int, int] = {}
+	var cur_runs: Dictionary[int, int] = {}
+	for ly: int in range(grid_size):
+		cur_runs.clear()
+		var row_offset: int = ly * grid_size
+		var lx: int = 0
+		while lx < grid_size:
+			if _rect_grid[row_offset + lx] == 0:
+				lx += 1
+				continue
+			var x0: int = lx
+			while lx < grid_size and _rect_grid[row_offset + lx] == 1:
+				lx += 1
+			var w: int = lx - x0
+			var key: int = (x0 << 6) | w
+			if prev_runs.has(key):
+				var rect_idx: int = prev_runs[key]
+				out_rects[rect_idx].size.y += 1
+				cur_runs[key] = rect_idx
+			else:
+				var rect_idx: int = out_rects.size()
+				out_rects.append(Rect2i(origin.x + x0, origin.y + ly, w, 1))
+				cur_runs[key] = rect_idx
+		var swap: Dictionary[int, int] = prev_runs
+		prev_runs = cur_runs
+		cur_runs = swap
+
+	return out_rects
+
+
 static func bake_chunk(coord: Vector2i, raster: ChunkRaster, plan: WorldPlan) -> void:
 	raster.rasterize(coord, plan)
 	if not raster.has_any_content():
@@ -164,6 +214,7 @@ static func bake_chunk(coord: Vector2i, raster: ChunkRaster, plan: WorldPlan) ->
 		if not wall_set.has(fpos):
 			walkable.append(fpos)
 	data[&"walkable"] = walkable
+	data[&"walkable_rects"] = build_walkable_rects(coord, walkable)
 	plan.baked_chunks[coord] = data
 
 

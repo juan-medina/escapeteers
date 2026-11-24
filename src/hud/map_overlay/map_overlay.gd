@@ -4,9 +4,30 @@
 class_name MapOverlay
 extends Control
 
+
+class MapRegion:
+	extends RefCounted
+	var coord: Vector2i
+	var unexplored_chunks: Dictionary[Vector2i, PackedVector2Array] = {}
+	var explored_verts: PackedVector2Array = PackedVector2Array()
+	var wall_verts: PackedVector2Array = PackedVector2Array()
+	var explored_ranges: Dictionary[Vector2i, Vector2i] = {}
+	var wall_ranges: Dictionary[Vector2i, Vector2i] = {}
+	var unexplored_mesh: MeshInstance2D = null
+	var explored_mesh: MeshInstance2D = null
+	var walls_mesh: MeshInstance2D = null
+	var unexplored_dirty: bool = false
+	var explored_dirty: bool = false
+	var walls_dirty: bool = false
+
+	func _init(region_coord: Vector2i) -> void:
+		coord = region_coord
+
+
 const TILE_SIZE: float = 16.0
 const CHUNK_SIZE_TILES: int = 2
 const CHUNK_SIZE_PX: float = float(CHUNK_SIZE_TILES) * TILE_SIZE
+const REGION_SHIFT: int = 4
 const DEADZONE_HALF_EXTENT: Vector2 = Vector2(220.0, 130.0)
 const DAMAGE_METER_SAFE_MARGIN: float = 192.0
 const RECENTER_SPEED: float = 420.0
@@ -36,9 +57,14 @@ var _chunk_segments: Dictionary[Vector2i, PackedVector2Array] = {}
 var _chunk_floor_vertices: Dictionary[Vector2i, PackedVector2Array] = {}
 var _revealed_chunks: Dictionary[Vector2i, bool] = {}
 var _explored_chunks: Dictionary[Vector2i, bool] = {}
-var _unexplored_floor_chunks: Dictionary[Vector2i, PackedVector2Array] = {}
-var _explored_floor_verts: PackedVector2Array = PackedVector2Array()
-var _wall_verts: PackedVector2Array = PackedVector2Array()
+var _regions: Dictionary[Vector2i, MapRegion] = {}
+var _dirty_regions: Dictionary[Vector2i, bool] = {}
+var _unexplored_mesh_pool: Array[MeshInstance2D] = []
+var _explored_mesh_pool: Array[MeshInstance2D] = []
+var _walls_mesh_pool: Array[MeshInstance2D] = []
+var _unexplored_pool_idx: int = 0
+var _explored_pool_idx: int = 0
+var _walls_pool_idx: int = 0
 var _discovered_rooms: Dictionary[Rect2i, bool] = {}
 var _cleared_rooms: Dictionary[Rect2i, bool] = {}
 var _room_labels: Dictionary[Rect2i, Label] = {}
@@ -48,9 +74,6 @@ var _anchor_map_pos: Vector2 = Vector2.ZERO
 var _has_anchor: bool = false
 var _is_recentering: bool = false
 var _dirty: bool = false
-var _unexplored_dirty: bool = false
-var _explored_dirty: bool = false
-var _walls_dirty: bool = false
 var _opened_shortcuts: Dictionary[WorldPlan.KeyColor, bool] = {}
 var _collected_keys: Dictionary[WorldPlan.KeyColor, bool] = {}
 var _door_entries: Array[Dictionary] = []
@@ -109,6 +132,8 @@ func _process(delta: float) -> void:
 		return
 	_update_discovery()
 	if visible:
+		if _dirty:
+			_rebuild_meshes()
 		_update_view(delta)
 		_update_matching_door_pulses()
 	_update_hud_edge_indicators()
@@ -190,8 +215,6 @@ func notify_door_unlocked(gate: SectorGatePlanner.SectorGate) -> void:
 		_visited_fov_chunks.clear()
 		_last_revealed_chunk = Vector2i(2147483647, 2147483647)
 	_update_gate_markers_visibility()
-	if _plan != null and is_instance_valid(_target):
-		_update_discovery()
 
 
 func notify_shortcut_opened(color: WorldPlan.KeyColor) -> void:
@@ -204,24 +227,47 @@ func notify_shortcut_opened(color: WorldPlan.KeyColor) -> void:
 			continue
 		_visibility.open_shortcut(gate)
 		for coord: Vector2i in gate.opened_map_chunk_coords:
+			var region: MapRegion = _get_or_create_region(coord)
+			var was_revealed: bool = _revealed_chunks.has(coord)
 			if gate.opened_map_floors.has(coord):
 				_chunk_floor_vertices[coord] = gate.opened_map_floors[coord]
 			if gate.opened_map_walls.has(coord):
 				_chunk_segments[coord] = gate.opened_map_walls[coord]
 			else:
 				_chunk_segments.erase(coord)
-			_revealed_chunks[coord] = true
+			var new_floors: PackedVector2Array = _chunk_floor_vertices.get(coord, PackedVector2Array())
+			var new_walls: PackedVector2Array = _chunk_segments.get(coord, PackedVector2Array())
+			if not was_revealed:
+				_revealed_chunks[coord] = true
+				if not new_floors.is_empty():
+					region.unexplored_chunks[coord] = new_floors
+					region.unexplored_dirty = true
+					_dirty_regions[region.coord] = true
+			else:
+				if _explored_chunks.has(coord):
+					_replace_explored_chunk(region, coord, new_floors)
+				elif not new_floors.is_empty():
+					region.unexplored_chunks[coord] = new_floors
+					region.unexplored_dirty = true
+					_dirty_regions[region.coord] = true
+				elif region.unexplored_chunks.erase(coord):
+					region.unexplored_dirty = true
+					_dirty_regions[region.coord] = true
+				if region.wall_ranges.has(coord):
+					var span: Vector2i = region.wall_ranges[coord]
+					for i: int in range(span.x, span.x + span.y):
+						region.wall_verts[i] = Vector2.ZERO
+					region.wall_ranges.erase(coord)
+					region.walls_dirty = true
+					_dirty_regions[region.coord] = true
+			_append_wall_chunk(region, coord, new_walls)
 			changed = true
 
 	_visited_fov_chunks.clear()
 	_last_revealed_chunk = Vector2i(2147483647, 2147483647)
 	if changed:
-		_rebuild_cached_buffers_from_revealed()
+		_dirty = true
 		_update_gate_markers_visibility()
-		if visible:
-			_rebuild_meshes()
-	if is_instance_valid(_target):
-		_update_discovery()
 
 
 func get_room_color(room: Rect2i) -> Color:
@@ -296,48 +342,91 @@ func _reveal_chunks_at(origin_tile: Vector2i) -> void:
 	var markers_changed: bool = false
 	for coord: Vector2i in _fov_chunks:
 		var is_explore: bool = _fov_chunks[coord]
+		var region: MapRegion = _get_or_create_region(coord)
 		if not _revealed_chunks.has(coord):
 			_revealed_chunks[coord] = true
 			markers_changed = true
 			if _chunk_segments.has(coord):
-				_wall_verts.append_array(_chunk_segments[coord])
-				_walls_dirty = true
+				_append_wall_chunk(region, coord, _chunk_segments[coord])
 			if not is_explore and _chunk_floor_vertices.has(coord):
-				_unexplored_floor_chunks[coord] = _chunk_floor_vertices[coord]
-				_unexplored_dirty = true
+				region.unexplored_chunks[coord] = _chunk_floor_vertices[coord]
+				region.unexplored_dirty = true
+				_dirty_regions[region.coord] = true
 
 		if is_explore and not _explored_chunks.has(coord):
 			_explored_chunks[coord] = true
-			if _unexplored_floor_chunks.erase(coord):
-				_unexplored_dirty = true
+			if region.unexplored_chunks.erase(coord):
+				region.unexplored_dirty = true
+				_dirty_regions[region.coord] = true
 			if _chunk_floor_vertices.has(coord):
-				_explored_floor_verts.append_array(_chunk_floor_vertices[coord])
-				_explored_dirty = true
+				_append_explored_chunk(region, coord, _chunk_floor_vertices[coord])
 
 	if markers_changed:
 		_update_gate_markers_visibility()
-	if _unexplored_dirty or _explored_dirty or _walls_dirty:
+	if not _dirty_regions.is_empty():
 		_dirty = true
 		if visible:
 			_rebuild_meshes()
 
 
-func _rebuild_cached_buffers_from_revealed() -> void:
-	_unexplored_floor_chunks.clear()
-	_explored_floor_verts.clear()
-	_wall_verts.clear()
-	for coord: Vector2i in _revealed_chunks:
-		if _chunk_floor_vertices.has(coord):
-			if _explored_chunks.has(coord):
-				_explored_floor_verts.append_array(_chunk_floor_vertices[coord])
-			else:
-				_unexplored_floor_chunks[coord] = _chunk_floor_vertices[coord]
-		if _chunk_segments.has(coord):
-			_wall_verts.append_array(_chunk_segments[coord])
-	_unexplored_dirty = true
-	_explored_dirty = true
-	_walls_dirty = true
-	_dirty = true
+static func _chunk_to_region(coord: Vector2i) -> Vector2i:
+	return Vector2i(coord.x >> REGION_SHIFT, coord.y >> REGION_SHIFT)
+
+
+func _get_or_create_region(chunk_coord: Vector2i) -> MapRegion:
+	var region_coord: Vector2i = _chunk_to_region(chunk_coord)
+	if _regions.has(region_coord):
+		return _regions[region_coord]
+	var region: MapRegion = MapRegion.new(region_coord)
+	_regions[region_coord] = region
+	return region
+
+
+func _acquire_layer_mesh(parent: MeshInstance2D, pool: Array[MeshInstance2D], pool_idx: int) -> MeshInstance2D:
+	if pool_idx < pool.size():
+		var existing: MeshInstance2D = pool[pool_idx]
+		existing.visible = true
+		return existing
+	var inst: MeshInstance2D = MeshInstance2D.new()
+	inst.self_modulate = parent.self_modulate
+	parent.add_child(inst)
+	pool.append(inst)
+	return inst
+
+
+static func _reset_layer_pool(pool: Array[MeshInstance2D]) -> void:
+	for inst: MeshInstance2D in pool:
+		inst.visible = false
+		inst.mesh = null
+
+
+func _append_wall_chunk(region: MapRegion, coord: Vector2i, segs: PackedVector2Array) -> void:
+	if segs.is_empty():
+		return
+	region.wall_ranges[coord] = Vector2i(region.wall_verts.size(), segs.size())
+	region.wall_verts.append_array(segs)
+	region.walls_dirty = true
+	_dirty_regions[region.coord] = true
+
+
+func _append_explored_chunk(region: MapRegion, coord: Vector2i, verts: PackedVector2Array) -> void:
+	if verts.is_empty():
+		return
+	region.explored_ranges[coord] = Vector2i(region.explored_verts.size(), verts.size())
+	region.explored_verts.append_array(verts)
+	region.explored_dirty = true
+	_dirty_regions[region.coord] = true
+
+
+func _replace_explored_chunk(region: MapRegion, coord: Vector2i, verts: PackedVector2Array) -> void:
+	if region.explored_ranges.has(coord):
+		var span: Vector2i = region.explored_ranges[coord]
+		for i: int in range(span.x, span.x + span.y):
+			region.explored_verts[i] = Vector2.ZERO
+		region.explored_ranges.erase(coord)
+		region.explored_dirty = true
+		_dirty_regions[region.coord] = true
+	_append_explored_chunk(region, coord, verts)
 
 
 func _rebuild_meshes() -> void:
@@ -345,20 +434,54 @@ func _rebuild_meshes() -> void:
 		return
 	_dirty = false
 
-	if _unexplored_dirty:
-		_unexplored_dirty = false
-		var unexp_verts: PackedVector2Array = PackedVector2Array()
-		for coord: Vector2i in _unexplored_floor_chunks:
-			unexp_verts.append_array(_unexplored_floor_chunks[coord])
-		_unexplored_floor_mesh.mesh = _create_simple_mesh(unexp_verts, Mesh.PRIMITIVE_TRIANGLES)
+	for rc: Vector2i in _dirty_regions:
+		var region: MapRegion = _regions[rc]
+		if region.unexplored_dirty:
+			region.unexplored_dirty = false
+			var unexp_verts: PackedVector2Array = PackedVector2Array()
+			for coord: Vector2i in region.unexplored_chunks:
+				unexp_verts.append_array(region.unexplored_chunks[coord])
+			if unexp_verts.is_empty():
+				if region.unexplored_mesh != null:
+					region.unexplored_mesh.mesh = null
+					region.unexplored_mesh.visible = false
+			else:
+				if region.unexplored_mesh == null:
+					region.unexplored_mesh = _acquire_layer_mesh(_unexplored_floor_mesh, _unexplored_mesh_pool, _unexplored_pool_idx)
+					_unexplored_pool_idx += 1
+				else:
+					region.unexplored_mesh.visible = true
+				region.unexplored_mesh.mesh = _create_simple_mesh(unexp_verts, Mesh.PRIMITIVE_TRIANGLES)
 
-	if _explored_dirty:
-		_explored_dirty = false
-		_explored_floor_mesh.mesh = _create_simple_mesh(_explored_floor_verts, Mesh.PRIMITIVE_TRIANGLES)
+		if region.explored_dirty:
+			region.explored_dirty = false
+			if region.explored_verts.is_empty():
+				if region.explored_mesh != null:
+					region.explored_mesh.mesh = null
+					region.explored_mesh.visible = false
+			else:
+				if region.explored_mesh == null:
+					region.explored_mesh = _acquire_layer_mesh(_explored_floor_mesh, _explored_mesh_pool, _explored_pool_idx)
+					_explored_pool_idx += 1
+				else:
+					region.explored_mesh.visible = true
+				region.explored_mesh.mesh = _create_simple_mesh(region.explored_verts, Mesh.PRIMITIVE_TRIANGLES)
 
-	if _walls_dirty:
-		_walls_dirty = false
-		_walls_mesh.mesh = _create_simple_mesh(_wall_verts, Mesh.PRIMITIVE_LINES)
+		if region.walls_dirty:
+			region.walls_dirty = false
+			if region.wall_verts.is_empty():
+				if region.walls_mesh != null:
+					region.walls_mesh.mesh = null
+					region.walls_mesh.visible = false
+			else:
+				if region.walls_mesh == null:
+					region.walls_mesh = _acquire_layer_mesh(_walls_mesh, _walls_mesh_pool, _walls_pool_idx)
+					_walls_pool_idx += 1
+				else:
+					region.walls_mesh.visible = true
+				region.walls_mesh.mesh = _create_simple_mesh(region.wall_verts, Mesh.PRIMITIVE_LINES)
+
+	_dirty_regions.clear()
 
 
 static func _create_simple_mesh(vertices: PackedVector2Array, primitive: Mesh.PrimitiveType) -> ArrayMesh:
@@ -373,19 +496,18 @@ static func _create_simple_mesh(vertices: PackedVector2Array, primitive: Mesh.Pr
 
 
 func _build_chunks(plan: WorldPlan) -> void:
-	_unexplored_floor_mesh.mesh = null
-	_explored_floor_mesh.mesh = null
-	_walls_mesh.mesh = null
+	_reset_layer_pool(_unexplored_mesh_pool)
+	_reset_layer_pool(_explored_mesh_pool)
+	_reset_layer_pool(_walls_mesh_pool)
+	_unexplored_pool_idx = 0
+	_explored_pool_idx = 0
+	_walls_pool_idx = 0
 	_dirty = false
-	_unexplored_dirty = false
-	_explored_dirty = false
-	_walls_dirty = false
 	_plan = plan
 	_revealed_chunks.clear()
 	_explored_chunks.clear()
-	_unexplored_floor_chunks.clear()
-	_explored_floor_verts.clear()
-	_wall_verts.clear()
+	_regions.clear()
+	_dirty_regions.clear()
 	_discovered_rooms.clear()
 	_cleared_rooms.clear()
 	_room_labels.clear()

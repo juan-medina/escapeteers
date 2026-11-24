@@ -305,7 +305,9 @@ func _finalize_pending_frame(next_enter_usec: int) -> void:
 		0.0, RenderingServer.viewport_get_measured_render_time_cpu(_viewport_rid) + RenderingServer.get_frame_setup_time_cpu()
 	)
 	var render_gpu_ms: float = maxf(0.0, RenderingServer.viewport_get_measured_render_time_gpu(_viewport_rid))
-	var cpu_ms: float = maxf(game_step_ms, wall_ms - balance_ms) if DisplayServer.get_name() == "headless" else (game_step_ms + render_cpu_ms)
+	var cpu_ms: float = (
+		maxf(game_step_ms, wall_ms - balance_ms) if DisplayServer.get_name() == "headless" else (game_step_ms + physics_ms + render_cpu_ms)
+	)
 	var other_ms: float = maxf(0.0, cpu_ms - game_step_ms)
 	var collision_pairs: int = int(Performance.get_monitor(Performance.PHYSICS_2D_COLLISION_PAIRS))
 	var active_physics: int = int(Performance.get_monitor(Performance.PHYSICS_2D_ACTIVE_OBJECTS))

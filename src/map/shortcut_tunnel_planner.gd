@@ -302,7 +302,7 @@ static func prebake_shortcut_tunnels(plan: WorldPlan, raster: ChunkRaster) -> vo
 			var open_data: Dictionary = TileClassifier.classify_chunk(raster, plan.run_seed, plan)
 			if not plan.baked_chunks.has(coord):
 				plan.baked_chunks[coord] = _create_empty_baked_chunk()
-			_diff_shortcut_chunk(gate, plan.baked_chunks[coord], open_data)
+			_diff_shortcut_chunk(gate, coord, plan.baked_chunks[coord], open_data)
 
 		plan.carve_rects.resize(base_count)
 		SectorGatePlanner.rebuild_spatial_grid(plan)
@@ -327,10 +327,16 @@ static func _create_empty_baked_chunk() -> Dictionary:
 		&"torch_alt_ids": [] as Array[int],
 		&"lights": [] as Array[Vector2i],
 		&"walkable": [] as Array[Vector2i],
+		&"walkable_rects": [] as Array[Rect2i],
 	}
 
 
-static func _diff_shortcut_chunk(gate: SectorGatePlanner.SectorGate, closed_data: Dictionary, open_data: Dictionary) -> void:
+static func _diff_shortcut_chunk(
+	gate: SectorGatePlanner.SectorGate,
+	coord: Vector2i,
+	closed_data: Dictionary,
+	open_data: Dictionary,
+) -> void:
 	var closed_floors: Dictionary[Vector2i, Vector2i] = {}
 	var c_floors: Array[Vector2i] = closed_data[&"floors"]
 	var c_floor_atlas: Array[Vector2i] = closed_data[&"floor_atlas"]
@@ -348,6 +354,11 @@ static func _diff_shortcut_chunk(gate: SectorGatePlanner.SectorGate, closed_data
 	for cell: Vector2i in c_walk:
 		closed_walkable[cell] = true
 
+	var chunk_floors: Array[Vector2i] = []
+	var chunk_erased_walls: Dictionary[Vector2i, bool] = {}
+	var chunk_walls: Array[Vector2i] = []
+	var chunk_walkable: Array[Vector2i] = []
+
 	var open_wall_map: Dictionary[Vector2i, Vector2i] = {}
 	var o_walls: Array[Vector2i] = open_data[&"walls"]
 	var o_wall_atlas: Array[Vector2i] = open_data[&"wall_atlas"]
@@ -357,10 +368,12 @@ static func _diff_shortcut_chunk(gate: SectorGatePlanner.SectorGate, closed_data
 		open_wall_map[wcell] = watlas
 		if not closed_walls.has(wcell) or closed_walls[wcell] != watlas:
 			gate.tunnel_walls[wcell] = watlas
+			chunk_walls.append(wcell)
 
 	for wcell: Vector2i in closed_walls:
 		if not open_wall_map.has(wcell):
 			gate.tunnel_erased_walls.append(wcell)
+			chunk_erased_walls[wcell] = true
 
 	var o_floors: Array[Vector2i] = open_data[&"floors"]
 	var o_floor_atlas: Array[Vector2i] = open_data[&"floor_atlas"]
@@ -369,8 +382,18 @@ static func _diff_shortcut_chunk(gate: SectorGatePlanner.SectorGate, closed_data
 		var fatlas: Vector2i = o_floor_atlas[i]
 		if not closed_floors.has(fcell) or closed_floors[fcell] != fatlas:
 			gate.tunnel_floors[fcell] = fatlas
+			chunk_floors.append(fcell)
 		if not open_wall_map.has(fcell) and not closed_walkable.has(fcell):
 			gate.tunnel_walkable.append(fcell)
+			chunk_walkable.append(fcell)
+
+	if not chunk_floors.is_empty() or not chunk_erased_walls.is_empty() or not chunk_walls.is_empty() or not chunk_walkable.is_empty():
+		gate.tunnel_chunk_diffs[coord] = {
+			&"floors": chunk_floors,
+			&"erased_walls": chunk_erased_walls,
+			&"walls": chunk_walls,
+			&"walkable": chunk_walkable,
+		}
 
 
 static func verify_solvability(plan: WorldPlan) -> bool:

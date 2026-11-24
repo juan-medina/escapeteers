@@ -24,6 +24,7 @@ const RANGED_IDS: Array[StringName] = [&"archer", &"wizard", &"soldier", &"pries
 
 var build_policy: String = "balanced"
 var target_max_depth: int = 12
+var rush_deep: bool = false
 var max_depth_reached: int = 0
 var rooms_cleared_count: int = 0
 var has_won: bool = false
@@ -34,7 +35,8 @@ var _last_known_room: Rect2i = Rect2i()
 var _goal_room: Rect2i = Rect2i()
 var _room_path: Array[Rect2i] = []
 var _room_stall_timer: float = 0.0
-var _last_room_remaining: int = -1
+var _stall_room: Rect2i = Rect2i()
+var _min_room_remaining: int = 999999
 var _skipped_rooms: Dictionary[Rect2i, bool] = {}
 var _visited_rooms: Dictionary[Rect2i, bool] = {}
 var _cleared_at_max_depth: bool = false
@@ -51,9 +53,10 @@ var _map_toggle_timer: float = MAP_CLOSED_DURATION
 var _shortcut_waypoints: Array[Vector2] = []
 
 
-func setup(map: Map, policy: String, max_depth: int) -> void:
+func setup(map: Map, policy: String, max_depth: int, rush_deep_mode: bool = false) -> void:
 	build_policy = policy
 	target_max_depth = max_depth
+	rush_deep = rush_deep_mode
 	max_depth_reached = 0
 	rooms_cleared_count = 0
 	has_won = false
@@ -62,7 +65,8 @@ func setup(map: Map, policy: String, max_depth: int) -> void:
 	_room_path.clear()
 	_shortcut_waypoints.clear()
 	_room_stall_timer = 0.0
-	_last_room_remaining = -1
+	_stall_room = Rect2i()
+	_min_room_remaining = 999999
 	_skipped_rooms.clear()
 	_visited_rooms.clear()
 	_cleared_at_max_depth = false
@@ -290,12 +294,18 @@ func _update_room_progress(game: Game, map: Map, leader: Hero, delta: float) -> 
 			cleared_now += 1
 	rooms_cleared_count = cleared_now
 
-	if _last_known_room != map.hero_room and not _is_room_done(game, _last_known_room) and _goal_room != _last_known_room:
+	if (
+		not _is_rushing_gates(map)
+		and _last_known_room != map.hero_room
+		and not _is_room_done(game, _last_known_room)
+		and _goal_room != _last_known_room
+	):
 		_goal_room = _last_known_room
 		_room_path = [_goal_room]
 		_shortcut_waypoints.clear()
 		_room_stall_timer = 0.0
-		_last_room_remaining = -1
+		_stall_room = _last_known_room
+		_min_room_remaining = 999999
 		return
 
 	if _last_known_room == _goal_room:
@@ -306,15 +316,23 @@ func _update_room_progress(game: Game, map: Map, leader: Hero, delta: float) -> 
 		return
 
 	var rem_goal: int = game._room_remaining_enemies.get(_goal_room, -1)
-	if rem_goal == _last_room_remaining:
-		_room_stall_timer += delta
-	else:
-		_last_room_remaining = rem_goal
+	if _last_known_room != _stall_room:
+		_stall_room = _last_known_room
 		_room_stall_timer = 0.0
+		_min_room_remaining = rem_goal if rem_goal >= 0 else 999999
+	elif rem_goal >= 0 and rem_goal < _min_room_remaining:
+		_min_room_remaining = rem_goal
+		_room_stall_timer = 0.0
+	else:
+		_room_stall_timer += delta
 
 	if _room_stall_timer >= ROOM_STALL_TIMEOUT:
-		_skipped_rooms[_goal_room] = true
-		_assign_next_goal(game, map, leader)
+		_cached_path = PackedVector2Array()
+		_room_stall_timer = 0.0
+		if _shortcut_waypoints.is_empty():
+			if not _is_progression_room(game, _goal_room):
+				_skipped_rooms[_goal_room] = true
+			_assign_next_goal(game, map, leader)
 
 
 func _assign_next_goal(game: Game, map: Map, leader: Hero) -> void:
@@ -322,18 +340,20 @@ func _assign_next_goal(game: Game, map: Map, leader: Hero) -> void:
 	var chain: Array[Rect2i] = _find_room_chain(map, _last_known_room, dest_room)
 	var next_target: Rect2i = dest_room
 	var target_idx: int = chain.size() - 1
-	for i: int in range(chain.size()):
-		if not _is_room_done(game, chain[i]):
-			next_target = chain[i]
-			target_idx = i
-			break
+	if not _is_rushing_gates(map):
+		for i: int in range(chain.size()):
+			if not _is_room_done(game, chain[i]):
+				next_target = chain[i]
+				target_idx = i
+				break
 	_goal_room = next_target
 	_room_path = chain.slice(0, target_idx + 1) if not chain.is_empty() else [next_target]
 	_shortcut_waypoints.clear()
 	if not _room_path.is_empty():
 		_populate_shortcut_waypoints(map, _last_known_room, _room_path[0])
 	_room_stall_timer = 0.0
-	_last_room_remaining = -1
+	_stall_room = _last_known_room
+	_min_room_remaining = 999999
 
 
 func _populate_shortcut_waypoints(map: Map, from_room: Rect2i, to_room: Rect2i) -> void:
@@ -355,15 +375,23 @@ func _populate_shortcut_waypoints(map: Map, from_room: Rect2i, to_room: Rect2i) 
 		return
 
 
-func _is_room_done(game: Game, room: Rect2i) -> bool:
-	if room == Rect2i() or _skipped_rooms.has(room):
-		return true
+func _is_progression_room(game: Game, room: Rect2i) -> bool:
 	for gate: SectorGatePlanner.SectorGate in game._map.plan.sector_gates:
 		var needs_key: bool = gate.has_key and room == gate.key_room and not game._collected_keys.has(gate.color)
 		var needs_lever: bool = gate.has_shortcut and room == gate.key_room and not gate.shortcut_opened and _last_known_room == gate.key_room
 		var needs_door: bool = room == gate.gate_room and game._collected_keys.has(gate.color) and not gate.door_unlocked
 		if needs_key or needs_lever or needs_door:
-			return false
+			return true
+	return false
+
+
+func _is_room_done(game: Game, room: Rect2i) -> bool:
+	if room == Rect2i():
+		return true
+	if _is_progression_room(game, room):
+		return false
+	if _is_rushing_gates(game._map) or _skipped_rooms.has(room):
+		return true
 	if room == game._map.hero_room:
 		return not _has_recruit_in_room(game, room)
 	if game._room_remaining_enemies.has(room):
@@ -389,6 +417,23 @@ func _is_edge_passable(map: Map, room_a: Rect2i, room_b: Rect2i) -> bool:
 	return true
 
 
+func _is_rushing_gates(map: Map) -> bool:
+	return rush_deep and _get_active_sector_gate(map) != null
+
+
+func _get_max_allowed_sector(map: Map) -> int:
+	var active_gate: SectorGatePlanner.SectorGate = _get_active_sector_gate(map)
+	return int(active_gate.color) if active_gate != null else 4
+
+
+func _is_room_in_unlocked_sector(map: Map, room: Rect2i) -> bool:
+	if room == Rect2i():
+		return true
+	if _is_room_locked(map, room):
+		return false
+	return SectorGatePlanner.get_sector_for_depth(map.get_room_depth(room)) <= _get_max_allowed_sector(map)
+
+
 func _is_room_locked(map: Map, room: Rect2i) -> bool:
 	for gate: SectorGatePlanner.SectorGate in map.plan.sector_gates:
 		if not gate.door_unlocked and gate.next_room == room:
@@ -408,12 +453,15 @@ func _has_recruit_in_room(game: Game, room: Rect2i) -> bool:
 
 func _pick_next_goal_room(game: Game, map: Map, leader: Hero) -> Rect2i:
 	if _last_known_room != Rect2i() and _last_known_room != map.hero_room and not _is_room_done(game, _last_known_room):
-		return _last_known_room
+		if not _is_rushing_gates(map) or _is_progression_room(game, _last_known_room):
+			return _last_known_room
 
 	var active_gate: SectorGatePlanner.SectorGate = _get_active_sector_gate(map)
-	var max_allowed_sector: int = int(active_gate.color) if active_gate != null else 4
+	var max_allowed_sector: int = _get_max_allowed_sector(map)
 	var cur_depth: int = map.get_room_depth(_last_known_room) if _last_known_room != Rect2i() else 0
-	var need_early_recruits: bool = game._squad.size() < EARLY_RECRUIT_TARGET_SQUAD
+	var need_early_recruits: bool = (
+		not rush_deep and game._squad.size() < EARLY_RECRUIT_TARGET_SQUAD and (active_gate == null or active_gate.color == WorldPlan.KeyColor.BLUE)
+	)
 	var best_room: Rect2i = Rect2i()
 	var best_score: float = -INF
 
@@ -500,36 +548,55 @@ func _find_room_chain(map: Map, start_room: Rect2i, target_room: Rect2i) -> Arra
 
 
 func _decide_move_direction(game: Game, map: Map, leader: Hero, delta: float) -> Vector2:
-	var nearby_recruit: Unknown = _find_nearest_recruit(game, map, leader)
+	var rushing: bool = _is_rushing_gates(map)
+	var steer_dest: Vector2 = Vector2.ZERO
+	var nearby_recruit: Unknown = _find_nearest_recruit(game, map, leader) if (not rushing or game._squad.size() < 15) else null
 	if nearby_recruit != null:
-		return _steer_toward(map, leader, nearby_recruit.global_position, delta)
+		steer_dest = nearby_recruit.global_position
+	else:
+		var nearby_key: KeyPickup = _find_nearest_key(game, map, leader)
+		if nearby_key != null:
+			steer_dest = nearby_key.global_position
 
-	var nearby_key: KeyPickup = _find_nearest_key(game, map, leader)
-	if nearby_key != null:
-		return _steer_toward(map, leader, nearby_key.global_position, delta)
+	if steer_dest != Vector2.ZERO:
+		return _steer_toward(map, leader, steer_dest, delta)
 
-	var combat_target: Enemy = _find_priority_enemy(game, leader)
-	if combat_target != null:
-		return _compute_combat_move(game, map, leader, combat_target, delta)
+	if not rushing:
+		var combat_target: Enemy = _find_priority_enemy(game, map, leader)
+		if combat_target != null:
+			return _compute_combat_move(game, map, leader, combat_target, delta)
 
-	var gate_dest: Vector2 = _get_gate_objective_pos(game, map)
-	if gate_dest != Vector2.ZERO:
-		return _steer_toward(map, leader, gate_dest, delta)
+	steer_dest = _get_gate_objective_pos(game, map)
+	if steer_dest == Vector2.ZERO:
+		steer_dest = _get_exploration_destination(map, leader)
+	if steer_dest != Vector2.ZERO:
+		return _steer_toward(map, leader, steer_dest, delta)
 
-	var nav_target: Vector2 = _get_exploration_destination(map, leader)
-	if nav_target != Vector2.ZERO:
-		return _steer_toward(map, leader, nav_target, delta)
+	if rushing:
+		var fallback_target: Enemy = _find_priority_enemy(game, map, leader)
+		if fallback_target != null:
+			return _compute_combat_move(game, map, leader, fallback_target, delta)
 	return Vector2.ZERO
 
 
 func _find_nearest_key(game: Game, map: Map, leader: Hero) -> KeyPickup:
 	var best: KeyPickup = null
-	var best_dist_sq: float = RECRUIT_SEARCH_RADIUS_SQ
+	var best_dist_sq: float = INF
 	for candidate: KeyPickup in game._keys:
 		if not is_instance_valid(candidate):
 			continue
+		var key_cell: Vector2i = map.local_to_map(candidate.global_position)
+		if not map.is_cell_walkable(key_cell):
+			continue
+		var key_room: Rect2i = map.plan.get_room_at(key_cell)
+		if not _is_room_in_unlocked_sector(map, key_room):
+			continue
 		var d_sq: float = leader.global_position.distance_squared_to(candidate.global_position)
-		if d_sq < best_dist_sq and map.is_cell_walkable(map.local_to_map(candidate.global_position)):
+		var in_cur_room: bool = _last_known_room != Rect2i() and _last_known_room.has_point(key_cell)
+		var can_reach: bool = in_cur_room
+		if not can_reach and d_sq < RECRUIT_SEARCH_RADIUS_SQ:
+			can_reach = key_room == _goal_room or SquadNavigator.has_line_of_sight(leader, candidate.global_position)
+		if can_reach and d_sq < best_dist_sq:
 			best_dist_sq = d_sq
 			best = candidate
 	return best
@@ -537,13 +604,18 @@ func _find_nearest_key(game: Game, map: Map, leader: Hero) -> KeyPickup:
 
 func _get_gate_objective_pos(game: Game, map: Map) -> Vector2:
 	var active_gate: SectorGatePlanner.SectorGate = _get_active_sector_gate(map)
-	if active_gate != null and game._collected_keys.has(active_gate.color):
-		if active_gate.has_shortcut and not active_gate.shortcut_opened and _last_known_room == active_gate.key_room:
-			return map.map_to_local(active_gate.lever_cell)
-		if _last_known_room == active_gate.gate_room:
-			var door_pos: Vector2 = (map.map_to_local(active_gate.door_cells[0]) + map.map_to_local(active_gate.door_cells[1])) * 0.5
-			return door_pos + Vector2(0.0, 12.0)
+	if active_gate != null:
+		if active_gate.has_key and not game._collected_keys.has(active_gate.color) and _last_known_room == active_gate.key_room:
+			return map.map_to_local(active_gate.key_cell)
+		if game._collected_keys.has(active_gate.color):
+			if active_gate.has_shortcut and not active_gate.shortcut_opened and _last_known_room == active_gate.key_room:
+				return map.map_to_local(active_gate.lever_cell)
+			if _last_known_room == active_gate.gate_room:
+				var door_pos: Vector2 = (map.map_to_local(active_gate.door_cells[0]) + map.map_to_local(active_gate.door_cells[1])) * 0.5
+				return door_pos + Vector2(0.0, 12.0)
 	for gate: SectorGatePlanner.SectorGate in map.plan.sector_gates:
+		if gate.has_key and not game._collected_keys.has(gate.color) and _last_known_room == gate.key_room:
+			return map.map_to_local(gate.key_cell)
 		if not gate.door_unlocked and _last_known_room == gate.gate_room and game._collected_keys.has(gate.color):
 			var d_pos: Vector2 = (map.map_to_local(gate.door_cells[0]) + map.map_to_local(gate.door_cells[1])) * 0.5
 			return d_pos + Vector2(0.0, 12.0)
@@ -557,13 +629,24 @@ func _find_nearest_recruit(game: Game, map: Map, leader: Hero) -> Unknown:
 		if not is_instance_valid(candidate):
 			continue
 		var d_sq: float = leader.global_position.distance_squared_to(candidate.global_position)
-		if d_sq < best_dist_sq and map.is_cell_walkable(map.local_to_map(candidate.global_position)):
-			best_dist_sq = d_sq
-			best = candidate
+		if d_sq >= best_dist_sq:
+			continue
+		var rec_cell: Vector2i = map.local_to_map(candidate.global_position)
+		if not map.is_cell_walkable(rec_cell):
+			continue
+		var rec_room: Rect2i = map.plan.get_room_at(rec_cell)
+		if not _is_room_in_unlocked_sector(map, rec_room):
+			continue
+		if rec_room != _last_known_room and rec_room != _goal_room and not SquadNavigator.has_line_of_sight(leader, candidate.global_position):
+			continue
+		best_dist_sq = d_sq
+		best = candidate
 	return best
 
 
-func _find_priority_enemy(game: Game, leader: Hero) -> Enemy:
+func _find_priority_enemy(game: Game, map: Map, leader: Hero) -> Enemy:
+	var best_necro: Enemy = null
+	var best_necro_dist_sq: float = INF
 	var best: Enemy = null
 	var best_score: float = INF
 	for enemy: Enemy in game._enemies:
@@ -572,28 +655,49 @@ func _find_priority_enemy(game: Game, leader: Hero) -> Enemy:
 		var d_sq: float = leader.global_position.distance_squared_to(enemy.global_position)
 		if d_sq > COMBAT_SEARCH_RADIUS_SQ:
 			continue
-		var eff_sq: float = d_sq * 0.4 if (enemy is Necromancer and d_sq <= NECRO_PRIORITY_RADIUS_SQ) else d_sq
-		if eff_sq < best_score:
-			best_score = eff_sq
+		if not _is_room_in_unlocked_sector(map, enemy.home_room):
+			continue
+		var enemy_room: Rect2i = map.plan.get_room_at(map.local_to_map(enemy.global_position))
+		if not _is_room_in_unlocked_sector(map, enemy_room):
+			continue
+		if enemy.home_room != _last_known_room and enemy.home_room != _goal_room and enemy_room != _last_known_room:
+			if not SquadNavigator.has_line_of_sight(leader, enemy.global_position):
+				continue
+		if enemy is Necromancer:
+			if d_sq < best_necro_dist_sq:
+				best_necro_dist_sq = d_sq
+				best_necro = enemy
+		elif d_sq < best_score:
+			best_score = d_sq
 			best = enemy
-	if best != null:
-		return best
 
+	var best_room_enemy: Enemy = null
 	var best_room_dist_sq: float = INF
 	for enemy: Enemy in game._enemies:
 		if not is_instance_valid(enemy) or enemy.is_dead or not enemy.visible:
 			continue
+		if not _is_room_in_unlocked_sector(map, enemy.home_room):
+			continue
 		if enemy.home_room != _last_known_room and enemy.home_room != _goal_room:
 			continue
 		var d_sq: float = leader.global_position.distance_squared_to(enemy.global_position)
-		if d_sq < best_room_dist_sq:
+		if enemy is Necromancer:
+			if d_sq < best_necro_dist_sq:
+				best_necro_dist_sq = d_sq
+				best_necro = enemy
+		elif best == null and d_sq < best_room_dist_sq:
 			best_room_dist_sq = d_sq
-			best = enemy
-	return best
+			best_room_enemy = enemy
+
+	if best_necro != null:
+		return best_necro
+	if best != null:
+		return best
+	return best_room_enemy
 
 
 func _compute_combat_move(game: Game, map: Map, leader: Hero, target: Enemy, delta: float) -> Vector2:
-	var desired_range: float = _get_desired_combat_range(game, leader)
+	var desired_range: float = _get_desired_combat_range(game, leader, target)
 	var to_enemy: Vector2 = target.global_position - leader.global_position
 	var dist: float = to_enemy.length()
 	if dist <= 0.001:
@@ -617,13 +721,13 @@ func _compute_combat_move(game: Game, map: Map, leader: Hero, target: Enemy, del
 	return Vector2.ZERO
 
 
-func _get_desired_combat_range(game: Game, leader: Hero) -> float:
+func _get_desired_combat_range(game: Game, leader: Hero, target: Enemy) -> float:
 	var hp_ratio: float = leader.health / maxf(1.0, leader.max_health)
 	if hp_ratio < 0.30:
 		return 95.0
 	if not leader.can_melee or leader.can_ranged:
 		return 85.0
-	if game._squad.size() <= 2:
+	if target is Necromancer or game._squad.size() <= 2:
 		return 16.0
 	return 34.0
 
@@ -645,8 +749,9 @@ func _get_exploration_destination(map: Map, leader: Hero) -> Vector2:
 			return _shortcut_waypoints[0]
 
 	while not _room_path.is_empty():
-		var hop_center: Vector2 = map.map_to_local(_room_path[0].get_center())
-		if leader.global_position.distance_squared_to(hop_center) <= ROOM_ARRIVE_DIST_SQ and _room_path.size() > 1:
+		var hop_center: Vector2 = map.clamp_to_walkable(map.map_to_local(_room_path[0].get_center()))
+		var arrived_hop: bool = _last_known_room == _room_path[0] or leader.global_position.distance_squared_to(hop_center) <= ROOM_ARRIVE_DIST_SQ
+		if arrived_hop and _room_path.size() > 1:
 			var popped: Rect2i = _room_path[0]
 			_room_path.remove_at(0)
 			_populate_shortcut_waypoints(map, popped, _room_path[0])
@@ -656,8 +761,28 @@ func _get_exploration_destination(map: Map, leader: Hero) -> Vector2:
 			return hop_center
 
 	if _goal_room != Rect2i():
-		return map.map_to_local(_goal_room.get_center())
+		return map.clamp_to_walkable(map.map_to_local(_goal_room.get_center()))
 	return Vector2.ZERO
+
+
+func get_gate_progress_tag(game: Game, map: Map) -> String:
+	var color_chars: Array[String] = ["B", "G", "Y", "R"]
+	var keys_str: String = ""
+	var doors_str: String = ""
+	for i: int in range(color_chars.size()):
+		var kc: WorldPlan.KeyColor = i as WorldPlan.KeyColor
+		if game._collected_keys.has(kc):
+			keys_str += color_chars[i]
+		for gate: SectorGatePlanner.SectorGate in map.plan.sector_gates:
+			if gate.color == kc and gate.door_unlocked:
+				doors_str += color_chars[i]
+				break
+	if keys_str == "":
+		keys_str = "-"
+	if doors_str == "":
+		doors_str = "-"
+	var goal_d: int = map.get_room_depth(_goal_room) if _goal_room != Rect2i() else -1
+	return "keys=%s doors=%s goalD=%d" % [keys_str, doors_str, goal_d]
 
 
 func _steer_toward(map: Map, leader: Hero, world_dest: Vector2, delta: float) -> Vector2:
@@ -710,7 +835,8 @@ func _update_stuck_recovery(map: Map, leader: Hero, move_dir: Vector2, delta: fl
 		_anchor_pos = leader.global_position
 		return
 
-	if _anchor_pos == Vector2.ZERO or leader.global_position.distance_squared_to(_anchor_pos) > STUCK_DIST_SQ:
+	var anchor_dist_sq: float = (48.0 * 48.0) if rush_deep else STUCK_DIST_SQ
+	if _anchor_pos == Vector2.ZERO or leader.global_position.distance_squared_to(_anchor_pos) > anchor_dist_sq:
 		_anchor_pos = leader.global_position
 		_stuck_timer = 0.0
 		return
@@ -723,9 +849,11 @@ func _update_stuck_recovery(map: Map, leader: Hero, move_dir: Vector2, delta: fl
 	if _stuck_timer >= STUCK_UNSTICK_TIME:
 		_stuck_timer = 0.0
 		if not _cached_path.is_empty():
-			var step_idx: int = mini(2, _cached_path.size() - 1)
+			var step_idx: int = mini(8 if rush_deep else 2, _cached_path.size() - 1)
 			leader.global_position = map.clamp_to_walkable(_cached_path[step_idx])
 			_cached_path = PackedVector2Array()
+		elif rush_deep and not _shortcut_waypoints.is_empty():
+			leader.global_position = map.clamp_to_walkable(_shortcut_waypoints[0])
 		else:
 			leader.global_position = map.clamp_to_walkable(leader.global_position + move_dir * 24.0)
 		_anchor_pos = leader.global_position

@@ -15,7 +15,6 @@ enum State {
 }
 
 const _GROUP_ENEMIES: StringName = &"enemies"
-const _GROUP_HEROES: StringName = &"heroes"
 const WAYPOINT_ARRIVE_DIST_SQ: float = 64.0
 const PATROL_TIMEOUT: float = 10.0
 const KNOCKBACK_DECAY: float = 600.0
@@ -28,6 +27,13 @@ const TELEGRAPH_COLOR: Color = Color(1.0, 1.0, 1.0, 0.35)
 const TELEGRAPH_LOCKED_COLOR: Color = Color(1.0, 1.0, 1.0, 0.85)
 const TELEGRAPH_LOCK_TIME: float = 0.25
 const KNIGHT_TAUNT_WEIGHT: float = 0.06
+const WAKE_HALF_EXTENT: Vector2 = Vector2(352.0, 212.0)
+const SLEEP_HALF_EXTENT: Vector2 = Vector2(384.0, 244.0)
+const CHASE_SLEEP_HALF_EXTENT: Vector2 = Vector2(416.0, 276.0)
+const BLOCKER_SCAN_INTERVAL: float = 0.10
+const BLOCKER_SCAN_JITTER: float = 0.05
+
+static var active_enemies: Array[Enemy] = []
 
 @export var level: int = 1
 
@@ -57,6 +63,8 @@ var target: Hero = null
 var attack_target: Hero = null
 var home_room: Rect2i = Rect2i()
 var active_telegraph: Telegraph = null
+var separation_velocity: Vector2 = Vector2.ZERO
+var is_sleeping: bool = false
 
 var _navigator: SquadNavigator = SquadNavigator.new()
 var _patrol_destination: Vector2 = Vector2.ZERO
@@ -73,6 +81,8 @@ var _burn_source: Hero = null
 var _mark_timer: float = 0.0
 var _mark_bonus: float = 0.0
 var _is_summoning_in: bool = false
+var _blocker_scan_timer: float = 0.0
+var _active_enemy_index: int = -1
 
 @onready var _status_vfx: StatusVfx = $StatusVfx
 
@@ -84,51 +94,94 @@ func _ready() -> void:
 		if data != null:
 			data.apply_to_enemy(self, level)
 	super._ready()
+	_notifier.screen_entered.disconnect(_on_screen_entered)
+	_notifier.screen_exited.disconnect(_on_screen_exited)
+	_notifier.process_mode = Node.PROCESS_MODE_DISABLED
 	_health_bar.set_fill_color(HealthBar.DEFAULT_ENEMY_COLOR)
 	_health_bar.set_level_color(LEVEL_COLOR)
 	_health_bar.set_level(level)
 	add_to_group(_GROUP_ENEMIES)
 	collision_layer = 8
-	collision_mask = 1 | 2 | 4 | 8
+	collision_mask = 1 | 2 | 4
 
 	hurtbox.setup(self, ENEMY_HURTBOX_RADIUS, Vector2.ZERO, 128)
 	_status_vfx.head_y = _health_bar.position.y + 3.0
 	_status_vfx.set_on_screen(is_on_screen)
 
 	set_process(false)
-	if not is_on_screen:
-		_set_sleeping(true)
+	_set_sleeping(not is_on_screen, true)
 	_setup_actions()
+
+
+func _exit_tree() -> void:
+	_unregister_active_enemy()
 
 
 func sync_screen_state(camera_pos: Vector2) -> void:
 	var diff: Vector2 = (global_position - camera_pos).abs()
-	is_on_screen = diff.x <= 384.0 and diff.y <= 244.0
-	_status_vfx.set_on_screen(is_on_screen)
+	var prev_on_screen: bool = is_on_screen
+	if is_on_screen:
+		is_on_screen = diff.x <= SLEEP_HALF_EXTENT.x and diff.y <= SLEEP_HALF_EXTENT.y
+	else:
+		is_on_screen = diff.x <= WAKE_HALF_EXTENT.x and diff.y <= WAKE_HALF_EXTENT.y
+	if is_on_screen != prev_on_screen:
+		_status_vfx.set_on_screen(is_on_screen)
 	if is_dead:
 		return
-	if not is_on_screen and current_state == State.PATROL and not is_burning():
-		_set_sleeping(true)
-	else:
+	if is_on_screen:
 		_set_sleeping(false)
+		return
+	if _should_sleep_offscreen(diff):
+		if current_state != State.PATROL:
+			_disengage_to_patrol()
+		_set_sleeping(true)
 
 
-func _set_sleeping(sleeping: bool) -> void:
+func _should_sleep_offscreen(diff: Vector2) -> bool:
+	if _is_summoning_in or is_burning() or _knockback_velocity.length_squared() > 1.0:
+		return false
+	if current_state == State.PATROL:
+		return true
+	if not CombatAction.is_valid_target(target):
+		return true
+	if diff.x > CHASE_SLEEP_HALF_EXTENT.x or diff.y > CHASE_SLEEP_HALF_EXTENT.y:
+		return true
+	return global_position.distance_squared_to(target.global_position) > detection_range * detection_range
+
+
+func _disengage_to_patrol() -> void:
+	_cancel_telegraph()
+	target = null
+	attack_target = null
+	current_action = null
+	combat_state = CombatState.READY
+	current_state = State.PATROL
+	_navigator.reset()
+	_patrol_destination = Vector2.ZERO
+
+
+func _set_sleeping(sleeping: bool, force: bool = false) -> void:
+	if not force and is_sleeping == sleeping:
+		return
+	is_sleeping = sleeping
 	set_physics_process(not sleeping)
 	set_process(false)
 	if sleeping:
+		_unregister_active_enemy()
+		separation_velocity = Vector2.ZERO
 		_cancel_telegraph()
 		_animated_sprite.pause()
 		_status_vfx.set_on_screen(false)
 		_status_vfx.set_process(false)
 		disable_collisions()
 	else:
+		if not is_dead:
+			_register_active_enemy()
+			enable_collisions()
 		if not _is_stunned() and not _animated_sprite.is_playing():
 			_animated_sprite.play()
 		_status_vfx.set_on_screen(is_on_screen)
 		_status_vfx.set_statuses(_is_stunned(), is_burning(), is_slowed(), is_marked())
-		if not is_dead:
-			enable_collisions()
 
 
 func _physics_process(delta: float) -> void:
@@ -136,10 +189,42 @@ func _physics_process(delta: float) -> void:
 		return
 
 	_update_combat_cooldowns(delta)
+	_blocker_scan_timer = maxf(0.0, _blocker_scan_timer - delta)
 
 	if _knockback_velocity.length_squared() > 1.0:
 		_knockback_velocity = _knockback_velocity.move_toward(Vector2.ZERO, KNOCKBACK_DECAY * delta)
 
+	if _update_statuses(delta):
+		return
+
+	if (
+		not is_on_screen
+		and current_state == State.PATROL
+		and not is_burning()
+		and not _is_summoning_in
+		and _knockback_velocity.length_squared() <= 1.0
+	):
+		_set_sleeping(true)
+		return
+
+	if _is_summoning_in:
+		return
+
+	if _is_stunned():
+		velocity = _knockback_velocity
+		move_and_slide()
+		return
+
+	_check_combat_actions()
+
+	match current_state:
+		State.PATROL:
+			_process_patrol(delta)
+		State.CHASE, State.ATTACK:
+			_process_chase(delta)
+
+
+func _update_statuses(delta: float) -> bool:
 	var status_changed: bool = false
 
 	if _stun_timer > 0.0:
@@ -168,7 +253,7 @@ func _physics_process(delta: float) -> void:
 				if src != null:
 					src.enemy_hit.emit(self, tick_dmg, false)
 				if is_dead:
-					return
+					return true
 		if _burn_timer <= 0.0:
 			_burn_timer = 0.0
 			_burn_dps = 0.0
@@ -185,32 +270,7 @@ func _physics_process(delta: float) -> void:
 
 	if status_changed:
 		_update_status_visuals()
-
-	if _is_summoning_in:
-		return
-
-	if _is_stunned():
-		velocity = _knockback_velocity
-		move_and_slide()
-		return
-
-	_check_combat_actions()
-
-	match current_state:
-		State.PATROL:
-			_process_patrol(delta)
-		State.CHASE, State.ATTACK:
-			_process_chase(delta)
-
-
-func _on_screen_visibility_changed() -> void:
-	_status_vfx.set_on_screen(is_on_screen)
-	if is_dead:
-		return
-	if is_on_screen:
-		_set_sleeping(false)
-	elif current_state == State.PATROL and not is_burning():
-		_set_sleeping(true)
+	return false
 
 
 func play_summon_intro() -> void:
@@ -252,9 +312,18 @@ func set_target_candidate(hero_candidate: Hero) -> void:
 	if not CombatAction.is_valid_target(hero_candidate):
 		return
 
+	if target == hero_candidate:
+		return
+
 	var dist_sq: float = global_position.distance_squared_to(hero_candidate.global_position)
 	if dist_sq > detection_range * detection_range:
 		return
+
+	if CombatAction.is_valid_target(target):
+		var candidate_eff_sq: float = get_effective_target_dist_sq(hero_candidate)
+		var current_eff_sq: float = get_effective_target_dist_sq(target)
+		if candidate_eff_sq >= current_eff_sq * 0.85:
+			return
 
 	if not SquadNavigator.has_line_of_sight(self, hero_candidate.global_position):
 		return
@@ -266,12 +335,9 @@ func set_target_candidate(hero_candidate: Hero) -> void:
 		current_state = State.CHASE
 		_navigator.reset()
 		Codex.discover_enemy(enemy_id)
-	elif target != hero_candidate:
-		var candidate_eff_sq: float = get_effective_target_dist_sq(hero_candidate)
-		var current_eff_sq: float = get_effective_target_dist_sq(target)
-		if candidate_eff_sq < current_eff_sq * 0.85:
-			target = hero_candidate
-			_navigator.reset()
+	else:
+		target = hero_candidate
+		_navigator.reset()
 
 
 func clear_hero_references(hero: Hero) -> void:
@@ -404,10 +470,11 @@ func take_damage(amount: float, flash_hurt: bool = true) -> void:
 
 
 func _process_patrol(delta: float) -> void:
+	var push_vel: Vector2 = _knockback_velocity + separation_velocity
 	if _idle_wait_timer > 0.0:
 		_idle_wait_timer -= delta
-		velocity = _knockback_velocity
-		if _knockback_velocity.length_squared() > 1.0:
+		velocity = push_vel
+		if push_vel.length_squared() > 1.0:
 			move_and_slide()
 		else:
 			update_visuals(Vector2.ZERO)
@@ -422,8 +489,8 @@ func _process_patrol(delta: float) -> void:
 	if dist_to_patrol_sq <= WAYPOINT_ARRIVE_DIST_SQ:
 		_idle_wait_timer = randf_range(1.5, 3.5)
 		_pick_new_patrol_destination()
-		velocity = _knockback_velocity
-		if _knockback_velocity.length_squared() > 1.0:
+		velocity = push_vel
+		if push_vel.length_squared() > 1.0:
 			move_and_slide()
 		else:
 			update_visuals(Vector2.ZERO)
@@ -431,7 +498,7 @@ func _process_patrol(delta: float) -> void:
 
 	var waypoint: Vector2 = _navigator.get_next_waypoint(self, _patrol_destination, map, delta)
 	var move_vec: Vector2 = (waypoint - global_position).normalized()
-	velocity = (move_vec * speed * _slow_multiplier) + _knockback_velocity
+	velocity = (move_vec * speed * _slow_multiplier) + push_vel
 	move_and_slide()
 	update_visuals(velocity * delta)
 
@@ -442,7 +509,7 @@ func _process_chase(delta: float) -> void:
 		attack_target = null
 		current_state = State.PATROL
 		_pick_new_patrol_destination()
-		if not is_on_screen:
+		if not is_on_screen and _knockback_velocity.length_squared() <= 1.0 and not is_burning():
 			_set_sleeping(true)
 		return
 
@@ -453,7 +520,7 @@ func _process_chase(delta: float) -> void:
 		attack_target = null
 		current_state = State.PATROL
 		_pick_new_patrol_destination()
-		if not is_on_screen:
+		if not is_on_screen and _knockback_velocity.length_squared() <= 1.0 and not is_burning():
 			_set_sleeping(true)
 		return
 
@@ -471,9 +538,10 @@ func _process_chase(delta: float) -> void:
 			move_and_slide()
 		return
 
+	var push_vel: Vector2 = _knockback_velocity + separation_velocity
 	if _can_reach_target():
-		velocity = _knockback_velocity
-		if _knockback_velocity.length_squared() > 1.0:
+		velocity = push_vel
+		if push_vel.length_squared() > 1.0:
 			move_and_slide()
 		else:
 			update_visuals(Vector2.ZERO)
@@ -481,7 +549,7 @@ func _process_chase(delta: float) -> void:
 
 	var waypoint: Vector2 = _navigator.get_next_waypoint(self, target.global_position, map, delta)
 	var move_vec: Vector2 = (waypoint - global_position).normalized()
-	velocity = (move_vec * speed * _slow_multiplier) + _knockback_velocity
+	velocity = (move_vec * speed * _slow_multiplier) + push_vel
 	move_and_slide()
 	update_visuals(velocity * delta)
 
@@ -494,7 +562,7 @@ func _try_kite_away(dist_to_target: float, delta: float) -> bool:
 	var away_dir: Vector2 = (global_position - target.global_position).normalized()
 	if away_dir.length_squared() < 0.01:
 		away_dir = Vector2.LEFT if not flip_h else Vector2.RIGHT
-	velocity = (away_dir * speed * _slow_multiplier) + _knockback_velocity
+	velocity = (away_dir * speed * _slow_multiplier) + separation_velocity + _knockback_velocity
 	move_and_slide()
 	update_visuals(velocity * delta)
 	return true
@@ -521,6 +589,10 @@ func _check_combat_actions() -> void:
 			action.execute(self, target)
 			return
 
+	if _blocker_scan_timer > 0.0:
+		return
+	_blocker_scan_timer = BLOCKER_SCAN_INTERVAL + randf_range(0.0, BLOCKER_SCAN_JITTER)
+
 	for action: CombatAction in combat_actions:
 		if action is MeleeAction and action.is_ready():
 			var melee: MeleeAction = action as MeleeAction
@@ -536,11 +608,8 @@ func _check_combat_actions() -> void:
 func _find_blocking_hero(melee: MeleeAction) -> Hero:
 	var best_blocker: Hero = null
 	var min_dist_sq: float = INF
-	for node: Node in get_tree().get_nodes_in_group(_GROUP_HEROES):
-		var hero: Hero = node as Hero
+	for hero: Hero in Hero.active_heroes:
 		if not CombatAction.is_valid_target(hero):
-			continue
-		if not hero.is_player and hero.squad_member == null:
 			continue
 		if not melee.can_reach(self, hero):
 			continue
@@ -660,7 +729,8 @@ func deactivate_for_pool() -> void:
 	_burn_source = null
 	_is_summoning_in = false
 	_knockback_velocity = Vector2.ZERO
-	_set_sleeping(true)
+	separation_velocity = Vector2.ZERO
+	_set_sleeping(true, true)
 
 
 func reset_for_pool() -> void:
@@ -680,6 +750,7 @@ func reset_for_pool() -> void:
 	_patrol_destination = Vector2.ZERO
 	_patrol_timer = 0.0
 	_idle_wait_timer = randf_range(0.1, 0.8)
+	_blocker_scan_timer = randf_range(0.0, BLOCKER_SCAN_INTERVAL)
 	_stun_timer = 0.0
 	_slow_timer = 0.0
 	_slow_multiplier = 1.0
@@ -690,6 +761,7 @@ func reset_for_pool() -> void:
 	_mark_timer = 0.0
 	_mark_bonus = 0.0
 	_knockback_velocity = Vector2.ZERO
+	separation_velocity = Vector2.ZERO
 	_navigator.reset()
 	_base_modulate = Color.WHITE
 	_status_vfx.clear()
@@ -700,7 +772,7 @@ func reset_for_pool() -> void:
 	visible = true
 	if not is_in_group(_GROUP_ENEMIES):
 		add_to_group(_GROUP_ENEMIES)
-	_set_sleeping(true)
+	_set_sleeping(true, true)
 
 
 func _cancel_telegraph() -> void:
@@ -712,6 +784,9 @@ func _cancel_telegraph() -> void:
 
 
 func _on_death() -> void:
+	_unregister_active_enemy()
+	is_sleeping = true
+	separation_velocity = Vector2.ZERO
 	_cancel_telegraph()
 	_is_summoning_in = false
 	target = null
@@ -746,6 +821,8 @@ func _on_animation_finished() -> void:
 		_is_summoning_in = false
 		combat_state = CombatState.READY
 		play(ANIM_IDLE)
+		if not is_on_screen and current_state == State.PATROL and not is_burning():
+			_set_sleeping(true)
 		return
 	super._on_animation_finished()
 	var hit_target: Hero = null
@@ -764,3 +841,22 @@ func _on_animation_finished() -> void:
 		var proj: Projectile = ranged.spawn_projectile(self, hit_target)
 		if proj != null:
 			spawn_projectile(proj)
+
+
+func _register_active_enemy() -> void:
+	if _active_enemy_index != -1:
+		return
+	_active_enemy_index = active_enemies.size()
+	active_enemies.append(self)
+
+
+func _unregister_active_enemy() -> void:
+	if _active_enemy_index == -1:
+		return
+	var last_idx: int = active_enemies.size() - 1
+	if _active_enemy_index != last_idx:
+		var swapped: Enemy = active_enemies[last_idx]
+		active_enemies[_active_enemy_index] = swapped
+		swapped._active_enemy_index = _active_enemy_index
+	active_enemies.pop_back()
+	_active_enemy_index = -1

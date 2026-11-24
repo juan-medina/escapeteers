@@ -11,13 +11,15 @@ const RECENTER_THRESHOLD_TILES: int = 32
 var _astar: AStarGrid2D = AStarGrid2D.new()
 var _walkable_cells: Dictionary[Vector2i, bool] = {}
 var _floor: TileMapLayer = null
+var _streamer: MapStreamer = null
 var _center_cell: Vector2i = Vector2i(-999999, -999999)
 var _current_region: Rect2i = Rect2i()
 
 
-func setup(walkable_cells: Dictionary[Vector2i, bool], floor_layer: TileMapLayer) -> void:
+func setup(walkable_cells: Dictionary[Vector2i, bool], floor_layer: TileMapLayer, streamer: MapStreamer = null) -> void:
 	_walkable_cells = walkable_cells
 	_floor = floor_layer
+	_streamer = streamer
 	_center_cell = Vector2i(-999999, -999999)
 	_astar.cell_size = Vector2(16, 16)
 	_astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_AT_LEAST_ONE_WALKABLE
@@ -111,6 +113,9 @@ func _recenter(new_center: Vector2i) -> void:
 
 	_astar.fill_solid_region(_current_region, true)
 
-	for cell: Vector2i in _walkable_cells:
-		if _current_region.has_point(cell):
-			_astar.set_point_solid(cell, false)
+	if _streamer != null:
+		_streamer.populate_nav_region(_astar, _current_region)
+	else:
+		for cell: Vector2i in _walkable_cells:
+			if _current_region.has_point(cell):
+				_astar.set_point_solid(cell, false)

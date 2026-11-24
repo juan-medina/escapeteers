@@ -38,8 +38,9 @@ class EvictCandidate:
 const MAX_CHARACTERS: int = 80
 const MAX_ENEMIES: int = 160
 const MAX_SPAWNS_PER_FRAME: int = 3
-const ENEMY_ACTIVE_DIST_SQ: float = 480.0 * 480.0
+const ENEMY_ACTIVE_DIST_SQ: float = 420.0 * 420.0
 const ENEMY_DESPAWN_DIST_SQ: float = 1350.0 * 1350.0
+const ENEMY_SCAN_STRIDE: int = 6
 const ROOM_RESPAWN_DIST_SQ: float = 950.0 * 950.0
 const STREAM_CHECK_INTERVAL: float = 0.15
 const BASE_SQUAD_SPEED: float = 100.0
@@ -94,6 +95,7 @@ var _continuous_move_timer: float = 0.0
 var _spike_hit_cooldowns: Dictionary[Character, float] = {}
 var _current_room: Rect2i = Rect2i()
 var _last_player_cell: Vector2i = Vector2i(2147483647, 2147483647)
+var _enemy_scan_tick: int = 0
 
 @onready var _camera: Camera2D = $Camera2D
 @onready var _characters: Node2D = $Characters
@@ -597,6 +599,7 @@ func _update_followers(delta: float) -> void:
 
 func _update_enemies() -> void:
 	var camera_pos: Vector2 = _camera.global_position
+	_enemy_scan_tick = (_enemy_scan_tick + 1) % ENEMY_SCAN_STRIDE
 
 	var i: int = _enemies.size() - 1
 	while i >= 0:
@@ -612,19 +615,22 @@ func _update_enemies() -> void:
 			i -= 1
 			continue
 
-		if dist_sq > ENEMY_ACTIVE_DIST_SQ:
-			if enemy.current_state == Enemy.State.PATROL and enemy.is_physics_processing():
-				enemy.sync_screen_state(camera_pos)
+		if dist_sq > ENEMY_ACTIVE_DIST_SQ and enemy.is_sleeping:
 			i -= 1
 			continue
 
-		if not enemy.is_physics_processing():
-			enemy.sync_screen_state(camera_pos)
+		enemy.sync_screen_state(camera_pos)
+		if enemy.is_sleeping:
+			i -= 1
+			continue
 
-		var best_target: Hero = _get_best_squad_target(enemy)
-		if best_target != null:
-			enemy.set_target_candidate(best_target)
+		if (i % ENEMY_SCAN_STRIDE) == _enemy_scan_tick:
+			var best_target: Hero = _get_best_squad_target(enemy)
+			if best_target != null:
+				enemy.set_target_candidate(best_target)
 		i -= 1
+
+	SquadNavigator.update_enemy_separation(Enemy.active_enemies)
 
 
 func _get_best_squad_target(enemy: Enemy) -> Hero:

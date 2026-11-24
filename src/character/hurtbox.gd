@@ -34,6 +34,7 @@ func setup(target_owner: Character, initial_radius: float, offset: Vector2, laye
 
 func set_disabled(disabled: bool) -> void:
 	_collision_shape.set_deferred(&"disabled", disabled)
+	set_deferred(&"monitorable", not disabled)
 
 
 func get_center_global_position() -> Vector2:

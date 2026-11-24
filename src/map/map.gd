@@ -26,6 +26,8 @@ const SPIKE_DOWN_1_TIME: float = 0.10
 const SPIKE_CYCLE_DURATION: float = 3.80
 const COIN_ROOM_CHANCE: float = 0.30
 const POTION_ROOM_CHANCE: float = 0.22
+const SHORTCUT_TILE_BATCH_SIZE: int = 64
+const SHORTCUT_IMMEDIATE_RADIUS_SQ: int = 64
 
 var plan: WorldPlan = WorldPlan.new()
 var streamer: MapStreamer = MapStreamer.new()
@@ -44,6 +46,13 @@ var _guaranteed_coin_room: Rect2i = Rect2i()
 var _guaranteed_potion_room: Rect2i = Rect2i()
 var _is_activating_lever: bool = false
 var _locked_door_toast_timer: float = 0.0
+var _pending_shortcut_floors: Array[Vector2i] = []
+var _pending_shortcut_floor_atlas: Array[Vector2i] = []
+var _pending_shortcut_erased_walls: Array[Vector2i] = []
+var _pending_shortcut_walls: Array[Vector2i] = []
+var _pending_shortcut_wall_atlas: Array[Vector2i] = []
+var _pending_shortcut_gate: SectorGatePlanner.SectorGate = null
+var _pending_shortcut_chunks: Array[Vector2i] = []
 
 @onready var light_manager: LightManager = $Lights
 @onready var _floor: TileMapLayer = $Floor
@@ -199,11 +208,11 @@ func generate_map() -> void:
 	generation_progress_updated.emit(0.75)
 	await get_tree().process_frame
 
-	nav_window.setup(_walkable_cells, _floor)
-	nav_window.update_center(hero_room.get_center())
+	nav_window.setup(_walkable_cells, _floor, streamer)
 	light_manager.setup(plan.run_seed)
 	light_manager.set_focus(get_hero_spawn_position())
 	streamer.setup(plan, _floor, _walls, _decorations, light_manager, nav_window, _walkable_cells, _loaded_spikes, _group_frames, plan.run_seed)
+	nav_window.update_center(hero_room.get_center())
 
 	generation_progress_updated.emit(0.82)
 	await get_tree().process_frame
@@ -370,19 +379,7 @@ func _activate_shortcut_lever(gate: SectorGatePlanner.SectorGate) -> void:
 	_shortcut_effect.modulate = Color.WHITE
 	_shortcut_effect.visible = true
 
-	for fcell: Vector2i in gate.tunnel_floors:
-		var fatlas: Vector2i = gate.tunnel_floors[fcell]
-		_floor.set_cell(fcell, TileClassifier.TILE_SET_SOURCE_ID, fatlas)
-		_update_baked_floor_cell(fcell, fatlas)
-
-	for ecell: Vector2i in gate.tunnel_erased_walls:
-		_walls.erase_cell(ecell)
-		_update_baked_wall_cell(ecell, Vector2i(-1, -1), 0)
-
-	for wcell: Vector2i in gate.tunnel_walls:
-		var watlas: Vector2i = gate.tunnel_walls[wcell]
-		_walls.set_cell(wcell, TileClassifier.TILE_SET_SOURCE_ID, watlas, 0)
-		_update_baked_wall_cell(wcell, watlas, 0)
+	_apply_shortcut_tiles(gate)
 
 	Audio.play_sfx(Audio.Sfx.SHORTCUT_OPEN)
 	shortcut_opened.emit(gate.color)
@@ -403,33 +400,200 @@ func _activate_shortcut_lever(gate: SectorGatePlanner.SectorGate) -> void:
 	tween.parallel().tween_property(_shortcut_right_wall, ^"scale", Vector2(0.2, 0.2), 0.45)
 	tween.parallel().tween_property(_shortcut_right_wall, ^"modulate:a", 0.0, 0.45)
 	tween.tween_interval(0.15)
-	tween.finished.connect(_on_shortcut_effect_finished.bind(gate.tunnel_walkable))
+	tween.finished.connect(_on_shortcut_effect_finished.bind(gate))
+	var tile_tween: Tween = create_tween()
+	tile_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tile_tween.tween_method(_step_shortcut_tile_batch, 0.0, 1.0, 0.65)
 
 
-func _on_shortcut_effect_finished(walkable_cells: Array[Vector2i]) -> void:
+func _on_shortcut_effect_finished(gate: SectorGatePlanner.SectorGate) -> void:
 	_shortcut_effect.visible = false
-	for cell: Vector2i in walkable_cells:
-		_walkable_cells[cell] = true
-		nav_window.set_cell_walkable(cell, true)
-		_set_baked_walkable(cell, true)
+	_flush_shortcut_tile_batches()
+	_apply_shortcut_walkable(gate)
 
 	_is_activating_lever = false
 	get_tree().paused = false
 
 
-func _update_baked_floor_cell(cell: Vector2i, atlas: Vector2i) -> void:
-	var coord: Vector2i = MapStreamer.cell_to_chunk(cell)
-	if not plan.baked_chunks.has(coord):
+func _step_shortcut_tile_batch(_progress: float) -> void:
+	if not _pending_shortcut_chunks.is_empty():
+		var coord: Vector2i = _pending_shortcut_chunks.pop_back()
+		_process_one_pending_shortcut_chunk(coord)
+	_drain_shortcut_tile_ops(SHORTCUT_TILE_BATCH_SIZE)
+
+
+func _flush_shortcut_tile_batches() -> void:
+	while not _pending_shortcut_chunks.is_empty():
+		var coord: Vector2i = _pending_shortcut_chunks.pop_back()
+		_process_one_pending_shortcut_chunk(coord)
+	_pending_shortcut_gate = null
+	_drain_shortcut_tile_ops(-1)
+
+
+func _drain_shortcut_tile_ops(budget: int) -> void:
+	var unlimited: bool = budget < 0
+	var remaining: int = budget
+	while (unlimited or remaining > 0) and not _pending_shortcut_erased_walls.is_empty():
+		var ecell: Vector2i = _pending_shortcut_erased_walls.pop_back()
+		_walls.erase_cell(ecell)
+		remaining -= 1
+	while (unlimited or remaining > 0) and not _pending_shortcut_floors.is_empty():
+		var fcell: Vector2i = _pending_shortcut_floors.pop_back()
+		var fatlas: Vector2i = _pending_shortcut_floor_atlas.pop_back()
+		_floor.set_cell(fcell, TileClassifier.TILE_SET_SOURCE_ID, fatlas)
+		remaining -= 1
+	while (unlimited or remaining > 0) and not _pending_shortcut_walls.is_empty():
+		var wcell: Vector2i = _pending_shortcut_walls.pop_back()
+		var watlas: Vector2i = _pending_shortcut_wall_atlas.pop_back()
+		_walls.set_cell(wcell, TileClassifier.TILE_SET_SOURCE_ID, watlas, 0)
+		remaining -= 1
+
+
+func _process_one_pending_shortcut_chunk(coord: Vector2i) -> void:
+	var diff: Dictionary = _pending_shortcut_gate.tunnel_chunk_diffs[coord]
+	var chunk_floors: Array[Vector2i] = diff[&"floors"]
+	var chunk_erased: Dictionary[Vector2i, bool] = diff[&"erased_walls"]
+	var chunk_walls: Array[Vector2i] = diff[&"walls"]
+	if streamer.is_chunk_loaded(coord):
+		var anchor_cell: Vector2i = _pending_shortcut_gate.shortcut_wall_cells[0]
+		_apply_or_queue_loaded_shortcut_chunk(chunk_floors, chunk_erased, chunk_walls, _pending_shortcut_gate, anchor_cell)
+	if plan.baked_chunks.has(coord):
+		var data: Dictionary = plan.baked_chunks[coord]
+		_apply_chunk_baked_floors(data, chunk_floors, _pending_shortcut_gate.tunnel_floors)
+		_apply_chunk_baked_walls(data, chunk_erased, chunk_walls, _pending_shortcut_gate.tunnel_walls)
+		streamer.sync_loaded_chunk_arrays(coord, data)
+
+
+func _apply_shortcut_tiles(gate: SectorGatePlanner.SectorGate) -> void:
+	_flush_shortcut_tile_batches()
+	_pending_shortcut_gate = gate
+	var anchor_cell: Vector2i = gate.shortcut_wall_cells[0]
+	var min_c: Vector2i = MapStreamer.cell_to_chunk(anchor_cell - Vector2i(8, 8))
+	var max_c: Vector2i = MapStreamer.cell_to_chunk(anchor_cell + Vector2i(8, 8))
+	for coord: Vector2i in gate.tunnel_chunk_diffs:
+		if coord.x >= min_c.x and coord.x <= max_c.x and coord.y >= min_c.y and coord.y <= max_c.y:
+			_process_one_pending_shortcut_chunk(coord)
+		else:
+			_pending_shortcut_chunks.append(coord)
+
+
+func _apply_or_queue_loaded_shortcut_chunk(
+	chunk_floors: Array[Vector2i],
+	chunk_erased: Dictionary[Vector2i, bool],
+	chunk_walls: Array[Vector2i],
+	gate: SectorGatePlanner.SectorGate,
+	anchor_cell: Vector2i,
+) -> void:
+	for fcell: Vector2i in chunk_floors:
+		var fatlas: Vector2i = gate.tunnel_floors[fcell]
+		if fcell.distance_squared_to(anchor_cell) <= SHORTCUT_IMMEDIATE_RADIUS_SQ:
+			_floor.set_cell(fcell, TileClassifier.TILE_SET_SOURCE_ID, fatlas)
+		else:
+			_pending_shortcut_floors.append(fcell)
+			_pending_shortcut_floor_atlas.append(fatlas)
+	for ecell: Vector2i in chunk_erased:
+		if ecell.distance_squared_to(anchor_cell) <= SHORTCUT_IMMEDIATE_RADIUS_SQ:
+			_walls.erase_cell(ecell)
+		else:
+			_pending_shortcut_erased_walls.append(ecell)
+	for wcell: Vector2i in chunk_walls:
+		var watlas: Vector2i = gate.tunnel_walls[wcell]
+		if wcell.distance_squared_to(anchor_cell) <= SHORTCUT_IMMEDIATE_RADIUS_SQ:
+			_walls.set_cell(wcell, TileClassifier.TILE_SET_SOURCE_ID, watlas, 0)
+		else:
+			_pending_shortcut_walls.append(wcell)
+			_pending_shortcut_wall_atlas.append(watlas)
+
+
+static func _apply_chunk_baked_floors(
+	data: Dictionary,
+	chunk_floors: Array[Vector2i],
+	tunnel_floors: Dictionary[Vector2i, Vector2i],
+) -> void:
+	if chunk_floors.is_empty():
 		return
-	var data: Dictionary = plan.baked_chunks[coord]
 	var floors: Array[Vector2i] = data[&"floors"]
 	var floor_atlas: Array[Vector2i] = data[&"floor_atlas"]
-	var idx: int = floors.find(cell)
-	if idx != -1:
-		floor_atlas[idx] = atlas
-	else:
-		floors.append(cell)
-		floor_atlas.append(atlas)
+	var index_by_cell: Dictionary[Vector2i, int] = {}
+	for i: int in range(floors.size()):
+		index_by_cell[floors[i]] = i
+	for fcell: Vector2i in chunk_floors:
+		var fatlas: Vector2i = tunnel_floors[fcell]
+		if index_by_cell.has(fcell):
+			floor_atlas[index_by_cell[fcell]] = fatlas
+		else:
+			index_by_cell[fcell] = floors.size()
+			floors.append(fcell)
+			floor_atlas.append(fatlas)
+
+
+static func _apply_chunk_baked_walls(
+	data: Dictionary,
+	chunk_erased: Dictionary[Vector2i, bool],
+	chunk_walls: Array[Vector2i],
+	tunnel_walls: Dictionary[Vector2i, Vector2i],
+) -> void:
+	var walls: Array[Vector2i] = data[&"walls"]
+	var wall_atlas: Array[Vector2i] = data[&"wall_atlas"]
+	var wall_alt_ids: Array[int] = data[&"wall_alt_ids"]
+
+	if not chunk_erased.is_empty():
+		var write_idx: int = 0
+		for read_idx: int in range(walls.size()):
+			var wcell: Vector2i = walls[read_idx]
+			if chunk_erased.has(wcell):
+				continue
+			if write_idx != read_idx:
+				walls[write_idx] = wcell
+				wall_atlas[write_idx] = wall_atlas[read_idx]
+				wall_alt_ids[write_idx] = wall_alt_ids[read_idx]
+			write_idx += 1
+		if write_idx < walls.size():
+			walls.resize(write_idx)
+			wall_atlas.resize(write_idx)
+			wall_alt_ids.resize(write_idx)
+
+	if chunk_walls.is_empty():
+		return
+	var index_by_cell: Dictionary[Vector2i, int] = {}
+	for i: int in range(walls.size()):
+		index_by_cell[walls[i]] = i
+	for wcell: Vector2i in chunk_walls:
+		var watlas: Vector2i = tunnel_walls[wcell]
+		if index_by_cell.has(wcell):
+			var idx: int = index_by_cell[wcell]
+			wall_atlas[idx] = watlas
+			wall_alt_ids[idx] = 0
+		else:
+			index_by_cell[wcell] = walls.size()
+			walls.append(wcell)
+			wall_atlas.append(watlas)
+			wall_alt_ids.append(0)
+
+
+func _apply_shortcut_walkable(gate: SectorGatePlanner.SectorGate) -> void:
+	for coord: Vector2i in gate.tunnel_chunk_diffs:
+		var diff: Dictionary = gate.tunnel_chunk_diffs[coord]
+		var chunk_cells: Array[Vector2i] = diff[&"walkable"]
+		if chunk_cells.is_empty():
+			continue
+		for cell: Vector2i in chunk_cells:
+			_walkable_cells[cell] = true
+			nav_window.set_cell_walkable(cell, true)
+		if not plan.baked_chunks.has(coord):
+			streamer.add_loaded_chunk_walkable(coord, chunk_cells)
+			continue
+		var data: Dictionary = plan.baked_chunks[coord]
+		var walk_arr: Array[Vector2i] = data[&"walkable"]
+		var existing: Dictionary[Vector2i, bool] = {}
+		for wcell: Vector2i in walk_arr:
+			existing[wcell] = true
+		for cell: Vector2i in chunk_cells:
+			if not existing.has(cell):
+				existing[cell] = true
+				walk_arr.append(cell)
+		data[&"walkable_rects"] = TileClassifier.build_walkable_rects(coord, walk_arr)
+		streamer.sync_loaded_chunk_arrays(coord, data)
 
 
 func _update_baked_wall_cell(cell: Vector2i, atlas: Vector2i, alt_id: int) -> void:
@@ -466,6 +630,8 @@ func _set_baked_walkable(cell: Vector2i, walkable: bool) -> void:
 			walk_arr.append(cell)
 	else:
 		walk_arr.erase(cell)
+	data[&"walkable_rects"] = TileClassifier.build_walkable_rects(coord, walk_arr)
+	streamer.sync_loaded_chunk_arrays(coord, data)
 
 
 func _update_baked_decoration_cell(cell: Vector2i, atlas: Vector2i, alt_id: int) -> void:
