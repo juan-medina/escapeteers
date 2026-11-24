@@ -19,11 +19,11 @@
   - [b]Swordsman:[/b] Extra health, quicker slashes, and a faster, harder-hitting three-hit flurry.
   - [b]Archer:[/b] Faster, higher-damage snipe arrows with longer range and heavy knockback.
   - [b]Priest:[/b] Much faster, stronger heals to keep squads alive.
-- [color=#ffffff][b]Dungeon Balance Pass:[/b][/color] Fairer deeper hordes, smoother leveling, and more potions.
+- [color=#ffffff][b]Dungeon Balance Pass:[/b][/color] Fairer deeper hordes, smoother leveling.
 - [color=#ffffff][b]Quick Hero Swap:[/b][/color] Retry jumps to hero selection with new hero summary cards.
 - [color=#ffffff][b]Snappier Map & Spawns:[/b][/color] Smoother map browsing and monster room ambushes.
 - [color=#ffffff][b]Winding Maze Dungeons:[/b][/color] Deeper themed wings with varied room shapes.
-- [color=#ffffff][b]Line-of-Sight Fog:[/b][/color] Walls and locked doors block map vision.
+- [color=#ffffff][b]Line-of-Sight Fog:[/b][/color] Walls block map vision.
 
 [color=#ffffff][b]v0.6.0 - 2026-11-18[/b][/color]
 
