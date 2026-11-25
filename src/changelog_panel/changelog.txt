@@ -9,6 +9,7 @@
 - [color=#ffffff][b]Dungeon Map View:[/b][/color] Full-screen opaque map with pan and zoom.
 
 [color=#e0e0e0][b]Fixed[/b][/color]
+- [color=#ffffff][b]Draft Dialog Input:[/b][/color] Held movement no longer scrolls hero choices.
 - [color=#ffffff][b]Shortcut Tunnels:[/b][/color] Secret shortcuts no longer overlap or jam.
 
 [color=#ffffff][b]v0.7.0 - 2026-11-24[/b][/color]
