@@ -32,6 +32,9 @@ const TORCH_RIGHT_ALT_ID: int = 1
 const TORCH_GRID_SIZE: int = 10
 const TORCH_BLOCK_MARGIN: int = 2
 const MIN_TORCH_DIST_SQ: int = 49
+const CORRIDOR_TORCH_GRID_SIZE: int = 16
+const CORRIDOR_TORCH_AXIS_MARGIN: int = 4
+const CORRIDOR_TORCH_MIN_DIST_SQ: int = 144
 const CANDLE_POST_TOP: Vector2i = Vector2i(10, 30)
 const CANDLE_POST_BOTTOM: Vector2i = Vector2i(10, 31)
 const SPIKE_FRAMES: Array[Vector2i] = [
@@ -407,6 +410,8 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan) 
 						right_candidates, h, TORCH_SIDE, TORCH_RIGHT_ALT_ID, out_torches, out_torch_atlas, out_torch_alt_ids, out_lights
 					)
 
+	_fill_dark_corridor_torches(raster, wall_grid, run_seed, plan, out_torches, out_torch_atlas, out_torch_alt_ids, out_lights)
+
 	# Candle posts streamed directly from WorldPlan
 	for ly: int in range(ChunkRaster.CHUNK_SIZE):
 		var gy: int = raster.origin.y + ly
@@ -470,3 +475,69 @@ static func _is_near_any(cell: Vector2i, existing: Array[Vector2i], min_dist_sq:
 		if cell.distance_squared_to(other) < min_dist_sq:
 			return true
 	return false
+
+
+static func _fill_dark_corridor_torches(
+	raster: ChunkRaster,
+	wall_grid: Dictionary[Vector2i, Vector2i],
+	run_seed: int,
+	plan: WorldPlan,
+	out_torches: Array[Vector2i],
+	out_torch_atlas: Array[Vector2i],
+	out_torch_alt_ids: Array[int],
+	out_lights: Array[Vector2i],
+) -> void:
+	for sub_y: int in range(2):
+		for sub_x: int in range(2):
+			var base_lx: int = sub_x * CORRIDOR_TORCH_GRID_SIZE
+			var base_ly: int = sub_y * CORRIDOR_TORCH_GRID_SIZE
+			var global_bx: int = floori(float(raster.origin.x + base_lx) / float(CORRIDOR_TORCH_GRID_SIZE))
+			var global_by: int = floori(float(raster.origin.y + base_ly) / float(CORRIDOR_TORCH_GRID_SIZE))
+			var h: int = cell_hash(run_seed ^ 0x51a7, global_bx, global_by)
+			var top_cands: Array[Vector2i] = []
+			var left_cands: Array[Vector2i] = []
+			var right_cands: Array[Vector2i] = []
+
+			for dy: int in range(CORRIDOR_TORCH_GRID_SIZE):
+				var ly: int = base_ly + dy
+				var gy: int = raster.origin.y + ly
+				for dx: int in range(CORRIDOR_TORCH_GRID_SIZE):
+					var lx: int = base_lx + dx
+					var lpos: Vector2i = Vector2i(lx, ly)
+					if not wall_grid.has(lpos):
+						continue
+					var atlas: Vector2i = wall_grid[lpos]
+					var gx: int = raster.origin.x + lx
+					if is_top_wall(atlas) and dx >= CORRIDOR_TORCH_AXIS_MARGIN and dx < CORRIDOR_TORCH_GRID_SIZE - CORRIDOR_TORCH_AXIS_MARGIN:
+						var cand_top: Vector2i = Vector2i(gx, gy)
+						if _is_valid_corridor_torch_cell(cand_top, plan, out_lights, false):
+							top_cands.append(cand_top)
+					elif is_left_wall(atlas) and dy >= CORRIDOR_TORCH_AXIS_MARGIN and dy < CORRIDOR_TORCH_GRID_SIZE - CORRIDOR_TORCH_AXIS_MARGIN:
+						var adj_lx: int = lx + 1
+						if adj_lx < ChunkRaster.CHUNK_SIZE and not wall_grid.has(Vector2i(adj_lx, ly)) and raster.is_floor_local(adj_lx, ly):
+							var cand_left: Vector2i = Vector2i(gx + 1, gy)
+							if _is_valid_corridor_torch_cell(cand_left, plan, out_lights, true):
+								left_cands.append(cand_left)
+					elif is_right_wall(atlas) and dy >= CORRIDOR_TORCH_AXIS_MARGIN and dy < CORRIDOR_TORCH_GRID_SIZE - CORRIDOR_TORCH_AXIS_MARGIN:
+						var adj_rx: int = lx - 1
+						if adj_rx >= 0 and not wall_grid.has(Vector2i(adj_rx, ly)) and raster.is_floor_local(adj_rx, ly):
+							var cand_right: Vector2i = Vector2i(gx - 1, gy)
+							if _is_valid_corridor_torch_cell(cand_right, plan, out_lights, true):
+								right_cands.append(cand_right)
+
+			if not _try_append_torch(top_cands, h, TORCH_TOP, 0, out_torches, out_torch_atlas, out_torch_alt_ids, out_lights):
+				if not _try_append_torch(left_cands, h, TORCH_SIDE, 0, out_torches, out_torch_atlas, out_torch_alt_ids, out_lights):
+					_try_append_torch(right_cands, h, TORCH_SIDE, TORCH_RIGHT_ALT_ID, out_torches, out_torch_atlas, out_torch_alt_ids, out_lights)
+
+
+static func _is_valid_corridor_torch_cell(
+	cell: Vector2i,
+	plan: WorldPlan,
+	out_lights: Array[Vector2i],
+	check_spikes: bool,
+) -> bool:
+	if plan.get_room_at(cell) != Rect2i() or plan.no_prop_cells.has(cell) or plan.has_candle_post_near(cell, 64):
+		return false
+	if check_spikes and (plan.is_spike_cell(cell) or plan.event_spike_cell_rooms.has(cell)):
+		return false
+	return not _is_near_any(cell, out_lights, CORRIDOR_TORCH_MIN_DIST_SQ)

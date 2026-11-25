@@ -330,6 +330,31 @@ static func plan_corridor(
 	return []
 
 
+static func get_usable_corridor_run(plan: WorldPlan, seg: Dictionary) -> Vector2i:
+	var is_horiz: bool = seg[&"is_horizontal"]
+	var min_c: int = seg[&"min"]
+	var max_c: int = seg[&"max"]
+	var fixed_c: int = seg[&"fixed"]
+
+	var run_start: int = -999999
+	var best_start: int = 0
+	var best_len: int = 0
+
+	for c: int in range(min_c, max_c + 1):
+		var center_cell: Vector2i = Vector2i(c, fixed_c) if is_horiz else Vector2i(fixed_c, c)
+		if plan.get_room_at(center_cell) == Rect2i():
+			if run_start == -999999:
+				run_start = c
+			var cur_len: int = c - run_start + 1
+			if cur_len > best_len:
+				best_len = cur_len
+				best_start = run_start
+		else:
+			run_start = -999999
+
+	return Vector2i(best_start, best_len)
+
+
 static func commit_corridor(plan: WorldPlan, segments: Array[Dictionary], sector_idx: int) -> void:
 	for seg: Dictionary in segments:
 		var rect: Rect2i = seg[&"rect"]

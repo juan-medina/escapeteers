@@ -150,7 +150,9 @@ func sync_loaded_chunk_arrays(coord: Vector2i, data: Dictionary) -> void:
 		return
 	var loaded: Dictionary = _loaded_chunks[coord]
 	loaded[&"floors"] = data[&"floors"]
+	loaded[&"spikes"] = data[&"spikes"]
 	loaded[&"walls"] = data[&"walls"]
+	loaded[&"torches"] = data[&"torches"]
 	loaded[&"walkable"] = data[&"walkable"]
 	loaded[&"walkable_rects"] = data[&"walkable_rects"]
 

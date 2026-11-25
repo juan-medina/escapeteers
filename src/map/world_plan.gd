@@ -75,6 +75,8 @@ var protected_neck_rects: Array[Rect2i] = []
 var room_event_types: Dictionary[Rect2i, RoomEventType] = {}
 var closing_spike_hazards: Dictionary[Rect2i, ClosingSpikeHazard] = {}
 var event_spike_cell_rooms: Dictionary[Vector2i, Rect2i] = {}
+var corridor_coin_cells: Array[Vector2i] = []
+var corridor_potion_spawns: Array[Dictionary] = []
 
 var _room_depths: Dictionary[Rect2i, int] = {}
 var _room_sectors: Dictionary[Rect2i, int] = {}
@@ -125,6 +127,8 @@ func generate(seed_val: int = 0, max_depth: int = 12) -> void:
 	room_event_types.clear()
 	closing_spike_hazards.clear()
 	event_spike_cell_rooms.clear()
+	corridor_coin_cells.clear()
+	corridor_potion_spawns.clear()
 	_room_grid.clear()
 	_room_depths.clear()
 	_room_sectors.clear()
@@ -158,6 +162,7 @@ func generate(seed_val: int = 0, max_depth: int = 12) -> void:
 	for room: Rect2i in rooms:
 		_plan_candle_posts_for_room(room)
 	SpikePlanner.plan_spike_traps(self)
+	CorridorLootPlanner.plan_loot(self)
 	if not SectorGatePlanner.verify_solvability(self):
 		push_error(&"WorldPlan solvability check failed for seed %d" % run_seed)
 

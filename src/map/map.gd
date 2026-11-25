@@ -489,13 +489,33 @@ func _process_one_pending_shortcut_chunk(coord: Vector2i) -> void:
 	var chunk_floors: Array[Vector2i] = diff[&"floors"]
 	var chunk_erased: Dictionary[Vector2i, bool] = diff[&"erased_walls"]
 	var chunk_walls: Array[Vector2i] = diff[&"walls"]
+	var chunk_spikes: Array[Vector2i] = diff[&"spikes"]
+	var chunk_torches: Array[Vector2i] = diff[&"torches"]
+	var chunk_erased_torches: Dictionary[Vector2i, bool] = diff[&"erased_torches"]
+	var chunk_lights: Array[Vector2i] = diff[&"lights"]
+	var chunk_erased_lights: Dictionary[Vector2i, bool] = diff[&"erased_lights"]
 	if streamer.is_chunk_loaded(coord):
+		for scell: Vector2i in chunk_spikes:
+			_loaded_spikes[scell] = plan.get_spike_group(scell)
+		for etcell: Vector2i in chunk_erased_torches:
+			_decorations.erase_cell(etcell)
+		for tcell: Vector2i in chunk_torches:
+			var tatlas: Vector2i = _pending_shortcut_gate.tunnel_torches[tcell]
+			var talt: int = _pending_shortcut_gate.tunnel_torch_alt_ids[tcell]
+			_decorations.set_cell(tcell, TileClassifier.TILE_SET_SOURCE_ID, tatlas, talt)
+		for elcell: Vector2i in chunk_erased_lights:
+			light_manager.remove_light_at(elcell)
+		for lcell: Vector2i in chunk_lights:
+			if not light_manager.has_light(lcell):
+				light_manager.add_light(coord, lcell, _decorations.map_to_local(lcell))
 		var anchor_cell: Vector2i = _pending_shortcut_gate.shortcut_wall_cells[0]
 		_apply_or_queue_loaded_shortcut_chunk(chunk_floors, chunk_erased, chunk_walls, _pending_shortcut_gate, anchor_cell)
 	if plan.baked_chunks.has(coord):
 		var data: Dictionary = plan.baked_chunks[coord]
 		_apply_chunk_baked_floors(data, chunk_floors, _pending_shortcut_gate.tunnel_floors)
 		_apply_chunk_baked_walls(data, chunk_erased, chunk_walls, _pending_shortcut_gate.tunnel_walls)
+		_apply_chunk_baked_spikes(data, chunk_spikes)
+		ShortcutTunnelPlanner.apply_baked_chunk_torches_and_lights(data, diff, _pending_shortcut_gate)
 		streamer.sync_loaded_chunk_arrays(coord, data)
 
 
@@ -521,6 +541,11 @@ func _apply_or_queue_loaded_shortcut_chunk(
 ) -> void:
 	for fcell: Vector2i in chunk_floors:
 		var fatlas: Vector2i = gate.tunnel_floors[fcell]
+		if _loaded_spikes.has(fcell):
+			var group_id: int = _loaded_spikes[fcell]
+			if group_id >= 0 and group_id < _group_frames.size():
+				var tile_set: int = plan.spike_tile_sets.get(fcell, 1)
+				fatlas = TileClassifier.get_spike_frame(_group_frames[group_id], tile_set)
 		if fcell.distance_squared_to(anchor_cell) <= SHORTCUT_IMMEDIATE_RADIUS_SQ:
 			_floor.set_cell(fcell, TileClassifier.TILE_SET_SOURCE_ID, fatlas)
 		else:
@@ -604,6 +629,19 @@ static func _apply_chunk_baked_walls(
 			walls.append(wcell)
 			wall_atlas.append(watlas)
 			wall_alt_ids.append(0)
+
+
+static func _apply_chunk_baked_spikes(data: Dictionary, chunk_spikes: Array[Vector2i]) -> void:
+	if chunk_spikes.is_empty():
+		return
+	var spikes: Array[Vector2i] = data[&"spikes"]
+	var existing: Dictionary[Vector2i, bool] = {}
+	for scell: Vector2i in spikes:
+		existing[scell] = true
+	for scell: Vector2i in chunk_spikes:
+		if not existing.has(scell):
+			existing[scell] = true
+			spikes.append(scell)
 
 
 func _apply_shortcut_walkable(gate: SectorGatePlanner.SectorGate) -> void:

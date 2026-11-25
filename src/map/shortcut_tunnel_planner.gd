@@ -4,6 +4,9 @@
 class_name ShortcutTunnelPlanner
 extends RefCounted
 
+const SHORTCUT_CORNER_MARGIN: int = 3
+const MIN_USABLE_RUN_LEN: int = 4
+
 
 static func setup_shortcut_and_key(
 	plan: WorldPlan,
@@ -80,6 +83,7 @@ static func setup_shortcut_and_key(
 	plan.protected_neck_rects.append(own_neck_guard)
 	gate.gate_entry_cell = chosen[&"entry_cell"]
 	gate.shortcut_waypoints = chosen[&"waypoints"]
+	gate.shortcut_segments = chosen[&"seg_defs"]
 	var tunnel_segs: Array[Rect2i] = chosen[&"segs"]
 	for seg: Rect2i in tunnel_segs:
 		plan._corridor_rects.append(seg)
@@ -158,7 +162,8 @@ static func _pick_best_shortcut_route(
 			_append_unique_int(turn_ys, target_room.end.y + 16)
 			for side_x: int in side_xs:
 				for turn_y: int in turn_ys:
-					var segs: Array[Rect2i] = _build_shortcut_route_rects(exit_x, neck_top_y, turn_y, side_x, entry_y, gate_inside_x)
+					var seg_defs: Array[Dictionary] = _build_shortcut_route_segments(exit_x, neck_top_y, turn_y, side_x, entry_y, gate_inside_x)
+					var segs: Array[Rect2i] = _extract_seg_rects(seg_defs)
 					if not _is_shortcut_route_valid(
 						plan,
 						gate,
@@ -182,27 +187,135 @@ static func _pick_best_shortcut_route(
 							Vector2i(side_x, entry_y),
 							Vector2i(gate_inside_x, entry_y),
 						]
-						best_route = {&"segs": segs, &"entry_cell": Vector2i(gate_wall_x, entry_y), &"waypoints": wps}
+						best_route = {
+							&"segs": segs,
+							&"seg_defs": seg_defs,
+							&"entry_cell": Vector2i(gate_wall_x, entry_y),
+							&"waypoints": wps,
+						}
 
 	return best_route
 
 
-static func _build_shortcut_route_rects(
+static func _make_tunnel_seg(is_horiz: bool, c_start: int, c_end: int, fixed_c: int, half_w: int) -> Dictionary:
+	var min_c: int = mini(c_start, c_end)
+	var max_c: int = maxi(c_start, c_end)
+	var rect: Rect2i = make_horiz_corridor_rect(min_c, max_c, fixed_c, half_w) if is_horiz else make_vert_corridor_rect(min_c, max_c, fixed_c, half_w)
+	return {
+		&"is_horizontal": is_horiz,
+		&"min": min_c,
+		&"max": max_c,
+		&"fixed": fixed_c,
+		&"half_width": half_w,
+		&"rect": rect,
+	}
+
+
+static func _build_shortcut_route_segments(
 	exit_x: int,
 	neck_top_y: int,
 	turn_y: int,
 	side_x: int,
 	entry_y: int,
 	gate_inside_x: int,
-) -> Array[Rect2i]:
-	var segs: Array[Rect2i] = []
+) -> Array[Dictionary]:
+	var seg_defs: Array[Dictionary] = []
 	if turn_y != neck_top_y:
-		segs.append(make_vert_corridor_rect(turn_y, neck_top_y, exit_x, 1))
+		seg_defs.append(_make_tunnel_seg(false, turn_y, neck_top_y, exit_x, 1))
 	var leg1_start_x: int = exit_x if side_x > exit_x else (exit_x + 1)
-	segs.append(make_horiz_corridor_rect(leg1_start_x, side_x, turn_y, 1))
-	segs.append(make_vert_corridor_rect(turn_y, entry_y, side_x, 1))
-	segs.append(make_horiz_corridor_rect(side_x, gate_inside_x, entry_y, 2))
+	seg_defs.append(_make_tunnel_seg(true, leg1_start_x, side_x, turn_y, 1))
+	seg_defs.append(_make_tunnel_seg(false, turn_y, entry_y, side_x, 1))
+	seg_defs.append(_make_tunnel_seg(true, side_x, gate_inside_x, entry_y, 2))
+	return seg_defs
+
+
+static func _extract_seg_rects(seg_defs: Array[Dictionary]) -> Array[Rect2i]:
+	var segs: Array[Rect2i] = []
+	for seg_def: Dictionary in seg_defs:
+		var rect: Rect2i = seg_def[&"rect"]
+		segs.append(rect)
 	return segs
+
+
+static func is_shortcut_floor_cell(cell: Vector2i, gate: SectorGatePlanner.SectorGate) -> bool:
+	for rect: Rect2i in gate.shortcut_corridor_rects:
+		if rect.has_point(cell):
+			return true
+	return false
+
+
+static func get_usable_shortcut_runs(plan: WorldPlan, gate: SectorGatePlanner.SectorGate) -> Array[Dictionary]:
+	var runs: Array[Dictionary] = []
+	for seg: Dictionary in gate.shortcut_segments:
+		var is_horiz: bool = seg[&"is_horizontal"]
+		var min_c: int = seg[&"min"]
+		var max_c: int = seg[&"max"]
+		var fixed_c: int = seg[&"fixed"]
+		var scan_start: int = min_c + SHORTCUT_CORNER_MARGIN
+		var scan_end: int = max_c - SHORTCUT_CORNER_MARGIN
+		if scan_start > scan_end:
+			continue
+
+		var run_start: int = -999999
+		for c: int in range(scan_start, scan_end + 1):
+			var center_cell: Vector2i = Vector2i(c, fixed_c) if is_horiz else Vector2i(fixed_c, c)
+			var usable: bool = (
+				plan.get_room_at(center_cell) == Rect2i()
+				and not plan.hero_room.grow(4).has_point(center_cell)
+				and not plan.is_floor(center_cell)
+				and not plan.no_prop_cells.has(center_cell)
+				and not WorldPlan._intersects_any_point(center_cell, plan.protected_neck_rects)
+				and is_shortcut_floor_cell(center_cell, gate)
+				and is_shortcut_floor_cell(center_cell + Vector2i(0, -1), gate)
+			)
+			if usable:
+				if run_start == -999999:
+					run_start = c
+			elif run_start != -999999:
+				var run_end: int = c - 1
+				var run_len: int = run_end - run_start + 1
+				if run_len >= MIN_USABLE_RUN_LEN:
+					runs.append({&"seg": seg, &"start": run_start, &"end": run_end, &"length": run_len})
+				run_start = -999999
+
+		if run_start != -999999:
+			var run_end: int = scan_end
+			var run_len: int = run_end - run_start + 1
+			if run_len >= MIN_USABLE_RUN_LEN:
+				runs.append({&"seg": seg, &"start": run_start, &"end": run_end, &"length": run_len})
+
+	return runs
+
+
+static func get_total_runs_length(runs: Array[Dictionary]) -> int:
+	var total: int = 0
+	for run: Dictionary in runs:
+		var run_len: int = run[&"length"]
+		total += run_len
+	return total
+
+
+static func sample_run_position(runs: Array[Dictionary], offset: int) -> Dictionary:
+	var remaining: int = maxi(0, offset)
+	for run: Dictionary in runs:
+		var run_len: int = run[&"length"]
+		if remaining < run_len:
+			var run_start: int = run[&"start"]
+			var run_end: int = run[&"end"]
+			return {
+				&"seg": run[&"seg"],
+				&"coord": run_start + remaining,
+				&"run_start": run_start,
+				&"run_end": run_end,
+			}
+		remaining -= run_len
+	var last_run: Dictionary = runs[runs.size() - 1]
+	return {
+		&"seg": last_run[&"seg"],
+		&"coord": last_run[&"end"],
+		&"run_start": last_run[&"start"],
+		&"run_end": last_run[&"end"],
+	}
 
 
 static func _is_shortcut_route_valid(
@@ -408,10 +521,33 @@ static func _diff_shortcut_chunk(
 	for cell: Vector2i in c_walk:
 		closed_walkable[cell] = true
 
+	var closed_spikes: Dictionary[Vector2i, bool] = {}
+	var c_spikes: Array[Vector2i] = closed_data[&"spikes"]
+	for cell: Vector2i in c_spikes:
+		closed_spikes[cell] = true
+
+	var closed_torches: Dictionary[Vector2i, Vector2i] = {}
+	var c_torches: Array[Vector2i] = closed_data[&"torches"]
+	var c_torch_atlas: Array[Vector2i] = closed_data[&"torch_atlas"]
+	for i: int in range(c_torches.size()):
+		closed_torches[c_torches[i]] = c_torch_atlas[i]
+
+	var closed_lights: Dictionary[Vector2i, bool] = {}
+	var c_lights: Array[Vector2i] = closed_data[&"lights"]
+	for cell: Vector2i in c_lights:
+		closed_lights[cell] = true
+
 	var chunk_floors: Array[Vector2i] = []
 	var chunk_erased_walls: Dictionary[Vector2i, bool] = {}
 	var chunk_walls: Array[Vector2i] = []
+	var chunk_spikes: Array[Vector2i] = []
+	var chunk_torches: Array[Vector2i] = []
+	var chunk_erased_torches: Dictionary[Vector2i, bool] = {}
+	var chunk_lights: Array[Vector2i] = []
+	var chunk_erased_lights: Dictionary[Vector2i, bool] = {}
 	var chunk_walkable: Array[Vector2i] = []
+	var added_wall_set: Dictionary[Vector2i, bool] = {}
+	var added_floor_set: Dictionary[Vector2i, bool] = {}
 
 	var open_wall_map: Dictionary[Vector2i, Vector2i] = {}
 	var o_walls: Array[Vector2i] = open_data[&"walls"]
@@ -423,6 +559,7 @@ static func _diff_shortcut_chunk(
 		if not closed_walls.has(wcell) or closed_walls[wcell] != watlas:
 			gate.tunnel_walls[wcell] = watlas
 			chunk_walls.append(wcell)
+			added_wall_set[wcell] = true
 
 	for wcell: Vector2i in closed_walls:
 		if not open_wall_map.has(wcell):
@@ -437,17 +574,142 @@ static func _diff_shortcut_chunk(
 		if not closed_floors.has(fcell) or closed_floors[fcell] != fatlas:
 			gate.tunnel_floors[fcell] = fatlas
 			chunk_floors.append(fcell)
+			added_floor_set[fcell] = true
 		if not open_wall_map.has(fcell) and not closed_walkable.has(fcell):
 			gate.tunnel_walkable.append(fcell)
 			chunk_walkable.append(fcell)
 
-	if not chunk_floors.is_empty() or not chunk_erased_walls.is_empty() or not chunk_walls.is_empty() or not chunk_walkable.is_empty():
+	var o_spikes: Array[Vector2i] = open_data[&"spikes"]
+	for scell: Vector2i in o_spikes:
+		if not closed_spikes.has(scell):
+			gate.tunnel_spikes.append(scell)
+			chunk_spikes.append(scell)
+
+	for tcell: Vector2i in closed_torches:
+		var tatlas: Vector2i = closed_torches[tcell]
+		var wall_broken: bool = chunk_erased_walls.has(tcell)
+		if not wall_broken and tatlas == TileClassifier.TORCH_SIDE:
+			wall_broken = chunk_erased_walls.has(tcell + Vector2i(-1, 0)) or chunk_erased_walls.has(tcell + Vector2i(1, 0))
+		if wall_broken:
+			gate.tunnel_erased_torches.append(tcell)
+			chunk_erased_torches[tcell] = true
+			if closed_lights.has(tcell):
+				gate.tunnel_erased_lights.append(tcell)
+				chunk_erased_lights[tcell] = true
+
+	var open_light_set: Dictionary[Vector2i, bool] = {}
+	var o_lights: Array[Vector2i] = open_data[&"lights"]
+	for lcell: Vector2i in o_lights:
+		open_light_set[lcell] = true
+
+	var o_torches: Array[Vector2i] = open_data[&"torches"]
+	var o_torch_atlas: Array[Vector2i] = open_data[&"torch_atlas"]
+	var o_torch_alt_ids: Array[int] = open_data[&"torch_alt_ids"]
+	for i: int in range(o_torches.size()):
+		var tcell: Vector2i = o_torches[i]
+		if closed_torches.has(tcell):
+			continue
+		if not added_wall_set.has(tcell) and not added_floor_set.has(tcell):
+			continue
+		gate.tunnel_torches[tcell] = o_torch_atlas[i]
+		gate.tunnel_torch_alt_ids[tcell] = o_torch_alt_ids[i]
+		chunk_torches.append(tcell)
+		if open_light_set.has(tcell) and not closed_lights.has(tcell):
+			gate.tunnel_lights.append(tcell)
+			chunk_lights.append(tcell)
+
+	var has_diff: bool = (
+		not chunk_floors.is_empty()
+		or not chunk_erased_walls.is_empty()
+		or not chunk_walls.is_empty()
+		or not chunk_spikes.is_empty()
+		or not chunk_torches.is_empty()
+		or not chunk_erased_torches.is_empty()
+		or not chunk_lights.is_empty()
+		or not chunk_erased_lights.is_empty()
+		or not chunk_walkable.is_empty()
+	)
+	if has_diff:
 		gate.tunnel_chunk_diffs[coord] = {
 			&"floors": chunk_floors,
 			&"erased_walls": chunk_erased_walls,
 			&"walls": chunk_walls,
+			&"spikes": chunk_spikes,
+			&"torches": chunk_torches,
+			&"erased_torches": chunk_erased_torches,
+			&"lights": chunk_lights,
+			&"erased_lights": chunk_erased_lights,
 			&"walkable": chunk_walkable,
 		}
+
+
+static func apply_baked_chunk_torches_and_lights(
+	data: Dictionary,
+	diff: Dictionary,
+	gate: SectorGatePlanner.SectorGate,
+) -> void:
+	var chunk_erased_torches: Dictionary[Vector2i, bool] = diff[&"erased_torches"]
+	var chunk_torches: Array[Vector2i] = diff[&"torches"]
+	var torches: Array[Vector2i] = data[&"torches"]
+	var torch_atlas: Array[Vector2i] = data[&"torch_atlas"]
+	var torch_alt_ids: Array[int] = data[&"torch_alt_ids"]
+
+	if not chunk_erased_torches.is_empty():
+		var write_idx: int = 0
+		for read_idx: int in range(torches.size()):
+			var tcell: Vector2i = torches[read_idx]
+			if chunk_erased_torches.has(tcell):
+				continue
+			if write_idx != read_idx:
+				torches[write_idx] = tcell
+				torch_atlas[write_idx] = torch_atlas[read_idx]
+				torch_alt_ids[write_idx] = torch_alt_ids[read_idx]
+			write_idx += 1
+		if write_idx < torches.size():
+			torches.resize(write_idx)
+			torch_atlas.resize(write_idx)
+			torch_alt_ids.resize(write_idx)
+
+	if not chunk_torches.is_empty():
+		var torch_idx_map: Dictionary[Vector2i, int] = {}
+		for i: int in range(torches.size()):
+			torch_idx_map[torches[i]] = i
+		for tcell: Vector2i in chunk_torches:
+			var tatlas: Vector2i = gate.tunnel_torches[tcell]
+			var talt: int = gate.tunnel_torch_alt_ids[tcell]
+			if torch_idx_map.has(tcell):
+				var idx: int = torch_idx_map[tcell]
+				torch_atlas[idx] = tatlas
+				torch_alt_ids[idx] = talt
+			else:
+				torch_idx_map[tcell] = torches.size()
+				torches.append(tcell)
+				torch_atlas.append(tatlas)
+				torch_alt_ids.append(talt)
+
+	var chunk_erased_lights: Dictionary[Vector2i, bool] = diff[&"erased_lights"]
+	var chunk_lights: Array[Vector2i] = diff[&"lights"]
+	var lights: Array[Vector2i] = data[&"lights"]
+	if not chunk_erased_lights.is_empty():
+		var l_write_idx: int = 0
+		for l_read_idx: int in range(lights.size()):
+			var lcell: Vector2i = lights[l_read_idx]
+			if chunk_erased_lights.has(lcell):
+				continue
+			if l_write_idx != l_read_idx:
+				lights[l_write_idx] = lcell
+			l_write_idx += 1
+		if l_write_idx < lights.size():
+			lights.resize(l_write_idx)
+
+	if not chunk_lights.is_empty():
+		var existing_lights: Dictionary[Vector2i, bool] = {}
+		for lcell: Vector2i in lights:
+			existing_lights[lcell] = true
+		for lcell: Vector2i in chunk_lights:
+			if not existing_lights.has(lcell):
+				existing_lights[lcell] = true
+				lights.append(lcell)
 
 
 static func verify_solvability(plan: WorldPlan) -> bool:

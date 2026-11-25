@@ -54,7 +54,6 @@ const SPIKE_DAMAGE_MAX_HP_RATIO: float = 0.15
 const SPIKE_HIT_COOLDOWN: float = 0.65
 
 const UNKNOWN_SCENE: PackedScene = preload("res://character/heroes/unknown/unknown.tscn")
-const COIN_SCENE: PackedScene = preload("res://coin/coin.tscn")
 const KEY_PICKUP_SCENE: PackedScene = preload("res://key_pickup/key_pickup.tscn")
 const LAVA_SLIME_SCENE: PackedScene = preload("res://character/enemies/lava_slime/lava_slime.tscn")
 const SKELETON_SCENE: PackedScene = preload("res://character/enemies/skeleton/skeleton.tscn")
@@ -129,7 +128,7 @@ func _ready() -> void:
 	_map.secret_torches_completed.connect(_on_secret_torches_completed)
 	_map.door_unlocked.connect(_on_door_unlocked)
 	_map.locked_door_bumped.connect(_on_locked_door_bumped)
-	_map.shortcut_opened.connect(_potion_manager.on_shortcut_opened.bind(_map))
+	_map.shortcut_opened.connect(_potion_manager.on_shortcut_opened.bind(_map, _coins))
 	_potion_manager.setup(_characters, _projectiles, _hud, HEAL_EFFECT_SCENE)
 	await _map.generate_map()
 
@@ -265,6 +264,8 @@ func _spawn_initial_characters() -> void:
 		key_node.setup(gate.color)
 		_keys.append(key_node)
 
+	_potion_manager.spawn_cell_pickups(_map.plan.corridor_coin_cells, _map.plan.corridor_potion_spawns, _map, _coins)
+
 
 func _spawn_companions_for_room(room: Rect2i) -> void:
 	if (_squad.size() + _unrecruited_characters.size()) >= MAX_CHARACTERS:
@@ -286,15 +287,7 @@ func _spawn_recruit_at(pos: Vector2) -> Unknown:
 
 
 func _spawn_pickups_for_room(room: Rect2i, include_event_reward: bool = false) -> void:
-	var pickups: Dictionary = _map.get_room_pickups(room, include_event_reward)
-	var coin_positions: Array[Vector2] = pickups[&"coins"]
-	for pos: Vector2 in coin_positions:
-		var coin: Coin = COIN_SCENE.instantiate() as Coin
-		_characters.add_child(coin)
-		coin.position = pos
-		_coins.append(coin)
-	var potion_spawns: Array[Dictionary] = pickups[&"potions"]
-	_potion_manager.spawn_list(potion_spawns)
+	_potion_manager.spawn_pickups(_map.get_room_pickups(room, include_event_reward), _coins)
 
 
 func _check_pickups() -> void:

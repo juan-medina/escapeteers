@@ -5,6 +5,7 @@ class_name PotionManager
 extends RefCounted
 
 const POTION_SCENE: PackedScene = preload("res://potion/potion_pickup.tscn")
+const COIN_SCENE: PackedScene = preload("res://coin/coin.tscn")
 const MAX_HEAL_VFX_PER_TICK: int = 6
 
 var _characters: Node2D = null
@@ -46,10 +47,35 @@ func spawn_list(spawns: Array[Dictionary]) -> void:
 		spawn_at(pos, potion_type)
 
 
-func on_shortcut_opened(color: WorldPlan.KeyColor, map: Map) -> void:
+func spawn_pickups(pickups: Dictionary, coins: Array[Coin]) -> void:
+	var coin_positions: Array[Vector2] = pickups[&"coins"]
+	for pos: Vector2 in coin_positions:
+		_spawn_coin_at(pos, coins)
+	var potion_spawns: Array[Dictionary] = pickups[&"potions"]
+	spawn_list(potion_spawns)
+
+
+func spawn_cell_pickups(coin_cells: Array[Vector2i], potion_spawns: Array[Dictionary], map: Map, coins: Array[Coin]) -> void:
+	for cell: Vector2i in coin_cells:
+		_spawn_coin_at(map.map_to_local(cell), coins)
+	for item: Dictionary in potion_spawns:
+		var cell: Vector2i = item[&"cell"]
+		var potion_type: PotionPickup.PotionType = item[&"type"]
+		spawn_at(map.map_to_local(cell), potion_type)
+
+
+func _spawn_coin_at(pos: Vector2, coins: Array[Coin]) -> void:
+	var coin: Coin = COIN_SCENE.instantiate() as Coin
+	_characters.add_child(coin)
+	coin.position = pos
+	coins.append(coin)
+
+
+func on_shortcut_opened(color: WorldPlan.KeyColor, map: Map, coins: Array[Coin]) -> void:
 	_hud.notify_shortcut_opened(color)
 	for gate: SectorGatePlanner.SectorGate in map.plan.sector_gates:
 		if gate.color == color and gate.has_shortcut:
+			spawn_cell_pickups(gate.shortcut_coin_cells, gate.shortcut_potion_spawns, map, coins)
 			if gate.key_room == gate.shortcut_target_room or gate.shortcut_wall_cells.size() < 2:
 				return
 			var pos_a: Vector2 = map.map_to_local(gate.shortcut_wall_cells[0] + Vector2i(0, -2))
