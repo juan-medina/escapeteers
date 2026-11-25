@@ -38,6 +38,7 @@ const LABEL_COLOR_CAUTION: Color = Color(1.0, 0.82, 0.32, 0.95)
 const LABEL_COLOR_DANGER: Color = Color(1.0, 0.38, 0.35, 0.95)
 const LABEL_COLOR_CLEARED: Color = Color(0.55, 0.62, 0.70, 0.50)
 const LABEL_COLOR_START: Color = Color(0.70, 0.88, 1.0, 0.80)
+const LABEL_COLOR_EVENT: Color = Color(1.0, 0.38, 0.65, 0.95)
 const HUD_EDGE_MARGIN_LEFT: float = 22.0
 const HUD_EDGE_MARGIN_RIGHT: float = 22.0
 const HUD_EDGE_MARGIN_TOP: float = 38.0
@@ -276,6 +277,8 @@ func get_room_color(room: Rect2i) -> Color:
 		return LABEL_COLOR_START
 	if _cleared_rooms.has(room):
 		return LABEL_COLOR_CLEARED
+	if _plan.is_event_room(room):
+		return LABEL_COLOR_EVENT
 	var diff: int = clampi(depth, 1, 12) - _squad_level
 	if diff <= 0:
 		return LABEL_COLOR_SAFE
@@ -762,7 +765,8 @@ func _build_room_labels(plan: WorldPlan) -> void:
 		pool_idx += 1
 
 	for room: Rect2i in plan.rooms:
-		var level_text: String = &"Lv.%d" % clampi(plan.get_room_depth(room), 1, 12)
+		var depth_val: int = clampi(plan.get_room_depth(room), 1, 12)
+		var level_text: String = (&"! Lv.%d" % depth_val) if plan.is_event_room(room) else (&"Lv.%d" % depth_val)
 		_register_room_label(room, level_text, pool_idx)
 		pool_idx += 1
 

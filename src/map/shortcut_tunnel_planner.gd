@@ -319,6 +319,7 @@ static func _create_empty_baked_chunk() -> Dictionary:
 		&"floors": [] as Array[Vector2i],
 		&"floor_atlas": [] as Array[Vector2i],
 		&"spikes": [] as Array[Vector2i],
+		&"event_spikes": [] as Array[Vector2i],
 		&"walls": [] as Array[Vector2i],
 		&"wall_atlas": [] as Array[Vector2i],
 		&"wall_alt_ids": [] as Array[int],

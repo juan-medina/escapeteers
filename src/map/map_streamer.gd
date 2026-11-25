@@ -316,6 +316,7 @@ func _store_empty_chunk(coord: Vector2i) -> void:
 	_loaded_chunks[coord] = {
 		&"floors": [] as Array[Vector2i],
 		&"spikes": [] as Array[Vector2i],
+		&"event_spikes": [] as Array[Vector2i],
 		&"walls": [] as Array[Vector2i],
 		&"torches": [] as Array[Vector2i],
 		&"lights": [] as Array[Vector2i],
@@ -326,9 +327,19 @@ func _store_empty_chunk(coord: Vector2i) -> void:
 
 func _commit_loaded_job(job: StreamJob) -> void:
 	var data: Dictionary = job.data
+	var event_spikes: Array[Vector2i] = data[&"event_spikes"]
+	for spos: Vector2i in event_spikes:
+		var event_room: Rect2i = _plan.event_spike_cell_rooms.get(spos, Rect2i())
+		var hazard: ClosingSpikeHazard = _plan.closing_spike_hazards.get(event_room, null)
+		if hazard != null:
+			var frame_idx: int = hazard.get_cell_frame(spos)
+			if frame_idx > 0:
+				var tile_set: int = _plan.spike_tile_sets.get(spos, 1)
+				_floor.set_cell(spos, TileClassifier.TILE_SET_SOURCE_ID, TileClassifier.get_blood_spike_frame(frame_idx, tile_set))
 	_loaded_chunks[job.coord] = {
 		&"floors": data[&"floors"],
 		&"spikes": data[&"spikes"],
+		&"event_spikes": event_spikes,
 		&"walls": data[&"walls"],
 		&"torches": data[&"torches"],
 		&"lights": job.spawned_lights,

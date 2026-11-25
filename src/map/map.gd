@@ -113,6 +113,12 @@ func get_enemy_spawn_positions_for_room(room: Rect2i, count: int) -> Array[Vecto
 	var max_x: int = room.position.x + room.size.x - margin - 1
 	var min_y: int = room.position.y + margin
 	var max_y: int = room.position.y + room.size.y - margin - 1
+	if plan.closing_spike_hazards.has(room):
+		var safe: Rect2i = plan.closing_spike_hazards[room].safe_rect
+		min_x = safe.position.x
+		max_x = safe.end.x - 1
+		min_y = safe.position.y
+		max_y = safe.end.y - 1
 
 	if min_x > max_x or min_y > max_y:
 		min_x = room.position.x + 1
@@ -234,7 +240,8 @@ func update_streaming(player_world_pos: Vector2, player_velocity: Vector2) -> vo
 	_check_secret_torch_proximity(player_world_pos)
 
 
-func update_spikes(delta: float) -> void:
+func update_spikes(delta: float, player_cell: Vector2i = Vector2i(2147483647, 2147483647)) -> void:
+	_update_event_hazards(delta, player_cell)
 	_spike_elapsed += delta
 	var changed_groups: Dictionary[int, int] = {}
 	var step_offset: float = SPIKE_CYCLE_DURATION / float(WorldPlan.SPIKE_PHASE_GROUPS)
@@ -258,10 +265,38 @@ func update_spikes(delta: float) -> void:
 
 
 func is_spike_active_at(cell: Vector2i) -> bool:
+	if plan.event_spike_cell_rooms.has(cell):
+		var event_room: Rect2i = plan.event_spike_cell_rooms[cell]
+		var hazard: ClosingSpikeHazard = plan.closing_spike_hazards.get(event_room, null)
+		if hazard != null and hazard.is_cell_active(cell):
+			return true
 	if not _loaded_spikes.has(cell):
 		return false
 	var group_id: int = _loaded_spikes[cell]
 	return group_id >= 0 and group_id < _group_frames.size() and _group_frames[group_id] == 3
+
+
+func _update_event_hazards(delta: float, player_cell: Vector2i) -> void:
+	if player_cell.x == 2147483647:
+		return
+	for hazard: ClosingSpikeHazard in plan.closing_spike_hazards.values():
+		hazard.update_player_presence(delta, player_cell)
+		var result: Dictionary = hazard.update(delta)
+		if result[&"telegraph_started"]:
+			Audio.play_sfx(Audio.Sfx.TELEGRAPH)
+		if result[&"snapped_active"]:
+			Audio.play_sfx(Audio.Sfx.SPIKE_TRAP)
+		var changed_rings: Array[int] = result[&"changed_rings"]
+		for ring_idx: int in changed_rings:
+			_apply_event_spike_ring(hazard, ring_idx)
+
+
+func _apply_event_spike_ring(hazard: ClosingSpikeHazard, ring_idx: int) -> void:
+	var ring: ClosingSpikeHazard.SpikeRing = hazard.rings[ring_idx]
+	for cell: Vector2i in ring.cells:
+		if _walkable_cells.has(cell):
+			var tile_set: int = plan.spike_tile_sets.get(cell, 1)
+			_floor.set_cell(cell, TileClassifier.TILE_SET_SOURCE_ID, TileClassifier.get_blood_spike_frame(ring.frame, tile_set))
 
 
 static func _get_spike_frame_for_time(t: float) -> int:
@@ -786,10 +821,18 @@ func _setup_secret_torches() -> void:
 		light_manager.set_light_blinking(_secret_torch_cells[0], true)
 
 
-func get_room_pickups(room: Rect2i) -> Dictionary:
+func get_room_pickups(room: Rect2i, include_event_reward: bool = false) -> Dictionary:
 	var coins: Array[Vector2] = []
 	var potions: Array[Dictionary] = []
 	if room == hero_room or room.size.x < 8 or room.size.y < 8:
+		return {&"coins": coins, &"potions": potions}
+
+	if plan.is_event_room(room):
+		if include_event_reward:
+			var center_world: Vector2 = _floor.map_to_local(room.get_center())
+			coins.append(clamp_to_walkable(center_world + Vector2(-12.0, 0.0)))
+			var potion_pos: Vector2 = clamp_to_walkable(center_world + Vector2(12.0, 0.0))
+			potions.append({&"pos": potion_pos, &"type": _roll_potion_type(room, 37, 71)})
 		return {&"coins": coins, &"potions": potions}
 
 	var coin_roll: int = TileClassifier.cell_hash(plan.run_seed, room.position.x, room.position.y) % 100
@@ -802,17 +845,20 @@ func get_room_pickups(room: Rect2i) -> Dictionary:
 	if room == _guaranteed_potion_room or float(potion_roll) < POTION_ROOM_CHANCE * 100.0:
 		var potion_cell: Vector2i = _find_potion_cell_for_room(room)
 		if potion_cell.x != 2147483647:
-			var type_roll: int = TileClassifier.cell_hash(plan.run_seed, room.position.x + 13, room.position.y + 29) % 100
-			var potion_type: PotionPickup.PotionType = PotionPickup.PotionType.XP
-			if type_roll < 35:
-				potion_type = PotionPickup.PotionType.HEALTH
-			elif type_roll < 55:
-				potion_type = PotionPickup.PotionType.HASTE
-			elif type_roll < 75:
-				potion_type = PotionPickup.PotionType.FURY
-			potions.append({&"pos": _floor.map_to_local(potion_cell), &"type": potion_type})
+			potions.append({&"pos": _floor.map_to_local(potion_cell), &"type": _roll_potion_type(room, 13, 29)})
 
 	return {&"coins": coins, &"potions": potions}
+
+
+func _roll_potion_type(room: Rect2i, seed_x_off: int, seed_y_off: int) -> PotionPickup.PotionType:
+	var type_roll: int = TileClassifier.cell_hash(plan.run_seed, room.position.x + seed_x_off, room.position.y + seed_y_off) % 100
+	if type_roll < 35:
+		return PotionPickup.PotionType.HEALTH
+	if type_roll < 55:
+		return PotionPickup.PotionType.HASTE
+	if type_roll < 75:
+		return PotionPickup.PotionType.FURY
+	return PotionPickup.PotionType.XP
 
 
 func _find_coin_cell_for_room(room: Rect2i) -> Vector2i:

@@ -40,6 +40,12 @@ const SPIKE_FRAMES: Array[Vector2i] = [
 	Vector2i(2, 9),
 	Vector2i(3, 9),
 ]
+const BLOOD_SPIKE_FRAMES: Array[Vector2i] = [
+	Vector2i(0, 9),
+	Vector2i(0, 10),
+	Vector2i(1, 10),
+	Vector2i(2, 10),
+]
 const FLOOR_PLATE_VARIANTS: Array[Vector2i] = [
 	Vector2i(4, 9),
 	Vector2i(5, 9),
@@ -107,6 +113,10 @@ static func get_floor_atlas(run_seed: int, gx: int, gy: int, tile_set: int = 0) 
 
 static func get_spike_frame(frame_idx: int, tile_set: int = 0) -> Vector2i:
 	return _apply_set_offset(SPIKE_FRAMES[frame_idx], tile_set)
+
+
+static func get_blood_spike_frame(frame_idx: int, tile_set: int = 0) -> Vector2i:
+	return _apply_set_offset(BLOOD_SPIKE_FRAMES[clampi(frame_idx, 0, BLOOD_SPIKE_FRAMES.size() - 1)], tile_set)
 
 
 static func get_floor_plate_atlas(plate_idx: int, tile_set: int = 0) -> Vector2i:
@@ -222,6 +232,7 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan) 
 	var out_floors: Array[Vector2i] = []
 	var out_floor_atlas: Array[Vector2i] = []
 	var out_spikes: Array[Vector2i] = []
+	var out_event_spikes: Array[Vector2i] = []
 	var out_walls: Array[Vector2i] = []
 	var out_wall_atlas: Array[Vector2i] = []
 	var out_wall_alt_ids: Array[int] = []
@@ -302,7 +313,10 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan) 
 				var tile_set: int = plan.get_cell_tile_set(gpos)
 				if is_f:
 					out_floors.append(gpos)
-					if wall_coords.x == -1 and plan.is_spike_cell(gpos):
+					if wall_coords.x == -1 and plan.event_spike_cell_rooms.has(gpos):
+						out_floor_atlas.append(get_blood_spike_frame(0, tile_set))
+						out_event_spikes.append(gpos)
+					elif wall_coords.x == -1 and plan.is_spike_cell(gpos):
 						out_floor_atlas.append(get_spike_frame(0, tile_set))
 						out_spikes.append(gpos)
 					elif wall_coords.x == -1:
@@ -369,6 +383,7 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan) 
 									not plan.no_prop_cells.has(cand_left)
 									and not plan.has_candle_post_near(cand_left, 64)
 									and not plan.is_spike_cell(cand_left)
+									and not plan.event_spike_cell_rooms.has(cand_left)
 									and not _is_near_any(cand_left, out_lights, MIN_TORCH_DIST_SQ)
 								):
 									left_candidates.append(cand_left)
@@ -380,6 +395,7 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan) 
 									not plan.no_prop_cells.has(cand_right)
 									and not plan.has_candle_post_near(cand_right, 64)
 									and not plan.is_spike_cell(cand_right)
+									and not plan.event_spike_cell_rooms.has(cand_right)
 									and not _is_near_any(cand_right, out_lights, MIN_TORCH_DIST_SQ)
 								):
 									right_candidates.append(cand_right)
@@ -417,6 +433,7 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan) 
 		&"floors": out_floors,
 		&"floor_atlas": out_floor_atlas,
 		&"spikes": out_spikes,
+		&"event_spikes": out_event_spikes,
 		&"walls": out_walls,
 		&"wall_atlas": out_wall_atlas,
 		&"wall_alt_ids": out_wall_alt_ids,

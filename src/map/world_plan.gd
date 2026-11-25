@@ -36,6 +36,11 @@ enum FloorPattern {
 	PILLAR_PLINTHS,
 }
 
+enum RoomEventType {
+	NONE,
+	CLOSING_SPIKES,
+}
+
 const WORLD_SIZE_TILES: int = 4096
 const HALF_WORLD_SIZE: int = 2048
 
@@ -67,6 +72,9 @@ var closed_shortcut_walls: Dictionary[Vector2i, bool] = {}
 var lever_cells: Dictionary[Vector2i, KeyColor] = {}
 var no_prop_cells: Dictionary[Vector2i, bool] = {}
 var protected_neck_rects: Array[Rect2i] = []
+var room_event_types: Dictionary[Rect2i, RoomEventType] = {}
+var closing_spike_hazards: Dictionary[Rect2i, ClosingSpikeHazard] = {}
+var event_spike_cell_rooms: Dictionary[Vector2i, Rect2i] = {}
 
 var _room_depths: Dictionary[Rect2i, int] = {}
 var _room_sectors: Dictionary[Rect2i, int] = {}
@@ -114,6 +122,9 @@ func generate(seed_val: int = 0, max_depth: int = 12) -> void:
 	lever_cells.clear()
 	no_prop_cells.clear()
 	protected_neck_rects.clear()
+	room_event_types.clear()
+	closing_spike_hazards.clear()
+	event_spike_cell_rooms.clear()
 	_room_grid.clear()
 	_room_depths.clear()
 	_room_sectors.clear()
@@ -191,6 +202,10 @@ func get_room_archetype(room: Rect2i) -> RoomArchetype:
 	if _room_archetypes.has(room):
 		return _room_archetypes[room]
 	return RoomArchetype.SLIME_PIT
+
+
+func is_event_room(room: Rect2i) -> bool:
+	return room_event_types.get(room, RoomEventType.NONE) != RoomEventType.NONE
 
 
 func are_all_doors_unlocked(color: KeyColor) -> bool:

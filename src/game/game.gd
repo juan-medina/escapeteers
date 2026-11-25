@@ -198,7 +198,7 @@ func _process(delta: float) -> void:
 			_update_map_streaming()
 		_map.update_streaming(_character.global_position, _character.velocity)
 
-	_map.update_spikes(delta)
+	_map.update_spikes(delta, _map.local_to_map(_character.global_position) if not _character.is_dead else Vector2i(2147483647, 2147483647))
 	var potion_xp: float = _potion_manager.update_buffs(delta, _squad, _character)
 	if potion_xp > 0.0:
 		_add_squad_xp(potion_xp)
@@ -242,8 +242,8 @@ func _check_room_entry() -> void:
 
 	var room_level: int = clampi(_map.get_room_depth(room), 1, 12)
 	var remaining: int = _room_remaining_enemies.get(room, _map.get_room_enemy_quota(room))
-	var archetype_name: StringName = RoomLayout.get_archetype_title(_map.plan.get_room_archetype(room))
-	var title: String = &"%s - Lv. %d" % [archetype_name, room_level]
+	var arch: StringName = RoomLayout.get_archetype_title(_map.plan.get_room_archetype(room))
+	var title: String = &"Blood Spike Arena - Lv. %d" % room_level if _map.plan.is_event_room(room) else &"%s - Lv. %d" % [arch, room_level]
 	_hud.notify_room_entered(room, title, remaining <= 0)
 
 
@@ -285,8 +285,8 @@ func _spawn_recruit_at(pos: Vector2) -> Unknown:
 	return ch
 
 
-func _spawn_pickups_for_room(room: Rect2i) -> void:
-	var pickups: Dictionary = _map.get_room_pickups(room)
+func _spawn_pickups_for_room(room: Rect2i, include_event_reward: bool = false) -> void:
+	var pickups: Dictionary = _map.get_room_pickups(room, include_event_reward)
 	var coin_positions: Array[Vector2] = pickups[&"coins"]
 	for pos: Vector2 in coin_positions:
 		var coin: Coin = COIN_SCENE.instantiate() as Coin
@@ -583,6 +583,11 @@ func _on_enemy_died(enemy: Enemy) -> void:
 			_room_remaining_enemies[room] = maxi(0, _room_remaining_enemies[room] - 1)
 			if _room_remaining_enemies[room] <= 0:
 				_hud.set_room_cleared(room, true)
+				if _map.plan.closing_spike_hazards.has(room) and not _map.plan.closing_spike_hazards[room].is_cleared:
+					_map.plan.closing_spike_hazards[room].clear()
+					_spawn_pickups_for_room(room, true)
+					Audio.play_sfx(Audio.Sfx.SECRET_TORCH)
+					_hud.show_event_toast(&"Arena Cleared! Reward Dropped", Color(1.0, 0.85, 0.35, 1.0))
 		_decrement_room_count(_room_spawned_enemies, room)
 	_add_squad_xp(enemy.xp_value)
 	_reset_combat_cooldown()
