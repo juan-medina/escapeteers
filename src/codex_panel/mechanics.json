@@ -114,7 +114,7 @@
 			{
 				"name": "Dungeon Map",
 				"color": "#a8e6cf",
-				"text": "Open the map to survey explored rooms, danger levels, remaining foes, keys, and sealed doors."
+				"text": "Open the map to survey explored rooms, danger levels, keys, and sealed doors."
 			}
 		]
 	}

@@ -174,9 +174,8 @@ func show_event_toast(title: String, color: Color) -> void:
 	_show_toast(title, color)
 
 
-func notify_room_entered(room: Rect2i, title: String, is_cleared: bool) -> void:
+func notify_room_entered(room: Rect2i, title: String) -> void:
 	_map_overlay.mark_room_discovered(room)
-	_map_overlay.set_room_cleared(room, is_cleared)
 
 	var color: Color = _map_overlay.get_room_color(room)
 	color.a = 1.0
@@ -202,10 +201,6 @@ func _show_toast(title: String, color: Color) -> void:
 	_room_toast_tween.tween_interval(ROOM_TOAST_HOLD)
 	_room_toast_tween.tween_property(_room_toast, ^"modulate:a", 0.0, ROOM_TOAST_FADE_OUT)
 	_room_toast_tween.tween_callback(_room_toast.hide)
-
-
-func set_room_cleared(room: Rect2i, is_cleared: bool) -> void:
-	_map_overlay.set_room_cleared(room, is_cleared)
 
 
 func dismiss_movement_hint() -> void:

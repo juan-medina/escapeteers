@@ -32,6 +32,8 @@ const SLEEP_HALF_EXTENT: Vector2 = Vector2(384.0, 244.0)
 const CHASE_SLEEP_HALF_EXTENT: Vector2 = Vector2(416.0, 276.0)
 const BLOCKER_SCAN_INTERVAL: float = 0.10
 const BLOCKER_SCAN_JITTER: float = 0.05
+const PATROL_XP_MULTIPLIER: float = 0.25
+const PATROL_HP_MULTIPLIER: float = 0.80
 
 static var active_enemies: Array[Enemy] = []
 
@@ -56,6 +58,7 @@ var summon_range: float = 180.0
 var summon_count: int = 2
 var kite_distance: float = 0.0
 var is_minion: bool = false
+var is_patrol_respawn: bool = false
 
 var current_state: State = State.PATROL
 var map: Map = null
@@ -654,16 +657,21 @@ func _pick_new_patrol_destination() -> void:
 	_patrol_destination = map.clamp_to_walkable(global_position + local_offset)
 
 
-func set_level(new_level: int) -> void:
-	if level == new_level and not combat_actions.is_empty():
+func set_level(new_level: int, is_patrol: bool = false) -> void:
+	if level == new_level and is_patrol_respawn == is_patrol and not combat_actions.is_empty():
 		health = max_health
 		_health_bar.set_level(level)
 		_health_bar.update_health(health, max_health)
 		return
 	level = new_level
+	is_patrol_respawn = is_patrol
 	if enemy_id != &"":
 		var data: EnemyData = EnemyData.get_enemy(enemy_id)
 		data.apply_to_enemy(self, level)
+	if is_patrol_respawn:
+		max_health = maxf(15.0, roundf(max_health * PATROL_HP_MULTIPLIER))
+		health = max_health
+		xp_value = maxf(1.0, roundf(xp_value * PATROL_XP_MULTIPLIER))
 	if combat_actions.is_empty():
 		_setup_actions()
 	else:
@@ -735,9 +743,10 @@ func deactivate_for_pool() -> void:
 
 func reset_for_pool() -> void:
 	scale = Vector2.ONE
-	if is_minion:
+	if is_minion or is_patrol_respawn:
 		level = -1
 	is_minion = false
+	is_patrol_respawn = false
 	health = max_health
 	is_dead = false
 	_is_summoning_in = false

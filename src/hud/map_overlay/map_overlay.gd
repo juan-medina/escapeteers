@@ -4,6 +4,33 @@
 class_name MapOverlay
 extends Control
 
+
+class RoomLabelEntry:
+	extends RefCounted
+	var room: Rect2i
+	var label: Label
+	var world_center: Vector2
+	var depth: int
+	var is_event: bool
+	var active_event: bool
+	var last_color: Color = Color(0.0, 0.0, 0.0, 0.0)
+
+	func _init(
+		entry_room: Rect2i,
+		entry_label: Label,
+		entry_center: Vector2,
+		entry_depth: int,
+		entry_is_event: bool,
+		entry_active_event: bool,
+	) -> void:
+		room = entry_room
+		label = entry_label
+		world_center = entry_center
+		depth = entry_depth
+		is_event = entry_is_event
+		active_event = entry_active_event
+
+
 const TILE_SIZE: float = 16.0
 const CHUNK_SIZE_TILES: int = 2
 const CHUNK_SIZE_PX: float = float(CHUNK_SIZE_TILES) * TILE_SIZE
@@ -24,7 +51,6 @@ const LABEL_HALF_SIZE: Vector2 = Vector2(16.0, 8.0)
 const LABEL_COLOR_SAFE: Color = Color(0.55, 0.95, 0.62, 1.0)
 const LABEL_COLOR_CAUTION: Color = Color(1.0, 0.82, 0.32, 1.0)
 const LABEL_COLOR_DANGER: Color = Color(1.0, 0.38, 0.35, 1.0)
-const LABEL_COLOR_CLEARED: Color = Color(0.45, 0.52, 0.60, 1.0)
 const LABEL_COLOR_START: Color = Color(0.70, 0.88, 1.0, 1.0)
 const LABEL_COLOR_EVENT: Color = Color(1.0, 0.38, 0.65, 1.0)
 const PLAYER_PULSE_COLOR_A: Color = Color(0.22, 0.72, 0.88, 1.0)
@@ -48,10 +74,9 @@ var _squad_level: int = 1
 var _revealed_chunks: Dictionary[Vector2i, bool] = {}
 var _explored_chunks: Dictionary[Vector2i, bool] = {}
 var _discovered_rooms: Dictionary[Rect2i, bool] = {}
-var _cleared_rooms: Dictionary[Rect2i, bool] = {}
-var _room_labels: Dictionary[Rect2i, Label] = {}
-var _room_world_centers: Dictionary[Rect2i, Vector2] = {}
+var _discovered_labels: Array[RoomLabelEntry] = []
 var _label_pool: Array[Label] = []
+var _next_label_pool_idx: int = 0
 var _last_revealed_chunk: Vector2i = Vector2i(2147483647, 2147483647)
 var _zoom_px_per_tile: float = DEFAULT_ZOOM
 var _target_zoom: float = DEFAULT_ZOOM
@@ -245,6 +270,7 @@ func set_map_visible(is_vis: bool) -> void:
 			_is_recentering = false
 			if _dirty:
 				_rebuild_meshes()
+			_refresh_discovered_labels()
 			_update_zoom_label()
 			_update_view()
 	else:
@@ -261,25 +287,37 @@ func set_map_visible(is_vis: bool) -> void:
 
 
 func mark_room_discovered(room: Rect2i) -> void:
-	if _room_labels.has(room) and not _discovered_rooms.has(room):
-		_discovered_rooms[room] = true
-		_update_room_label(room)
+	if _plan == null or room.size == Vector2i.ZERO or _discovered_rooms.has(room):
+		return
+	_discovered_rooms[room] = true
 
-
-func set_room_cleared(room: Rect2i, is_cleared: bool) -> void:
-	if is_cleared:
-		_cleared_rooms[room] = true
+	var label: Label
+	if _next_label_pool_idx < _label_pool.size():
+		label = _label_pool[_next_label_pool_idx]
 	else:
-		_cleared_rooms.erase(room)
-	_update_room_label(room)
+		label = ROOM_LABEL_SCENE.instantiate() as Label
+		_label_pool.append(label)
+		_room_labels_container.add_child(label)
+	_next_label_pool_idx += 1
+
+	var is_start: bool = room == _plan.hero_room
+	var depth: int = 0 if is_start else clampi(_plan.get_room_depth(room), 1, 12)
+	var is_event: bool = _plan.is_event_room(room)
+	var active_event: bool = _is_active_event_room(room)
+	var world_center: Vector2 = (Vector2(room.position) + Vector2(room.size) * 0.5) * TILE_SIZE
+	label.visible = false
+	label.text = "Start" if depth <= 0 else (("! Lv.%d" % depth) if active_event else ("Lv.%d" % depth))
+	_discovered_labels.append(RoomLabelEntry.new(room, label, world_center, depth, is_event, active_event))
+	if visible:
+		_refresh_discovered_labels()
 
 
 func set_squad_level(squad_level: int) -> void:
 	if _squad_level == squad_level:
 		return
 	_squad_level = squad_level
-	for room: Rect2i in _discovered_rooms:
-		_update_room_label(room)
+	if visible:
+		_refresh_discovered_labels()
 
 
 func set_key_state(color: WorldPlan.KeyColor, collected: bool, _used: bool) -> void:
@@ -323,11 +361,13 @@ func notify_shortcut_opened(color: WorldPlan.KeyColor) -> void:
 
 func get_room_color(room: Rect2i) -> Color:
 	var depth: int = _plan.get_room_depth(room)
+	return _color_for_room(depth, _is_active_event_room(room))
+
+
+func _color_for_room(depth: int, active_event: bool) -> Color:
 	if depth <= 0:
 		return LABEL_COLOR_START
-	if _cleared_rooms.has(room):
-		return LABEL_COLOR_CLEARED
-	if _plan.is_event_room(room):
+	if active_event:
 		return LABEL_COLOR_EVENT
 	var diff: int = clampi(depth, 1, 12) - _squad_level
 	if diff <= 0:
@@ -335,6 +375,26 @@ func get_room_color(room: Rect2i) -> Color:
 	if diff == 1:
 		return LABEL_COLOR_CAUTION
 	return LABEL_COLOR_DANGER
+
+
+func _is_active_event_room(room: Rect2i) -> bool:
+	if _plan == null or not _plan.is_event_room(room):
+		return false
+	var hazard: ClosingSpikeHazard = _plan.closing_spike_hazards.get(room, null)
+	return hazard == null or not hazard.is_cleared
+
+
+func _refresh_discovered_labels() -> void:
+	for entry: RoomLabelEntry in _discovered_labels:
+		if entry.is_event:
+			var is_active: bool = _is_active_event_room(entry.room)
+			if is_active != entry.active_event:
+				entry.active_event = is_active
+				entry.label.text = (&"! Lv.%d" % entry.depth) if is_active else (&"Lv.%d" % entry.depth)
+		var color: Color = _color_for_room(entry.depth, entry.active_event)
+		if color != entry.last_color:
+			entry.last_color = color
+			entry.label.add_theme_color_override(&"font_color", color)
 
 
 func _on_map_viewport_gui_input(event: InputEvent) -> void:
@@ -567,29 +627,22 @@ func _update_view() -> void:
 			var world_pos: Vector2 = entry[&"world_pos"]
 			marker.position = viewport_center + (world_pos * map_scale).round() - cam_scaled
 
-	for room: Rect2i in _room_labels:
-		var label: Label = _room_labels[room]
-		var show_label: bool = _should_show_room_label(room)
-		label.visible = show_label
-		if show_label:
-			var world_center: Vector2 = _room_world_centers[room]
-			label.position = viewport_center + (world_center * map_scale).round() - cam_scaled - LABEL_HALF_SIZE
+	var vp_size: Vector2 = _map_viewport.size
+	var show_all_labels: bool = _zoom_px_per_tile >= LABEL_ALL_MIN_ZOOM
+	for entry: RoomLabelEntry in _discovered_labels:
+		var show_label: bool = show_all_labels or entry.depth <= 0 or entry.active_event
+		if not show_label:
+			entry.label.visible = false
+			continue
+		var pos: Vector2 = viewport_center + (entry.world_center * map_scale).round() - cam_scaled - LABEL_HALF_SIZE
+		var on_viewport: bool = pos.x >= -32.0 and pos.x <= vp_size.x and pos.y >= -16.0 and pos.y <= vp_size.y
+		entry.label.visible = on_viewport
+		if on_viewport:
+			entry.label.position = pos
 
 	_player_marker.position = viewport_center + (_target.global_position * map_scale).round() - cam_scaled
 	if _target.velocity.length_squared() > 0.01:
 		_player_marker.rotation = _target.velocity.angle()
-
-
-func _should_show_room_label(room: Rect2i) -> bool:
-	if not _discovered_rooms.has(room):
-		return false
-	if _zoom_px_per_tile >= LABEL_ALL_MIN_ZOOM:
-		return true
-	if _plan == null:
-		return true
-	if room == _plan.hero_room:
-		return true
-	return _plan.is_event_room(room) and not _cleared_rooms.has(room)
 
 
 func _update_discovery() -> void:
@@ -661,9 +714,10 @@ func _build_chunks(plan: WorldPlan) -> void:
 	_revealed_min_chunk = Vector2i.ZERO
 	_revealed_max_chunk = Vector2i.ZERO
 	_discovered_rooms.clear()
-	_cleared_rooms.clear()
-	_room_labels.clear()
-	_room_world_centers.clear()
+	_discovered_labels.clear()
+	_next_label_pool_idx = 0
+	for label: Label in _label_pool:
+		label.visible = false
 	_opened_shortcuts.clear()
 	_collected_keys.clear()
 	_door_entries.clear()
@@ -694,7 +748,6 @@ func _build_chunks(plan: WorldPlan) -> void:
 	_visibility.setup(plan)
 	map_scale = _zoom_px_per_tile / TILE_SIZE
 	_chunks_container.scale = Vector2(map_scale, map_scale)
-	_build_room_labels(plan)
 	_build_gate_markers_and_opened_tunnels(plan)
 
 
@@ -855,44 +908,3 @@ func _update_hud_indicator(
 
 static func _cell_to_map_chunk(cell: Vector2i) -> Vector2i:
 	return Vector2i(floori(float(cell.x) / float(CHUNK_SIZE_TILES)), floori(float(cell.y) / float(CHUNK_SIZE_TILES)))
-
-
-func _build_room_labels(plan: WorldPlan) -> void:
-	var pool_idx: int = 0
-	if plan.hero_room.size != Vector2i.ZERO:
-		_register_room_label(plan.hero_room, &"Start", pool_idx)
-		pool_idx += 1
-
-	for room: Rect2i in plan.rooms:
-		var depth_val: int = clampi(plan.get_room_depth(room), 1, 12)
-		var level_text: String = (&"! Lv.%d" % depth_val) if plan.is_event_room(room) else (&"Lv.%d" % depth_val)
-		_register_room_label(room, level_text, pool_idx)
-		pool_idx += 1
-
-	for i: int in range(pool_idx, _label_pool.size()):
-		_label_pool[i].visible = false
-
-
-func _register_room_label(room: Rect2i, label_text: String, pool_idx: int) -> void:
-	var label: Label
-	if pool_idx < _label_pool.size():
-		label = _label_pool[pool_idx]
-	else:
-		label = ROOM_LABEL_SCENE.instantiate() as Label
-		_label_pool.append(label)
-		_room_labels_container.add_child(label)
-
-	var room_center: Vector2 = (Vector2(room.position) + Vector2(room.size) * 0.5) * TILE_SIZE
-	label.text = label_text
-	label.visible = false
-	_room_labels[room] = label
-	_room_world_centers[room] = room_center
-
-
-func _update_room_label(room: Rect2i) -> void:
-	if not _room_labels.has(room):
-		return
-	var label: Label = _room_labels[room]
-	label.visible = _should_show_room_label(room)
-	if _discovered_rooms.has(room):
-		label.add_theme_color_override(&"font_color", get_room_color(room))

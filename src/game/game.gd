@@ -9,20 +9,12 @@ class PendingSpawn:
 	extends RefCounted
 	var room: Rect2i
 	var pos: Vector2
+	var is_patrol: bool = false
 
-	func _init(spawn_room: Rect2i, spawn_pos: Vector2) -> void:
+	func _init(spawn_room: Rect2i, spawn_pos: Vector2, spawn_is_patrol: bool = false) -> void:
 		room = spawn_room
 		pos = spawn_pos
-
-
-class RoomCandidate:
-	extends RefCounted
-	var room: Rect2i
-	var dist_sq: float
-
-	func _init(cand_room: Rect2i, cand_dist_sq: float) -> void:
-		room = cand_room
-		dist_sq = cand_dist_sq
+		is_patrol = spawn_is_patrol
 
 
 class EvictCandidate:
@@ -73,6 +65,7 @@ var _starter_recruits: Array[Unknown] = []
 var _coins: Array[Coin] = []
 var _reroll_coins: int = 0
 var _potion_manager: PotionManager = PotionManager.new()
+var _patrol_manager: PatrolManager = PatrolManager.new()
 var _keys: Array[KeyPickup] = []
 var _collected_keys: Dictionary[WorldPlan.KeyColor, bool] = {}
 var _class_levels: Dictionary[StringName, int] = {}
@@ -131,6 +124,7 @@ func _ready() -> void:
 	_map.shortcut_opened.connect(_potion_manager.on_shortcut_opened.bind(_map, _coins))
 	_potion_manager.setup(_characters, _projectiles, _hud, HEAL_EFFECT_SCENE)
 	await _map.generate_map()
+	_patrol_manager.setup(_map, _room_remaining_enemies, _room_spawned_enemies)
 
 	var starting_data: HeroData = HeroData.get_hero(Transition.starting_hero_id)
 	_class_levels[starting_data.id] = 1
@@ -187,6 +181,7 @@ func _on_secret_torches_completed() -> void:
 func _process(delta: float) -> void:
 	_camera.position = _character.position
 	if not _character.is_dead:
+		_patrol_manager.advance_time(delta)
 		if _character.is_moving:
 			_hud.dismiss_movement_hint()
 			_check_room_entry()
@@ -219,6 +214,7 @@ func _update_map_streaming() -> void:
 			_spawn_pickups_for_room(room)
 		_register_and_populate_rooms(new_rooms)
 
+	_patrol_manager.update_repopulation(_camera.global_position)
 	_respawn_nearby_hibernating_rooms()
 
 
@@ -234,16 +230,16 @@ func _check_room_entry() -> void:
 	_current_room = room
 	if room.size == Vector2i.ZERO:
 		return
+	_patrol_manager.set_occupied_room(room)
 
 	if room == _map.hero_room:
-		_hud.notify_room_entered(room, &"Starting Chamber", true)
+		_hud.notify_room_entered(room, &"Starting Chamber")
 		return
 
 	var room_level: int = clampi(_map.get_room_depth(room), 1, 12)
-	var remaining: int = _room_remaining_enemies.get(room, _map.get_room_enemy_quota(room))
 	var arch: StringName = RoomLayout.get_archetype_title(_map.plan.get_room_archetype(room))
 	var title: String = &"Blood Spike Arena - Lv. %d" % room_level if _map.plan.is_event_room(room) else &"%s - Lv. %d" % [arch, room_level]
-	_hud.notify_room_entered(room, title, remaining <= 0)
+	_hud.notify_room_entered(room, title)
 
 
 func _spawn_initial_characters() -> void:
@@ -366,12 +362,10 @@ func _register_and_populate_rooms(rooms: Array[Rect2i]) -> void:
 			_populate_room_enemies(room)
 
 
-func _populate_room_enemies(room: Rect2i) -> void:
+func _populate_room_enemies(room: Rect2i, is_patrol: bool = false) -> void:
 	if not _map.is_cell_walkable(room.get_center()):
 		return
-	var remaining: int = _room_remaining_enemies.get(room, 0)
-	var alive_in_room: int = _room_spawned_enemies.get(room, 0)
-	var needed: int = remaining - alive_in_room
+	var needed: int = _patrol_manager.get_needed_spawns(room, is_patrol)
 	if needed <= 0 or (_enemies.size() + _pending_spawns.size()) >= MAX_ENEMIES:
 		return
 
@@ -380,8 +374,8 @@ func _populate_room_enemies(room: Rect2i) -> void:
 	var spawn_positions: Array[Vector2] = _map.get_enemy_spawn_positions_for_room(room, to_spawn)
 
 	for pos: Vector2 in spawn_positions:
-		_pending_spawns.append(PendingSpawn.new(room, pos))
-		_room_spawned_enemies[room] = _room_spawned_enemies.get(room, 0) + 1
+		_pending_spawns.append(PendingSpawn.new(room, pos, is_patrol))
+	_patrol_manager.record_spawned(room, spawn_positions.size(), is_patrol)
 
 
 func _process_pending_spawns() -> void:
@@ -393,25 +387,34 @@ func _process_pending_spawns() -> void:
 		var req: PendingSpawn = _pending_spawns.pop_back()
 		var cell: Vector2i = _map.local_to_map(req.pos)
 		if req.pos.distance_squared_to(cam_pos) > ENEMY_DESPAWN_DIST_SQ or not _map.is_cell_walkable(cell):
-			if _room_spawned_enemies.has(req.room):
-				_room_spawned_enemies[req.room] = maxi(0, _room_spawned_enemies[req.room] - 1)
+			_patrol_manager.record_despawned(req.room, req.is_patrol)
 			continue
-		_spawn_enemy_at(req.pos, req.room)
+		_spawn_enemy_at(req.pos, req.room, null, -1, false, req.is_patrol)
 		spawned += 1
 
 
-func _spawn_enemy_at(pos: Vector2, room: Rect2i, forced_scene: PackedScene = null, forced_level: int = -1, is_summoned: bool = false) -> void:
+func _spawn_enemy_at(
+	pos: Vector2,
+	room: Rect2i,
+	forced_scene: PackedScene = null,
+	forced_level: int = -1,
+	is_summoned: bool = false,
+	is_patrol: bool = false,
+) -> void:
 	var depth: int = _map.get_room_depth(room)
 	var enemy_scene: PackedScene = forced_scene
 	if enemy_scene == null:
-		enemy_scene = _pick_enemy_scene_for_room(room, depth)
+		if is_patrol:
+			enemy_scene = PatrolManager.pick_enemy_scene(_map.plan.get_room_archetype(room), LAVA_SLIME_SCENE, SKELETON_SCENE, SKELETON_ARCHER_SCENE)
+		else:
+			enemy_scene = _pick_enemy_scene_for_room(room, depth)
 	var enemy: Enemy = _entity_pool.acquire(enemy_scene) as Enemy
 	enemy.home_room = room
 	enemy.position = pos
 	enemy.map = _map
 	enemy.y_sort_enabled = true
 	var enemy_level: int = forced_level if forced_level > 0 else clampi(depth, 1, 12)
-	enemy.set_level(enemy_level)
+	enemy.set_level(enemy_level, is_patrol)
 	if not enemy.projectile_spawn_requested.is_connected(_on_projectile_spawn_requested):
 		enemy.projectile_spawn_requested.connect(_on_projectile_spawn_requested)
 		enemy.minion_summon_requested.connect(_on_enemy_minion_summon_requested)
@@ -426,37 +429,15 @@ func _spawn_enemy_at(pos: Vector2, room: Rect2i, forced_scene: PackedScene = nul
 
 func _respawn_nearby_hibernating_rooms() -> void:
 	var player_pos: Vector2 = _character.global_position
-	var room_candidates: Array[RoomCandidate] = []
-
-	for room: Rect2i in _map.companion_rooms:
-		var remaining: int = _room_remaining_enemies.get(room, 0)
-		var spawned: int = _room_spawned_enemies.get(room, 0)
-		if remaining <= spawned or not _map.is_cell_walkable(room.get_center()):
-			continue
-
-		var room_world_center: Vector2 = _map.map_to_local(room.get_center())
-		var dist_sq: float = player_pos.distance_squared_to(room_world_center)
-		if dist_sq <= ROOM_RESPAWN_DIST_SQ:
-			room_candidates.append(RoomCandidate.new(room, dist_sq))
-
+	var room_candidates: Array[PatrolManager.RoomCandidate] = _patrol_manager.collect_rooms(player_pos, ROOM_RESPAWN_DIST_SQ)
 	if room_candidates.is_empty():
 		return
 
-	room_candidates.sort_custom(_compare_room_candidate_asc)
-
-	for cand: RoomCandidate in room_candidates:
-		var room: Rect2i = cand.room
-		var remaining: int = _room_remaining_enemies.get(room, 0)
-		var spawned: int = _room_spawned_enemies.get(room, 0)
-		var needed: int = remaining - spawned
-		if needed <= 0:
-			continue
-
+	for cand: PatrolManager.RoomCandidate in room_candidates:
 		var free_slots: int = MAX_ENEMIES - (_enemies.size() + _pending_spawns.size())
-		if free_slots < needed:
-			_reclaim_distant_enemies_for_room(room, cand.dist_sq, needed - free_slots, player_pos)
-
-		_populate_room_enemies(room)
+		if free_slots < cand.needed:
+			_reclaim_distant_enemies_for_room(cand.room, cand.dist_sq, cand.needed - free_slots, player_pos)
+		_populate_room_enemies(cand.room, cand.is_patrol)
 
 
 func _reclaim_distant_enemies_for_room(target_room: Rect2i, target_room_dist_sq: float, count_needed: int, player_pos: Vector2) -> void:
@@ -470,8 +451,7 @@ func _reclaim_distant_enemies_for_room(target_room: Rect2i, target_room_dist_sq:
 			var r_center: Vector2 = _map.map_to_local(req.room.get_center())
 			if player_pos.distance_squared_to(r_center) > min_evict_dist_sq:
 				_pending_spawns.remove_at(p_idx)
-				if _room_spawned_enemies.has(req.room):
-					_room_spawned_enemies[req.room] = maxi(0, _room_spawned_enemies[req.room] - 1)
+				_patrol_manager.record_despawned(req.room, req.is_patrol)
 				reclaimed += 1
 		p_idx -= 1
 
@@ -508,6 +488,8 @@ func _despawn_enemy(enemy: Enemy) -> void:
 	var room: Rect2i = enemy.home_room
 	if enemy.is_minion:
 		_decrement_room_count(_room_summoned_enemies, room)
+	elif enemy.is_patrol_respawn:
+		_patrol_manager.record_despawned(room)
 	else:
 		_decrement_room_count(_room_spawned_enemies, room)
 		if enemy is Necromancer:
@@ -515,10 +497,6 @@ func _despawn_enemy(enemy: Enemy) -> void:
 	_spike_hit_cooldowns.erase(enemy)
 	_entity_pool.release(enemy)
 	_enemies.erase(enemy)
-
-
-static func _compare_room_candidate_asc(a: RoomCandidate, b: RoomCandidate) -> bool:
-	return a.dist_sq < b.dist_sq
 
 
 static func _compare_evict_candidate_desc(a: EvictCandidate, b: EvictCandidate) -> bool:
@@ -571,11 +549,13 @@ func _on_enemy_died(enemy: Enemy) -> void:
 	var room: Rect2i = enemy.home_room
 	if enemy.is_minion:
 		_decrement_room_count(_room_summoned_enemies, room)
+	elif enemy.is_patrol_respawn:
+		_patrol_manager.on_patrol_enemy_died(room)
 	else:
 		if _room_remaining_enemies.has(room):
 			_room_remaining_enemies[room] = maxi(0, _room_remaining_enemies[room] - 1)
 			if _room_remaining_enemies[room] <= 0:
-				_hud.set_room_cleared(room, true)
+				_patrol_manager.schedule_respawn(room)
 				if _map.plan.closing_spike_hazards.has(room) and not _map.plan.closing_spike_hazards[room].is_cleared:
 					_map.plan.closing_spike_hazards[room].clear()
 					_spawn_pickups_for_room(room, true)
