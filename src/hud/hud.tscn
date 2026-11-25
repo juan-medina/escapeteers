@@ -57,8 +57,6 @@ border_color = Color(0.2, 0.22, 0.3, 0.6)
 layer = 10
 script = ExtResource("1_hud")
 
-[node name="MapOverlay" parent="." instance=ExtResource("3_map")]
-
 [node name="Margin" type="MarginContainer" parent="." unique_id=741029384]
 anchors_preset = 10
 anchor_right = 1.0
@@ -408,3 +406,5 @@ points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 closed = true
 width = 1.0
 default_color = Color(0.09, 0.11, 0.15, 0.95)
+
+[node name="MapOverlay" parent="." instance=ExtResource("3_map")]

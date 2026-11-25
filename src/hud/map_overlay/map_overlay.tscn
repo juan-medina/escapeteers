@@ -3,109 +3,314 @@
 [ext_resource type="Script" uid="uid://csawcvlkf4574" path="res://hud/map_overlay/map_overlay.gd" id="1_overlay"]
 [ext_resource type="Texture2D" path="res://data/assets/hud/door_icon.png" id="2_door_icon"]
 [ext_resource type="Texture2D" path="res://data/assets/hud/key_icon.png" id="3_key_icon"]
+[ext_resource type="FontFile" uid="uid://bst61g6fxq6sj" path="res://data/assets/pixel_ui_theme/m6x11.ttf" id="4_m6x11"]
+[ext_resource type="FontFile" uid="uid://dlxxgod8ydjxc" path="res://data/assets/pixel_ui_theme/m3x6.ttf" id="5_m3x6"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_map_frame"]
+content_margin_left = 1.0
+content_margin_top = 1.0
+content_margin_right = 1.0
+content_margin_bottom = 1.0
+bg_color = Color(0.045, 0.052, 0.085, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.58, 0.48, 0.28, 1)
 
 [node name="MapOverlay" type="Control" unique_id=136559416]
+visible = false
+process_mode = 3
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
+mouse_filter = 0
 script = ExtResource("1_overlay")
 
-[node name="Chunks" type="Node2D" parent="." unique_id=1676614325]
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.035, 0.04, 0.065, 1)
 
-[node name="UnexploredFloorMesh" type="MeshInstance2D" parent="Chunks"]
-self_modulate = Color(0.55, 0.25, 0.3, 0.28)
+[node name="FrameMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 8
 
-[node name="ExploredFloorMesh" type="MeshInstance2D" parent="Chunks"]
-self_modulate = Color(0.22, 0.48, 0.68, 0.38)
+[node name="VBox" type="VBoxContainer" parent="FrameMargin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
 
-[node name="WallsMesh" type="MeshInstance2D" parent="Chunks"]
-self_modulate = Color(0.85, 0.72, 0.38, 0.65)
+[node name="HeaderBar" type="HBoxContainer" parent="FrameMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
 
-[node name="RoomLabels" type="Node2D" parent="."]
+[node name="TitleLabel" type="Label" parent="FrameMargin/VBox/HeaderBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.85, 0.52, 1)
+theme_override_fonts/font = ExtResource("4_m6x11")
+theme_override_font_sizes/font_size = 16
+text = "DUNGEON MAP"
 
-[node name="GateMarkers" type="Node2D" parent="."]
+[node name="ZoomLabel" type="Label" parent="FrameMargin/VBox/HeaderBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.72, 0.82, 1)
+theme_override_fonts/font = ExtResource("5_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "100%"
+vertical_alignment = 1
 
-[node name="BlueDoorMarker" type="Sprite2D" parent="GateMarkers"]
+[node name="Spacer" type="Control" parent="FrameMargin/VBox/HeaderBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Legend" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="ExploredItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="Swatch" type="ColorRect" parent="FrameMargin/VBox/HeaderBar/Legend/ExploredItem"]
+custom_minimum_size = Vector2(6, 6)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+color = Color(0.15, 0.3, 0.45, 1)
+
+[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/ExploredItem"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
+theme_override_fonts/font = ExtResource("5_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "Explored"
+
+[node name="FrontierItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="Swatch" type="ColorRect" parent="FrameMargin/VBox/HeaderBar/Legend/FrontierItem"]
+custom_minimum_size = Vector2(6, 6)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+color = Color(0.3, 0.14, 0.21, 1)
+
+[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/FrontierItem"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
+theme_override_fonts/font = ExtResource("5_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "Frontier"
+
+[node name="EventItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Icon" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/EventItem"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.38, 0.65, 1)
+theme_override_fonts/font = ExtResource("5_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "!"
+
+[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/EventItem"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
+theme_override_fonts/font = ExtResource("5_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "Event"
+
+[node name="DoorItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Icon" type="TextureRect" parent="FrameMargin/VBox/HeaderBar/Legend/DoorItem"]
+custom_minimum_size = Vector2(10, 10)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("2_door_icon")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/DoorItem"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
+theme_override_fonts/font = ExtResource("5_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "Gate"
+
+[node name="KeyItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Icon" type="TextureRect" parent="FrameMargin/VBox/HeaderBar/Legend/KeyItem"]
+custom_minimum_size = Vector2(10, 10)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("3_key_icon")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/KeyItem"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
+theme_override_fonts/font = ExtResource("5_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "Key"
+
+[node name="MapFrame" type="PanelContainer" parent="FrameMargin/VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_map_frame")
+
+[node name="MapViewport" type="Control" parent="FrameMargin/VBox/MapFrame"]
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 0
+
+[node name="Chunks" type="Node2D" parent="FrameMargin/VBox/MapFrame/MapViewport" unique_id=1676614325]
+
+[node name="UnexploredFloorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+self_modulate = Color(0.3, 0.14, 0.21, 1)
+
+[node name="ExploredFloorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+self_modulate = Color(0.15, 0.3, 0.45, 1)
+
+[node name="WallsMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+self_modulate = Color(0.88, 0.76, 0.44, 1)
+
+[node name="RoomLabels" type="Node2D" parent="FrameMargin/VBox/MapFrame/MapViewport"]
+
+[node name="GateMarkers" type="Node2D" parent="FrameMargin/VBox/MapFrame/MapViewport"]
+
+[node name="BlueDoorMarker" type="Sprite2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers"]
 visible = false
-modulate = Color(0.25, 0.68, 1, 0.95)
+modulate = Color(0.25, 0.68, 1, 1)
 texture = ExtResource("2_door_icon")
 
-[node name="HighlightRing" type="Line2D" parent="GateMarkers/BlueDoorMarker"]
+[node name="HighlightRing" type="Line2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/BlueDoorMarker"]
 visible = false
 points = PackedVector2Array(0, -9, 7, -6, 9, 0, 7, 6, 0, 9, -7, 6, -9, 0, -7, -6)
 closed = true
 width = 1.5
-default_color = Color(1, 1, 1, 0.95)
+default_color = Color(1, 1, 1, 1)
 
-[node name="GreenDoorMarker" type="Sprite2D" parent="GateMarkers"]
+[node name="GreenDoorMarker" type="Sprite2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers"]
 visible = false
-modulate = Color(0.3, 0.92, 0.48, 0.95)
+modulate = Color(0.3, 0.92, 0.48, 1)
 texture = ExtResource("2_door_icon")
 
-[node name="HighlightRing" type="Line2D" parent="GateMarkers/GreenDoorMarker"]
+[node name="HighlightRing" type="Line2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/GreenDoorMarker"]
 visible = false
 points = PackedVector2Array(0, -9, 7, -6, 9, 0, 7, 6, 0, 9, -7, 6, -9, 0, -7, -6)
 closed = true
 width = 1.5
-default_color = Color(1, 1, 1, 0.95)
+default_color = Color(1, 1, 1, 1)
 
-[node name="YellowDoorMarker" type="Sprite2D" parent="GateMarkers"]
+[node name="YellowDoorMarker" type="Sprite2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers"]
 visible = false
-modulate = Color(1, 0.86, 0.25, 0.95)
+modulate = Color(1, 0.86, 0.25, 1)
 texture = ExtResource("2_door_icon")
 
-[node name="HighlightRing" type="Line2D" parent="GateMarkers/YellowDoorMarker"]
+[node name="HighlightRing" type="Line2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/YellowDoorMarker"]
 visible = false
 points = PackedVector2Array(0, -9, 7, -6, 9, 0, 7, 6, 0, 9, -7, 6, -9, 0, -7, -6)
 closed = true
 width = 1.5
-default_color = Color(1, 1, 1, 0.95)
+default_color = Color(1, 1, 1, 1)
 
-[node name="RedDoorMarker" type="Sprite2D" parent="GateMarkers"]
+[node name="RedDoorMarker" type="Sprite2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers"]
 visible = false
-modulate = Color(1, 0.35, 0.35, 0.95)
+modulate = Color(1, 0.35, 0.35, 1)
 texture = ExtResource("2_door_icon")
 
-[node name="HighlightRing" type="Line2D" parent="GateMarkers/RedDoorMarker"]
+[node name="HighlightRing" type="Line2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/RedDoorMarker"]
 visible = false
 points = PackedVector2Array(0, -9, 7, -6, 9, 0, 7, 6, 0, 9, -7, 6, -9, 0, -7, -6)
 closed = true
 width = 1.5
-default_color = Color(1, 1, 1, 0.95)
+default_color = Color(1, 1, 1, 1)
 
-[node name="BlueKeyMarker" type="Sprite2D" parent="GateMarkers"]
+[node name="BlueKeyMarker" type="Sprite2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers"]
 visible = false
-modulate = Color(0.25, 0.68, 1, 0.95)
+modulate = Color(0.25, 0.68, 1, 1)
 texture = ExtResource("3_key_icon")
 
-[node name="GreenKeyMarker" type="Sprite2D" parent="GateMarkers"]
+[node name="GreenKeyMarker" type="Sprite2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers"]
 visible = false
-modulate = Color(0.3, 0.92, 0.48, 0.95)
+modulate = Color(0.3, 0.92, 0.48, 1)
 texture = ExtResource("3_key_icon")
 
-[node name="YellowKeyMarker" type="Sprite2D" parent="GateMarkers"]
+[node name="YellowKeyMarker" type="Sprite2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers"]
 visible = false
-modulate = Color(1, 0.86, 0.25, 0.95)
+modulate = Color(1, 0.86, 0.25, 1)
 texture = ExtResource("3_key_icon")
 
-[node name="RedKeyMarker" type="Sprite2D" parent="GateMarkers"]
+[node name="RedKeyMarker" type="Sprite2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers"]
 visible = false
-modulate = Color(1, 0.35, 0.35, 0.95)
+modulate = Color(1, 0.35, 0.35, 1)
 texture = ExtResource("3_key_icon")
 
-[node name="PlayerMarker" type="Node2D" parent="." unique_id=740950094]
+[node name="PlayerMarker" type="Node2D" parent="FrameMargin/VBox/MapFrame/MapViewport" unique_id=740950094]
 rotation = -1.5707964
 
-[node name="Arrow" type="Polygon2D" parent="PlayerMarker"]
-color = Color(0.2, 0.9, 1, 0.95)
+[node name="PulseRing" type="Line2D" parent="FrameMargin/VBox/MapFrame/MapViewport/PlayerMarker"]
+points = PackedVector2Array(0, -8, 6, -6, 8, 0, 6, 6, 0, 8, -6, 6, -8, 0, -6, -6)
+closed = true
+width = 1.0
+default_color = Color(0.32, 0.92, 1, 1)
+
+[node name="Arrow" type="Polygon2D" parent="FrameMargin/VBox/MapFrame/MapViewport/PlayerMarker"]
+color = Color(0.25, 0.92, 1, 1)
 polygon = PackedVector2Array(6, 0, -5, -4.5, -2.5, 0, -5, 4.5)
 
-[node name="Outline" type="Line2D" parent="PlayerMarker"]
+[node name="Outline" type="Line2D" parent="FrameMargin/VBox/MapFrame/MapViewport/PlayerMarker"]
 points = PackedVector2Array(6, 0, -5, -4.5, -2.5, 0, -5, 4.5)
 closed = true
 width = 1.0
-default_color = Color(1, 1, 1, 0.95)
+default_color = Color(1, 1, 1, 1)
+
+[node name="FooterBar" type="HBoxContainer" parent="FrameMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="ControlsHint" type="Label" parent="FrameMargin/VBox/FooterBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
+text = "WASD / Drag: Pan  |  Wheel / +/-: Zoom  |  Space: Center  |  TAB / M: Close"
+
+[connection signal="gui_input" from="FrameMargin/VBox/MapFrame/MapViewport" to="." method="_on_map_viewport_gui_input"]

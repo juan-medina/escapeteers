@@ -4,76 +4,70 @@
 class_name MapOverlay
 extends Control
 
-
-class MapRegion:
-	extends RefCounted
-	var coord: Vector2i
-	var unexplored_chunks: Dictionary[Vector2i, PackedVector2Array] = {}
-	var explored_verts: PackedVector2Array = PackedVector2Array()
-	var wall_verts: PackedVector2Array = PackedVector2Array()
-	var explored_ranges: Dictionary[Vector2i, Vector2i] = {}
-	var wall_ranges: Dictionary[Vector2i, Vector2i] = {}
-	var unexplored_mesh: MeshInstance2D = null
-	var explored_mesh: MeshInstance2D = null
-	var walls_mesh: MeshInstance2D = null
-	var unexplored_dirty: bool = false
-	var explored_dirty: bool = false
-	var walls_dirty: bool = false
-
-	func _init(region_coord: Vector2i) -> void:
-		coord = region_coord
-
-
 const TILE_SIZE: float = 16.0
 const CHUNK_SIZE_TILES: int = 2
 const CHUNK_SIZE_PX: float = float(CHUNK_SIZE_TILES) * TILE_SIZE
-const REGION_SHIFT: int = 4
-const DEADZONE_HALF_EXTENT: Vector2 = Vector2(220.0, 130.0)
-const DAMAGE_METER_SAFE_MARGIN: float = 192.0
-const RECENTER_SPEED: float = 420.0
+const ZOOM_LEVELS: Array[float] = [0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0]
+const DEFAULT_ZOOM: float = 2.0
+const MIN_ZOOM: float = 0.5
+const MAX_ZOOM: float = 4.0
+const ZOOM_LERP_SPEED: float = 18.0
+const TRIGGER_ZOOM_RATE: float = 2.4
+const TRIGGER_DEADZONE: float = 0.25
+const PAN_SCREEN_SPEED: float = 260.0
+const RECENTER_LERP_SPEED: float = 14.0
+const PAN_BOUNDS_MARGIN_PX: float = 96.0
+const LABEL_ALL_MIN_ZOOM: float = 1.2
+const PAN_ACTIONS: Array[StringName] = [&"left", &"right", &"up", &"down"]
 const ROOM_LABEL_SCENE: PackedScene = preload("res://hud/map_overlay/room_level_label.tscn")
 const LABEL_HALF_SIZE: Vector2 = Vector2(16.0, 8.0)
-const LABEL_COLOR_SAFE: Color = Color(0.55, 0.95, 0.62, 0.95)
-const LABEL_COLOR_CAUTION: Color = Color(1.0, 0.82, 0.32, 0.95)
-const LABEL_COLOR_DANGER: Color = Color(1.0, 0.38, 0.35, 0.95)
-const LABEL_COLOR_CLEARED: Color = Color(0.55, 0.62, 0.70, 0.50)
-const LABEL_COLOR_START: Color = Color(0.70, 0.88, 1.0, 0.80)
-const LABEL_COLOR_EVENT: Color = Color(1.0, 0.38, 0.65, 0.95)
+const LABEL_COLOR_SAFE: Color = Color(0.55, 0.95, 0.62, 1.0)
+const LABEL_COLOR_CAUTION: Color = Color(1.0, 0.82, 0.32, 1.0)
+const LABEL_COLOR_DANGER: Color = Color(1.0, 0.38, 0.35, 1.0)
+const LABEL_COLOR_CLEARED: Color = Color(0.45, 0.52, 0.60, 1.0)
+const LABEL_COLOR_START: Color = Color(0.70, 0.88, 1.0, 1.0)
+const LABEL_COLOR_EVENT: Color = Color(1.0, 0.38, 0.65, 1.0)
+const PLAYER_PULSE_COLOR_A: Color = Color(0.22, 0.72, 0.88, 1.0)
+const PLAYER_PULSE_COLOR_B: Color = Color(0.75, 0.98, 1.0, 1.0)
 const HUD_EDGE_MARGIN_LEFT: float = 22.0
 const HUD_EDGE_MARGIN_RIGHT: float = 22.0
 const HUD_EDGE_MARGIN_TOP: float = 38.0
 const HUD_EDGE_MARGIN_BOTTOM: float = 26.0
 const HUD_ON_SCREEN_PAD: float = 8.0
 
-## Screen pixels per world tile. Must be an integer so every wall vertex lands on a whole pixel (crisp, no shimmer).
+## Screen pixels per world tile. Defaults to crisp 2px per tile.
 @export_range(1, 8) var pixels_per_tile: int = 2
 @export_range(1, 16) var reveal_chunk_radius: int = 8
 @export_range(1, 8) var explore_chunk_radius: int = 2
 
 var map_scale: float = 0.0
+
 var _plan: WorldPlan = null
 var _target: CharacterBody2D = null
 var _squad_level: int = 1
-var _chunk_segments: Dictionary[Vector2i, PackedVector2Array] = {}
-var _chunk_floor_vertices: Dictionary[Vector2i, PackedVector2Array] = {}
 var _revealed_chunks: Dictionary[Vector2i, bool] = {}
 var _explored_chunks: Dictionary[Vector2i, bool] = {}
-var _regions: Dictionary[Vector2i, MapRegion] = {}
-var _dirty_regions: Dictionary[Vector2i, bool] = {}
-var _unexplored_mesh_pool: Array[MeshInstance2D] = []
-var _explored_mesh_pool: Array[MeshInstance2D] = []
-var _walls_mesh_pool: Array[MeshInstance2D] = []
-var _unexplored_pool_idx: int = 0
-var _explored_pool_idx: int = 0
-var _walls_pool_idx: int = 0
 var _discovered_rooms: Dictionary[Rect2i, bool] = {}
 var _cleared_rooms: Dictionary[Rect2i, bool] = {}
 var _room_labels: Dictionary[Rect2i, Label] = {}
+var _room_world_centers: Dictionary[Rect2i, Vector2] = {}
 var _label_pool: Array[Label] = []
 var _last_revealed_chunk: Vector2i = Vector2i(2147483647, 2147483647)
-var _anchor_map_pos: Vector2 = Vector2.ZERO
-var _has_anchor: bool = false
+var _zoom_px_per_tile: float = DEFAULT_ZOOM
+var _target_zoom: float = DEFAULT_ZOOM
+var _zoom_anchor_screen: Vector2 = Vector2.ZERO
+var _has_zoom_anchor: bool = false
+var _last_zoom_pct: int = -1
+var _camera_world_pos: Vector2 = Vector2.ZERO
 var _is_recentering: bool = false
+var _is_dragging: bool = false
+var _paused_by_map: bool = false
+var _blocked_pan_actions: Dictionary[StringName, bool] = {}
+var _wait_left_stick_release: bool = false
+var _wait_right_stick_release: bool = false
+var _has_revealed_bounds: bool = false
+var _revealed_min_chunk: Vector2i = Vector2i.ZERO
+var _revealed_max_chunk: Vector2i = Vector2i.ZERO
 var _dirty: bool = false
 var _opened_shortcuts: Dictionary[WorldPlan.KeyColor, bool] = {}
 var _collected_keys: Dictionary[WorldPlan.KeyColor, bool] = {}
@@ -84,60 +78,117 @@ var _hud_door_indicators: Array[Node2D] = []
 var _hud_door_arrows: Array[Node2D] = []
 var _hud_key_indicators: Array[Node2D] = []
 var _hud_key_arrows: Array[Node2D] = []
+var _chunk_meshes: MapChunkMeshes = MapChunkMeshes.new()
 var _visibility: MapVisibility = MapVisibility.new()
 var _visited_fov_chunks: Dictionary[Vector2i, bool] = {}
 var _fov_chunks: Dictionary[Vector2i, bool] = {}
 
-@onready var _chunks_container: Node2D = $Chunks
-@onready var _unexplored_floor_mesh: MeshInstance2D = $Chunks/UnexploredFloorMesh
-@onready var _explored_floor_mesh: MeshInstance2D = $Chunks/ExploredFloorMesh
-@onready var _walls_mesh: MeshInstance2D = $Chunks/WallsMesh
-@onready var _room_labels_container: Node2D = $RoomLabels
-@onready var _gate_markers_container: Node2D = $GateMarkers
-@onready var _player_marker: Node2D = $PlayerMarker
+@onready var _zoom_label: Label = $FrameMargin/VBox/HeaderBar/ZoomLabel
+@onready var _controls_hint: Label = $FrameMargin/VBox/FooterBar/ControlsHint
+@onready var _map_viewport: Control = $FrameMargin/VBox/MapFrame/MapViewport
+@onready var _chunks_container: Node2D = $FrameMargin/VBox/MapFrame/MapViewport/Chunks
+@onready var _unexplored_floor_mesh: MeshInstance2D = $FrameMargin/VBox/MapFrame/MapViewport/Chunks/UnexploredFloorMesh
+@onready var _explored_floor_mesh: MeshInstance2D = $FrameMargin/VBox/MapFrame/MapViewport/Chunks/ExploredFloorMesh
+@onready var _walls_mesh: MeshInstance2D = $FrameMargin/VBox/MapFrame/MapViewport/Chunks/WallsMesh
+@onready var _room_labels_container: Node2D = $FrameMargin/VBox/MapFrame/MapViewport/RoomLabels
+@onready var _player_marker: Node2D = $FrameMargin/VBox/MapFrame/MapViewport/PlayerMarker
+@onready var _player_pulse_ring: Line2D = $FrameMargin/VBox/MapFrame/MapViewport/PlayerMarker/PulseRing
 @onready var _door_markers: Array[Sprite2D] = [
-	$GateMarkers/BlueDoorMarker,
-	$GateMarkers/GreenDoorMarker,
-	$GateMarkers/YellowDoorMarker,
-	$GateMarkers/RedDoorMarker,
+	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/BlueDoorMarker,
+	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/GreenDoorMarker,
+	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/YellowDoorMarker,
+	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/RedDoorMarker,
 ]
 @onready var _door_rings: Array[Line2D] = [
-	$GateMarkers/BlueDoorMarker/HighlightRing,
-	$GateMarkers/GreenDoorMarker/HighlightRing,
-	$GateMarkers/YellowDoorMarker/HighlightRing,
-	$GateMarkers/RedDoorMarker/HighlightRing,
+	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/BlueDoorMarker/HighlightRing,
+	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/GreenDoorMarker/HighlightRing,
+	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/YellowDoorMarker/HighlightRing,
+	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/RedDoorMarker/HighlightRing,
 ]
 @onready var _key_markers: Array[Sprite2D] = [
-	$GateMarkers/BlueKeyMarker,
-	$GateMarkers/GreenKeyMarker,
-	$GateMarkers/YellowKeyMarker,
-	$GateMarkers/RedKeyMarker,
+	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/BlueKeyMarker,
+	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/GreenKeyMarker,
+	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/YellowKeyMarker,
+	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/RedKeyMarker,
 ]
 
 
 func _ready() -> void:
 	visible = false
 	set_process(false)
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chunk_meshes.bind_layers(_unexplored_floor_mesh, _explored_floor_mesh, _walls_mesh)
+	InputManager.input_mode_changed.connect(_on_input_mode_changed)
+	_update_controls_hint(InputManager.current_mode)
+
+
+func _exit_tree() -> void:
+	if _paused_by_map:
+		_paused_by_map = false
+		get_tree().paused = false
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"toggle_map"):
+		if not visible and get_tree().paused:
+			return
+		Audio.play_click()
 		toggle()
 		get_viewport().set_input_as_handled()
+		return
+
+	if not visible:
+		return
+
+	if event.is_action_pressed(&"pause") or event.is_action_pressed(&"back"):
+		Audio.play_click()
+		set_map_visible(false)
+		get_viewport().set_input_as_handled()
+		return
+
+	if event.is_action_pressed(&"ui_accept"):
+		_request_recenter()
+		get_viewport().set_input_as_handled()
+		return
+
+	if event is InputEventKey:
+		var key: InputEventKey = event as InputEventKey
+		if key.is_pressed():
+			if key.keycode == KEY_PLUS or key.keycode == KEY_EQUAL or key.keycode == KEY_KP_ADD or key.unicode == 43:
+				_step_zoom(1, false)
+				get_viewport().set_input_as_handled()
+			elif key.keycode == KEY_MINUS or key.keycode == KEY_KP_SUBTRACT or key.unicode == 45:
+				_step_zoom(-1, false)
+				get_viewport().set_input_as_handled()
+			elif not key.is_echo() and key.keycode == KEY_C:
+				_request_recenter()
+				get_viewport().set_input_as_handled()
+	elif event is InputEventJoypadButton:
+		var joy_btn: InputEventJoypadButton = event as InputEventJoypadButton
+		if joy_btn.is_pressed():
+			if joy_btn.button_index == JOY_BUTTON_RIGHT_SHOULDER:
+				_step_zoom(1, false)
+				get_viewport().set_input_as_handled()
+			elif joy_btn.button_index == JOY_BUTTON_LEFT_SHOULDER:
+				_step_zoom(-1, false)
+				get_viewport().set_input_as_handled()
 
 
 func _process(delta: float) -> void:
+	if get_tree().paused and not visible:
+		return
 	_pulse_time += delta
 	if not is_instance_valid(_target):
 		return
-	_update_discovery()
 	if visible:
 		if _dirty:
 			_rebuild_meshes()
-		_update_view(delta)
+		_update_navigation(delta)
+		_update_view()
 		_update_matching_door_pulses()
-	_update_hud_edge_indicators()
+		_update_player_pulse()
+	else:
+		_update_discovery()
+		_update_hud_edge_indicators()
 
 
 func set_hud_edge_indicators(
@@ -155,15 +206,23 @@ func set_hud_edge_indicators(
 func setup(plan: WorldPlan, target: CharacterBody2D) -> void:
 	_target = target
 	_player_marker.rotation = -PI * 0.5
-	_has_anchor = false
+	_zoom_px_per_tile = clampf(float(pixels_per_tile), MIN_ZOOM, MAX_ZOOM)
+	_target_zoom = _zoom_px_per_tile
+	_has_zoom_anchor = false
 	_is_recentering = false
+	_is_dragging = false
+	_blocked_pan_actions.clear()
+	_wait_left_stick_release = false
+	_wait_right_stick_release = false
+	_last_zoom_pct = -1
 	_build_chunks(plan)
 	set_process(true)
 	if is_instance_valid(_target):
-		_center_anchor_on_target()
+		_camera_world_pos = _target.global_position
 		_update_discovery()
+		_update_zoom_label()
 		if visible:
-			_update_view(0.0)
+			_update_view()
 
 
 func toggle() -> void:
@@ -171,12 +230,33 @@ func toggle() -> void:
 
 
 func set_map_visible(is_vis: bool) -> void:
-	visible = is_vis
-	if visible and is_instance_valid(_target):
-		_center_anchor_on_target()
-		_update_view(0.0)
-		if _dirty:
-			_rebuild_meshes()
+	if is_vis:
+		if not visible and get_tree().paused and not _paused_by_map:
+			return
+		_paused_by_map = true
+		get_tree().paused = true
+		visible = true
+		_is_dragging = false
+		_has_zoom_anchor = false
+		_zoom_px_per_tile = _target_zoom
+		_capture_held_pan_inputs()
+		if is_instance_valid(_target):
+			_camera_world_pos = _target.global_position
+			_is_recentering = false
+			if _dirty:
+				_rebuild_meshes()
+			_update_zoom_label()
+			_update_view()
+	else:
+		visible = false
+		_is_dragging = false
+		_has_zoom_anchor = false
+		_blocked_pan_actions.clear()
+		_wait_left_stick_release = false
+		_wait_right_stick_release = false
+		if _paused_by_map:
+			_paused_by_map = false
+			get_tree().paused = false
 	_update_hud_edge_indicators()
 
 
@@ -228,40 +308,10 @@ func notify_shortcut_opened(color: WorldPlan.KeyColor) -> void:
 			continue
 		_visibility.open_shortcut(gate)
 		for coord: Vector2i in gate.opened_map_chunk_coords:
-			var region: MapRegion = _get_or_create_region(coord)
 			var was_revealed: bool = _revealed_chunks.has(coord)
-			if gate.opened_map_floors.has(coord):
-				_chunk_floor_vertices[coord] = gate.opened_map_floors[coord]
-			if gate.opened_map_walls.has(coord):
-				_chunk_segments[coord] = gate.opened_map_walls[coord]
-			else:
-				_chunk_segments.erase(coord)
-			var new_floors: PackedVector2Array = _chunk_floor_vertices.get(coord, PackedVector2Array())
-			var new_walls: PackedVector2Array = _chunk_segments.get(coord, PackedVector2Array())
 			if not was_revealed:
-				_revealed_chunks[coord] = true
-				if not new_floors.is_empty():
-					region.unexplored_chunks[coord] = new_floors
-					region.unexplored_dirty = true
-					_dirty_regions[region.coord] = true
-			else:
-				if _explored_chunks.has(coord):
-					_replace_explored_chunk(region, coord, new_floors)
-				elif not new_floors.is_empty():
-					region.unexplored_chunks[coord] = new_floors
-					region.unexplored_dirty = true
-					_dirty_regions[region.coord] = true
-				elif region.unexplored_chunks.erase(coord):
-					region.unexplored_dirty = true
-					_dirty_regions[region.coord] = true
-				if region.wall_ranges.has(coord):
-					var span: Vector2i = region.wall_ranges[coord]
-					for i: int in range(span.x, span.x + span.y):
-						region.wall_verts[i] = Vector2.ZERO
-					region.wall_ranges.erase(coord)
-					region.walls_dirty = true
-					_dirty_regions[region.coord] = true
-			_append_wall_chunk(region, coord, new_walls)
+				_record_revealed_chunk(coord)
+			_chunk_meshes.apply_shortcut_chunk(coord, gate, was_revealed, _explored_chunks.has(coord))
 			changed = true
 
 	_visited_fov_chunks.clear()
@@ -287,37 +337,259 @@ func get_room_color(room: Rect2i) -> Color:
 	return LABEL_COLOR_DANGER
 
 
-func _center_anchor_on_target() -> void:
-	_anchor_map_pos = (_target.global_position * map_scale).round()
-	_has_anchor = true
-	_is_recentering = false
+func _on_map_viewport_gui_input(event: InputEvent) -> void:
+	if not visible:
+		return
+	if event is InputEventMouseButton:
+		var mouse_btn: InputEventMouseButton = event as InputEventMouseButton
+		if mouse_btn.button_index == MOUSE_BUTTON_WHEEL_UP and mouse_btn.is_pressed():
+			_step_zoom(1, true, mouse_btn.position)
+			_map_viewport.accept_event()
+		elif mouse_btn.button_index == MOUSE_BUTTON_WHEEL_DOWN and mouse_btn.is_pressed():
+			_step_zoom(-1, true, mouse_btn.position)
+			_map_viewport.accept_event()
+		elif (
+			mouse_btn.button_index == MOUSE_BUTTON_LEFT
+			or mouse_btn.button_index == MOUSE_BUTTON_MIDDLE
+			or mouse_btn.button_index == MOUSE_BUTTON_RIGHT
+		):
+			_is_dragging = mouse_btn.is_pressed()
+			if _is_dragging:
+				_is_recentering = false
+			_map_viewport.accept_event()
+	elif event is InputEventMouseMotion:
+		if _is_dragging:
+			var motion: InputEventMouseMotion = event as InputEventMouseMotion
+			var scale_now: float = _zoom_px_per_tile / TILE_SIZE
+			_camera_world_pos -= motion.relative / scale_now
+			_clamp_camera_to_bounds()
+			_is_recentering = false
+			_has_zoom_anchor = false
+			_map_viewport.accept_event()
 
 
-func _update_view(delta: float) -> void:
-	if not _has_anchor:
-		_center_anchor_on_target()
+func _on_input_mode_changed(mode: InputManager.InputMode) -> void:
+	_update_controls_hint(mode)
 
-	var center: Vector2 = (size * 0.5).round()
-	var player_map_pos: Vector2 = (_target.global_position * map_scale).round()
-	var offset: Vector2 = player_map_pos - _anchor_map_pos
 
-	var max_right_extent: float = clampf(center.x - DAMAGE_METER_SAFE_MARGIN, 32.0, DEADZONE_HALF_EXTENT.x)
-	if offset.x < -DEADZONE_HALF_EXTENT.x or offset.x > max_right_extent or absf(offset.y) > DEADZONE_HALF_EXTENT.y:
-		_is_recentering = true
+func _update_controls_hint(mode: InputManager.InputMode) -> void:
+	match mode:
+		InputManager.InputMode.XBOX:
+			_controls_hint.text = &"Stick / D-Pad: Pan  |  LB / RB / Triggers: Zoom  |  A: Center  |  VIEW / B: Close"
+		InputManager.InputMode.PLAYSTATION:
+			_controls_hint.text = &"Stick / D-Pad: Pan  |  L1 / R1 / L2 / R2: Zoom  |  Cross: Center  |  SHARE / Circle: Close"
+		InputManager.InputMode.GENERIC_GAMEPAD:
+			_controls_hint.text = &"Stick / D-Pad: Pan  |  L / R: Zoom  |  A: Center  |  SELECT / B: Close"
+		_:
+			_controls_hint.text = &"WASD / Drag: Pan  |  Wheel / +/-: Zoom  |  Space: Center  |  TAB / M: Close"
 
-	if _is_recentering:
-		_anchor_map_pos = _anchor_map_pos.move_toward(player_map_pos, RECENTER_SPEED * delta)
-		if _anchor_map_pos.distance_squared_to(player_map_pos) <= 0.25:
-			_anchor_map_pos = player_map_pos
+
+func _request_recenter() -> void:
+	_has_zoom_anchor = false
+	_is_dragging = false
+	_is_recentering = true
+
+
+func _step_zoom(direction: int, use_cursor_anchor: bool, anchor_screen: Vector2 = Vector2.ZERO) -> void:
+	var next_zoom: float = _target_zoom
+	if direction > 0:
+		next_zoom = MAX_ZOOM
+		for lvl: float in ZOOM_LEVELS:
+			if lvl > _target_zoom + 0.01:
+				next_zoom = lvl
+				break
+	elif direction < 0:
+		next_zoom = MIN_ZOOM
+		for idx: int in range(ZOOM_LEVELS.size() - 1, -1, -1):
+			var lvl: float = ZOOM_LEVELS[idx]
+			if lvl < _target_zoom - 0.01:
+				next_zoom = lvl
+				break
+
+	_target_zoom = clampf(next_zoom, MIN_ZOOM, MAX_ZOOM)
+	if use_cursor_anchor:
+		_zoom_anchor_screen = anchor_screen
+		_has_zoom_anchor = true
+	else:
+		_has_zoom_anchor = false
+
+
+func _update_navigation(delta: float) -> void:
+	var pan_vec: Vector2 = _get_pan_vector()
+	if pan_vec != Vector2.ZERO:
+		_is_recentering = false
+		_has_zoom_anchor = false
+		var scale_now: float = _zoom_px_per_tile / TILE_SIZE
+		_camera_world_pos += pan_vec * (PAN_SCREEN_SPEED / scale_now) * delta
+
+	var trigger_axis: float = _get_trigger_zoom_axis()
+	if absf(trigger_axis) > 0.0:
+		_has_zoom_anchor = false
+		_target_zoom = clampf(_target_zoom * pow(TRIGGER_ZOOM_RATE, trigger_axis * delta), MIN_ZOOM, MAX_ZOOM)
+
+	if absf(_zoom_px_per_tile - _target_zoom) > 0.001:
+		var new_zoom: float = lerpf(_zoom_px_per_tile, _target_zoom, clampf(ZOOM_LERP_SPEED * delta, 0.0, 1.0))
+		if absf(new_zoom - _target_zoom) <= 0.002:
+			new_zoom = _target_zoom
+		if _has_zoom_anchor:
+			var old_scale: float = _zoom_px_per_tile / TILE_SIZE
+			var new_scale: float = new_zoom / TILE_SIZE
+			var offset_from_center: Vector2 = _zoom_anchor_screen - (_map_viewport.size * 0.5)
+			var anchor_world: Vector2 = _camera_world_pos + offset_from_center / old_scale
+			_zoom_px_per_tile = new_zoom
+			_camera_world_pos = anchor_world - offset_from_center / new_scale
+		else:
+			_zoom_px_per_tile = new_zoom
+		_update_zoom_label()
+	else:
+		_zoom_px_per_tile = _target_zoom
+		_has_zoom_anchor = false
+
+	if _is_recentering and is_instance_valid(_target):
+		_camera_world_pos = _camera_world_pos.lerp(_target.global_position, clampf(RECENTER_LERP_SPEED * delta, 0.0, 1.0))
+		if _camera_world_pos.distance_squared_to(_target.global_position) <= 1.0:
+			_camera_world_pos = _target.global_position
 			_is_recentering = false
 
-	var snapped_anchor: Vector2 = _anchor_map_pos.round()
-	_chunks_container.position = center - snapped_anchor
-	_room_labels_container.position = center - snapped_anchor
-	_gate_markers_container.position = center - snapped_anchor
-	_player_marker.position = center + (player_map_pos - snapped_anchor)
+	_clamp_camera_to_bounds()
+
+
+func _capture_held_pan_inputs() -> void:
+	_blocked_pan_actions.clear()
+	for action: StringName in PAN_ACTIONS:
+		if Input.is_action_pressed(action):
+			_blocked_pan_actions[action] = true
+	_wait_left_stick_release = _is_any_stick_held(JOY_AXIS_LEFT_X, JOY_AXIS_LEFT_Y)
+	_wait_right_stick_release = _is_any_stick_held(JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y)
+
+
+func _is_any_stick_held(axis_x: JoyAxis, axis_y: JoyAxis) -> bool:
+	for pad: int in Input.get_connected_joypads():
+		var raw: Vector2 = Vector2(Input.get_joy_axis(pad, axis_x), Input.get_joy_axis(pad, axis_y))
+		if raw.length() >= InputManager.STICK_DEADZONE:
+			return true
+	return false
+
+
+func _get_pan_vector() -> Vector2:
+	if _wait_left_stick_release and not _is_any_stick_held(JOY_AXIS_LEFT_X, JOY_AXIS_LEFT_Y):
+		_wait_left_stick_release = false
+	if _wait_right_stick_release and not _is_any_stick_held(JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y):
+		_wait_right_stick_release = false
+	for action: StringName in PAN_ACTIONS:
+		if _blocked_pan_actions.has(action) and not Input.is_action_pressed(action):
+			_blocked_pan_actions.erase(action)
+
+	var best_stick: Vector2 = Vector2.ZERO
+	var best_mag_sq: float = 0.0
+	for pad: int in Input.get_connected_joypads():
+		var left_raw: Vector2 = (
+			Vector2.ZERO if _wait_left_stick_release else Vector2(Input.get_joy_axis(pad, JOY_AXIS_LEFT_X), Input.get_joy_axis(pad, JOY_AXIS_LEFT_Y))
+		)
+		var right_raw: Vector2 = (
+			Vector2.ZERO
+			if _wait_right_stick_release
+			else Vector2(Input.get_joy_axis(pad, JOY_AXIS_RIGHT_X), Input.get_joy_axis(pad, JOY_AXIS_RIGHT_Y))
+		)
+		for raw_stick: Vector2 in [left_raw, right_raw]:
+			var mag: float = raw_stick.length()
+			if mag >= InputManager.STICK_DEADZONE:
+				var scaled_mag: float = clampf((mag - InputManager.STICK_DEADZONE) / (1.0 - InputManager.STICK_DEADZONE), 0.0, 1.0)
+				var stick_vec: Vector2 = raw_stick.normalized() * scaled_mag
+				var sq: float = stick_vec.length_squared()
+				if sq > best_mag_sq:
+					best_mag_sq = sq
+					best_stick = stick_vec
+	if best_stick != Vector2.ZERO:
+		return best_stick
+
+	var lx: float = 0.0 if _blocked_pan_actions.has(&"left") else Input.get_action_strength(&"left")
+	var rx: float = 0.0 if _blocked_pan_actions.has(&"right") else Input.get_action_strength(&"right")
+	var uy: float = 0.0 if _blocked_pan_actions.has(&"up") else Input.get_action_strength(&"up")
+	var dy: float = 0.0 if _blocked_pan_actions.has(&"down") else Input.get_action_strength(&"down")
+	var action_vec: Vector2 = Vector2(rx - lx, dy - uy)
+	if action_vec.length_squared() > 1.0:
+		action_vec = action_vec.normalized()
+	return action_vec
+
+
+func _get_trigger_zoom_axis() -> float:
+	var best_axis: float = 0.0
+	for pad: int in Input.get_connected_joypads():
+		var rt: float = Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_RIGHT)
+		var lt: float = Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_LEFT)
+		var axis: float = (rt if rt > TRIGGER_DEADZONE else 0.0) - (lt if lt > TRIGGER_DEADZONE else 0.0)
+		if absf(axis) > absf(best_axis):
+			best_axis = axis
+	return best_axis
+
+
+func _clamp_camera_to_bounds() -> void:
+	if not _has_revealed_bounds:
+		return
+	var scale_now: float = _zoom_px_per_tile / TILE_SIZE
+	var margin_world: float = PAN_BOUNDS_MARGIN_PX / scale_now
+	var min_world: Vector2 = Vector2(_revealed_min_chunk) * CHUNK_SIZE_PX
+	var max_world: Vector2 = Vector2(_revealed_max_chunk + Vector2i.ONE) * CHUNK_SIZE_PX
+	if is_instance_valid(_target):
+		min_world = Vector2(minf(min_world.x, _target.global_position.x), minf(min_world.y, _target.global_position.y))
+		max_world = Vector2(maxf(max_world.x, _target.global_position.x), maxf(max_world.y, _target.global_position.y))
+	_camera_world_pos = Vector2(
+		clampf(_camera_world_pos.x, min_world.x - margin_world, max_world.x + margin_world),
+		clampf(_camera_world_pos.y, min_world.y - margin_world, max_world.y + margin_world),
+	)
+
+
+func _update_zoom_label() -> void:
+	var pct: int = int(roundf((_zoom_px_per_tile / DEFAULT_ZOOM) * 100.0))
+	if pct == _last_zoom_pct:
+		return
+	_last_zoom_pct = pct
+	_zoom_label.text = &"%d%%" % pct
+
+
+func _update_view() -> void:
+	map_scale = _zoom_px_per_tile / TILE_SIZE
+	_chunks_container.scale = Vector2(map_scale, map_scale)
+	var viewport_center: Vector2 = (_map_viewport.size * 0.5).round()
+	var cam_scaled: Vector2 = (_camera_world_pos * map_scale).round()
+	_chunks_container.position = viewport_center - cam_scaled
+
+	for entry: Dictionary in _door_entries:
+		var marker: Sprite2D = entry[&"marker"]
+		if marker.visible:
+			var world_pos: Vector2 = entry[&"world_pos"]
+			marker.position = viewport_center + (world_pos * map_scale).round() - cam_scaled
+
+	for entry: Dictionary in _key_entries:
+		var marker: Sprite2D = entry[&"marker"]
+		if marker.visible:
+			var world_pos: Vector2 = entry[&"world_pos"]
+			marker.position = viewport_center + (world_pos * map_scale).round() - cam_scaled
+
+	for room: Rect2i in _room_labels:
+		var label: Label = _room_labels[room]
+		var show_label: bool = _should_show_room_label(room)
+		label.visible = show_label
+		if show_label:
+			var world_center: Vector2 = _room_world_centers[room]
+			label.position = viewport_center + (world_center * map_scale).round() - cam_scaled - LABEL_HALF_SIZE
+
+	_player_marker.position = viewport_center + (_target.global_position * map_scale).round() - cam_scaled
 	if _target.velocity.length_squared() > 0.01:
 		_player_marker.rotation = _target.velocity.angle()
+
+
+func _should_show_room_label(room: Rect2i) -> bool:
+	if not _discovered_rooms.has(room):
+		return false
+	if _zoom_px_per_tile >= LABEL_ALL_MIN_ZOOM:
+		return true
+	if _plan == null:
+		return true
+	if room == _plan.hero_room:
+		return true
+	return _plan.is_event_room(room) and not _cleared_rooms.has(room)
 
 
 func _update_discovery() -> void:
@@ -345,177 +617,53 @@ func _reveal_chunks_at(origin_tile: Vector2i) -> void:
 	var markers_changed: bool = false
 	for coord: Vector2i in _fov_chunks:
 		var is_explore: bool = _fov_chunks[coord]
-		var region: MapRegion = _get_or_create_region(coord)
 		if not _revealed_chunks.has(coord):
-			_revealed_chunks[coord] = true
+			_record_revealed_chunk(coord)
 			markers_changed = true
-			if _chunk_segments.has(coord):
-				_append_wall_chunk(region, coord, _chunk_segments[coord])
-			if not is_explore and _chunk_floor_vertices.has(coord):
-				region.unexplored_chunks[coord] = _chunk_floor_vertices[coord]
-				region.unexplored_dirty = true
-				_dirty_regions[region.coord] = true
+			_chunk_meshes.reveal_chunk(coord, is_explore)
 
 		if is_explore and not _explored_chunks.has(coord):
 			_explored_chunks[coord] = true
-			if region.unexplored_chunks.erase(coord):
-				region.unexplored_dirty = true
-				_dirty_regions[region.coord] = true
-			if _chunk_floor_vertices.has(coord):
-				_append_explored_chunk(region, coord, _chunk_floor_vertices[coord])
+			_chunk_meshes.explore_chunk(coord)
 
 	if markers_changed:
 		_update_gate_markers_visibility()
-	if not _dirty_regions.is_empty():
+	if _chunk_meshes.has_dirty_regions():
 		_dirty = true
 		if visible:
 			_rebuild_meshes()
 
 
-static func _chunk_to_region(coord: Vector2i) -> Vector2i:
-	return Vector2i(coord.x >> REGION_SHIFT, coord.y >> REGION_SHIFT)
-
-
-func _get_or_create_region(chunk_coord: Vector2i) -> MapRegion:
-	var region_coord: Vector2i = _chunk_to_region(chunk_coord)
-	if _regions.has(region_coord):
-		return _regions[region_coord]
-	var region: MapRegion = MapRegion.new(region_coord)
-	_regions[region_coord] = region
-	return region
-
-
-func _acquire_layer_mesh(parent: MeshInstance2D, pool: Array[MeshInstance2D], pool_idx: int) -> MeshInstance2D:
-	if pool_idx < pool.size():
-		var existing: MeshInstance2D = pool[pool_idx]
-		existing.visible = true
-		return existing
-	var inst: MeshInstance2D = MeshInstance2D.new()
-	inst.self_modulate = parent.self_modulate
-	parent.add_child(inst)
-	pool.append(inst)
-	return inst
-
-
-static func _reset_layer_pool(pool: Array[MeshInstance2D]) -> void:
-	for inst: MeshInstance2D in pool:
-		inst.visible = false
-		inst.mesh = null
-
-
-func _append_wall_chunk(region: MapRegion, coord: Vector2i, segs: PackedVector2Array) -> void:
-	if segs.is_empty():
-		return
-	region.wall_ranges[coord] = Vector2i(region.wall_verts.size(), segs.size())
-	region.wall_verts.append_array(segs)
-	region.walls_dirty = true
-	_dirty_regions[region.coord] = true
-
-
-func _append_explored_chunk(region: MapRegion, coord: Vector2i, verts: PackedVector2Array) -> void:
-	if verts.is_empty():
-		return
-	region.explored_ranges[coord] = Vector2i(region.explored_verts.size(), verts.size())
-	region.explored_verts.append_array(verts)
-	region.explored_dirty = true
-	_dirty_regions[region.coord] = true
-
-
-func _replace_explored_chunk(region: MapRegion, coord: Vector2i, verts: PackedVector2Array) -> void:
-	if region.explored_ranges.has(coord):
-		var span: Vector2i = region.explored_ranges[coord]
-		for i: int in range(span.x, span.x + span.y):
-			region.explored_verts[i] = Vector2.ZERO
-		region.explored_ranges.erase(coord)
-		region.explored_dirty = true
-		_dirty_regions[region.coord] = true
-	_append_explored_chunk(region, coord, verts)
+func _record_revealed_chunk(coord: Vector2i) -> void:
+	_revealed_chunks[coord] = true
+	if not _has_revealed_bounds:
+		_has_revealed_bounds = true
+		_revealed_min_chunk = coord
+		_revealed_max_chunk = coord
+	else:
+		_revealed_min_chunk = Vector2i(mini(_revealed_min_chunk.x, coord.x), mini(_revealed_min_chunk.y, coord.y))
+		_revealed_max_chunk = Vector2i(maxi(_revealed_max_chunk.x, coord.x), maxi(_revealed_max_chunk.y, coord.y))
 
 
 func _rebuild_meshes() -> void:
 	if not _dirty:
 		return
 	_dirty = false
-
-	for rc: Vector2i in _dirty_regions:
-		var region: MapRegion = _regions[rc]
-		if region.unexplored_dirty:
-			region.unexplored_dirty = false
-			var unexp_verts: PackedVector2Array = PackedVector2Array()
-			for coord: Vector2i in region.unexplored_chunks:
-				unexp_verts.append_array(region.unexplored_chunks[coord])
-			if unexp_verts.is_empty():
-				if region.unexplored_mesh != null:
-					region.unexplored_mesh.mesh = null
-					region.unexplored_mesh.visible = false
-			else:
-				if region.unexplored_mesh == null:
-					region.unexplored_mesh = _acquire_layer_mesh(_unexplored_floor_mesh, _unexplored_mesh_pool, _unexplored_pool_idx)
-					_unexplored_pool_idx += 1
-				else:
-					region.unexplored_mesh.visible = true
-				region.unexplored_mesh.mesh = _create_simple_mesh(unexp_verts, Mesh.PRIMITIVE_TRIANGLES)
-
-		if region.explored_dirty:
-			region.explored_dirty = false
-			if region.explored_verts.is_empty():
-				if region.explored_mesh != null:
-					region.explored_mesh.mesh = null
-					region.explored_mesh.visible = false
-			else:
-				if region.explored_mesh == null:
-					region.explored_mesh = _acquire_layer_mesh(_explored_floor_mesh, _explored_mesh_pool, _explored_pool_idx)
-					_explored_pool_idx += 1
-				else:
-					region.explored_mesh.visible = true
-				region.explored_mesh.mesh = _create_simple_mesh(region.explored_verts, Mesh.PRIMITIVE_TRIANGLES)
-
-		if region.walls_dirty:
-			region.walls_dirty = false
-			if region.wall_verts.is_empty():
-				if region.walls_mesh != null:
-					region.walls_mesh.mesh = null
-					region.walls_mesh.visible = false
-			else:
-				if region.walls_mesh == null:
-					region.walls_mesh = _acquire_layer_mesh(_walls_mesh, _walls_mesh_pool, _walls_pool_idx)
-					_walls_pool_idx += 1
-				else:
-					region.walls_mesh.visible = true
-				region.walls_mesh.mesh = _create_simple_mesh(region.wall_verts, Mesh.PRIMITIVE_LINES)
-
-	_dirty_regions.clear()
-
-
-static func _create_simple_mesh(vertices: PackedVector2Array, primitive: Mesh.PrimitiveType) -> ArrayMesh:
-	if vertices.is_empty():
-		return null
-	var arrays: Array = []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = vertices
-	var mesh: ArrayMesh = ArrayMesh.new()
-	mesh.add_surface_from_arrays(primitive, arrays)
-	return mesh
+	_chunk_meshes.rebuild_dirty()
 
 
 func _build_chunks(plan: WorldPlan) -> void:
-	_reset_layer_pool(_unexplored_mesh_pool)
-	_reset_layer_pool(_explored_mesh_pool)
-	_reset_layer_pool(_walls_mesh_pool)
-	_unexplored_pool_idx = 0
-	_explored_pool_idx = 0
-	_walls_pool_idx = 0
 	_dirty = false
 	_plan = plan
 	_revealed_chunks.clear()
 	_explored_chunks.clear()
-	_regions.clear()
-	_dirty_regions.clear()
+	_has_revealed_bounds = false
+	_revealed_min_chunk = Vector2i.ZERO
+	_revealed_max_chunk = Vector2i.ZERO
 	_discovered_rooms.clear()
 	_cleared_rooms.clear()
 	_room_labels.clear()
-	_chunk_segments.clear()
-	_chunk_floor_vertices.clear()
+	_room_world_centers.clear()
 	_opened_shortcuts.clear()
 	_collected_keys.clear()
 	_door_entries.clear()
@@ -536,6 +684,7 @@ func _build_chunks(plan: WorldPlan) -> void:
 		ind.visible = false
 	_last_revealed_chunk = Vector2i(2147483647, 2147483647)
 
+	_chunk_meshes.reset(plan)
 	if plan.carve_rects.is_empty():
 		_visibility.setup(null)
 		for label: Label in _label_pool:
@@ -543,10 +692,8 @@ func _build_chunks(plan: WorldPlan) -> void:
 		return
 
 	_visibility.setup(plan)
-	map_scale = float(pixels_per_tile) / TILE_SIZE
+	map_scale = _zoom_px_per_tile / TILE_SIZE
 	_chunks_container.scale = Vector2(map_scale, map_scale)
-	_extract_chunked_floors(plan)
-	_extract_chunked_wall_segments(plan)
 	_build_room_labels(plan)
 	_build_gate_markers_and_opened_tunnels(plan)
 
@@ -559,71 +706,16 @@ func _build_gate_markers_and_opened_tunnels(plan: WorldPlan) -> void:
 			var door_world: Vector2 = door_mid * TILE_SIZE
 			var marker: Sprite2D = _door_markers[color_idx]
 			var ring: Line2D = _door_rings[color_idx]
-			marker.position = (door_world * map_scale).round()
 			_door_entries.append({&"gate": gate, &"marker": marker, &"ring": ring, &"world_pos": door_world})
 		if gate.has_key and color_idx >= 0 and color_idx < _key_markers.size():
 			var key_mid: Vector2 = Vector2(gate.key_cell) + Vector2(0.5, 0.5)
 			var key_world: Vector2 = key_mid * TILE_SIZE
 			var key_marker: Sprite2D = _key_markers[color_idx]
-			key_marker.position = (key_world * map_scale).round()
 			_key_entries.append({&"gate": gate, &"marker": key_marker, &"world_pos": key_world})
 
 		if not gate.has_shortcut or gate.key_room == gate.shortcut_target_room or gate.shortcut_corridor_rects.is_empty():
 			continue
-		_build_opened_tunnel_map_data(plan, gate)
-
-
-func _build_opened_tunnel_map_data(plan: WorldPlan, gate: SectorGatePlanner.SectorGate) -> void:
-	var touched: Array[Vector2i] = SectorGatePlanner.collect_rects_chunks(gate.shortcut_corridor_rects, CHUNK_SIZE_TILES, 1)
-	if touched.is_empty():
-		return
-
-	var min_tx: int = touched[0].x * CHUNK_SIZE_TILES
-	var max_tx: int = min_tx + CHUNK_SIZE_TILES
-	var min_ty: int = touched[0].y * CHUNK_SIZE_TILES
-	var max_ty: int = min_ty + CHUNK_SIZE_TILES
-	for coord: Vector2i in touched:
-		var cx0: int = coord.x * CHUNK_SIZE_TILES
-		var cy0: int = coord.y * CHUNK_SIZE_TILES
-		min_tx = mini(min_tx, cx0)
-		max_tx = maxi(max_tx, cx0 + CHUNK_SIZE_TILES)
-		min_ty = mini(min_ty, cy0)
-		max_ty = maxi(max_ty, cy0 + CHUNK_SIZE_TILES)
-
-	var tile_rect: Rect2i = Rect2i(min_tx, min_ty, max_tx - min_tx, max_ty - min_ty)
-	var query_rect: Rect2i = tile_rect.grow(2)
-	var base_count: int = plan.carve_rects.size()
-	for seg: Rect2i in gate.shortcut_corridor_rects:
-		plan._add_carve_rect(seg)
-
-	gate.opened_map_chunk_coords = touched
-	gate.opened_map_floors.clear()
-	gate.opened_map_walls.clear()
-	for coord: Vector2i in touched:
-		var verts: PackedVector2Array = _build_chunk_floor_vertices(coord, plan)
-		if not verts.is_empty():
-			gate.opened_map_floors[coord] = verts
-
-	var opened_segments: Dictionary[Vector2i, PackedVector2Array] = {}
-	var rects: Array[Rect2i] = plan.carve_rects
-	var grid: SpatialGrid = plan.spatial_grid
-	for idx: int in grid.get_candidate_ids_for_rect(query_rect):
-		if idx < 0 or idx >= rects.size():
-			continue
-		var r: Rect2i = rects[idx]
-		if not r.grow(1).intersects(tile_rect):
-			continue
-		_extract_horizontal_edge(r, r.position.y, r.position.y - 1, rects, grid, opened_segments)
-		_extract_horizontal_edge(r, r.end.y, r.end.y, rects, grid, opened_segments)
-		_extract_vertical_edge(r, r.position.x, r.position.x - 1, rects, grid, opened_segments)
-		_extract_vertical_edge(r, r.end.x, r.end.x, rects, grid, opened_segments)
-
-	for coord: Vector2i in touched:
-		if opened_segments.has(coord):
-			gate.opened_map_walls[coord] = opened_segments[coord]
-
-	plan.carve_rects.resize(base_count)
-	SectorGatePlanner.rebuild_spatial_grid(plan)
+		_chunk_meshes.build_opened_tunnel_data(plan, gate)
 
 
 func _update_gate_markers_visibility() -> void:
@@ -639,8 +731,9 @@ func _update_gate_markers_visibility() -> void:
 		marker.visible = is_revealed and not gate.door_unlocked
 		var is_ready: bool = marker.visible and _collected_keys.has(gate.color)
 		ring.visible = is_ready
+		ring.modulate = Color.WHITE
 		marker.scale = Vector2.ONE
-		marker.self_modulate.a = 1.0 if is_ready else 0.85
+		marker.self_modulate = Color.WHITE if is_ready else Color(0.75, 0.75, 0.75, 1.0)
 
 	for entry: Dictionary in _key_entries:
 		var gate: SectorGatePlanner.SectorGate = entry[&"gate"]
@@ -658,8 +751,14 @@ func _update_matching_door_pulses() -> void:
 		var ring: Line2D = entry[&"ring"]
 		if ring.visible:
 			ring.scale = Vector2.ONE * lerpf(0.92, 1.28, pulse)
-			ring.modulate.a = lerpf(0.55, 1.0, pulse)
+			ring.modulate = Color.WHITE
 			marker.scale = Vector2.ONE * lerpf(1.0, 1.12, pulse)
+
+
+func _update_player_pulse() -> void:
+	var pulse: float = 0.5 + 0.5 * sin(_pulse_time * 4.5)
+	_player_pulse_ring.scale = Vector2.ONE * lerpf(0.90, 1.35, pulse)
+	_player_pulse_ring.default_color = PLAYER_PULSE_COLOR_A.lerp(PLAYER_PULSE_COLOR_B, pulse)
 
 
 func _update_hud_edge_indicators() -> void:
@@ -783,192 +882,17 @@ func _register_room_label(room: Rect2i, label_text: String, pool_idx: int) -> vo
 		_label_pool.append(label)
 		_room_labels_container.add_child(label)
 
-	var room_center: Vector2 = Vector2(room.position) + Vector2(room.size) * 0.5
+	var room_center: Vector2 = (Vector2(room.position) + Vector2(room.size) * 0.5) * TILE_SIZE
 	label.text = label_text
-	label.position = (room_center * TILE_SIZE * map_scale).round() - LABEL_HALF_SIZE
 	label.visible = false
 	_room_labels[room] = label
+	_room_world_centers[room] = room_center
 
 
 func _update_room_label(room: Rect2i) -> void:
 	if not _room_labels.has(room):
 		return
 	var label: Label = _room_labels[room]
-	label.visible = _discovered_rooms.has(room)
-	if label.visible:
+	label.visible = _should_show_room_label(room)
+	if _discovered_rooms.has(room):
 		label.add_theme_color_override(&"font_color", get_room_color(room))
-
-
-func _extract_chunked_floors(plan: WorldPlan) -> void:
-	for coord: Vector2i in SectorGatePlanner.collect_rects_chunks(plan.carve_rects, CHUNK_SIZE_TILES, 0):
-		var verts: PackedVector2Array = _build_chunk_floor_vertices(coord, plan)
-		if not verts.is_empty():
-			_chunk_floor_vertices[coord] = verts
-
-
-func _build_chunk_floor_vertices(coord: Vector2i, plan: WorldPlan) -> PackedVector2Array:
-	var base_tx: int = coord.x * CHUNK_SIZE_TILES
-	var base_ty: int = coord.y * CHUNK_SIZE_TILES
-	if (
-		plan.is_floor(Vector2i(base_tx, base_ty))
-		and plan.is_floor(Vector2i(base_tx + 1, base_ty))
-		and plan.is_floor(Vector2i(base_tx, base_ty + 1))
-		and plan.is_floor(Vector2i(base_tx + 1, base_ty + 1))
-	):
-		var x0: float = float(base_tx) * TILE_SIZE
-		var y0: float = float(base_ty) * TILE_SIZE
-		var x2: float = float(base_tx + CHUNK_SIZE_TILES) * TILE_SIZE
-		var y2: float = float(base_ty + CHUNK_SIZE_TILES) * TILE_SIZE
-		return PackedVector2Array(
-			[
-				Vector2(x0, y0),
-				Vector2(x2, y0),
-				Vector2(x2, y2),
-				Vector2(x0, y0),
-				Vector2(x2, y2),
-				Vector2(x0, y2),
-			]
-		)
-	var verts: PackedVector2Array = PackedVector2Array()
-	for dy: int in range(CHUNK_SIZE_TILES):
-		var ty: int = base_ty + dy
-		var y0: float = float(ty) * TILE_SIZE
-		var y1: float = float(ty + 1) * TILE_SIZE
-		for dx: int in range(CHUNK_SIZE_TILES):
-			var tx: int = base_tx + dx
-			if not plan.is_floor(Vector2i(tx, ty)):
-				continue
-			var x0: float = float(tx) * TILE_SIZE
-			var x1: float = float(tx + 1) * TILE_SIZE
-			verts.append(Vector2(x0, y0))
-			verts.append(Vector2(x1, y0))
-			verts.append(Vector2(x1, y1))
-			verts.append(Vector2(x0, y0))
-			verts.append(Vector2(x1, y1))
-			verts.append(Vector2(x0, y1))
-	return verts
-
-
-func _extract_chunked_wall_segments(plan: WorldPlan) -> void:
-	var rects: Array[Rect2i] = plan.carve_rects
-	var grid: SpatialGrid = plan.spatial_grid
-
-	for r: Rect2i in rects:
-		_extract_horizontal_edge(r, r.position.y, r.position.y - 1, rects, grid, _chunk_segments)
-		_extract_horizontal_edge(r, r.end.y, r.end.y, rects, grid, _chunk_segments)
-		_extract_vertical_edge(r, r.position.x, r.position.x - 1, rects, grid, _chunk_segments)
-		_extract_vertical_edge(r, r.end.x, r.end.x, rects, grid, _chunk_segments)
-
-
-func _extract_horizontal_edge(
-	r: Rect2i,
-	y_line: int,
-	y_outside: int,
-	rects: Array[Rect2i],
-	grid: SpatialGrid,
-	target_segments: Dictionary[Vector2i, PackedVector2Array],
-) -> void:
-	var blockers: Array[Vector2i] = []
-	var query: Rect2i = Rect2i(r.position.x, y_outside, r.size.x, 1)
-	for idx: int in grid.get_candidate_ids_for_rect(query):
-		var other: Rect2i = rects[idx]
-		if other == r:
-			continue
-		if other.position.y <= y_outside and other.end.y > y_outside:
-			var ox1: int = maxi(r.position.x, other.position.x)
-			var ox2: int = mini(r.end.x, other.end.x)
-			if ox2 > ox1:
-				blockers.append(Vector2i(ox1, ox2))
-
-	for w: Vector2i in _subtract_intervals(r.position.x, r.end.x, blockers):
-		_split_horizontal(w.x, w.y, y_line, target_segments)
-
-
-func _extract_vertical_edge(
-	r: Rect2i,
-	x_line: int,
-	x_outside: int,
-	rects: Array[Rect2i],
-	grid: SpatialGrid,
-	target_segments: Dictionary[Vector2i, PackedVector2Array],
-) -> void:
-	var blockers: Array[Vector2i] = []
-	var query: Rect2i = Rect2i(x_outside, r.position.y, 1, r.size.y)
-	for idx: int in grid.get_candidate_ids_for_rect(query):
-		var other: Rect2i = rects[idx]
-		if other == r:
-			continue
-		if other.position.x <= x_outside and other.end.x > x_outside:
-			var oy1: int = maxi(r.position.y, other.position.y)
-			var oy2: int = mini(r.end.y, other.end.y)
-			if oy2 > oy1:
-				blockers.append(Vector2i(oy1, oy2))
-
-	for w: Vector2i in _subtract_intervals(r.position.y, r.end.y, blockers):
-		_split_vertical(w.x, w.y, x_line, target_segments)
-
-
-func _split_horizontal(min_x: int, max_x: int, y: int, target_segments: Dictionary[Vector2i, PackedVector2Array]) -> void:
-	var cy: int = floori(float(y) / float(CHUNK_SIZE_TILES))
-	var cur_x: int = min_x
-	while cur_x < max_x:
-		var cx: int = floori(float(cur_x) / float(CHUNK_SIZE_TILES))
-		var next_chunk_x: int = (cx + 1) * CHUNK_SIZE_TILES
-		var end_x: int = mini(max_x, next_chunk_x)
-
-		var coord: Vector2i = Vector2i(cx, cy)
-		if not target_segments.has(coord):
-			target_segments[coord] = PackedVector2Array()
-		var pts: PackedVector2Array = target_segments[coord]
-		pts.append(Vector2(float(cur_x) * TILE_SIZE, float(y) * TILE_SIZE))
-		pts.append(Vector2(float(end_x) * TILE_SIZE, float(y) * TILE_SIZE))
-		target_segments[coord] = pts
-		cur_x = end_x
-
-
-func _split_vertical(min_y: int, max_y: int, x: int, target_segments: Dictionary[Vector2i, PackedVector2Array]) -> void:
-	var cx: int = floori(float(x) / float(CHUNK_SIZE_TILES))
-	var cur_y: int = min_y
-	while cur_y < max_y:
-		var cy: int = floori(float(cur_y) / float(CHUNK_SIZE_TILES))
-		var next_chunk_y: int = (cy + 1) * CHUNK_SIZE_TILES
-		var end_y: int = mini(max_y, next_chunk_y)
-
-		var coord: Vector2i = Vector2i(cx, cy)
-		if not target_segments.has(coord):
-			target_segments[coord] = PackedVector2Array()
-		var pts: PackedVector2Array = target_segments[coord]
-		pts.append(Vector2(float(x) * TILE_SIZE, float(cur_y) * TILE_SIZE))
-		pts.append(Vector2(float(x) * TILE_SIZE, float(end_y) * TILE_SIZE))
-		target_segments[coord] = pts
-		cur_y = end_y
-
-
-func _subtract_intervals(base_min: int, base_max: int, blockers: Array[Vector2i]) -> Array[Vector2i]:
-	var result: Array[Vector2i] = []
-	if base_min >= base_max:
-		return result
-	if blockers.is_empty():
-		result.append(Vector2i(base_min, base_max))
-		return result
-
-	blockers.sort_custom(_compare_intervals_asc)
-
-	var current: int = base_min
-	for b: Vector2i in blockers:
-		var b_start: int = clampi(b.x, base_min, base_max)
-		var b_end: int = clampi(b.y, base_min, base_max)
-		if b_start > current:
-			result.append(Vector2i(current, b_start))
-		current = maxi(current, b_end)
-		if current >= base_max:
-			break
-
-	if current < base_max:
-		result.append(Vector2i(current, base_max))
-
-	return result
-
-
-static func _compare_intervals_asc(a: Vector2i, b: Vector2i) -> bool:
-	return a.x < b.x

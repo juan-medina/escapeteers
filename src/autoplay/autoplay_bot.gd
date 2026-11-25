@@ -92,7 +92,7 @@ func update_map_toggle(game: Game, delta: float) -> bool:
 	_map_toggle_timer -= delta
 	if _map_toggle_timer <= 0.0:
 		game._hud._map_overlay.toggle()
-		_map_toggle_timer = MAP_OPEN_DURATION if game._hud._map_overlay.visible else MAP_CLOSED_DURATION
+		_map_toggle_timer = MAP_CLOSED_DURATION
 		return true
 	return false
 
@@ -177,6 +177,8 @@ func _handle_paused_panels(game: Game) -> void:
 			if chosen_id == &"":
 				break
 			game._level_up_panel._on_card_chosen(HeroData.get_hero(chosen_id))
+		elif game._hud._map_overlay.visible:
+			game._hud._map_overlay.set_map_visible(false)
 		else:
 			break
 

@@ -5,6 +5,9 @@
 [color=#e0e0e0][b]Added[/b][/color]
 - [color=#ffffff][b]Blood Spike Arenas:[/b][/color] Closing spike rings guard rich bonus loot.
 
+[color=#e0e0e0][b]Changed[/b][/color]
+- [color=#ffffff][b]Dungeon Map View:[/b][/color] Full-screen opaque map with pan and zoom.
+
 [color=#e0e0e0][b]Fixed[/b][/color]
 - [color=#ffffff][b]Shortcut Tunnels:[/b][/color] Secret shortcuts no longer overlap or jam.
 
@@ -12,7 +15,7 @@
 
 [color=#e0e0e0][b]Added[/b][/color]
 - [color=#ffffff][b]Dungeon Potions:[/b][/color] Grab healing, haste, fury, and XP flasks.
-- [color=#ffffff][b]Dungeon Codex:[/b][/color] Inspect heroes, monsters, and game mechanics.
+- [color=#ffffff][b]Dungeon Codex:[/b][/color] Inspect heroes, monsters, and game mechanics.open
 - [color=#ffffff][b]Colored Keys & Doors:[/b][/color] Explore interlocking wings to unlock matching colored gates.
 - [color=#ffffff][b]Secret Lever Shortcuts:[/b][/color] Pull key-room levers to open hidden shortcut walls.
 
