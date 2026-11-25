@@ -502,7 +502,9 @@ static func _has_clear_north_wall_strip(plan: WorldPlan, room: Rect2i, height: i
 	var probe: Rect2i = Rect2i(door_x - 3, door_y - height, 8, height)
 	if plan._is_outside_world_bounds(probe):
 		return false
-	return not plan.spatial_grid.intersects_any(probe, plan.carve_rects, 0)
+	if plan.spatial_grid.intersects_any(probe, plan.carve_rects, 0):
+		return false
+	return not WorldPlan._intersects_any_rect(probe.grow(2), ShortcutTunnelPlanner.collect_existing_shortcut_rects(plan))
 
 
 static func _has_clear_north_gate_space(plan: WorldPlan, room: Rect2i, probe_height: int) -> bool:
@@ -724,6 +726,8 @@ static func _add_safe_sector_loops(
 
 	var dist_from_origin: Dictionary[Rect2i, int] = _bfs_sector_distances(plan, origin_room, bfs_rooms)
 	var dist_from_key: Dictionary[Rect2i, int] = _bfs_sector_distances(plan, key_room, bfs_rooms)
+	var protected_shortcuts: Array[Rect2i] = ShortcutTunnelPlanner.collect_existing_shortcut_rects(plan, gate)
+	protected_shortcuts.append_array(gate.shortcut_corridor_rects)
 	var added: int = 0
 
 	for pair: Array in pairs:
@@ -736,7 +740,7 @@ static func _add_safe_sector_loops(
 		if mini(path_a, path_b) < MIN_KEY_HOPS:
 			continue
 		var segs: Array[Dictionary] = RoomLayout.plan_corridor(plan, room_a, room_b, [], sector_idx, true)
-		if segs.is_empty() or _corridor_hits_protected(segs, gate.shortcut_corridor_rects, reserved_growth_rects):
+		if segs.is_empty() or _corridor_hits_protected(segs, protected_shortcuts, reserved_growth_rects):
 			continue
 		RoomLayout.commit_corridor(plan, segs, sector_idx)
 		plan._add_neighbor_edge(room_a, room_b)

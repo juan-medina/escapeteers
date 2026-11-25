@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 param(
-    [ValidateSet("perf", "balance", "matrix", "watch")]
+    [ValidateSet("perf", "balance", "matrix", "watch", "audit")]
     [string]$Mode = "perf",
     [ValidateSet("all", "balanced", "mono", "comps")]
     [string]$MatrixSet = "all",
@@ -38,6 +38,8 @@ $effectiveSeeds = $Seeds
 if ($effectiveSeeds -le 0) {
     if ($Seed -gt 0) {
         $effectiveSeeds = 1
+    } elseif ($Mode -eq "audit") {
+        $effectiveSeeds = 50
     } elseif ($Mode -eq "perf") {
         $effectiveSeeds = 3
     } elseif ($Mode -eq "watch") {
@@ -150,7 +152,11 @@ try {
         & $python @pyArgs
         exit $LASTEXITCODE
     }
-    Write-Host "Running Autoplay [$Mode] (leader=$Leader build=$Build seeds=$effectiveSeeds seed=$effectiveSeed)..." -ForegroundColor Cyan
+    if ($Mode -eq "audit") {
+        Write-Host "Running Autoplay [audit] (seeds=$effectiveSeeds seed=$effectiveSeed max_depth=$MaxDepth)..." -ForegroundColor Cyan
+    } else {
+        Write-Host "Running Autoplay [$Mode] (leader=$Leader build=$Build seeds=$effectiveSeeds seed=$effectiveSeed)..." -ForegroundColor Cyan
+    }
     & godot @godotArgs
     exit $LASTEXITCODE
 } finally {

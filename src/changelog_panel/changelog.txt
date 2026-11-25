@@ -5,6 +5,9 @@
 [color=#e0e0e0][b]Added[/b][/color]
 - [color=#ffffff][b]Blood Spike Arenas:[/b][/color] Closing spike rings guard rich bonus loot.
 
+[color=#e0e0e0][b]Fixed[/b][/color]
+- [color=#ffffff][b]Shortcut Tunnels:[/b][/color] Secret shortcuts no longer overlap or jam.
+
 [color=#ffffff][b]v0.7.0 - 2026-11-24[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]

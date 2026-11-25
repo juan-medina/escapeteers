@@ -50,12 +50,16 @@ var _is_shutting_down: bool = false
 var _bot: AutoplayBot = AutoplayBot.new()
 var _profiler: AutoplayProfiler = AutoplayProfiler.new()
 var _balance: AutoplayBalance = AutoplayBalance.new()
+var _map_audit: AutoplayMapAudit = AutoplayMapAudit.new()
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	process_priority = 1
 	_parse_args()
+	if _mode == "audit":
+		_run_audit_session()
+		return
 	_build_run_queue()
 	_profiler.reset_session()
 	_balance.reset_session()
@@ -100,7 +104,7 @@ func _parse_args() -> void:
 	_max_depth = maxi(1, int(_get_arg(args, "max_depth", "12")))
 	_out_path = _get_arg(args, "out", "")
 
-	var default_seeds: int = 3 if _mode == "perf" else (1 if _mode == "watch" else 10)
+	var default_seeds: int = 50 if _mode == "audit" else (3 if _mode == "perf" else (1 if _mode == "watch" else 10))
 	_seeds_count = maxi(1, int(_get_arg(args, "seeds", str(default_seeds))))
 
 	var default_frames: int = 9000 if _mode == "perf" else (0 if _mode == "watch" else 108000)
@@ -339,6 +343,33 @@ func _write_json_report() -> void:
 	file.store_string(JSON.stringify(payload, "\t"))
 	file.close()
 	print(&"[Autoplay] JSON report saved to: %s" % _out_path)
+
+
+func _run_audit_session() -> void:
+	_is_shutting_down = true
+	set_process(false)
+	_map_audit.reset_session()
+	print(&"[Autoplay] mode=audit seeds=%d base_seed=%d max_depth=%d" % [_seeds_count, _base_seed, _max_depth])
+	for i: int in range(_seeds_count):
+		var run_seed: int = _base_seed + i
+		var res: Dictionary = _map_audit.audit_seed(run_seed, _max_depth)
+		if not res[&"passed"]:
+			_map_audit.print_seed_failure(res)
+	_map_audit.print_report()
+	if _out_path != "":
+		var payload: Dictionary = {
+			&"mode": "audit",
+			&"runs": _seeds_count,
+			&"audit": _map_audit.build_report_dict(),
+		}
+		var file: FileAccess = FileAccess.open(_out_path, FileAccess.WRITE)
+		if file == null:
+			printerr(&"Failed to write autoplay audit JSON report to: " + _out_path)
+		else:
+			file.store_string(JSON.stringify(payload, "\t"))
+			file.close()
+			print(&"[Autoplay] JSON report saved to: %s" % _out_path)
+	_shutdown.call_deferred()
 
 
 func _shutdown() -> void:

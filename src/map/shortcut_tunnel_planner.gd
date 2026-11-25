@@ -35,6 +35,12 @@ static func setup_shortcut_and_key(
 		gate.shortcut_opened = true
 		return
 
+	var existing_shortcuts: Array[Rect2i] = collect_existing_shortcut_rects(plan, gate)
+	if WorldPlan._intersects_any_rect(shortcut_neck.grow(2), existing_shortcuts):
+		gate.has_shortcut = false
+		gate.shortcut_opened = true
+		return
+
 	var chosen: Dictionary = _pick_best_shortcut_route(
 		plan,
 		gate,
@@ -42,6 +48,7 @@ static func setup_shortcut_and_key(
 		target_room,
 		allowed_sectors,
 		reserved_growth_rects,
+		existing_shortcuts,
 		exit_x,
 		neck_top_y,
 	)
@@ -53,6 +60,7 @@ static func setup_shortcut_and_key(
 			fallback_target_room,
 			allowed_sectors,
 			reserved_growth_rects,
+			existing_shortcuts,
 			exit_x,
 			neck_top_y,
 		)
@@ -79,6 +87,20 @@ static func setup_shortcut_and_key(
 		gate.shortcut_corridor_rects.append(seg)
 
 
+static func collect_existing_shortcut_rects(plan: WorldPlan, exclude_gate: SectorGatePlanner.SectorGate = null) -> Array[Rect2i]:
+	var rects: Array[Rect2i] = []
+	for existing: SectorGatePlanner.SectorGate in plan.sector_gates:
+		if existing == exclude_gate or not existing.has_shortcut:
+			continue
+		rects.append_array(existing.shortcut_corridor_rects)
+	return rects
+
+
+static func _append_unique_int(arr: Array[int], val: int) -> void:
+	if not arr.has(val):
+		arr.append(val)
+
+
 static func _pick_best_shortcut_route(
 	plan: WorldPlan,
 	gate: SectorGatePlanner.SectorGate,
@@ -86,53 +108,81 @@ static func _pick_best_shortcut_route(
 	target_room: Rect2i,
 	allowed_sectors: Array[int],
 	reserved_growth_rects: Array[Rect2i],
+	existing_shortcuts: Array[Rect2i],
 	exit_x: int,
 	neck_top_y: int,
 ) -> Dictionary:
 	var prefer_west: bool = exit_x <= target_room.get_center().x
 	var side_choices: Array[bool] = [prefer_west, not prefer_west]
-	var entry_y: int = target_room.get_center().y
-	var turn_ys: Array[int] = [
-		neck_top_y,
-		mini(neck_top_y, entry_y),
-		mini(neck_top_y, target_room.position.y - 10),
-		mini(neck_top_y, target_room.position.y - 22),
-		neck_top_y - 12,
-		neck_top_y - 26,
-		mini(neck_top_y, gate.next_room.position.y - 6),
-		target_room.end.y + 8,
-	]
+	var center_y: int = target_room.get_center().y
+	var raw_entry_ys: Array[int] = [center_y, center_y - 6, center_y + 6]
 	var best_route: Dictionary = {}
 	var best_score: int = 999999999
 
 	for from_west: bool in side_choices:
+		var sign_x: int = -1 if from_west else 1
 		var near_x: int = (target_room.position.x - 5) if from_west else (target_room.end.x + 4)
 		var clear_x: int = mini(near_x, gate.next_room.position.x - 6) if from_west else maxi(near_x, gate.next_room.end.x + 5)
-		var chute_x: int = (clear_x - 5) if from_west else (clear_x + 5)
-		var wide_x: int = (near_x - 16) if from_west else (near_x + 16)
-		var side_xs: Array[int] = [near_x]
-		if near_x != clear_x:
-			side_xs.append(clear_x)
-		side_xs.append(chute_x)
-		side_xs.append(wide_x)
+		var side_xs: Array[int] = []
+		_append_unique_int(side_xs, near_x)
+		_append_unique_int(side_xs, clear_x)
+		_append_unique_int(side_xs, clear_x + sign_x * 5)
+		_append_unique_int(side_xs, clear_x + sign_x * 11)
+		_append_unique_int(side_xs, near_x + sign_x * 16)
+		_append_unique_int(side_xs, clear_x + sign_x * 20)
+		_append_unique_int(side_xs, near_x + sign_x * 28)
+		_append_unique_int(side_xs, near_x + sign_x * 40)
+
 		var gate_wall_x: int = (target_room.position.x - 1) if from_west else target_room.end.x
 		var gate_inside_x: int = (target_room.position.x + 2) if from_west else (target_room.end.x - 3)
-		for side_x: int in side_xs:
-			for turn_y: int in turn_ys:
-				var segs: Array[Rect2i] = _build_shortcut_route_rects(exit_x, neck_top_y, turn_y, side_x, entry_y, gate_inside_x)
-				if not _is_shortcut_route_valid(plan, gate, segs, key_room, target_room, allowed_sectors, reserved_growth_rects):
-					continue
-				var score: int = _score_shortcut_route(plan, gate, segs, key_room, target_room, gate_wall_x, entry_y)
-				if score < best_score:
-					best_score = score
-					var wps: Array[Vector2i] = [
-						Vector2i(exit_x, neck_top_y + 5),
-						Vector2i(exit_x, turn_y),
-						Vector2i(side_x, turn_y),
-						Vector2i(side_x, entry_y),
-						Vector2i(gate_inside_x, entry_y),
-					]
-					best_route = {&"segs": segs, &"entry_cell": Vector2i(gate_wall_x, entry_y), &"waypoints": wps}
+		var entry_ys: Array[int] = []
+		for cand_y: int in raw_entry_ys:
+			if cand_y >= target_room.position.y + 4 and cand_y <= target_room.end.y - 5 and plan.is_floor(Vector2i(gate_inside_x, cand_y)):
+				_append_unique_int(entry_ys, cand_y)
+		if entry_ys.is_empty():
+			entry_ys.append(center_y)
+
+		for entry_y: int in entry_ys:
+			var turn_ys: Array[int] = []
+			_append_unique_int(turn_ys, neck_top_y)
+			_append_unique_int(turn_ys, mini(neck_top_y, entry_y))
+			_append_unique_int(turn_ys, mini(neck_top_y, target_room.position.y - 10))
+			_append_unique_int(turn_ys, mini(neck_top_y, target_room.position.y - 16))
+			_append_unique_int(turn_ys, mini(neck_top_y, target_room.position.y - 24))
+			_append_unique_int(turn_ys, neck_top_y - 6)
+			_append_unique_int(turn_ys, neck_top_y - 12)
+			_append_unique_int(turn_ys, neck_top_y - 20)
+			_append_unique_int(turn_ys, neck_top_y - 30)
+			_append_unique_int(turn_ys, mini(neck_top_y, gate.next_room.position.y - 6))
+			_append_unique_int(turn_ys, target_room.end.y + 8)
+			_append_unique_int(turn_ys, target_room.end.y + 16)
+			for side_x: int in side_xs:
+				for turn_y: int in turn_ys:
+					var segs: Array[Rect2i] = _build_shortcut_route_rects(exit_x, neck_top_y, turn_y, side_x, entry_y, gate_inside_x)
+					if not _is_shortcut_route_valid(
+						plan,
+						gate,
+						segs,
+						key_room,
+						target_room,
+						allowed_sectors,
+						reserved_growth_rects,
+						existing_shortcuts,
+					):
+						continue
+					var score: int = _score_shortcut_route(plan, gate, segs, key_room, target_room, gate_wall_x, entry_y)
+					if entry_y != center_y:
+						score += 20
+					if score < best_score:
+						best_score = score
+						var wps: Array[Vector2i] = [
+							Vector2i(exit_x, neck_top_y + 5),
+							Vector2i(exit_x, turn_y),
+							Vector2i(side_x, turn_y),
+							Vector2i(side_x, entry_y),
+							Vector2i(gate_inside_x, entry_y),
+						]
+						best_route = {&"segs": segs, &"entry_cell": Vector2i(gate_wall_x, entry_y), &"waypoints": wps}
 
 	return best_route
 
@@ -163,6 +213,7 @@ static func _is_shortcut_route_valid(
 	target_room: Rect2i,
 	allowed_sectors: Array[int],
 	reserved_growth_rects: Array[Rect2i],
+	existing_shortcuts: Array[Rect2i],
 ) -> bool:
 	var last_idx: int = segs.size() - 1
 	for i: int in range(segs.size()):
@@ -170,6 +221,8 @@ static func _is_shortcut_route_valid(
 		if plan._is_outside_world_bounds(r) or r.intersects(gate.next_room.grow(2)) or r.intersects(key_room.grow(1)):
 			return false
 		if i < last_idx and r.intersects(target_room.grow(1)):
+			return false
+		if WorldPlan._intersects_any_rect(r.grow(2), existing_shortcuts):
 			return false
 		if WorldPlan._intersects_any_rect(r.grow(1), plan.protected_neck_rects):
 			return false
