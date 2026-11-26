@@ -223,6 +223,7 @@ func step_game_frame(game: Game, map: Map, bot: AutoplayBot, delta: float, sim_f
 func _step_streaming_and_spikes(game: Game, map: Map, delta: float) -> void:
 	game._camera.position = game._character.position
 	if not game._character.is_dead:
+		game._patrol_manager.advance_time(delta)
 		if game._character.is_moving:
 			game._hud.dismiss_movement_hint()
 			game._check_room_entry()
@@ -232,7 +233,13 @@ func _step_streaming_and_spikes(game: Game, map: Map, delta: float) -> void:
 			game._stream_timer = Game.STREAM_CHECK_INTERVAL
 			game._update_map_streaming()
 		map.update_streaming(game._character.global_position, game._character.velocity)
-	map.update_spikes(delta)
+	var player_cell: Vector2i = Vector2i(2147483647, 2147483647)
+	if not game._character.is_dead:
+		player_cell = map.local_to_map(game._character.global_position)
+	map.update_spikes(delta, player_cell)
+	var potion_xp: float = game._potion_manager.update_buffs(delta, game._squad, game._character)
+	if potion_xp > 0.0:
+		game._add_squad_xp(potion_xp)
 
 
 func _diff_chunks(map: Map, prev_count: int) -> Vector2i:

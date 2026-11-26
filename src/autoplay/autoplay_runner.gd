@@ -35,6 +35,7 @@ var _speed: float = 1.0
 var _immortal: bool = true
 var _out_path: String = ""
 var _profile_enabled: bool = true
+var _full_combat: bool = false
 
 var _state: RunState = RunState.IDLE
 var _run_queue: Array[Dictionary] = []
@@ -116,6 +117,7 @@ func _parse_args() -> void:
 	var default_immortal: String = "true" if _mode == "perf" else "false"
 	_immortal = _get_arg(args, "immortal", default_immortal).to_lower() == "true"
 	_profile_enabled = _mode == "perf" or _mode == "watch"
+	_full_combat = _get_arg(args, "full_combat", "false").to_lower() == "true"
 
 
 static func _get_arg(args: Dictionary[String, String], key: String, fallback: String) -> String:
@@ -204,7 +206,7 @@ func _tick_loading() -> void:
 	var leader: String = _current_run_cfg[&"leader"]
 	var build: String = _current_run_cfg[&"build"]
 
-	_bot.setup(_map, build, _max_depth, _mode == "perf")
+	_bot.setup(_map, build, _max_depth, _mode == "perf" and not _full_combat)
 	_balance.begin_run(_game, _map, run_seed, StringName(leader), build)
 
 	if _profile_enabled:

@@ -16,7 +16,8 @@ param(
     [string]$Immortal = "",
     [int]$Jobs = 0,
     [string]$Out = "",
-    [switch]$Gpu
+    [switch]$Gpu,
+    [switch]$FullCombat
 )
 
 $repoRoot = Split-Path $PSScriptRoot -Parent
@@ -83,6 +84,9 @@ if ($Out -ne "") {
         New-Item -ItemType Directory -Path $outParent -Force | Out-Null
     }
     $userArgs += "--out=$resolvedOut"
+}
+if ($FullCombat) {
+    $userArgs += "--full_combat=true"
 }
 
 $godotArgs = @()
