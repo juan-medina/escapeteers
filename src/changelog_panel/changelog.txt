@@ -9,6 +9,7 @@
 
 [color=#e0e0e0][b]Changed[/b][/color]
 - [color=#ffffff][b]Dungeon Map View:[/b][/color] Full-screen opaque map with pan and zoom.
+- [color=#ffffff][b]Swordsman Health:[/b][/color] Slightly boosted durability in frontline brawls.
 
 [color=#e0e0e0][b]Fixed[/b][/color]
 - [color=#ffffff][b]Draft Dialog Input:[/b][/color] Held movement no longer scrolls hero choices.

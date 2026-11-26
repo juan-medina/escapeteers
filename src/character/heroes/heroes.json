@@ -223,7 +223,7 @@
 		"description": "Agile duelist who overwhelms targets with fast slashes and three-hit flurries.",
 		"codex": "A swift blademaster who darts from the frontline to cut down priority targets. Chains relentless sword strikes into devastating three-hit bursts.",
 		"scene_path": "res://character/heroes/swordsman/swordsman.tscn",
-		"health": { "base": 135.0, "growth": 0.11 },
+		"health": { "base": 150.0, "growth": 0.11 },
 		"skills": [
 			{
 				"name": "Quick Slash",

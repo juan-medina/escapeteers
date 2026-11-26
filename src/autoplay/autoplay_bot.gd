@@ -578,6 +578,8 @@ func _find_room_chain(map: Map, start_room: Rect2i, target_room: Rect2i) -> Arra
 
 func _decide_move_direction(game: Game, map: Map, leader: Hero, delta: float) -> Vector2:
 	var rushing: bool = _is_rushing_gates(map)
+	if not rushing and AutoplaySpecialRooms.is_in_active_special_room(map, leader, _skipped_rooms):
+		return AutoplaySpecialRooms.decide_move(self, game, map, leader, delta)
 	var steer_dest: Vector2 = Vector2.ZERO
 	var nearby_recruit: Unknown = _find_nearest_recruit(game, map, leader) if (not rushing or game._squad.size() < 15) else null
 	if nearby_recruit != null:
@@ -917,7 +919,7 @@ func _apply_spike_avoidance(map: Map, world_pos: Vector2, move_dir: Vector2) -> 
 	for dy: int in range(-SPIKE_AVOID_RADIUS_CELLS, SPIKE_AVOID_RADIUS_CELLS + 1):
 		for dx: int in range(-SPIKE_AVOID_RADIUS_CELLS, SPIKE_AVOID_RADIUS_CELLS + 1):
 			var check_cell: Vector2i = base_cell + Vector2i(dx, dy)
-			if map.is_spike_active_at(check_cell):
+			if AutoplaySpecialRooms.is_dangerous_spike_cell(map, check_cell):
 				var spike_world: Vector2 = map.map_to_local(check_cell)
 				var away: Vector2 = world_pos - spike_world
 				var d_sq: float = maxf(16.0, away.length_squared())
