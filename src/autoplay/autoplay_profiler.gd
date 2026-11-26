@@ -55,6 +55,10 @@ var _max_enabled_lights_seen: int = 0
 var _max_total_lights_seen: int = 0
 var _max_vram_mb_seen: float = 0.0
 var _top_spikes: Array[Dictionary] = []
+var _prev_teleport_count: int = 0
+var _catchup_teleport_count: int = 0
+var _catchup_teleport_squad_ms: Array[float] = []
+var _catchup_teleport_depths: Dictionary[int, int] = {}
 
 
 func reset_session() -> void:
@@ -102,12 +106,18 @@ func reset_session() -> void:
 	_max_total_lights_seen = 0
 	_max_vram_mb_seen = 0.0
 	_top_spikes.clear()
+	_prev_teleport_count = 0
+	_catchup_teleport_count = 0
+	_catchup_teleport_squad_ms.clear()
+	_catchup_teleport_depths.clear()
+	SquadMember.catchup_teleport_count = 0
 
 
 func begin_run(game: Game, map: Map) -> void:
 	_has_pending_frame = false
 	_pending_frame = {}
 	_last_balance_usec = 0
+	_prev_teleport_count = SquadMember.catchup_teleport_count
 	_prev_loaded_chunks.clear()
 	for coord: Vector2i in map.streamer._loaded_chunks:
 		_prev_loaded_chunks[coord] = true
@@ -157,6 +167,8 @@ func step_game_frame(game: Game, map: Map, bot: AutoplayBot, delta: float, sim_f
 	var t1: int = Time.get_ticks_usec()
 	game._update_squad_speed(delta)
 	game._update_followers(delta)
+	var teleports_delta: int = SquadMember.catchup_teleport_count - _prev_teleport_count
+	_prev_teleport_count = SquadMember.catchup_teleport_count
 	var t2: int = Time.get_ticks_usec()
 	game._update_enemies()
 	var t3: int = Time.get_ticks_usec()
@@ -205,6 +217,7 @@ func step_game_frame(game: Game, map: Map, bot: AutoplayBot, delta: float, sim_f
 		&"rooms_discovered": rooms_discovered,
 		&"spawns_processed": spawns_delta,
 		&"enemies_delta": enemies_delta,
+		&"catchup_teleports": teleports_delta,
 		&"streaming_ms": float(t1 - t0) / 1000.0,
 		&"squad_ms": float(t2 - t1) / 1000.0,
 		&"enemies_ms": float(t3 - t2) / 1000.0,
@@ -399,6 +412,13 @@ func _accumulate_sample(rec: Dictionary) -> void:
 		_map_rebuild_ms.append(map_overlay_ms)
 	_max_revealed_map_chunks = maxi(_max_revealed_map_chunks, map_chunks)
 
+	var catchup_teleports: int = rec[&"catchup_teleports"]
+	if catchup_teleports > 0:
+		_catchup_teleport_count += catchup_teleports
+		_catchup_teleport_squad_ms.append(rec[&"squad_ms"])
+		var depth: int = rec[&"depth"]
+		_catchup_teleport_depths[depth] = _catchup_teleport_depths.get(depth, 0) + catchup_teleports
+
 	_max_squad_seen = maxi(_max_squad_seen, squad_count)
 	_max_awake_enemies_seen = maxi(_max_awake_enemies_seen, awake_enemies)
 	_max_awake_offscreen_seen = maxi(_max_awake_offscreen_seen, awake_offscreen)
@@ -480,6 +500,9 @@ func build_report_dict() -> Dictionary:
 			&"map_rebuilds": _map_rebuild_count,
 			&"map_rebuild_ms": _stats_dict(_map_rebuild_ms),
 			&"max_map_chunks": _max_revealed_map_chunks,
+			&"catchup_teleports": _catchup_teleport_count,
+			&"catchup_teleport_squad_ms": _stats_dict(_catchup_teleport_squad_ms),
+			&"catchup_teleport_depths": _catchup_teleport_depths,
 		},
 		&"peaks":
 		{
@@ -546,6 +569,12 @@ func print_report() -> void:
 			% [_map_rebuild_count, map_s[&"avg"], map_s[&"max"], _max_revealed_map_chunks]
 		)
 	)
+	var tp_s: Dictionary = trigs[&"catchup_teleport_squad_ms"]
+	var tp_depths: Dictionary[int, int] = trigs[&"catchup_teleport_depths"]
+	var tp_depth_str: String = _format_depth_counts(tp_depths)
+	print(
+		&"  Companion Teleports:  %d (squad avg=%.2fms max=%.2fms | depths=%s)" % [_catchup_teleport_count, tp_s[&"avg"], tp_s[&"max"], tp_depth_str]
+	)
 	print(
 		(
 			&"Peaks: squad=%d | awake_enemies=%d (offscreen=%d) | proj=%d | pairs=%d | nodes=%d"
@@ -602,6 +631,19 @@ func print_report() -> void:
 static func _print_sub_row(label: StringName, subs: Dictionary, key: StringName) -> void:
 	var s: Dictionary = subs[key]
 	print(&"  %-24s %6.2f  %6.2f  %6.2f  %6.2f" % [String(label), s[&"avg"], s[&"p95"], s[&"p99"], s[&"max"]])
+
+
+static func _format_depth_counts(depths: Dictionary[int, int]) -> String:
+	if depths.is_empty():
+		return "none"
+	var keys: Array[int] = []
+	for d: int in depths:
+		keys.append(d)
+	keys.sort()
+	var parts: Array[String] = []
+	for d: int in keys:
+		parts.append("D%d:%d" % [d, depths[d]])
+	return ", ".join(parts)
 
 
 static func _stats_dict(values: Array[float]) -> Dictionary:

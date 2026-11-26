@@ -12,6 +12,7 @@
 - [color=#ffffff][b]Swordsman Health:[/b][/color] Slightly boosted durability in frontline brawls.
 
 [color=#e0e0e0][b]Fixed[/b][/color]
+- [color=#ffffff][b]Stranded Companions:[/b][/color] Lost heroes now warp safely back to you.
 - [color=#ffffff][b]Draft Dialog Input:[/b][/color] Held movement no longer scrolls hero choices.
 - [color=#ffffff][b]Shortcut Tunnels:[/b][/color] Secret shortcuts no longer overlap or jam.
 

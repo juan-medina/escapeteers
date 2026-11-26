@@ -21,6 +21,10 @@ const TRAIL_STEP_DELAY: float = 0.045
 const TRAIL_LANE_SPACING: float = 5.0
 const FAR_CATCHUP_DISTANCE: float = 48.0
 const MIN_MOVEMENT_THRESHOLD_SQUARED: float = 0.04
+const MAX_CATCHUP_DISTANCE: float = 480.0
+const MAX_CATCHUP_DISTANCE_SQ: float = MAX_CATCHUP_DISTANCE * MAX_CATCHUP_DISTANCE
+
+static var catchup_teleport_count: int = 0
 
 var slot_index: int = 0
 var slot_offset: Vector2 = Vector2.ZERO
@@ -70,11 +74,31 @@ func get_formation_position(leader: Hero) -> Vector2:
 	return _compute_target_position(leader)
 
 
+func teleport_to_leader(hero: Hero, map: Map) -> void:
+	var leader: Hero = hero.leader
+	if leader == null or leader.is_dead or hero.is_dead:
+		return
+
+	hero.position = map.clamp_to_walkable(leader.position)
+	hero.velocity = Vector2.ZERO
+	hero.is_moving = false
+	if not hero.is_attacking:
+		hero.active_target = null
+	navigator.reset()
+	catchup_teleport_count += 1
+	hero.play_catchup_teleport_vfx()
+	hero.update_visuals(Vector2.ZERO)
+
+
 func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 	var leader: Hero = hero.leader
 	if leader == null or leader.is_dead or hero.is_dead:
 		hero.velocity = Vector2.ZERO
 		hero.update_visuals(Vector2.ZERO)
+		return
+
+	if hero.position.distance_squared_to(leader.position) > MAX_CATCHUP_DISTANCE_SQ:
+		teleport_to_leader(hero, map)
 		return
 
 	hero.speed = leader.speed

@@ -19,6 +19,9 @@ const PLAYER_HURTBOX_RADIUS: float = 3.5
 const COMPANION_HURTBOX_RADIUS: float = 4.5
 const HERO_MELEE_VERTICAL_TOLERANCE: float = 12.0
 const HEAL_TRIAGE_THRESHOLD: float = 0.75
+const TELEPORT_POP_SCALE: Vector2 = Vector2(0.55, 1.35)
+const TELEPORT_FLASH_COLOR: Color = Color(1.4, 1.6, 2.0, 0.25)
+const TELEPORT_VFX_DURATION: float = 0.20
 const _GROUP_HEROES: StringName = &"heroes"
 
 static var active_heroes: Array[Hero] = []
@@ -92,6 +95,7 @@ var _history_count: int = 0
 var _hit_applied_this_attack: bool = false
 var _hits_applied_frames: Array[int] = []
 var _active_hero_index: int = -1
+var _teleport_tween: Tween = null
 
 @onready var _ground_indicator: GroundIndicator = $GroundIndicator
 @onready var _hero_vfx: HeroVfx = $HeroVfx
@@ -213,6 +217,25 @@ func play_level_up_vfx() -> void:
 	_health_bar.update_health(health, max_health)
 	if not is_dead:
 		_hero_vfx.trigger_level_up()
+
+
+func play_catchup_teleport_vfx() -> void:
+	if is_dead:
+		return
+	if _teleport_tween != null and _teleport_tween.is_valid():
+		_teleport_tween.kill()
+	_animated_sprite.scale = TELEPORT_POP_SCALE
+	_animated_sprite.modulate = TELEPORT_FLASH_COLOR
+	_ground_indicator.modulate.a = 0.0
+	_teleport_tween = create_tween()
+	_teleport_tween.set_parallel(true)
+	_teleport_tween.tween_property(_animated_sprite, ^"scale", Vector2.ONE, TELEPORT_VFX_DURATION).set_trans(Tween.TRANS_BACK).set_ease(
+		Tween.EASE_OUT
+	)
+	_teleport_tween.tween_property(_animated_sprite, ^"modulate", _base_modulate, TELEPORT_VFX_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(
+		Tween.EASE_OUT
+	)
+	_teleport_tween.tween_property(_ground_indicator, ^"modulate:a", 1.0, TELEPORT_VFX_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
 func refresh_combat_actions() -> void:
@@ -501,6 +524,12 @@ func _on_frame_changed() -> void:
 
 func _on_death() -> void:
 	_unregister_active_hero()
+	if _teleport_tween != null and _teleport_tween.is_valid():
+		_teleport_tween.kill()
+	_teleport_tween = null
+	_animated_sprite.scale = Vector2.ONE
+	_animated_sprite.modulate = _base_modulate
+	_ground_indicator.modulate.a = 1.0
 	active_target = null
 	current_action = null
 	remove_from_group(_GROUP_HEROES)
