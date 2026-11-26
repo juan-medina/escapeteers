@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://bv83mep1xq4k7"]
 
 [ext_resource type="Shader" path="res://fog/fog.gdshader" id="1_shader"]
+[ext_resource type="Script" path="res://fog/fog.gd" id="2_fog"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_fog"]
 shader = ExtResource("1_shader")
@@ -11,6 +12,7 @@ shader_parameter/max_density = 0.98
 
 [node name="Fog" type="CanvasLayer" unique_id=983174251]
 layer = 5
+script = ExtResource("2_fog")
 
 [node name="FogRect" type="ColorRect" parent="." unique_id=983174252]
 material = SubResource("ShaderMaterial_fog")

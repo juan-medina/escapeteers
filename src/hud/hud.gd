@@ -10,6 +10,10 @@ const HINT_FADE_DURATION: float = 0.8
 const ROOM_TOAST_FADE_IN: float = 0.18
 const ROOM_TOAST_HOLD: float = 2.0
 const ROOM_TOAST_FADE_OUT: float = 0.45
+const EVENT_BANNER_FADE_IN: float = 0.14
+const EVENT_BANNER_FLASH_STEP: float = 0.12
+const EVENT_BANNER_HOLD: float = 1.6
+const EVENT_BANNER_FADE_OUT: float = 0.4
 const KEY_COLLECTED_COLOR: Color = Color(1.0, 1.0, 1.0, 1.0)
 const KEY_USED_COLOR: Color = Color(0.45, 0.48, 0.52, 0.20)
 
@@ -18,7 +22,10 @@ var _target_xp: float = 0.0
 var _display_xp: float = 0.0
 var _display_max_xp: float = 50.0
 var _movement_hint_dismissed: bool = false
-var _room_toast_tween: Tween = null
+var _toast_tweens: Array[Tween] = [null, null, null]
+var _toast_order: Array[int] = []
+var _event_banner_tween: Tween = null
+var _event_banner_style: StyleBoxFlat = null
 var _last_haste_secs: int = -1
 var _last_fury_secs: int = -1
 
@@ -36,8 +43,21 @@ var _last_fury_secs: int = -1
 @onready var _xp_badge: HBoxContainer = $Margin/HBox/BuffBar/XpBadge
 @onready var _map_hint: Label = $MapHint
 @onready var _movement_hint: Label = $MovementHint
-@onready var _room_toast: PanelContainer = $RoomToast
-@onready var _room_toast_label: Label = $RoomToast/Label
+@onready var _notification_stack: VBoxContainer = $NotificationStack
+@onready var _event_banner: PanelContainer = $NotificationStack/EventBanner
+@onready var _event_tag_label: Label = $NotificationStack/EventBanner/VBox/TagLabel
+@onready var _event_title_label: Label = $NotificationStack/EventBanner/VBox/TitleLabel
+@onready var _event_subtitle_label: Label = $NotificationStack/EventBanner/VBox/SubtitleLabel
+@onready var _toast_slots: Array[PanelContainer] = [
+	$NotificationStack/Toast0,
+	$NotificationStack/Toast1,
+	$NotificationStack/Toast2,
+]
+@onready var _toast_labels: Array[Label] = [
+	$NotificationStack/Toast0/Label,
+	$NotificationStack/Toast1/Label,
+	$NotificationStack/Toast2/Label,
+]
 @onready var _key_icons: Array[TextureRect] = [
 	$Margin/HBox/KeyBar/BlueKey,
 	$Margin/HBox/KeyBar/GreenKey,
@@ -72,6 +92,8 @@ var _last_fury_secs: int = -1
 
 func _ready() -> void:
 	set_process(false)
+	_event_banner_style = (_event_banner.get_theme_stylebox(&"panel") as StyleBoxFlat).duplicate() as StyleBoxFlat
+	_event_banner.add_theme_stylebox_override(&"panel", _event_banner_style)
 	_map_overlay.set_hud_edge_indicators(_door_edge_indicators, _door_edge_arrows, _key_edge_indicators, _key_edge_arrows)
 	InputManager.input_mode_changed.connect(_on_input_mode_changed)
 	_update_map_prompt(InputManager.current_mode)
@@ -174,6 +196,34 @@ func show_event_toast(title: String, color: Color) -> void:
 	_show_toast(title, color)
 
 
+func show_event_banner(tag: String, title: String, subtitle: String, accent_color: Color) -> void:
+	_event_tag_label.text = tag
+	_event_tag_label.add_theme_color_override(&"font_color", accent_color)
+	_event_title_label.text = title
+	_event_subtitle_label.text = subtitle
+	_event_banner_style.border_color = accent_color
+
+	if _event_banner_tween != null and _event_banner_tween.is_valid():
+		_event_banner_tween.kill()
+
+	_event_banner.modulate.a = 0.0
+	_event_tag_label.modulate.a = 1.0
+	_event_banner.visible = true
+	_event_banner.pivot_offset = _event_banner.size * 0.5
+	_event_banner.scale = Vector2(0.88, 1.0)
+
+	_event_banner_tween = create_tween()
+	_event_banner_tween.tween_property(_event_banner, ^"modulate:a", 1.0, EVENT_BANNER_FADE_IN)
+	_event_banner_tween.parallel().tween_property(_event_banner, ^"scale:x", 1.0, EVENT_BANNER_FADE_IN)
+	_event_banner_tween.tween_property(_event_tag_label, ^"modulate:a", 0.3, EVENT_BANNER_FLASH_STEP)
+	_event_banner_tween.tween_property(_event_tag_label, ^"modulate:a", 1.0, EVENT_BANNER_FLASH_STEP)
+	_event_banner_tween.tween_property(_event_tag_label, ^"modulate:a", 0.3, EVENT_BANNER_FLASH_STEP)
+	_event_banner_tween.tween_property(_event_tag_label, ^"modulate:a", 1.0, EVENT_BANNER_FLASH_STEP)
+	_event_banner_tween.tween_interval(EVENT_BANNER_HOLD)
+	_event_banner_tween.tween_property(_event_banner, ^"modulate:a", 0.0, EVENT_BANNER_FADE_OUT)
+	_event_banner_tween.tween_callback(_event_banner.hide)
+
+
 func notify_room_entered(room: Rect2i, title: String) -> void:
 	_map_overlay.mark_room_discovered(room)
 
@@ -189,18 +239,40 @@ func _reset_keys() -> void:
 
 
 func _show_toast(title: String, color: Color) -> void:
-	_room_toast_label.text = title
-	_room_toast_label.add_theme_color_override(&"font_color", color)
+	var slot_idx: int = -1
+	for i: int in range(_toast_slots.size()):
+		if not _toast_slots[i].visible:
+			slot_idx = i
+			break
+	if slot_idx == -1:
+		slot_idx = _toast_order.pop_front()
+		if _toast_tweens[slot_idx] != null and _toast_tweens[slot_idx].is_valid():
+			_toast_tweens[slot_idx].kill()
+		_toast_tweens[slot_idx] = null
 
-	if _room_toast_tween != null and _room_toast_tween.is_valid():
-		_room_toast_tween.kill()
-	_room_toast.modulate.a = 0.0
-	_room_toast.visible = true
-	_room_toast_tween = create_tween()
-	_room_toast_tween.tween_property(_room_toast, ^"modulate:a", 1.0, ROOM_TOAST_FADE_IN)
-	_room_toast_tween.tween_interval(ROOM_TOAST_HOLD)
-	_room_toast_tween.tween_property(_room_toast, ^"modulate:a", 0.0, ROOM_TOAST_FADE_OUT)
-	_room_toast_tween.tween_callback(_room_toast.hide)
+	_toast_order.erase(slot_idx)
+	_toast_order.append(slot_idx)
+
+	var slot: PanelContainer = _toast_slots[slot_idx]
+	var label: Label = _toast_labels[slot_idx]
+	_notification_stack.move_child(slot, _notification_stack.get_child_count() - 1)
+	label.text = title
+	label.add_theme_color_override(&"font_color", color)
+	slot.modulate.a = 0.0
+	slot.visible = true
+
+	var tween: Tween = create_tween()
+	tween.tween_property(slot, ^"modulate:a", 1.0, ROOM_TOAST_FADE_IN)
+	tween.tween_interval(ROOM_TOAST_HOLD)
+	tween.tween_property(slot, ^"modulate:a", 0.0, ROOM_TOAST_FADE_OUT)
+	tween.tween_callback(_hide_toast_slot.bind(slot_idx))
+	_toast_tweens[slot_idx] = tween
+
+
+func _hide_toast_slot(slot_idx: int) -> void:
+	_toast_slots[slot_idx].hide()
+	_toast_order.erase(slot_idx)
+	_toast_tweens[slot_idx] = null
 
 
 func dismiss_movement_hint() -> void:

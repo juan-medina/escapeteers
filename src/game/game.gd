@@ -44,6 +44,8 @@ const SPRINT_ACCELERATION: float = 50.0
 const COMBAT_EXIT_DELAY: float = 1.25
 const SPIKE_DAMAGE_MAX_HP_RATIO: float = 0.15
 const SPIKE_HIT_COOLDOWN: float = 0.65
+const BLOOD_SPIKE_DAMAGE_MAX_HP_RATIO: float = 0.30
+const BLOOD_SPIKE_HIT_COOLDOWN: float = 0.45
 
 const UNKNOWN_SCENE: PackedScene = preload("res://character/heroes/unknown/unknown.tscn")
 const KEY_PICKUP_SCENE: PackedScene = preload("res://key_pickup/key_pickup.tscn")
@@ -66,6 +68,7 @@ var _coins: Array[Coin] = []
 var _reroll_coins: int = 0
 var _potion_manager: PotionManager = PotionManager.new()
 var _patrol_manager: PatrolManager = PatrolManager.new()
+var _event_director: EventDirector = EventDirector.new()
 var _keys: Array[KeyPickup] = []
 var _collected_keys: Dictionary[WorldPlan.KeyColor, bool] = {}
 var _class_levels: Dictionary[StringName, int] = {}
@@ -97,6 +100,7 @@ var _enemy_scan_tick: int = 0
 @onready var _map: Map = $Map
 @onready var _projectiles: Node2D = $Projectiles
 @onready var _hud: Hud = $Hud
+@onready var _fog: Fog = $Fog
 @onready var _recruit_panel: RecruitPanel = $Overlays/RecruitPanel
 @onready var _level_up_panel: LevelUpPanel = $Overlays/LevelUpPanel
 @onready var _pause_overlay: PauseOverlay = $PauseOverlay
@@ -122,6 +126,9 @@ func _ready() -> void:
 	_map.door_unlocked.connect(_on_door_unlocked)
 	_map.locked_door_bumped.connect(_on_locked_door_bumped)
 	_map.shortcut_opened.connect(_potion_manager.on_shortcut_opened.bind(_map, _coins))
+	_event_director.setup(_hud, _fog, _camera)
+	_map.event_room_armed.connect(_event_director.on_event_armed)
+	_map.event_room_disarmed.connect(_event_director.on_event_disarmed)
 	_potion_manager.setup(_characters, _projectiles, _hud, HEAL_EFFECT_SCENE)
 	await _map.generate_map()
 	_patrol_manager.setup(_map, _room_remaining_enemies, _room_spawned_enemies)
@@ -180,6 +187,7 @@ func _on_secret_torches_completed() -> void:
 
 func _process(delta: float) -> void:
 	_camera.position = _character.position
+	_event_director.update(delta)
 	if not _character.is_dead:
 		_patrol_manager.advance_time(delta)
 		if _character.is_moving:
@@ -559,8 +567,7 @@ func _on_enemy_died(enemy: Enemy) -> void:
 				if _map.plan.closing_spike_hazards.has(room) and not _map.plan.closing_spike_hazards[room].is_cleared:
 					_map.plan.closing_spike_hazards[room].clear()
 					_spawn_pickups_for_room(room, true)
-					Audio.play_sfx(Audio.Sfx.SECRET_TORCH)
-					_hud.show_event_toast(&"Arena Cleared! Reward Dropped", Color(1.0, 0.85, 0.35, 1.0))
+					_event_director.on_event_cleared(room)
 		_decrement_room_count(_room_spawned_enemies, room)
 	_add_squad_xp(enemy.xp_value)
 	_reset_combat_cooldown()
@@ -646,6 +653,7 @@ func _on_hero_died(hero: Hero) -> void:
 
 
 func _on_player_died() -> void:
+	_event_director.on_player_died()
 	Audio.play_sfx(Audio.Sfx.HERO_DOWN)
 	Audio.stop_music()
 	_clear_dead_hero_references(_character)
@@ -947,20 +955,24 @@ func _update_spike_hazards(delta: float) -> void:
 
 	for enemy: Enemy in _enemies:
 		if not enemy.is_dead and enemy.visible and enemy.is_physics_processing():
-			var damage: float = _check_character_spike(enemy)
+			var damage: float = _check_character_spike(enemy, true)
 			if damage > 0.0:
 				_hud.record_damage(&"spike", damage)
 
 
-func _check_character_spike(character: Character) -> float:
+func _check_character_spike(character: Character, is_enemy: bool = false) -> float:
 	if _spike_hit_cooldowns.has(character):
 		return 0.0
 	var foot_cell: Vector2i = _map.local_to_map(character.get_hurtbox_position())
 	if not _map.is_spike_active_at(foot_cell):
 		return 0.0
+	var is_blood: bool = _map.plan.event_spike_cell_rooms.has(foot_cell)
+	if is_blood and is_enemy:
+		return 0.0
 	Audio.play_sfx(Audio.Sfx.SPIKE_TRAP)
-	_spike_hit_cooldowns[character] = SPIKE_HIT_COOLDOWN
-	var damage: float = maxf(1.0, roundf(character.max_health * SPIKE_DAMAGE_MAX_HP_RATIO))
+	_spike_hit_cooldowns[character] = BLOOD_SPIKE_HIT_COOLDOWN if is_blood else SPIKE_HIT_COOLDOWN
+	var ratio: float = BLOOD_SPIKE_DAMAGE_MAX_HP_RATIO if is_blood else SPIKE_DAMAGE_MAX_HP_RATIO
+	var damage: float = maxf(1.0, roundf(character.max_health * ratio))
 	character.take_damage(damage)
 	return damage
 

@@ -9,6 +9,8 @@ signal secret_torches_completed
 signal door_unlocked(gate: SectorGatePlanner.SectorGate)
 signal locked_door_bumped(color: WorldPlan.KeyColor)
 signal shortcut_opened(color: WorldPlan.KeyColor)
+signal event_room_armed(room: Rect2i)
+signal event_room_disarmed(room: Rect2i)
 
 const ROOM_PADDING: int = 8
 const EXPAND_TRIGGER_DISTANCE_TILES: float = 75.0
@@ -280,7 +282,12 @@ func _update_event_hazards(delta: float, player_cell: Vector2i) -> void:
 	if player_cell.x == 2147483647:
 		return
 	for hazard: ClosingSpikeHazard in plan.closing_spike_hazards.values():
+		var was_armed: bool = hazard.is_armed
 		hazard.update_player_presence(delta, player_cell)
+		if not was_armed and hazard.is_armed:
+			event_room_armed.emit(hazard.room)
+		elif was_armed and not hazard.is_armed:
+			event_room_disarmed.emit(hazard.room)
 		var result: Dictionary = hazard.update(delta)
 		if result[&"telegraph_started"]:
 			Audio.play_sfx(Audio.Sfx.TELEGRAPH)

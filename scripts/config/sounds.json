@@ -241,6 +241,16 @@
       "input": "src/data/raw/sounds/Potion_Xp.wav",
       "output": "src/data/assets/sounds/Potion_Xp.wav",
       "tier": "heavy"
+    },
+    {
+      "input": "src/data/raw/sounds/Event_Start.wav",
+      "output": "src/data/assets/sounds/Event_Start.wav",
+      "tier": "critical"
+    },
+    {
+      "input": "src/data/raw/sounds/Event_Clear.wav",
+      "output": "src/data/assets/sounds/Event_Clear.wav",
+      "tier": "critical"
     }
   ]
 }

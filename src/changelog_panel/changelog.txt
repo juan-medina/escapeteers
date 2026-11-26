@@ -3,7 +3,7 @@
 [color=#ffffff][b]v0.8.0 - WIP[/b][/color]
 
 [color=#e0e0e0][b]Added[/b][/color]
-- [color=#ffffff][b]Blood Spike Arenas:[/b][/color] Closing spike rings guard rich bonus loot.
+- [color=#ffffff][b]Blood Spike Arenas:[/b][/color] Closing spikes, alarm music, and bonus loot.
 - [color=#ffffff][b]Corridor Traps & Loot:[/b][/color] Torches, spikes, and loot line long tunnels.
 - [color=#ffffff][b]Wandering Patrols:[/b][/color] Light monster squads reclaim distant cleared rooms.
 

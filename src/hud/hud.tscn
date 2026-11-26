@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://bew3b5nrsmhiw" path="res://data/assets/map/tiles/Tileset.png" id="6_tileset"]
 [ext_resource type="Texture2D" path="res://data/assets/hud/door_icon.png" id="7_door_icon"]
 [ext_resource type="Texture2D" path="res://data/assets/hud/key_icon.png" id="8_key_icon"]
+[ext_resource type="FontFile" uid="uid://coftxjtdkqsnn" path="res://data/assets/pixel_ui_theme/m5x7.ttf" id="9_m5x7"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_blue_key"]
 atlas = ExtResource("6_tileset")
@@ -52,6 +53,18 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.2, 0.22, 0.3, 0.6)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_event_banner"]
+content_margin_left = 18.0
+content_margin_top = 6.0
+content_margin_right = 18.0
+content_margin_bottom = 6.0
+bg_color = Color(0.05, 0.02, 0.04, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.28, 0.28, 0.95)
 
 [node name="Hud" type="CanvasLayer" unique_id=1849182746]
 layer = 10
@@ -239,20 +252,97 @@ theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 0.85)
 horizontal_alignment = 1
 text = "WASD / Cursors / Controller or touch to move"
 
-[node name="RoomToast" type="PanelContainer" parent="."]
-visible = false
+[node name="NotificationStack" type="VBoxContainer" parent="."]
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -80.0
+offset_left = -180.0
 offset_top = 30.0
-offset_right = 80.0
-offset_bottom = 48.0
+offset_right = 180.0
+offset_bottom = 180.0
 grow_horizontal = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="EventBanner" type="PanelContainer" parent="NotificationStack"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_event_banner")
+
+[node name="VBox" type="VBoxContainer" parent="NotificationStack/EventBanner"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 1
+
+[node name="TagLabel" type="Label" parent="NotificationStack/EventBanner/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.28, 0.28, 1)
+theme_override_fonts/font = ExtResource("5_m6x11")
+theme_override_font_sizes/font_size = 16
+text = "! WARNING !"
+horizontal_alignment = 1
+
+[node name="TitleLabel" type="Label" parent="NotificationStack/EventBanner/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("5_m6x11")
+theme_override_font_sizes/font_size = 32
+text = "Blood Spike Arena"
+horizontal_alignment = 1
+
+[node name="SubtitleLabel" type="Label" parent="NotificationStack/EventBanner/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.88, 0.84, 0.84, 0.95)
+theme_override_fonts/font = ExtResource("9_m5x7")
+theme_override_font_sizes/font_size = 16
+text = "Clear all enemies to stop the spikes"
+horizontal_alignment = 1
+
+[node name="Toast0" type="PanelContainer" parent="NotificationStack"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_room_toast")
 
-[node name="Label" type="Label" parent="RoomToast"]
+[node name="Label" type="Label" parent="NotificationStack/Toast0"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_fonts/font = ExtResource("5_m6x11")
+theme_override_font_sizes/font_size = 16
+text = "Slime Pit - Lv. 1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Toast1" type="PanelContainer" parent="NotificationStack"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_room_toast")
+
+[node name="Label" type="Label" parent="NotificationStack/Toast1"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_fonts/font = ExtResource("5_m6x11")
+theme_override_font_sizes/font_size = 16
+text = "Slime Pit - Lv. 1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Toast2" type="PanelContainer" parent="NotificationStack"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_room_toast")
+
+[node name="Label" type="Label" parent="NotificationStack/Toast2"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_fonts/font = ExtResource("5_m6x11")

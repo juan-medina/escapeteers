@@ -74,6 +74,11 @@ The submodule is private: without access, the clone succeeds but `src/data` stay
 * **Source:** [Itch.io](https://heltonyan.itch.io/pixelcombat)
 * **License:** Paid. Used under a purchased license (personal and commercial use allowed; purchased to support the author).
 
+#### 200 Free SFX
+* **Author:** [Kronbits (Davit Masia)](https://kronbits.itch.io/)
+* **Source:** [Itch.io](https://kronbits.itch.io/200-free-sfx)
+* **License:** [Creative Commons Zero (CC0 1.0)](https://creativecommons.org/publicdomain/zero/1.0/) — public domain, free for personal and commercial use.
+
 ### Fonts
 
 #### m3x6, m5x7, m6x11 & m6x11plus

@@ -42,6 +42,9 @@
 [ext_resource type="AudioStreamWAV" path="res://data/assets/sounds/Potion_Haste.wav" id="40_potion_haste"]
 [ext_resource type="AudioStreamWAV" path="res://data/assets/sounds/Potion_Fury.wav" id="41_potion_fury"]
 [ext_resource type="AudioStreamWAV" path="res://data/assets/sounds/Potion_Xp.wav" id="42_potion_xp"]
+[ext_resource type="AudioStreamOggVorbis" path="res://data/assets/music/Three Red Hearts - Out of Time.ogg" id="43_event_music"]
+[ext_resource type="AudioStreamWAV" path="res://data/assets/sounds/Event_Start.wav" id="44_event_start"]
+[ext_resource type="AudioStreamWAV" path="res://data/assets/sounds/Event_Clear.wav" id="45_event_clear"]
 
 [sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_spike_trap"]
 playback_mode = 0
@@ -132,6 +135,10 @@ bus = &"Music"
 stream = ExtResource("2_game_music")
 bus = &"Music"
 
+[node name="EventMusic" type="AudioStreamPlayer" parent="Music"]
+stream = ExtResource("43_event_music")
+bus = &"Music"
+
 [node name="UI" type="Node" parent="."]
 
 [node name="Hover" type="AudioStreamPlayer" parent="UI"]
@@ -162,6 +169,14 @@ bus = &"Sfx"
 
 [node name="HeroDown" type="AudioStreamPlayer" parent="ChannelStinger"]
 stream = ExtResource("9_hero_down")
+bus = &"Sfx"
+
+[node name="EventStart" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("44_event_start")
+bus = &"Sfx"
+
+[node name="EventClear" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("45_event_clear")
 bus = &"Sfx"
 
 [node name="LevelUp" type="AudioStreamPlayer" parent="ChannelStinger"]

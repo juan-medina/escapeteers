@@ -22,13 +22,14 @@ enum RingState {
 }
 
 const RING_THICKNESS: int = 2
-const MIN_SAFE_CORE_SIZE: int = 8
-const MAX_RINGS: int = 4
+const MIN_SAFE_CORE_SIZE: int = 0
+const MAX_RINGS: int = 12
+const CENTER_SPAWN_HALF_SIZE: int = 2
 const ENTRY_ARM_MARGIN: int = 2
-const INITIAL_ARM_DELAY: float = 0.8
-const RING_TELEGRAPH_1_TIME: float = 1.4
+const INITIAL_ARM_DELAY: float = 0.6
+const RING_TELEGRAPH_1_TIME: float = 1.0
 const RING_TELEGRAPH_2_TIME: float = 0.35
-const NEXT_RING_INTERVAL: float = 4.0
+const NEXT_RING_INTERVAL: float = 1.85
 const RETRACT_STEP_TIME: float = 0.10
 const RETREAT_RESET_DELAY: float = 1.0
 
@@ -47,7 +48,8 @@ var _retreat_timer: float = 0.0
 static func compute_ring_count(room_rect: Rect2i) -> int:
 	# Account for north top-wall row when computing playable interior height.
 	var min_dim: int = mini(room_rect.size.x, room_rect.size.y - 1)
-	var possible: int = floori(float(min_dim - MIN_SAFE_CORE_SIZE) / float(RING_THICKNESS * 2))
+	var usable: int = maxi(0, min_dim - MIN_SAFE_CORE_SIZE)
+	var possible: int = ceili(float(usable) / float(RING_THICKNESS * 2))
 	return clampi(possible, 0, MAX_RINGS)
 
 
@@ -61,7 +63,14 @@ static func build_for_room(plan: WorldPlan, room_rect: Rect2i) -> ClosingSpikeHa
 	var num_rings: int = compute_ring_count(room_rect)
 	var inner_bounds: Rect2i = Rect2i(room_rect.position.x, room_rect.position.y + 1, room_rect.size.x, room_rect.size.y - 1)
 	var inset: int = num_rings * RING_THICKNESS
-	hazard.safe_rect = Rect2i(inner_bounds.position + Vector2i(inset, inset), inner_bounds.size - Vector2i(inset * 2, inset * 2))
+	var raw_safe: Rect2i = Rect2i(inner_bounds.position + Vector2i(inset, inset), inner_bounds.size - Vector2i(inset * 2, inset * 2))
+	if raw_safe.size.x > 0 and raw_safe.size.y > 0:
+		hazard.safe_rect = raw_safe
+	else:
+		var center: Vector2i = inner_bounds.get_center()
+		var core_pos: Vector2i = center - Vector2i(CENTER_SPAWN_HALF_SIZE, CENTER_SPAWN_HALF_SIZE)
+		var core_size: Vector2i = Vector2i(CENTER_SPAWN_HALF_SIZE * 2, CENTER_SPAWN_HALF_SIZE * 2)
+		hazard.safe_rect = Rect2i(core_pos, core_size).intersection(inner_bounds)
 
 	for _i: int in range(num_rings):
 		hazard.rings.append(SpikeRing.new())

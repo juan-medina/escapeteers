@@ -3,9 +3,17 @@
 
 extends Node
 
+enum MusicTrack {
+	MENU,
+	GAME,
+	EVENT,
+}
+
 enum Sfx {
 	GAME_OVER,
 	HERO_DOWN,
+	EVENT_START,
+	EVENT_CLEAR,
 	LEVEL_UP,
 	HERO_RECRUITED,
 	SECRET_TORCH,
@@ -32,12 +40,17 @@ enum Sfx {
 }
 
 const AUDIO_LIBRARY_SCENE: PackedScene = preload("res://audio/audio_library.tscn")
+const MUSIC_FADE_OUT_DB: float = -36.0
+const MUSIC_FADE_IN_DB: float = -24.0
 
 var _suppress_hover: bool = false
 var _sfx: Array[AudioStreamPlayer] = []
 
 var _menu_music: AudioStreamPlayer
 var _game_music: AudioStreamPlayer
+var _event_music: AudioStreamPlayer
+var _current_music: AudioStreamPlayer = null
+var _music_tween: Tween = null
 var _hover: AudioStreamPlayer
 var _click: AudioStreamPlayer
 var _return: AudioStreamPlayer
@@ -51,8 +64,10 @@ func _ready() -> void:
 	add_child(lib)
 	_menu_music = lib.get_node(^"Music/MenuMusic") as AudioStreamPlayer
 	_game_music = lib.get_node(^"Music/GameMusic") as AudioStreamPlayer
+	_event_music = lib.get_node(^"Music/EventMusic") as AudioStreamPlayer
 	(_menu_music.stream as AudioStreamOggVorbis).loop = true
 	(_game_music.stream as AudioStreamOggVorbis).loop = true
+	(_event_music.stream as AudioStreamOggVorbis).loop = true
 	_hover = lib.get_node(^"UI/Hover") as AudioStreamPlayer
 	_click = lib.get_node(^"UI/Click") as AudioStreamPlayer
 	_return = lib.get_node(^"UI/Return") as AudioStreamPlayer
@@ -77,17 +92,77 @@ func play_sfx(sfx: Sfx) -> void:
 	player.play()
 
 
-func play_music(is_game: bool = true) -> void:
-	var target: AudioStreamPlayer = _game_music if is_game else _menu_music
-	var other: AudioStreamPlayer = _menu_music if is_game else _game_music
-	other.stop()
+func set_music_track(track: MusicTrack, fade_duration: float = 0.0) -> void:
+	var target: AudioStreamPlayer = _get_music_player(track)
+	if _music_tween != null and _music_tween.is_valid():
+		_music_tween.kill()
+	_music_tween = null
+
+	if target == _current_music and target.playing:
+		for player: AudioStreamPlayer in [_menu_music, _game_music, _event_music]:
+			if player != target:
+				player.stop()
+				player.volume_db = 0.0
+		if fade_duration > 0.0 and not is_zero_approx(target.volume_db):
+			_music_tween = create_tween()
+			_music_tween.tween_property(target, ^"volume_db", 0.0, fade_duration)
+		else:
+			target.volume_db = 0.0
+		return
+
+	if fade_duration <= 0.0 or _current_music == null or not _current_music.playing:
+		for player: AudioStreamPlayer in [_menu_music, _game_music, _event_music]:
+			player.stop()
+			player.volume_db = 0.0
+		target.play()
+		_current_music = target
+		return
+
+	var prev: AudioStreamPlayer = _current_music
+	for player: AudioStreamPlayer in [_menu_music, _game_music, _event_music]:
+		if player != prev and player != target:
+			player.stop()
+			player.volume_db = 0.0
+
+	_current_music = target
+	target.volume_db = MUSIC_FADE_IN_DB
 	if not target.playing:
 		target.play()
+	_music_tween = create_tween()
+	_music_tween.set_parallel(true)
+	_music_tween.tween_property(target, ^"volume_db", 0.0, fade_duration)
+	_music_tween.tween_property(prev, ^"volume_db", MUSIC_FADE_OUT_DB, fade_duration)
+	_music_tween.chain().tween_callback(_finish_music_fade_out.bind(prev))
+
+
+func play_music(is_game: bool = true) -> void:
+	set_music_track(MusicTrack.GAME if is_game else MusicTrack.MENU, 0.0)
 
 
 func stop_music() -> void:
-	_menu_music.stop()
-	_game_music.stop()
+	if _music_tween != null and _music_tween.is_valid():
+		_music_tween.kill()
+	_music_tween = null
+	for player: AudioStreamPlayer in [_menu_music, _game_music, _event_music]:
+		player.stop()
+		player.volume_db = 0.0
+	_current_music = null
+
+
+func _finish_music_fade_out(player: AudioStreamPlayer) -> void:
+	if player != _current_music:
+		player.stop()
+		player.volume_db = 0.0
+
+
+func _get_music_player(track: MusicTrack) -> AudioStreamPlayer:
+	match track:
+		MusicTrack.MENU:
+			return _menu_music
+		MusicTrack.EVENT:
+			return _event_music
+		_:
+			return _game_music
 
 
 func play_click() -> void:
