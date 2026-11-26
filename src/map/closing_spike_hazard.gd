@@ -22,14 +22,14 @@ enum RingState {
 }
 
 const RING_THICKNESS: int = 2
-const MIN_SAFE_CORE_SIZE: int = 0
+const MIN_SAFE_CORE_SIZE: int = 2
 const MAX_RINGS: int = 12
 const CENTER_SPAWN_HALF_SIZE: int = 2
 const ENTRY_ARM_MARGIN: int = 2
 const INITIAL_ARM_DELAY: float = 0.6
 const RING_TELEGRAPH_1_TIME: float = 1.0
 const RING_TELEGRAPH_2_TIME: float = 0.35
-const NEXT_RING_INTERVAL: float = 1.85
+const NEXT_RING_INTERVAL: float = 3.0
 const RETRACT_STEP_TIME: float = 0.10
 const RETREAT_RESET_DELAY: float = 1.0
 
@@ -49,7 +49,7 @@ static func compute_ring_count(room_rect: Rect2i) -> int:
 	# Account for north top-wall row when computing playable interior height.
 	var min_dim: int = mini(room_rect.size.x, room_rect.size.y - 1)
 	var usable: int = maxi(0, min_dim - MIN_SAFE_CORE_SIZE)
-	var possible: int = ceili(float(usable) / float(RING_THICKNESS * 2))
+	var possible: int = floori(float(usable) / float(RING_THICKNESS * 2))
 	return clampi(possible, 0, MAX_RINGS)
 
 
