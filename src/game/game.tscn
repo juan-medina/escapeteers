@@ -7,25 +7,29 @@
 [ext_resource type="PackedScene" uid="uid://c6sfl12l8kd1o" path="res://hud/hud.tscn" id="6_hud"]
 [ext_resource type="PackedScene" path="res://recruit_panel/recruit_panel.tscn" id="7_recruit"]
 [ext_resource type="PackedScene" path="res://level_up_panel/level_up_panel.tscn" id="8_level_up"]
+[ext_resource type="PackedScene" path="res://debug_overlay/debug_overlay.tscn" id="9_debug"]
+[ext_resource type="Script" uid="uid://iwtiai5t55qf" path="res://floating_combat_text/floating_combat_text.gd" id="10_combat_text"]
 
 [node name="Game" type="Node2D" unique_id=676083646]
 script = ExtResource("1_game")
 
-[node name="PauseOverlay" parent="." instance=ExtResource("5_pause")]
+[node name="PauseOverlay" parent="." unique_id=760955010 instance=ExtResource("5_pause")]
 
-[node name="Hud" parent="." instance=ExtResource("6_hud")]
+[node name="DebugOverlay" parent="." unique_id=815953904 instance=ExtResource("9_debug")]
 
-[node name="Overlays" type="CanvasLayer" parent="."]
+[node name="Hud" parent="." unique_id=776129902 instance=ExtResource("6_hud")]
+
+[node name="Overlays" type="CanvasLayer" parent="." unique_id=1512089603]
 process_mode = 3
 layer = 1000
 
-[node name="RecruitPanel" parent="Overlays" instance=ExtResource("7_recruit")]
+[node name="RecruitPanel" parent="Overlays" unique_id=1019603451 instance=ExtResource("7_recruit")]
 visible = false
 
-[node name="LevelUpPanel" parent="Overlays" instance=ExtResource("8_level_up")]
+[node name="LevelUpPanel" parent="Overlays" unique_id=286802242 instance=ExtResource("8_level_up")]
 visible = false
 
-[node name="Map" parent="." instance=ExtResource("2_map")]
+[node name="Map" parent="." unique_id=1648028115 instance=ExtResource("2_map")]
 
 [node name="Characters" type="Node2D" parent="." unique_id=1481928371]
 z_index = 1
@@ -37,10 +41,13 @@ y_sort_enabled = true
 z_index = 1
 y_sort_enabled = true
 
-[node name="Fog" parent="." instance=ExtResource("4_fog")]
+[node name="FloatingCombatText" type="Node2D" parent="." unique_id=1017163686]
+z_index = 20
+script = ExtResource("10_combat_text")
+
+[node name="Fog" parent="." unique_id=1272550817 instance=ExtResource("4_fog")]
 
 [connection signal="hero_selected" from="Overlays/RecruitPanel" to="." method="_on_hero_recruited"]
 [connection signal="reroll_requested" from="Overlays/RecruitPanel" to="." method="_on_recruit_reroll_requested"]
 [connection signal="class_leveled_up" from="Overlays/LevelUpPanel" to="." method="_on_class_leveled_up"]
 [connection signal="reroll_requested" from="Overlays/LevelUpPanel" to="." method="_on_level_up_reroll_requested"]
-

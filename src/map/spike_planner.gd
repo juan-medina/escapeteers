@@ -14,6 +14,7 @@ const RANGED_EVENT_MAX_ROOM_DIM: int = 30
 static func plan_spike_traps(plan: WorldPlan) -> void:
 	_plan_closing_spike_rooms(plan)
 	_plan_wave_ambush_rooms(plan)
+	_plan_obelisk_rooms(plan)
 	for room: Rect2i in plan.rooms:
 		if not plan.is_event_room(room):
 			_plan_room_spike_traps(plan, room)
@@ -82,7 +83,7 @@ static func _has_event_neighbor(plan: WorldPlan, room: Rect2i) -> bool:
 	return false
 
 
-static func _plan_wave_ambush_rooms(plan: WorldPlan) -> void:
+static func _collect_shuffled_event_candidates(plan: WorldPlan, min_dim: int) -> Dictionary[int, Array]:
 	var excluded: Dictionary[Rect2i, bool] = {plan.hero_room: true}
 	for gate: SectorGatePlanner.SectorGate in plan.sector_gates:
 		excluded[gate.gate_room] = true
@@ -98,22 +99,28 @@ static func _plan_wave_ambush_rooms(plan: WorldPlan) -> void:
 		var shape: WorldPlan.RoomShape = plan._room_shapes.get(room, WorldPlan.RoomShape.RECTANGLE)
 		if shape != WorldPlan.RoomShape.RECTANGLE and shape != WorldPlan.RoomShape.CUT_CORNERS:
 			continue
-		if not WaveAmbush.can_fit_room(room):
+		if room.size.x < min_dim or room.size.y < min_dim:
 			continue
 		if not sector_candidates.has(sector_idx):
 			sector_candidates[sector_idx] = []
 		sector_candidates[sector_idx].append(room)
 
-	for sector_idx: int in range(4):
-		if not sector_candidates.has(sector_idx):
-			continue
+	for sector_idx: int in sector_candidates:
 		var list: Array = sector_candidates[sector_idx]
 		for i: int in range(list.size() - 1, 0, -1):
 			var swap_idx: int = plan._rng.randi_range(0, i)
 			var tmp: Rect2i = list[i]
 			list[i] = list[swap_idx]
 			list[swap_idx] = tmp
-		for r_var: Variant in list:
+	return sector_candidates
+
+
+static func _plan_wave_ambush_rooms(plan: WorldPlan) -> void:
+	var sector_candidates: Dictionary[int, Array] = _collect_shuffled_event_candidates(plan, 18)
+	for sector_idx: int in range(4):
+		if not sector_candidates.has(sector_idx):
+			continue
+		for r_var: Variant in sector_candidates[sector_idx]:
 			var room: Rect2i = r_var
 			if _has_event_neighbor(plan, room):
 				continue
@@ -124,6 +131,26 @@ static func _plan_wave_ambush_rooms(plan: WorldPlan) -> void:
 			plan.wave_ambushes[room] = ambush
 			plan.no_prop_cells[ambush.bait_cell] = true
 			plan.no_prop_cells[ambush.bait_cell + Vector2i(1, 0)] = true
+			break
+
+
+static func _plan_obelisk_rooms(plan: WorldPlan) -> void:
+	var sector_candidates: Dictionary[int, Array] = _collect_shuffled_event_candidates(plan, ObeliskEncounter.MIN_ROOM_DIM)
+	for sector_idx: int in range(4):
+		if not sector_candidates.has(sector_idx):
+			continue
+		for r_var: Variant in sector_candidates[sector_idx]:
+			var room: Rect2i = r_var
+			if _has_event_neighbor(plan, room):
+				continue
+			var encounter: ObeliskEncounter = ObeliskEncounter.build_for_room(plan, room)
+			if encounter.obelisk_cells.size() != 4:
+				continue
+			plan.room_event_types[room] = WorldPlan.RoomEventType.CURSED_OBELISKS
+			plan.obelisk_encounters[room] = encounter
+			plan.no_prop_cells[encounter.bait_cell] = true
+			for cell: Vector2i in encounter.obelisk_cells:
+				plan.no_prop_cells[cell] = true
 			break
 
 

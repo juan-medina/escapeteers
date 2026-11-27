@@ -27,6 +27,11 @@ Author: [url=https://mrdakerchan.itch.io/]MrDakerChan[/url]
 Source: [url=https://mrdakerchan.itch.io/pixel-top-down-dungeon]Itch.io[/url]
 License: Paid. Personal & commercial use allowed; redistribution and resale prohibited.
 
+[color=#ffffff][b]16x16 Dungeon Tileset[/b][/color]
+Author: [url=https://larchrow.itch.io/]Larchrow[/url]
+Source: [url=https://larchrow.itch.io/larchrow-16x16-dungeon-tileset]Itch.io[/url]
+License: Paid. Royalty-free for personal & commercial use; redistribution and resale prohibited.
+
 [color=#ffffff][b]Pixel UI Theme for Godot[/b][/color]
 Author: [url=https://thowsenmedia.itch.io/]Pelatho[/url]
 Source: [url=https://thowsenmedia.itch.io/pixel-ui-theme-for-godot]Itch.io[/url]

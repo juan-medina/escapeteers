@@ -575,8 +575,8 @@ func _on_enemy_died(enemy: Enemy) -> void:
 		if not _event_director.handle_ambush_enemy_died(self, enemy, room) and _room_remaining_enemies.has(room):
 			_room_remaining_enemies[room] = maxi(0, _room_remaining_enemies[room] - 1)
 			if _room_remaining_enemies[room] <= 0:
-				_patrol_manager.schedule_respawn(room)
-				_event_director.handle_closing_spikes_cleared(self, room)
+				if not _event_director.handle_event_room_enemies_cleared(self, room):
+					_patrol_manager.schedule_respawn(room)
 		_decrement_room_count(_room_spawned_enemies, room)
 	_add_squad_xp(enemy.xp_value)
 	_reset_combat_cooldown()
@@ -612,7 +612,7 @@ func _update_enemies() -> void:
 			continue
 
 		var dist_sq: float = enemy.global_position.distance_squared_to(camera_pos)
-		if dist_sq > ENEMY_DESPAWN_DIST_SQ:
+		if dist_sq > ENEMY_DESPAWN_DIST_SQ and not _event_director.is_active_obelisk_room(enemy.home_room):
 			_despawn_enemy(enemy)
 			i -= 1
 			continue
@@ -736,9 +736,10 @@ func _on_hero_recruited(hero_data: HeroData) -> void:
 
 func _on_hero_enemy_hit(enemy: Enemy, damage: float, is_heavy: bool, hero: Hero) -> void:
 	Codex.discover_enemy(enemy.enemy_id)
-	_hud.record_damage(hero.hero_data.id, damage)
+	if damage > 0.0:
+		_hud.record_damage(hero.hero_data.id, damage)
+		Audio.play_sfx(Audio.Sfx.HEAVY_IMPACT if is_heavy else Audio.Sfx.HIT_IMPACT)
 	_reset_combat_cooldown()
-	Audio.play_sfx(Audio.Sfx.HEAVY_IMPACT if is_heavy else Audio.Sfx.HIT_IMPACT)
 	if not enemy.is_dead and enemy.target == null:
 		enemy.set_target_candidate(hero)
 
@@ -976,7 +977,7 @@ func _check_character_spike(character: Character, is_enemy: bool = false) -> flo
 	if not _map.is_spike_active_at(foot_cell):
 		return 0.0
 	var is_blood: bool = _map.plan.event_spike_cell_rooms.has(foot_cell)
-	if is_blood and is_enemy:
+	if is_enemy and (is_blood or (character as Enemy).is_damage_immune):
 		return 0.0
 	Audio.play_sfx(Audio.Sfx.SPIKE_TRAP)
 	_spike_hit_cooldowns[character] = BLOOD_SPIKE_HIT_COOLDOWN if is_blood else SPIKE_HIT_COOLDOWN

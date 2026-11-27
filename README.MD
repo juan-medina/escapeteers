@@ -45,6 +45,11 @@ The submodule is private: without access, the clone succeeds but `src/data` stay
 * **Source:** [Itch.io](https://mrdakerchan.itch.io/pixel-top-down-dungeon)
 * **License:** Paid. Used under a purchased license (personal and commercial use allowed; redistribution and resale prohibited).
 
+#### 16x16 Dungeon Tileset
+* **Author:** [Larchrow](https://larchrow.itch.io/)
+* **Source:** [Itch.io](https://larchrow.itch.io/larchrow-16x16-dungeon-tileset)
+* **License:** Paid. Royalty-free for commercial and non-commercial use; redistribution and resale prohibited.
+
 #### Pixel UI Theme for Godot
 * **Author:** [Pelatho](https://thowsenmedia.itch.io/)
 * **Source:** [Itch.io](https://thowsenmedia.itch.io/pixel-ui-theme-for-godot)

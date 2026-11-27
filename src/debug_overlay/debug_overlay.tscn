@@ -1,0 +1,151 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://debug_overlay/debug_overlay.gd" id="1_debug"]
+[ext_resource type="FontFile" uid="uid://bg6arvysy4jwv" path="res://data/assets/pixel_ui_theme/m6x11plus.ttf" id="2_m6x11plus"]
+
+[node name="DebugOverlay" type="CanvasLayer"]
+process_mode = 3
+layer = 1050
+visible = false
+script = ExtResource("1_debug")
+
+[node name="ColorRect" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Center" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Title" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_m6x11plus")
+theme_override_font_sizes/font_size = 18
+text = "Debug Menu (F9)"
+horizontal_alignment = 1
+
+[node name="StatusLabel" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+text = "Depth: 0 | Squad: 1 | Lv: 1 | God: OFF"
+horizontal_alignment = 1
+
+[node name="HSeparator1" type="HSeparator" parent="Center/Panel/VBox"]
+layout_mode = 2
+
+[node name="WarpHeader" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+text = "Warp to Room"
+horizontal_alignment = 1
+
+[node name="WarpGrid" type="GridContainer" parent="Center/Panel/VBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 6
+columns = 2
+
+[node name="BloodSpikesBtn" type="Button" parent="Center/Panel/VBox/WarpGrid"]
+layout_mode = 2
+text = "Blood Spikes"
+
+[node name="WaveAmbushBtn" type="Button" parent="Center/Panel/VBox/WarpGrid"]
+layout_mode = 2
+text = "Cursed Ambush"
+
+[node name="ObeliskBtn" type="Button" parent="Center/Panel/VBox/WarpGrid"]
+layout_mode = 2
+text = "Cursed Obelisks"
+
+[node name="DeeperBtn" type="Button" parent="Center/Panel/VBox/WarpGrid"]
+layout_mode = 2
+text = "Deeper (+2)"
+
+[node name="HSeparator2" type="HSeparator" parent="Center/Panel/VBox"]
+layout_mode = 2
+
+[node name="SquadHeader" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+text = "Squad Setup"
+horizontal_alignment = 1
+
+[node name="SquadGrid" type="GridContainer" parent="Center/Panel/VBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 6
+columns = 2
+
+[node name="AddSquadBtn" type="Button" parent="Center/Panel/VBox/SquadGrid"]
+layout_mode = 2
+text = "+4 Balanced Squad"
+
+[node name="LevelUpAllBtn" type="Button" parent="Center/Panel/VBox/SquadGrid"]
+layout_mode = 2
+text = "+1 Level All"
+
+[node name="HealSquadBtn" type="Button" parent="Center/Panel/VBox/SquadGrid"]
+layout_mode = 2
+text = "Heal Squad"
+
+[node name="GrantKeysBtn" type="Button" parent="Center/Panel/VBox/SquadGrid"]
+layout_mode = 2
+text = "Grant All Keys"
+
+[node name="HSeparator3" type="HSeparator" parent="Center/Panel/VBox"]
+layout_mode = 2
+
+[node name="ToolsHeader" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+text = "Run Tools"
+horizontal_alignment = 1
+
+[node name="ToolsGrid" type="GridContainer" parent="Center/Panel/VBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 6
+columns = 2
+
+[node name="GodModeBtn" type="Button" parent="Center/Panel/VBox/ToolsGrid"]
+layout_mode = 2
+text = "God Mode: OFF"
+
+[node name="RevealMapBtn" type="Button" parent="Center/Panel/VBox/ToolsGrid"]
+layout_mode = 2
+text = "Reveal Map"
+
+[node name="ClearRoomBtn" type="Button" parent="Center/Panel/VBox/ToolsGrid"]
+layout_mode = 2
+text = "Clear Room Enemies"
+
+[node name="HSeparator4" type="HSeparator" parent="Center/Panel/VBox"]
+layout_mode = 2
+
+[node name="CloseBtn" type="Button" parent="Center/Panel/VBox" groups=["ui_return"]]
+layout_mode = 2
+text = "Close (F9)"
+
+[connection signal="pressed" from="Center/Panel/VBox/WarpGrid/BloodSpikesBtn" to="." method="_on_warp_blood_spikes_pressed"]
+[connection signal="pressed" from="Center/Panel/VBox/WarpGrid/WaveAmbushBtn" to="." method="_on_warp_wave_ambush_pressed"]
+[connection signal="pressed" from="Center/Panel/VBox/WarpGrid/ObeliskBtn" to="." method="_on_warp_obelisks_pressed"]
+[connection signal="pressed" from="Center/Panel/VBox/WarpGrid/DeeperBtn" to="." method="_on_warp_deeper_pressed"]
+[connection signal="pressed" from="Center/Panel/VBox/SquadGrid/AddSquadBtn" to="." method="_on_add_squad_pressed"]
+[connection signal="pressed" from="Center/Panel/VBox/SquadGrid/LevelUpAllBtn" to="." method="_on_level_up_all_pressed"]
+[connection signal="pressed" from="Center/Panel/VBox/SquadGrid/HealSquadBtn" to="." method="_on_heal_squad_pressed"]
+[connection signal="pressed" from="Center/Panel/VBox/SquadGrid/GrantKeysBtn" to="." method="_on_grant_keys_pressed"]
+[connection signal="pressed" from="Center/Panel/VBox/ToolsGrid/GodModeBtn" to="." method="_on_god_mode_pressed"]
+[connection signal="pressed" from="Center/Panel/VBox/ToolsGrid/RevealMapBtn" to="." method="_on_reveal_map_pressed"]
+[connection signal="pressed" from="Center/Panel/VBox/ToolsGrid/ClearRoomBtn" to="." method="_on_clear_room_pressed"]
+[connection signal="pressed" from="Center/Panel/VBox/CloseBtn" to="." method="_on_close_pressed"]

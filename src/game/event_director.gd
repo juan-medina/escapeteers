@@ -12,6 +12,7 @@ const EVENT_WARNING_COLOR: Color = Color(1.0, 0.28, 0.28, 1.0)
 const EVENT_WAVE_COLOR: Color = Color(0.82, 0.42, 1.0, 1.0)
 const EVENT_CLEAR_COLOR: Color = Color(1.0, 0.85, 0.35, 1.0)
 const CURSED_CHEST_SCENE: PackedScene = preload("res://cursed_chest/cursed_chest.tscn")
+const CURSED_OBELISK_SCENE: PackedScene = preload("res://cursed_obelisk/cursed_obelisk.tscn")
 
 var _hud: Hud
 var _fog: Fog
@@ -19,6 +20,8 @@ var _camera: Camera2D
 var _active_event_room: Rect2i = Rect2i()
 var _cursed_chests: Array[CursedChest] = []
 var _chests_by_room: Dictionary[Rect2i, CursedChest] = {}
+var _obelisks_by_room: Dictionary[Rect2i, Array] = {}
+var _active_obelisk_rooms: Array[Rect2i] = []
 var _active_ambush: WaveAmbush = null
 var _shake_timer: float = 0.0
 var _shake_duration: float = 0.0
@@ -81,6 +84,8 @@ func get_room_entry_title(map: Map, room: Rect2i) -> String:
 		return &"Blood Spike Arena - Lv. %d" % room_level
 	if event_type == WorldPlan.RoomEventType.WAVE_AMBUSH:
 		return &"Cursed Ambush - Lv. %d" % room_level
+	if event_type == WorldPlan.RoomEventType.CURSED_OBELISKS:
+		return &"Cursed Obelisks - Lv. %d" % room_level
 	var arch: StringName = RoomLayout.get_archetype_title(map.plan.get_room_archetype(room))
 	return &"%s - Lv. %d" % [arch, room_level]
 
@@ -94,16 +99,38 @@ func handle_map_event_armed(room: Rect2i, game: Game) -> void:
 			enemy.set_target_candidate(game._character, true)
 
 
-func handle_closing_spikes_cleared(game: Game, room: Rect2i) -> void:
-	var hazard: ClosingSpikeHazard = game._map.plan.closing_spike_hazards.get(room, null)
-	if hazard != null and not hazard.is_cleared:
-		hazard.clear()
-		if game._map.active_event_room == room:
-			game._map.active_event_room = Rect2i()
-		var chest: CursedChest = _chests_by_room.get(room, null)
-		if chest != null:
-			chest.unlock_reward()
-		on_event_cleared(room, &"Blood Spike Arena", &"Open the chest to claim your reward!")
+func handle_event_room_enemies_cleared(game: Game, room: Rect2i) -> bool:
+	var event_type: WorldPlan.RoomEventType = game._map.plan.room_event_types.get(room, WorldPlan.RoomEventType.NONE)
+	if event_type == WorldPlan.RoomEventType.CLOSING_SPIKES:
+		var hazard: ClosingSpikeHazard = game._map.plan.closing_spike_hazards.get(room, null)
+		if hazard != null and not hazard.is_cleared:
+			hazard.clear()
+			if game._map.active_event_room == room:
+				game._map.active_event_room = Rect2i()
+			var chest: CursedChest = _chests_by_room.get(room, null)
+			if chest != null:
+				chest.unlock_reward()
+			on_event_cleared(room, &"Blood Spike Arena", &"Open the chest to claim your reward!")
+		return true
+	if event_type == WorldPlan.RoomEventType.CURSED_OBELISKS:
+		_try_clear_obelisk_room(game, room)
+		return true
+	return false
+
+
+func get_active_obelisks_in_room(room: Rect2i) -> Array[CursedObelisk]:
+	var alive: Array[CursedObelisk] = []
+	if not _obelisks_by_room.has(room):
+		return alive
+	for ob_var: Variant in _obelisks_by_room[room]:
+		var obelisk: CursedObelisk = ob_var
+		if obelisk != null and not obelisk.is_dead and obelisk.obelisk_state == CursedObelisk.ObeliskState.ACTIVE:
+			alive.append(obelisk)
+	return alive
+
+
+func is_active_obelisk_room(room: Rect2i) -> bool:
+	return _active_obelisk_rooms.has(room)
 
 
 func get_unclaimed_chest_in_room(room: Rect2i) -> CursedChest:
@@ -116,16 +143,33 @@ func get_unclaimed_chest_in_room(room: Rect2i) -> CursedChest:
 func on_player_died() -> void:
 	_active_event_room = Rect2i()
 	_active_ambush = null
+	_active_obelisk_rooms.clear()
 
 
 func spawn_event_chests(map: Map, parent: Node2D) -> void:
 	_cursed_chests.clear()
 	_chests_by_room.clear()
+	_obelisks_by_room.clear()
+	_active_obelisk_rooms.clear()
 	_active_ambush = null
 	for hazard: ClosingSpikeHazard in map.plan.closing_spike_hazards.values():
 		_spawn_chest_at(map, parent, hazard.room, hazard.bait_cell)
 	for ambush: WaveAmbush in map.plan.wave_ambushes.values():
 		_spawn_chest_at(map, parent, ambush.room, ambush.bait_cell)
+	for encounter: ObeliskEncounter in map.plan.obelisk_encounters.values():
+		_spawn_chest_at(map, parent, encounter.room, encounter.bait_cell)
+		_spawn_obelisks_for_encounter(map, parent, encounter)
+
+
+func _spawn_obelisks_for_encounter(map: Map, parent: Node2D, encounter: ObeliskEncounter) -> void:
+	var spawned: Array[CursedObelisk] = []
+	for cell: Vector2i in encounter.obelisk_cells:
+		var obelisk: CursedObelisk = CURSED_OBELISK_SCENE.instantiate() as CursedObelisk
+		parent.add_child(obelisk)
+		obelisk.position = map.map_to_local(cell)
+		obelisk.home_room = encounter.room
+		spawned.append(obelisk)
+	_obelisks_by_room[encounter.room] = spawned
 
 
 func _spawn_chest_at(map: Map, parent: Node2D, room: Rect2i, cell: Vector2i) -> void:
@@ -147,8 +191,13 @@ func update_events(game: Game, delta: float) -> void:
 					_start_wave_ambush(game, chest)
 				elif ev_type == WorldPlan.RoomEventType.CLOSING_SPIKES:
 					_start_closing_spikes(game, chest)
+				elif ev_type == WorldPlan.RoomEventType.CURSED_OBELISKS:
+					_start_obelisk_encounter(game, chest)
 		elif chest.can_claim_reward() and PotionManager.is_squad_touching(game._squad, chest.position, CursedChest.TRIGGER_DISTANCE):
 			_claim_chest_reward(game, chest)
+
+	if not _active_obelisk_rooms.is_empty():
+		_update_obelisk_rooms(game)
 
 	if _active_ambush == null:
 		return
@@ -219,7 +268,128 @@ func _start_closing_spikes(game: Game, chest: CursedChest) -> void:
 	game._room_remaining_enemies[room] = cells.size()
 	game._room_spawned_enemies[room] = cells.size()
 	if cells.is_empty():
-		handle_closing_spikes_cleared(game, room)
+		handle_event_room_enemies_cleared(game, room)
+
+
+func _start_obelisk_encounter(game: Game, chest: CursedChest) -> void:
+	var room: Rect2i = chest.room
+	var encounter: ObeliskEncounter = game._map.plan.obelisk_encounters.get(room, null)
+	if encounter == null or encounter.is_cleared or encounter.is_triggered:
+		return
+	chest.activate()
+	encounter.is_triggered = true
+	game._map.active_event_room = room
+	if not _active_obelisk_rooms.has(room):
+		_active_obelisk_rooms.append(room)
+
+	var depth: int = clampi(encounter.depth, 1, 12)
+	var obelisks: Array = _obelisks_by_room.get(room, [])
+	for ob_var: Variant in obelisks:
+		var obelisk: CursedObelisk = ob_var
+		if obelisk != null:
+			obelisk.activate(depth, encounter.aura_radius)
+			if not obelisk.died.is_connected(_on_obelisk_died):
+				obelisk.died.connect(_on_obelisk_died.bind(game, room))
+
+	on_event_armed(room, &"Cursed Obelisk Chamber", &"Shatter all 4 orbs and clear the guards")
+
+	var used_cells: Dictionary[Vector2i, bool] = {encounter.bait_cell: true}
+	for cell: Vector2i in encounter.obelisk_cells:
+		used_cells[cell] = true
+
+	var spawn_requests: Array[Dictionary] = []
+	for i: int in range(encounter.obelisk_cells.size()):
+		var roster: Array[StringName] = encounter.build_guard_roster_for_obelisk(i)
+		var guard_cells: Array[Vector2i] = encounter.pick_guard_cells_around(game._map.plan, encounter.obelisk_cells[i], roster.size(), used_cells)
+		var count: int = mini(roster.size(), guard_cells.size())
+		for j: int in range(count):
+			spawn_requests.append({&"pos": game._map.map_to_local(guard_cells[j]), &"id": roster[j]})
+
+	var free_slots: int = Game.MAX_ENEMIES - game._enemies.size()
+	if free_slots < spawn_requests.size():
+		var room_center: Vector2 = game._map.map_to_local(room.get_center())
+		var dist_sq: float = game._character.global_position.distance_squared_to(room_center)
+		game._reclaim_distant_enemies_for_room(room, dist_sq, spawn_requests.size() - free_slots, game._character.global_position)
+
+	var spawned_count: int = 0
+	for req: Dictionary in spawn_requests:
+		if game._enemies.size() >= Game.MAX_ENEMIES:
+			break
+		var pos: Vector2 = req[&"pos"]
+		var enemy_id: StringName = req[&"id"]
+		var pentagram: Projectile = Projectile.acquire(Game.SUMMON_PENTAGRAM_SCENE)
+		pentagram.global_position = pos
+		game._on_projectile_spawn_requested(pentagram)
+		game._spawn_enemy_at(pos, room, _scene_for_enemy_id(enemy_id), depth, false, false)
+		game._enemies[game._enemies.size() - 1].stay_in_home_room = true
+		spawned_count += 1
+	if spawned_count > 0:
+		Audio.play_sfx(Audio.Sfx.NECRO_SUMMON)
+	game._room_remaining_enemies[room] = spawned_count
+	game._room_spawned_enemies[room] = spawned_count
+	_refresh_obelisk_auras(game, room)
+
+
+func _update_obelisk_rooms(game: Game) -> void:
+	for room: Rect2i in _active_obelisk_rooms:
+		_refresh_obelisk_auras(game, room)
+		if game._current_room == room:
+			if _active_event_room != room:
+				_active_event_room = room
+				Audio.set_music_track(Audio.MusicTrack.EVENT, EVENT_MUSIC_FADE_IN)
+				_fog.set_event_atmosphere(true)
+		elif _active_event_room == room:
+			on_event_disarmed(room)
+
+
+func _refresh_obelisk_auras(game: Game, room: Rect2i) -> void:
+	var alive_obelisks: Array[CursedObelisk] = get_active_obelisks_in_room(room)
+	var tethers_by_obelisk: Array[Array] = []
+	for _i: int in range(alive_obelisks.size()):
+		tethers_by_obelisk.append([])
+
+	for enemy: Enemy in game._enemies:
+		if enemy.is_dead or enemy.home_room != room:
+			continue
+		var shielded: bool = false
+		for i: int in range(alive_obelisks.size()):
+			var r_sq: float = alive_obelisks[i].aura_radius * alive_obelisks[i].aura_radius
+			if enemy.global_position.distance_squared_to(alive_obelisks[i].global_position) <= r_sq:
+				shielded = true
+				tethers_by_obelisk[i].append(enemy.global_position)
+		enemy.is_damage_immune = shielded
+
+	for i: int in range(alive_obelisks.size()):
+		var world_pts: Array[Vector2] = []
+		for pos_var: Variant in tethers_by_obelisk[i]:
+			world_pts.append(pos_var)
+		alive_obelisks[i].set_tether_world_positions(world_pts)
+
+
+func _on_obelisk_died(game: Game, room: Rect2i) -> void:
+	trigger_shake(3.0, 0.20)
+	_refresh_obelisk_auras(game, room)
+	_try_clear_obelisk_room(game, room)
+
+
+func _try_clear_obelisk_room(game: Game, room: Rect2i) -> void:
+	var encounter: ObeliskEncounter = game._map.plan.obelisk_encounters.get(room, null)
+	if encounter == null or encounter.is_cleared:
+		return
+	if not get_active_obelisks_in_room(room).is_empty():
+		return
+	for enemy: Enemy in game._enemies:
+		if not enemy.is_dead and enemy.home_room == room:
+			return
+	encounter.clear()
+	_active_obelisk_rooms.erase(room)
+	if game._map.active_event_room == room:
+		game._map.active_event_room = Rect2i()
+	var chest: CursedChest = _chests_by_room.get(room, null)
+	if chest != null:
+		chest.unlock_reward()
+	on_event_cleared(room, &"Cursed Obelisk Chamber", &"Open the chest to claim your reward!")
+	game._patrol_manager.schedule_respawn(room)
 
 
 func _start_wave_ambush(game: Game, chest: CursedChest) -> void:

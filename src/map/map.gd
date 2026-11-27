@@ -662,11 +662,16 @@ func get_room_pickups(room: Rect2i, include_event_reward: bool = false, drop_anc
 	if plan.is_event_room(room):
 		if include_event_reward:
 			var base_world: Vector2 = drop_anchor if drop_anchor.is_finite() else _floor.map_to_local(room.get_center())
-			if plan.room_event_types.get(room, WorldPlan.RoomEventType.NONE) == WorldPlan.RoomEventType.WAVE_AMBUSH:
+			var event_type: WorldPlan.RoomEventType = plan.room_event_types.get(room, WorldPlan.RoomEventType.NONE)
+			if event_type == WorldPlan.RoomEventType.WAVE_AMBUSH:
 				coins.append(_clamp_world_to_room(base_world + Vector2(-18.0, -8.0), room))
 				coins.append(_clamp_world_to_room(base_world + Vector2(18.0, -8.0), room))
 				potions.append({&"pos": _clamp_world_to_room(base_world + Vector2(-12.0, 10.0), room), &"type": PotionPickup.PotionType.HEALTH})
 				potions.append({&"pos": _clamp_world_to_room(base_world + Vector2(12.0, 10.0), room), &"type": _roll_potion_type(room, 53, 89)})
+			elif event_type == WorldPlan.RoomEventType.CURSED_OBELISKS:
+				coins.append(_clamp_world_to_room(base_world + Vector2(-14.0, -6.0), room))
+				potions.append({&"pos": _clamp_world_to_room(base_world + Vector2(14.0, -6.0), room), &"type": PotionPickup.PotionType.HEALTH})
+				potions.append({&"pos": _clamp_world_to_room(base_world + Vector2(0.0, 10.0), room), &"type": _roll_potion_type(room, 41, 79)})
 			else:
 				coins.append(_clamp_world_to_room(base_world + Vector2(-12.0, 0.0), room))
 				potions.append({&"pos": _clamp_world_to_room(base_world + Vector2(12.0, 0.0), room), &"type": _roll_potion_type(room, 37, 71)})

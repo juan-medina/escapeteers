@@ -16,6 +16,9 @@ static func is_active_special_room(map: Map, room: Rect2i) -> bool:
 		WorldPlan.RoomEventType.WAVE_AMBUSH:
 			var ambush: WaveAmbush = map.plan.wave_ambushes.get(room, null)
 			return ambush != null and not ambush.is_cleared
+		WorldPlan.RoomEventType.CURSED_OBELISKS:
+			var enc: ObeliskEncounter = map.plan.obelisk_encounters.get(room, null)
+			return enc != null and not enc.is_cleared
 		_:
 			return false
 
@@ -50,8 +53,43 @@ static func decide_move(bot: AutoplayBot, game: Game, map: Map, leader: Hero, de
 			return _decide_closing_spikes_move(bot, game, map, leader, room, delta)
 		WorldPlan.RoomEventType.WAVE_AMBUSH:
 			return _decide_wave_ambush_move(bot, game, map, leader, room, delta)
+		WorldPlan.RoomEventType.CURSED_OBELISKS:
+			return _decide_obelisk_move(bot, game, map, leader, room, delta)
 		_:
 			return Vector2.ZERO
+
+
+static func _decide_obelisk_move(bot: AutoplayBot, game: Game, map: Map, leader: Hero, room: Rect2i, delta: float) -> Vector2:
+	var enc: ObeliskEncounter = map.plan.obelisk_encounters.get(room, null)
+	if enc == null or enc.is_cleared:
+		return Vector2.ZERO
+	if not enc.is_triggered:
+		var bait_pos: Vector2 = map.clamp_to_walkable(map.map_to_local(enc.bait_cell))
+		return bot._steer_toward(map, leader, bait_pos, delta)
+
+	var safe_pickup: Vector2 = _find_safe_pickup(bot, game, map, leader, room)
+	if safe_pickup != Vector2.ZERO:
+		return bot._steer_toward(map, leader, safe_pickup, delta)
+
+	var obelisks: Array[CursedObelisk] = game._event_director.get_active_obelisks_in_room(room)
+	if not obelisks.is_empty():
+		var nearest: CursedObelisk = obelisks[0]
+		var min_dist_sq: float = leader.global_position.distance_squared_to(nearest.global_position)
+		for i: int in range(1, obelisks.size()):
+			var d_sq: float = leader.global_position.distance_squared_to(obelisks[i].global_position)
+			if d_sq < min_dist_sq:
+				min_dist_sq = d_sq
+				nearest = obelisks[i]
+		return bot._compute_combat_move(game, map, leader, nearest, delta)
+
+	var combat_target: Enemy = bot._find_priority_enemy(game, map, leader)
+	if combat_target != null:
+		return bot._compute_combat_move(game, map, leader, combat_target, delta)
+
+	var center_pos: Vector2 = map.clamp_to_walkable(map.map_to_local(room.get_center()))
+	if leader.global_position.distance_squared_to(center_pos) > 24.0 * 24.0:
+		return bot._steer_toward(map, leader, center_pos, delta)
+	return Vector2.ZERO
 
 
 static func _decide_wave_ambush_move(bot: AutoplayBot, game: Game, map: Map, leader: Hero, room: Rect2i, delta: float) -> Vector2:

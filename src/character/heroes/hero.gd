@@ -26,6 +26,7 @@ const _GROUP_HEROES: StringName = &"heroes"
 
 static var active_heroes: Array[Hero] = []
 static var active_hazard_safe_rect: Rect2 = Rect2()
+static var god_mode: bool = false
 
 @export var level: int = 1:
 	set(value):
@@ -251,6 +252,8 @@ func heal(amount: float) -> void:
 
 
 func take_damage(amount: float, flash_hurt: bool = true) -> void:
+	if god_mode:
+		return
 	super.take_damage(amount, flash_hurt)
 	if not is_dead and health > 0.0:
 		Audio.play_sfx(Audio.Sfx.HERO_HURT)
@@ -389,6 +392,8 @@ func _find_closest_enemy() -> Enemy:
 	var min_preferred_dist_sq: float = INF
 	var closest_fallback: Enemy = null
 	var min_fallback_dist_sq: float = INF
+	var closest_immune: Enemy = null
+	var min_immune_dist_sq: float = INF
 	var max_detection: float = get_detection_range()
 	var max_detection_sq: float = max_detection * max_detection
 	var leash: float = get_current_leash()
@@ -420,17 +425,26 @@ func _find_closest_enemy() -> Enemy:
 				continue
 
 		var dist_to_self_sq: float = self_pos.distance_squared_to(enemy_pos)
+		if enemy.is_damage_immune:
+			if dist_to_self_sq < min_immune_dist_sq:
+				min_immune_dist_sq = dist_to_self_sq
+				closest_immune = enemy
+			continue
+
+		var score_dist_sq: float = dist_to_self_sq * 0.7 if (enemy is CursedObelisk) else dist_to_self_sq
 		if _is_preferred_target(enemy):
-			if dist_to_self_sq < min_preferred_dist_sq:
-				min_preferred_dist_sq = dist_to_self_sq
+			if score_dist_sq < min_preferred_dist_sq:
+				min_preferred_dist_sq = score_dist_sq
 				closest_preferred = enemy
-		elif dist_to_self_sq < min_fallback_dist_sq:
-			min_fallback_dist_sq = dist_to_self_sq
+		elif score_dist_sq < min_fallback_dist_sq:
+			min_fallback_dist_sq = score_dist_sq
 			closest_fallback = enemy
 
 	if closest_preferred != null:
 		return closest_preferred
-	return closest_fallback
+	if closest_fallback != null:
+		return closest_fallback
+	return closest_immune
 
 
 func _find_injured_ally(max_health_ratio: float = HEAL_TRIAGE_THRESHOLD) -> Hero:

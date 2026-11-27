@@ -20,6 +20,9 @@ const PATROL_TIMEOUT: float = 10.0
 const KNOCKBACK_DECAY: float = 600.0
 const SLOW_MODULATE: Color = Color(0.45, 0.75, 1.35, 1.0)
 const MINION_MODULATE: Color = Color(0.85, 0.9, 1.1, 0.85)
+const IMMUNE_MODULATE: Color = Color(1.05, 0.72, 1.45, 1.0)
+const IMMUNE_FLASH_COLOR: Color = Color(1.85, 1.30, 2.50, 1.0)
+const IMMUNE_BAR_COLOR: Color = Color(0.75, 0.42, 1.0, 1.0)
 const BURN_TICK_INTERVAL: float = 0.5
 const ENEMY_HURTBOX_RADIUS: float = 10.0
 const LEVEL_COLOR: Color = Color(1.0, 0.45, 0.35, 1.0)
@@ -59,6 +62,14 @@ var summon_count: int = 2
 var kite_distance: float = 0.0
 var is_minion: bool = false
 var is_patrol_respawn: bool = false
+var stay_in_home_room: bool = false
+var is_damage_immune: bool = false:
+	set(value):
+		if is_damage_immune == value:
+			return
+		is_damage_immune = value
+		if is_inside_tree() and not is_dead:
+			_update_status_visuals()
 
 var current_state: State = State.PATROL
 var map: Map = null
@@ -184,7 +195,7 @@ func _set_sleeping(sleeping: bool, force: bool = false) -> void:
 		if not _is_stunned() and not _animated_sprite.is_playing():
 			_animated_sprite.play()
 		_status_vfx.set_on_screen(is_on_screen)
-		_status_vfx.set_statuses(_is_stunned(), is_burning(), is_slowed(), is_marked())
+		_status_vfx.set_statuses(_is_stunned(), is_burning(), is_slowed(), is_marked(), is_damage_immune)
 
 
 func _physics_process(delta: float) -> void:
@@ -440,6 +451,8 @@ func is_marked() -> bool:
 
 
 func get_effective_damage_taken(raw_damage: float) -> float:
+	if is_damage_immune:
+		return 0.0
 	if _mark_timer > 0.0 and _mark_bonus > 0.0:
 		return raw_damage * (1.0 + _mark_bonus)
 	return raw_damage
@@ -468,28 +481,45 @@ func _is_in_active_event_room() -> bool:
 
 
 func _update_status_visuals() -> void:
-	_status_vfx.set_statuses(_is_stunned(), is_burning(), is_slowed(), is_marked())
+	_status_vfx.set_statuses(_is_stunned(), is_burning(), is_slowed(), is_marked(), is_damage_immune)
 	if _is_stunned():
 		_animated_sprite.pause()
 	elif not _animated_sprite.is_playing() and not is_dead:
 		_animated_sprite.play()
 
-	if is_slowed():
+	if is_damage_immune:
+		_base_modulate = IMMUNE_MODULATE
+		_animated_sprite.modulate = IMMUNE_MODULATE
+		_health_bar.set_fill_color(IMMUNE_BAR_COLOR)
+	elif is_slowed():
 		_base_modulate = SLOW_MODULATE
 		_animated_sprite.modulate = SLOW_MODULATE
+		_health_bar.set_fill_color(HealthBar.DEFAULT_ENEMY_COLOR)
 	elif is_minion:
 		_base_modulate = MINION_MODULATE
 		_animated_sprite.modulate = MINION_MODULATE
+		_health_bar.set_fill_color(HealthBar.DEFAULT_ENEMY_COLOR)
 	else:
 		_base_modulate = Color.WHITE
 		_animated_sprite.modulate = Color.WHITE
+		_health_bar.set_fill_color(HealthBar.DEFAULT_ENEMY_COLOR)
 
 
 func take_damage(amount: float, flash_hurt: bool = true) -> void:
 	if is_dead or not visible:
 		return
 	_set_sleeping(false)
+	if is_damage_immune:
+		if flash_hurt:
+			_flash_immune()
+		return
 	super.take_damage(amount, flash_hurt)
+
+
+func _flash_immune() -> void:
+	var tween: Tween = create_tween()
+	_animated_sprite.modulate = IMMUNE_FLASH_COLOR
+	tween.tween_property(_animated_sprite, ^"modulate", _base_modulate, 0.10)
 
 
 func _process_patrol(delta: float) -> void:
@@ -567,6 +597,7 @@ func _process_chase(delta: float) -> void:
 		velocity = _knockback_velocity
 		if _knockback_velocity.length_squared() > 1.0:
 			move_and_slide()
+			_enforce_home_room_bounds()
 		return
 
 	var push_vel: Vector2 = _knockback_velocity + separation_velocity
@@ -574,15 +605,31 @@ func _process_chase(delta: float) -> void:
 		velocity = push_vel
 		if push_vel.length_squared() > 1.0:
 			move_and_slide()
+			_enforce_home_room_bounds()
 		else:
 			update_visuals(Vector2.ZERO)
 		return
 
-	var waypoint: Vector2 = _navigator.get_next_waypoint(self, target.global_position, map, delta)
+	var chase_goal: Vector2 = (
+		_clamp_to_home_room(target.global_position) if (stay_in_home_room and home_room != Rect2i() and map != null) else target.global_position
+	)
+	var waypoint: Vector2 = _navigator.get_next_waypoint(self, chase_goal, map, delta)
 	var move_vec: Vector2 = (waypoint - global_position).normalized()
 	velocity = (move_vec * speed * _slow_multiplier) + push_vel
 	move_and_slide()
+	_enforce_home_room_bounds()
 	update_visuals(velocity * delta)
+
+
+func _clamp_to_home_room(pos: Vector2) -> Vector2:
+	var min_w: Vector2 = map.map_to_local(home_room.position)
+	var max_w: Vector2 = map.map_to_local(home_room.end - Vector2i.ONE)
+	return Vector2(clampf(pos.x, min_w.x, max_w.x), clampf(pos.y, min_w.y, max_w.y))
+
+
+func _enforce_home_room_bounds() -> void:
+	if stay_in_home_room and home_room != Rect2i() and map != null:
+		global_position = _clamp_to_home_room(global_position)
 
 
 func _try_kite_away(dist_to_target: float, delta: float) -> bool:
@@ -597,8 +644,12 @@ func _try_kite_away(dist_to_target: float, delta: float) -> bool:
 		var safe_rect: Rect2 = map.active_event_safe_world_rect
 		if safe_rect.has_area() and not safe_rect.has_point(global_position + away_dir * 16.0):
 			return false
+	if stay_in_home_room and home_room != Rect2i() and map != null:
+		if not home_room.has_point(map.local_to_map(global_position + away_dir * 16.0)):
+			return false
 	velocity = (away_dir * speed * _slow_multiplier) + separation_velocity + _knockback_velocity
 	move_and_slide()
+	_enforce_home_room_bounds()
 	update_visuals(velocity * delta)
 	return true
 
@@ -766,6 +817,7 @@ func deactivate_for_pool() -> void:
 	target = null
 	attack_target = null
 	current_action = null
+	stay_in_home_room = false
 	_burn_source = null
 	_is_summoning_in = false
 	_knockback_velocity = Vector2.ZERO
@@ -779,6 +831,7 @@ func reset_for_pool() -> void:
 		level = -1
 	is_minion = false
 	is_patrol_respawn = false
+	stay_in_home_room = false
 	health = max_health
 	is_dead = false
 	_is_summoning_in = false
@@ -788,6 +841,7 @@ func reset_for_pool() -> void:
 	target = null
 	attack_target = null
 	current_action = null
+	stay_in_home_room = false
 	_patrol_destination = Vector2.ZERO
 	_patrol_timer = 0.0
 	_idle_wait_timer = randf_range(0.1, 0.8)
@@ -805,10 +859,12 @@ func reset_for_pool() -> void:
 	separation_velocity = Vector2.ZERO
 	_navigator.reset()
 	_base_modulate = Color.WHITE
+	is_damage_immune = false
 	_status_vfx.clear()
 	_animated_sprite.modulate = Color.WHITE
 	_animated_sprite.play(ANIM_IDLE)
 	_health_bar.visible = true
+	_health_bar.set_fill_color(HealthBar.DEFAULT_ENEMY_COLOR)
 	_health_bar.update_health(health, max_health)
 	visible = true
 	if not is_in_group(_GROUP_ENEMIES):
@@ -833,6 +889,7 @@ func _on_death() -> void:
 	target = null
 	attack_target = null
 	current_action = null
+	stay_in_home_room = false
 	set_physics_process(false)
 	remove_from_group(_GROUP_ENEMIES)
 	_stun_timer = 0.0
@@ -844,6 +901,7 @@ func _on_death() -> void:
 	_burn_source = null
 	_mark_timer = 0.0
 	_mark_bonus = 0.0
+	is_damage_immune = false
 	_status_vfx.clear()
 	_base_modulate = Color.WHITE
 	_animated_sprite.modulate = Color.WHITE

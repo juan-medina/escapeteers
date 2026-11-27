@@ -737,6 +737,8 @@ func _find_priority_enemy(game: Game, map: Map, leader: Hero) -> Enemy:
 	var best_necro_dist_sq: float = INF
 	var best: Enemy = null
 	var best_score: float = INF
+	var best_immune: Enemy = null
+	var best_immune_dist_sq: float = INF
 	for enemy: Enemy in game._enemies:
 		if not is_instance_valid(enemy) or enemy.is_dead or not enemy.visible:
 			continue
@@ -751,7 +753,11 @@ func _find_priority_enemy(game: Game, map: Map, leader: Hero) -> Enemy:
 		if enemy.home_room != _last_known_room and enemy.home_room != _goal_room and enemy_room != _last_known_room:
 			if not SquadNavigator.has_line_of_sight(leader, enemy.global_position):
 				continue
-		if enemy is Necromancer:
+		if enemy.is_damage_immune:
+			if d_sq < best_immune_dist_sq:
+				best_immune_dist_sq = d_sq
+				best_immune = enemy
+		elif enemy is Necromancer:
 			if d_sq < best_necro_dist_sq:
 				best_necro_dist_sq = d_sq
 				best_necro = enemy
@@ -769,7 +775,11 @@ func _find_priority_enemy(game: Game, map: Map, leader: Hero) -> Enemy:
 		if enemy.home_room != _last_known_room and enemy.home_room != _goal_room:
 			continue
 		var d_sq: float = leader.global_position.distance_squared_to(enemy.global_position)
-		if enemy is Necromancer:
+		if enemy.is_damage_immune:
+			if d_sq < best_immune_dist_sq:
+				best_immune_dist_sq = d_sq
+				best_immune = enemy
+		elif enemy is Necromancer:
 			if d_sq < best_necro_dist_sq:
 				best_necro_dist_sq = d_sq
 				best_necro = enemy
@@ -781,7 +791,9 @@ func _find_priority_enemy(game: Game, map: Map, leader: Hero) -> Enemy:
 		return best_necro
 	if best != null:
 		return best
-	return best_room_enemy
+	if best_room_enemy != null:
+		return best_room_enemy
+	return best_immune
 
 
 func _compute_combat_move(game: Game, map: Map, leader: Hero, target: Enemy, delta: float) -> Vector2:

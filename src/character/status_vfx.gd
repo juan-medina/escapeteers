@@ -42,6 +42,13 @@ const MARK_COLOR_OUTER: Color = Color(1.0, 0.22, 0.22, 0.95)
 const MARK_COLOR_CORE: Color = Color(1.0, 0.78, 0.78, 1.0)
 const MARK_COLOR_SHADOW: Color = Color(0.24, 0.02, 0.02, 0.85)
 
+const IMMUNE_RADIUS_X: float = 7.5
+const IMMUNE_RADIUS_Y: float = 3.2
+const IMMUNE_PIP_COUNT: int = 3
+const IMMUNE_RING_COLOR: Color = Color(0.82, 0.45, 1.0, 0.85)
+const IMMUNE_PIP_COLOR: Color = Color(0.96, 0.82, 1.0, 1.0)
+const IMMUNE_SHADOW_COLOR: Color = Color(0.18, 0.04, 0.30, 0.80)
+
 var head_y: float = -8.0
 var feet_y: float = 6.0
 
@@ -49,6 +56,7 @@ var _is_stunned: bool = false
 var _is_burning: bool = false
 var _is_slowed: bool = false
 var _is_marked: bool = false
+var _is_immune: bool = false
 var _is_on_screen: bool = true
 var _time: float = 0.0
 var _redraw_timer: float = 0.0
@@ -72,12 +80,15 @@ func set_on_screen(on_screen: bool) -> void:
 	_update_active_state(_is_on_screen)
 
 
-func set_statuses(stunned: bool, burning: bool, slowed: bool, marked: bool = false) -> void:
-	var changed: bool = (_is_stunned != stunned) or (_is_burning != burning) or (_is_slowed != slowed) or (_is_marked != marked)
+func set_statuses(stunned: bool, burning: bool, slowed: bool, marked: bool = false, immune: bool = false) -> void:
+	var changed: bool = (
+		(_is_stunned != stunned) or (_is_burning != burning) or (_is_slowed != slowed) or (_is_marked != marked) or (_is_immune != immune)
+	)
 	_is_stunned = stunned
 	_is_burning = burning
 	_is_slowed = slowed
 	_is_marked = marked
+	_is_immune = immune
 	_update_active_state(changed)
 
 
@@ -106,6 +117,7 @@ func clear() -> void:
 	_is_burning = false
 	_is_slowed = false
 	_is_marked = false
+	_is_immune = false
 	_burn_pulse = 0.0
 	_kb_timer = 0.0
 	_redraw_timer = 0.0
@@ -115,7 +127,7 @@ func clear() -> void:
 
 
 func _update_active_state(force_redraw: bool) -> void:
-	var any_active: bool = _is_stunned or _is_burning or _is_slowed or _is_marked or (_kb_timer > 0.0)
+	var any_active: bool = _is_stunned or _is_burning or _is_slowed or _is_marked or _is_immune or (_kb_timer > 0.0)
 	visible = any_active and _is_on_screen
 	set_process((any_active and _is_on_screen) or (_kb_timer > 0.0))
 	if not _is_burning:
@@ -141,6 +153,8 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	if _is_immune:
+		_draw_immune_shield()
 	if _kb_timer > 0.0:
 		_draw_knockback_impact()
 	if _is_slowed:
@@ -243,3 +257,19 @@ func _draw_hunter_mark() -> void:
 	draw_rect(Rect2(-1.0, cy - 2.0, 3.0, 2.0), MARK_COLOR_OUTER, true)
 	draw_rect(Rect2(0.0, cy, 1.0, 2.0), MARK_COLOR_OUTER, true)
 	draw_rect(Rect2(0.0, cy - 2.0, 1.0, 2.0), MARK_COLOR_CORE, true)
+
+
+func _draw_immune_shield() -> void:
+	var mid_y: float = roundf((head_y + feet_y) * 0.5)
+	draw_rect(Rect2(-5.0, feet_y - 2.0, 10.0, 1.0), IMMUNE_RING_COLOR, true)
+	draw_rect(Rect2(-5.0, feet_y + 2.0, 10.0, 1.0), IMMUNE_RING_COLOR, true)
+	draw_rect(Rect2(-7.0, feet_y - 1.0, 2.0, 2.0), IMMUNE_RING_COLOR, true)
+	draw_rect(Rect2(5.0, feet_y - 1.0, 2.0, 2.0), IMMUNE_RING_COLOR, true)
+
+	for i: int in range(IMMUNE_PIP_COUNT):
+		var angle: float = _time * 3.2 + (TAU * float(i)) / float(IMMUNE_PIP_COUNT)
+		var px: float = roundf(cos(angle) * IMMUNE_RADIUS_X)
+		var py: float = roundf(mid_y + sin(angle) * IMMUNE_RADIUS_Y)
+		draw_rect(Rect2(px - 1.0, py - 1.0, 3.0, 3.0), IMMUNE_SHADOW_COLOR, true)
+		draw_rect(Rect2(px, py, 2.0, 2.0), IMMUNE_RING_COLOR, true)
+		draw_rect(Rect2(px, py, 1.0, 1.0), IMMUNE_PIP_COLOR, true)

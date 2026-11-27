@@ -1,0 +1,138 @@
+[gd_scene format=3 uid="uid://dhr7vpfrgmk6"]
+
+[ext_resource type="Script" uid="uid://cadq8vr64wfjm" path="res://cursed_obelisk/cursed_obelisk.gd" id="1_obelisk"]
+[ext_resource type="Script" uid="uid://c8m0rwlbiwnld" path="res://cursed_obelisk/obelisk_aura.gd" id="2_aura"]
+[ext_resource type="Script" uid="uid://ck6m1qkfwuddh" path="res://character/ground_indicator.gd" id="3_ind"]
+[ext_resource type="Script" uid="uid://b51ct7bx358a5" path="res://character/health_bar.gd" id="4_hbar"]
+[ext_resource type="Script" uid="uid://cj3ew31mv37dv" path="res://character/hurtbox.gd" id="5_hurtbox"]
+[ext_resource type="Script" uid="uid://bira88vukndjn" path="res://character/status_vfx.gd" id="6_svfx"]
+[ext_resource type="Texture2D" uid="uid://cd8wqoflbfbrv" path="res://map/light_texture.tres" id="7_light"]
+[ext_resource type="Texture2D" uid="uid://dppdneod7ec02" path="res://data/assets/map/props/orb_pedestal.png" id="8_dormant"]
+[ext_resource type="Texture2D" uid="uid://5fdqigis8um2" path="res://data/assets/map/props/orb_pedestal_f1.png" id="9_f1"]
+[ext_resource type="Texture2D" uid="uid://ci5j0q1xbndvg" path="res://data/assets/map/props/orb_pedestal_f2.png" id="10_f2"]
+[ext_resource type="Texture2D" uid="uid://cqke5t3b3qfkj" path="res://data/assets/map/props/pillar_broken.png" id="11_broken"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_obelisk"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("8_dormant")
+}, {
+"duration": 1.0,
+"texture": ExtResource("9_f1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_f2")
+}],
+"loop": 1,
+"name": &"active",
+"speed": 6.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("11_broken")
+}],
+"loop": 1,
+"name": &"destroyed",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("8_dormant")
+}],
+"loop": 1,
+"name": &"dormant",
+"speed": 1.0
+}]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_body"]
+radius = 6.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_hurtbox"]
+
+[node name="CursedObelisk" type="CharacterBody2D" unique_id=808353715]
+y_sort_enabled = true
+collision_layer = 8
+collision_mask = 0
+script = ExtResource("1_obelisk")
+
+[node name="ObeliskAura" type="Node2D" parent="." unique_id=155876080]
+z_index = -1
+script = ExtResource("2_aura")
+
+[node name="GroundIndicator" type="Node2D" parent="." unique_id=24774030]
+position = Vector2(0, 5)
+script = ExtResource("3_ind")
+radius_x = 8.0
+radius_y = 4.0
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1304446754]
+position = Vector2(0, -4)
+sprite_frames = SubResource("SpriteFrames_obelisk")
+animation = &"dormant"
+autoplay = "dormant"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1752861135]
+position = Vector2(0, 2)
+shape = SubResource("CircleShape2D_body")
+
+[node name="Hurtbox" type="Area2D" parent="." unique_id=551800881]
+position = Vector2(0, -2)
+monitoring = false
+script = ExtResource("5_hurtbox")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=989354571]
+shape = SubResource("CircleShape2D_hurtbox")
+
+[node name="HealthBar" type="Node2D" parent="." unique_id=722629224]
+position = Vector2(0, -15)
+script = ExtResource("4_hbar")
+
+[node name="SpawnPoint" type="Marker2D" parent="." unique_id=202374380]
+position = Vector2(0, 2)
+
+[node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="." unique_id=1592202243]
+rect = Rect2(-64, -64, 128, 128)
+
+[node name="StatusVfx" type="Node2D" parent="." unique_id=1061694081]
+script = ExtResource("6_svfx")
+
+[node name="CursedParticles" type="CPUParticles2D" parent="." unique_id=1198667985]
+z_index = 1
+position = Vector2(0, -8)
+emitting = false
+amount = 10
+lifetime = 0.85
+emission_shape = 3
+emission_rect_extents = Vector2(5, 3)
+direction = Vector2(0, -1)
+gravity = Vector2(0, -14)
+initial_velocity_min = 6.0
+initial_velocity_max = 16.0
+scale_amount_min = 1.2
+scale_amount_max = 2.2
+color = Color(0.75, 0.35, 1, 0.85)
+
+[node name="ShatterParticles" type="CPUParticles2D" parent="." unique_id=817672110]
+z_index = 2
+position = Vector2(0, -4)
+emitting = false
+amount = 16
+lifetime = 0.45
+one_shot = true
+explosiveness = 0.9
+spread = 180.0
+gravity = Vector2(0, 60)
+initial_velocity_min = 24.0
+initial_velocity_max = 58.0
+scale_amount_min = 1.5
+scale_amount_max = 3.0
+color = Color(0.72, 0.48, 0.95, 0.95)
+
+[node name="ObeliskLight" type="PointLight2D" parent="." unique_id=1905496175]
+position = Vector2(0, -6)
+enabled = false
+color = Color(0.78, 0.4, 1, 1)
+energy = 0.65
+texture = ExtResource("7_light")
+texture_scale = 1.4

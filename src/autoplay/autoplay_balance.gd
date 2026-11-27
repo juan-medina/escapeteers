@@ -13,6 +13,7 @@ const ARCHETYPE_NAMES: Dictionary[int, StringName] = {
 const EVENT_TYPE_NAMES: Dictionary[int, StringName] = {
 	WorldPlan.RoomEventType.CLOSING_SPIKES: &"BLOOD_SPIKES",
 	WorldPlan.RoomEventType.WAVE_AMBUSH: &"WAVE_AMBUSH",
+	WorldPlan.RoomEventType.CURSED_OBELISKS: &"CURSED_OBELISKS",
 }
 
 var _runs: Array[Dictionary] = []
@@ -209,7 +210,7 @@ func _hook_character_node(node: Node) -> void:
 		hero.ally_healed.connect(_on_hero_ally_healed.bind(hero))
 		hero.damaged.connect(_on_hero_damaged.bind(hero))
 		hero.died.connect(_on_hero_died.bind(hero))
-	elif node is Enemy:
+	elif node is Enemy and not (node is CursedObelisk):
 		var enemy: Enemy = node as Enemy
 		var eid: int = enemy.get_instance_id()
 		if _hooked_enemies.has(eid):
@@ -355,6 +356,9 @@ func _track_rooms(game: Game, map: Map) -> void:
 		elif map.plan.wave_ambushes.has(tracked_room):
 			var ambush: WaveAmbush = map.plan.wave_ambushes[tracked_room]
 			room_cleared = ambush != null and ambush.is_cleared
+		elif map.plan.obelisk_encounters.has(tracked_room):
+			var encounter: ObeliskEncounter = map.plan.obelisk_encounters[tracked_room]
+			room_cleared = encounter != null and encounter.is_cleared
 		elif game._room_remaining_enemies.has(tracked_room) and game._room_remaining_enemies[tracked_room] <= 0:
 			room_cleared = true
 		if room_cleared:
