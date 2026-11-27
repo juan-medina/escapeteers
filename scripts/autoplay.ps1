@@ -68,8 +68,6 @@ if ($Mode -eq "matrix") {
 
 if ($MaxFrames -ge 0) {
     $userArgs += "--max_frames=$MaxFrames"
-} elseif ($Gpu) {
-    $userArgs += "--max_frames=3600"
 }
 if ($Speed -gt 0.0) {
     $userArgs += "--speed=$Speed"
