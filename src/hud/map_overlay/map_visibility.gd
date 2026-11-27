@@ -43,9 +43,6 @@ func setup(plan: WorldPlan) -> void:
 	var bounds: Rect2i = plan.carve_rects[0]
 	for rect: Rect2i in plan.carve_rects:
 		bounds = bounds.merge(rect)
-	for gate: SectorGatePlanner.SectorGate in plan.sector_gates:
-		for sc_rect: Rect2i in gate.shortcut_corridor_rects:
-			bounds = bounds.merge(sc_rect)
 	bounds = bounds.grow(2)
 
 	_origin = bounds.position
@@ -61,8 +58,9 @@ func setup(plan: WorldPlan) -> void:
 
 	for cell: Vector2i in plan.door_cell_codes:
 		_set_cell(cell.x, cell.y, CELL_LOCKED_DOOR)
-	for cell: Vector2i in plan.closed_shortcut_walls:
-		_set_cell(cell.x, cell.y, CELL_WALL)
+
+	for cell: Vector2i in plan.shortcut_blocker_cells:
+		_set_cell(cell.x, cell.y, CELL_LOCKED_DOOR)
 
 
 ## Marks the locked door cells of a gate as transparent floor once unlocked.
@@ -71,9 +69,9 @@ func open_door(gate: SectorGatePlanner.SectorGate) -> void:
 		_set_cell(cell.x, cell.y, CELL_FLOOR)
 
 
-## Marks the tunnel tiles of a gate's secret shortcut as transparent floor once opened.
-func open_shortcut(gate: SectorGatePlanner.SectorGate) -> void:
-	for cell: Vector2i in gate.tunnel_walkable:
+## Marks the door cells of a local shortcut as transparent floor once opened.
+func open_shortcut(shortcut: ShortcutTunnelPlanner.LocalShortcut) -> void:
+	for cell: Vector2i in shortcut.door_cells:
 		_set_cell(cell.x, cell.y, CELL_FLOOR)
 
 

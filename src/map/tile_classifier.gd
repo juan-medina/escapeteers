@@ -91,6 +91,19 @@ const DOOR_OPEN_BOTTOM_RIGHT: Array[Vector2i] = [
 	Vector2i(1, 25),
 	Vector2i(1, 23),
 ]
+const DOOR_VERT_CLOSED_TOP: Array[Vector2i] = [
+	Vector2i(8, 26),
+	Vector2i(6, 26),
+	Vector2i(5, 26),
+	Vector2i(7, 26),
+]
+const DOOR_VERT_CLOSED_BOTTOM: Array[Vector2i] = [
+	Vector2i(8, 27),
+	Vector2i(6, 27),
+	Vector2i(5, 27),
+	Vector2i(7, 27),
+]
+const DOOR_CODE_VERT_OFFSET: int = 8
 const LEVER_CLOSED: Vector2i = Vector2i(5, 31)
 const LEVER_OPEN: Vector2i = Vector2i(6, 31)
 
@@ -127,6 +140,9 @@ static func get_floor_plate_atlas(plate_idx: int, tile_set: int = 0) -> Vector2i
 
 
 static func get_closed_door_atlas(door_code: int) -> Vector2i:
+	if door_code >= DOOR_CODE_VERT_OFFSET:
+		var vert_color_idx: int = clampi((door_code - DOOR_CODE_VERT_OFFSET) >> 1, 0, DOOR_VERT_CLOSED_TOP.size() - 1)
+		return DOOR_VERT_CLOSED_BOTTOM[vert_color_idx] if (door_code % 2) == 1 else DOOR_VERT_CLOSED_TOP[vert_color_idx]
 	var color_idx: int = clampi(door_code >> 1, 0, DOOR_CLOSED_LEFT.size() - 1)
 	return DOOR_CLOSED_RIGHT[color_idx] if (door_code % 2) == 1 else DOOR_CLOSED_LEFT[color_idx]
 
@@ -224,7 +240,7 @@ static func bake_chunk(coord: Vector2i, raster: ChunkRaster, plan: WorldPlan) ->
 		wall_set[wpos] = true
 	var walkable: Array[Vector2i] = []
 	for fpos: Vector2i in floors:
-		if not wall_set.has(fpos):
+		if not wall_set.has(fpos) and not plan.shortcut_blocker_cells.has(fpos):
 			walkable.append(fpos)
 	data[&"walkable"] = walkable
 	data[&"walkable_rects"] = build_walkable_rects(coord, walkable)
@@ -273,9 +289,6 @@ static func classify_chunk(raster: ChunkRaster, run_seed: int, plan: WorldPlan) 
 				is_fixed_door = true
 				if (door_code % 2) == 0:
 					out_lights.append(gpos)
-			elif plan.closed_shortcut_walls.has(gpos):
-				var h: int = cell_hash(run_seed, gx, gy)
-				wall_coords = WALL_TOP_VARIANTS[h % WALL_TOP_VARIANTS.size()]
 			elif is_f:
 				if not n:
 					if ne and not nw:

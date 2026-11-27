@@ -1,8 +1,6 @@
 [gd_scene format=3 uid="uid://b5lsgvbfd70re"]
 
 [ext_resource type="Script" uid="uid://csawcvlkf4574" path="res://hud/map_overlay/map_overlay.gd" id="1_overlay"]
-[ext_resource type="Texture2D" path="res://data/assets/hud/door_icon.png" id="2_door_icon"]
-[ext_resource type="Texture2D" path="res://data/assets/hud/key_icon.png" id="3_key_icon"]
 [ext_resource type="FontFile" uid="uid://bst61g6fxq6sj" path="res://data/assets/pixel_ui_theme/m6x11.ttf" id="4_m6x11"]
 [ext_resource type="FontFile" uid="uid://dlxxgod8ydjxc" path="res://data/assets/pixel_ui_theme/m3x6.ttf" id="5_m3x6"]
 
@@ -148,37 +146,66 @@ text = "Event"
 [node name="DoorItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 2
+theme_override_constants/separation = 3
 
-[node name="Icon" type="TextureRect" parent="FrameMargin/VBox/HeaderBar/Legend/DoorItem"]
-custom_minimum_size = Vector2(10, 10)
+[node name="Swatch" type="ColorRect" parent="FrameMargin/VBox/HeaderBar/Legend/DoorItem"]
+custom_minimum_size = Vector2(10, 3)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
-texture = ExtResource("2_door_icon")
-expand_mode = 1
-stretch_mode = 5
+color = Color(0.25, 0.68, 1, 1)
 
 [node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/DoorItem"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
 theme_override_fonts/font = ExtResource("5_m3x6")
 theme_override_font_sizes/font_size = 16
-text = "Gate"
+text = "Door"
+
+[node name="ShortcutItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="Glyph" type="Control" parent="FrameMargin/VBox/HeaderBar/Legend/ShortcutItem"]
+custom_minimum_size = Vector2(11, 8)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="Bar" type="ColorRect" parent="FrameMargin/VBox/HeaderBar/Legend/ShortcutItem/Glyph"]
+layout_mode = 0
+offset_left = 1.0
+offset_right = 3.0
+offset_bottom = 8.0
+mouse_filter = 2
+color = Color(0.98, 0.88, 0.45, 1)
+
+[node name="Arrow" type="Polygon2D" parent="FrameMargin/VBox/HeaderBar/Legend/ShortcutItem/Glyph"]
+color = Color(0.98, 0.88, 0.45, 1)
+polygon = PackedVector2Array(5, 4, 10, 1, 10, 7)
+
+[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/ShortcutItem"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
+theme_override_fonts/font = ExtResource("5_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "Shortcut"
 
 [node name="KeyItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 2
+theme_override_constants/separation = 3
 
-[node name="Icon" type="TextureRect" parent="FrameMargin/VBox/HeaderBar/Legend/KeyItem"]
-custom_minimum_size = Vector2(10, 10)
+[node name="Glyph" type="Control" parent="FrameMargin/VBox/HeaderBar/Legend/KeyItem"]
+custom_minimum_size = Vector2(8, 8)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
-texture = ExtResource("3_key_icon")
-expand_mode = 1
-stretch_mode = 5
+
+[node name="Diamond" type="Polygon2D" parent="FrameMargin/VBox/HeaderBar/Legend/KeyItem/Glyph"]
+color = Color(1, 0.86, 0.25, 1)
+polygon = PackedVector2Array(4, 0, 8, 4, 4, 8, 0, 4)
 
 [node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/KeyItem"]
 layout_mode = 2
@@ -212,77 +239,47 @@ self_modulate = Color(0.15, 0.3, 0.45, 1)
 [node name="WallsMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
 self_modulate = Color(0.88, 0.76, 0.44, 1)
 
+[node name="ShortcutLinesMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+visible = false
+self_modulate = Color(0.98, 0.88, 0.45, 1)
+
+[node name="BlueDoorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+visible = false
+self_modulate = Color(0.25, 0.68, 1, 1)
+
+[node name="GreenDoorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+visible = false
+self_modulate = Color(0.3, 0.92, 0.48, 1)
+
+[node name="YellowDoorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+visible = false
+self_modulate = Color(1, 0.86, 0.25, 1)
+
+[node name="RedDoorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+visible = false
+self_modulate = Color(1, 0.35, 0.35, 1)
+
+[node name="BlueKeyMarker" type="Polygon2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+visible = false
+color = Color(0.25, 0.68, 1, 1)
+polygon = PackedVector2Array(0, -20, 20, 0, 0, 20, -20, 0)
+
+[node name="GreenKeyMarker" type="Polygon2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+visible = false
+color = Color(0.3, 0.92, 0.48, 1)
+polygon = PackedVector2Array(0, -20, 20, 0, 0, 20, -20, 0)
+
+[node name="YellowKeyMarker" type="Polygon2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+visible = false
+color = Color(1, 0.86, 0.25, 1)
+polygon = PackedVector2Array(0, -20, 20, 0, 0, 20, -20, 0)
+
+[node name="RedKeyMarker" type="Polygon2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+visible = false
+color = Color(1, 0.35, 0.35, 1)
+polygon = PackedVector2Array(0, -20, 20, 0, 0, 20, -20, 0)
+
 [node name="RoomLabels" type="Node2D" parent="FrameMargin/VBox/MapFrame/MapViewport"]
-
-[node name="GateMarkers" type="Node2D" parent="FrameMargin/VBox/MapFrame/MapViewport"]
-
-[node name="BlueDoorMarker" type="Sprite2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers"]
-visible = false
-modulate = Color(0.25, 0.68, 1, 1)
-texture = ExtResource("2_door_icon")
-
-[node name="HighlightRing" type="Line2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/BlueDoorMarker"]
-visible = false
-points = PackedVector2Array(0, -9, 7, -6, 9, 0, 7, 6, 0, 9, -7, 6, -9, 0, -7, -6)
-closed = true
-width = 1.5
-default_color = Color(1, 1, 1, 1)
-
-[node name="GreenDoorMarker" type="Sprite2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers"]
-visible = false
-modulate = Color(0.3, 0.92, 0.48, 1)
-texture = ExtResource("2_door_icon")
-
-[node name="HighlightRing" type="Line2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/GreenDoorMarker"]
-visible = false
-points = PackedVector2Array(0, -9, 7, -6, 9, 0, 7, 6, 0, 9, -7, 6, -9, 0, -7, -6)
-closed = true
-width = 1.5
-default_color = Color(1, 1, 1, 1)
-
-[node name="YellowDoorMarker" type="Sprite2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers"]
-visible = false
-modulate = Color(1, 0.86, 0.25, 1)
-texture = ExtResource("2_door_icon")
-
-[node name="HighlightRing" type="Line2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/YellowDoorMarker"]
-visible = false
-points = PackedVector2Array(0, -9, 7, -6, 9, 0, 7, 6, 0, 9, -7, 6, -9, 0, -7, -6)
-closed = true
-width = 1.5
-default_color = Color(1, 1, 1, 1)
-
-[node name="RedDoorMarker" type="Sprite2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers"]
-visible = false
-modulate = Color(1, 0.35, 0.35, 1)
-texture = ExtResource("2_door_icon")
-
-[node name="HighlightRing" type="Line2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/RedDoorMarker"]
-visible = false
-points = PackedVector2Array(0, -9, 7, -6, 9, 0, 7, 6, 0, 9, -7, 6, -9, 0, -7, -6)
-closed = true
-width = 1.5
-default_color = Color(1, 1, 1, 1)
-
-[node name="BlueKeyMarker" type="Sprite2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers"]
-visible = false
-modulate = Color(0.25, 0.68, 1, 1)
-texture = ExtResource("3_key_icon")
-
-[node name="GreenKeyMarker" type="Sprite2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers"]
-visible = false
-modulate = Color(0.3, 0.92, 0.48, 1)
-texture = ExtResource("3_key_icon")
-
-[node name="YellowKeyMarker" type="Sprite2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers"]
-visible = false
-modulate = Color(1, 0.86, 0.25, 1)
-texture = ExtResource("3_key_icon")
-
-[node name="RedKeyMarker" type="Sprite2D" parent="FrameMargin/VBox/MapFrame/MapViewport/GateMarkers"]
-visible = false
-modulate = Color(1, 0.35, 0.35, 1)
-texture = ExtResource("3_key_icon")
 
 [node name="PlayerMarker" type="Node2D" parent="FrameMargin/VBox/MapFrame/MapViewport" unique_id=740950094]
 rotation = -1.5707964

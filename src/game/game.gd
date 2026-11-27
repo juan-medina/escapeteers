@@ -125,7 +125,7 @@ func _ready() -> void:
 	_map.secret_torches_completed.connect(_on_secret_torches_completed)
 	_map.door_unlocked.connect(_on_door_unlocked)
 	_map.locked_door_bumped.connect(_on_locked_door_bumped)
-	_map.shortcut_opened.connect(_potion_manager.on_shortcut_opened.bind(_map, _coins))
+	_map.shortcut_opened.connect(_on_shortcut_opened)
 	_event_director.setup(_hud, _fog, _camera)
 	_map.event_room_armed.connect(_event_director.on_event_armed)
 	_map.event_room_disarmed.connect(_event_director.on_event_disarmed)
@@ -317,7 +317,8 @@ func _check_pickups() -> void:
 			_collected_keys[color] = true
 			Audio.play_sfx(Audio.Sfx.KEY_PICKUP)
 			_hud.set_key_state(color, true, false)
-			_hud.show_event_toast(&"%s Key Found!" % KeyPickup.get_color_name(color), KeyPickup.get_display_color(color))
+			var key_name: String = KeyPickup.get_color_name(color)
+			_hud.show_event_banner(&"KEY FOUND", &"%s Key" % key_name, &"", KeyPickup.get_display_color(color))
 
 
 func _on_door_unlocked(gate: SectorGatePlanner.SectorGate) -> void:
@@ -328,6 +329,10 @@ func _on_door_unlocked(gate: SectorGatePlanner.SectorGate) -> void:
 
 func _on_locked_door_bumped(color: WorldPlan.KeyColor) -> void:
 	_hud.show_event_toast(&"Locked - Need %s Key" % KeyPickup.get_color_name(color), KeyPickup.get_display_color(color))
+
+
+func _on_shortcut_opened(shortcut: ShortcutTunnelPlanner.LocalShortcut) -> void:
+	_hud.notify_shortcut_opened(shortcut)
 
 
 func _spawn_hero(hero_data: HeroData, pos: Vector2, is_leader: bool) -> Hero:

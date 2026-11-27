@@ -30,19 +30,12 @@ func audit_seed(seed_val: int, max_depth: int) -> Dictionary:
 	var raster: ChunkRaster = ChunkRaster.new()
 	for coord: Vector2i in all_chunks:
 		TileClassifier.bake_chunk(coord, raster, plan)
-	SectorGatePlanner.prebake_shortcut_tunnels(plan, raster)
 
 	var solvability_ok: bool = SectorGatePlanner.verify_solvability(plan)
 
 	var shortcut_direct_overlaps: Array[Dictionary] = []
 	var shortcut_margin_overlaps: Array[Dictionary] = []
-	var shortcut_diff_collisions: Array[Dictionary] = []
-	_check_shortcut_overlaps(
-		plan,
-		shortcut_direct_overlaps,
-		shortcut_margin_overlaps,
-		shortcut_diff_collisions,
-	)
+	_check_shortcut_overlaps(plan, shortcut_direct_overlaps, shortcut_margin_overlaps)
 
 	var floors: Dictionary[Vector2i, bool] = {}
 	var walls: Dictionary[Vector2i, bool] = {}
@@ -54,9 +47,9 @@ func audit_seed(seed_val: int, max_depth: int) -> Dictionary:
 	var opened_shortcuts: Dictionary[int, bool] = {}
 	var unlocked_doors: Dictionary[int, bool] = {}
 	var visited: Dictionary[Vector2i, bool] = {}
+	var sequence_breaks: Array[String] = []
 	var hero_spawn_blocked: bool = _simulate_progression(
 		plan,
-		floors,
 		walls,
 		walkable,
 		unlocked_door_cells,
@@ -64,6 +57,7 @@ func audit_seed(seed_val: int, max_depth: int) -> Dictionary:
 		opened_shortcuts,
 		unlocked_doors,
 		visited,
+		sequence_breaks,
 	)
 
 	var unreachable_rooms: int = _count_unreachable_rooms(plan, visited)
@@ -97,13 +91,10 @@ func audit_seed(seed_val: int, max_depth: int) -> Dictionary:
 	)
 
 	var wall_hole_samples: Array[String] = []
-	var wall_hole_count: int = _count_wall_holes(walkable, walls, wall_hole_samples)
+	var wall_hole_count: int = _count_wall_holes(plan, walkable, walls, wall_hole_samples)
 
 	var elapsed_ms: float = float(Time.get_ticks_usec() - t0) / 1000.0
-	var shortcuts_count: int = 0
-	for gate: SectorGatePlanner.SectorGate in plan.sector_gates:
-		if gate.has_shortcut:
-			shortcuts_count += 1
+	var shortcuts_count: int = plan.local_shortcuts.size()
 
 	var passed: bool = (
 		solvability_ok
@@ -112,9 +103,9 @@ func audit_seed(seed_val: int, max_depth: int) -> Dictionary:
 		and uncollected_keys.is_empty()
 		and locked_doors.is_empty()
 		and unopened_shortcuts.is_empty()
+		and sequence_breaks.is_empty()
 		and shortcut_direct_overlaps.is_empty()
 		and shortcut_margin_overlaps.is_empty()
-		and shortcut_diff_collisions.is_empty()
 		and broken_shortcuts.is_empty()
 		and wall_on_walkable_count == 0
 		and wall_hole_count == 0
@@ -134,9 +125,9 @@ func audit_seed(seed_val: int, max_depth: int) -> Dictionary:
 		&"uncollected_keys": uncollected_keys,
 		&"locked_doors": locked_doors,
 		&"unopened_shortcuts": unopened_shortcuts,
+		&"sequence_breaks": sequence_breaks,
 		&"shortcut_direct_overlaps": shortcut_direct_overlaps,
 		&"shortcut_margin_overlaps": shortcut_margin_overlaps,
-		&"shortcut_diff_collisions": shortcut_diff_collisions,
 		&"broken_shortcuts": broken_shortcuts,
 		&"wall_on_walkable_count": wall_on_walkable_count,
 		&"wall_on_walkable_samples": wall_on_walkable_samples,
@@ -165,6 +156,9 @@ func print_seed_failure(res: Dictionary) -> void:
 	var unopen: Array[String] = res[&"unopened_shortcuts"]
 	if not unopen.is_empty():
 		tags.append("unopened_shortcuts=[%s]" % ", ".join(unopen))
+	var seq_breaks: Array[String] = res[&"sequence_breaks"]
+	if not seq_breaks.is_empty():
+		tags.append("sequence_breaks=[%s]" % ", ".join(seq_breaks))
 
 	var direct_ov: Array[Dictionary] = res[&"shortcut_direct_overlaps"]
 	if not direct_ov.is_empty():
@@ -172,9 +166,6 @@ func print_seed_failure(res: Dictionary) -> void:
 	var margin_ov: Array[Dictionary] = res[&"shortcut_margin_overlaps"]
 	if not margin_ov.is_empty():
 		tags.append("margin_overlaps=%s" % _format_pair_list(margin_ov))
-	var diff_col: Array[Dictionary] = res[&"shortcut_diff_collisions"]
-	if not diff_col.is_empty():
-		tags.append("diff_collisions=%s" % _format_diff_list(diff_col))
 
 	var broken: Array[String] = res[&"broken_shortcuts"]
 	if not broken.is_empty():
@@ -207,11 +198,11 @@ func print_report() -> void:
 	)
 	print(
 		(
-			&"Gates: %d  Shortcuts Created: %d (%.1f%%)"
+			&"Gates: %d  Local Shortcuts Created: %d (avg %.1f/seed)"
 			% [
 				summary[&"total_gates"],
 				summary[&"total_shortcuts"],
-				summary[&"shortcut_pct"],
+				summary[&"avg_shortcuts_per_seed"],
 			]
 		)
 	)
@@ -219,7 +210,6 @@ func print_report() -> void:
 	print(&"Failure Breakdown:")
 	print(&"  shortcut_direct_overlaps : %d" % counts[&"shortcut_direct_overlaps"])
 	print(&"  shortcut_margin_overlaps : %d" % counts[&"shortcut_margin_overlaps"])
-	print(&"  shortcut_diff_collisions : %d" % counts[&"shortcut_diff_collisions"])
 	print(&"  wall_on_walkable         : %d" % counts[&"wall_on_walkable"])
 	print(&"  wall_holes               : %d" % counts[&"wall_holes"])
 	print(&"  broken_shortcuts         : %d" % counts[&"broken_shortcuts"])
@@ -227,6 +217,7 @@ func print_report() -> void:
 	print(&"  locked_doors             : %d" % counts[&"locked_doors"])
 	print(&"  uncollected_keys         : %d" % counts[&"uncollected_keys"])
 	print(&"  unopened_shortcuts       : %d" % counts[&"unopened_shortcuts"])
+	print(&"  sequence_breaks          : %d" % counts[&"sequence_breaks"])
 	print(&"  solvability_failed       : %d" % counts[&"solvability_failed"])
 	print(&"  hero_spawn_blocked       : %d" % counts[&"hero_spawn_blocked"])
 
@@ -248,7 +239,6 @@ func build_report_dict() -> Dictionary:
 	var counts: Dictionary = {
 		&"shortcut_direct_overlaps": 0,
 		&"shortcut_margin_overlaps": 0,
-		&"shortcut_diff_collisions": 0,
 		&"wall_on_walkable": 0,
 		&"wall_holes": 0,
 		&"broken_shortcuts": 0,
@@ -256,6 +246,7 @@ func build_report_dict() -> Dictionary:
 		&"locked_doors": 0,
 		&"uncollected_keys": 0,
 		&"unopened_shortcuts": 0,
+		&"sequence_breaks": 0,
 		&"solvability_failed": 0,
 		&"hero_spawn_blocked": 0,
 	}
@@ -274,8 +265,6 @@ func build_report_dict() -> Dictionary:
 			counts[&"shortcut_direct_overlaps"] += 1
 		if not res[&"shortcut_margin_overlaps"].is_empty():
 			counts[&"shortcut_margin_overlaps"] += 1
-		if not res[&"shortcut_diff_collisions"].is_empty():
-			counts[&"shortcut_diff_collisions"] += 1
 		if int(res[&"wall_on_walkable_count"]) > 0:
 			counts[&"wall_on_walkable"] += 1
 		if int(res[&"wall_hole_count"]) > 0:
@@ -290,12 +279,14 @@ func build_report_dict() -> Dictionary:
 			counts[&"uncollected_keys"] += 1
 		if not res[&"unopened_shortcuts"].is_empty():
 			counts[&"unopened_shortcuts"] += 1
+		if not res[&"sequence_breaks"].is_empty():
+			counts[&"sequence_breaks"] += 1
 		if not res[&"solvability_ok"]:
 			counts[&"solvability_failed"] += 1
 		if res[&"hero_spawn_blocked"]:
 			counts[&"hero_spawn_blocked"] += 1
 
-	var shortcut_pct: float = float(total_shortcuts) / float(maxi(1, total_gates)) * 100.0
+	var avg_shortcuts: float = float(total_shortcuts) / float(maxi(1, total))
 	return {
 		&"total_seeds": total,
 		&"passed_seeds": passed_count,
@@ -304,7 +295,7 @@ func build_report_dict() -> Dictionary:
 		&"avg_elapsed_ms": total_ms / float(maxi(1, total)),
 		&"total_gates": total_gates,
 		&"total_shortcuts": total_shortcuts,
-		&"shortcut_pct": shortcut_pct,
+		&"avg_shortcuts_per_seed": avg_shortcuts,
 		&"failure_counts": counts,
 		&"failing_examples": failing_examples,
 		&"results": _results,
@@ -322,101 +313,18 @@ static func _check_shortcut_overlaps(
 	plan: WorldPlan,
 	direct_overlaps: Array[Dictionary],
 	margin_overlaps: Array[Dictionary],
-	diff_collisions: Array[Dictionary],
 ) -> void:
-	for i: int in range(plan.sector_gates.size()):
-		var gate_a: SectorGatePlanner.SectorGate = plan.sector_gates[i]
-		if not gate_a.has_shortcut or gate_a.shortcut_corridor_rects.is_empty():
-			continue
-		for j: int in range(i + 1, plan.sector_gates.size()):
-			var gate_b: SectorGatePlanner.SectorGate = plan.sector_gates[j]
-			if not gate_b.has_shortcut or gate_b.shortcut_corridor_rects.is_empty():
-				continue
-			var pair_label: String = "%s+%s" % [_color_name(gate_a.color), _color_name(gate_b.color)]
-			_compare_shortcut_rects(gate_a, gate_b, pair_label, direct_overlaps, margin_overlaps)
-			_compare_shortcut_diffs(gate_a, gate_b, pair_label, diff_collisions)
-
-
-static func _compare_shortcut_rects(
-	gate_a: SectorGatePlanner.SectorGate,
-	gate_b: SectorGatePlanner.SectorGate,
-	pair_label: String,
-	direct_overlaps: Array[Dictionary],
-	margin_overlaps: Array[Dictionary],
-) -> void:
-	for ra: Rect2i in gate_a.shortcut_corridor_rects:
-		for rb: Rect2i in gate_b.shortcut_corridor_rects:
+	for i: int in range(plan.local_shortcuts.size()):
+		var sc_a: ShortcutTunnelPlanner.LocalShortcut = plan.local_shortcuts[i]
+		for j: int in range(i + 1, plan.local_shortcuts.size()):
+			var sc_b: ShortcutTunnelPlanner.LocalShortcut = plan.local_shortcuts[j]
+			var pair_label: String = "S%d+S%d" % [sc_a.id, sc_b.id]
+			var ra: Rect2i = sc_a.corridor_rect
+			var rb: Rect2i = sc_b.corridor_rect
 			if ra.intersects(rb):
-				(
-					direct_overlaps
-					. append(
-						{
-							&"pair": pair_label,
-							&"rect_a": str(ra),
-							&"rect_b": str(rb),
-							&"intersection": str(ra.intersection(rb)),
-						}
-					)
-				)
+				direct_overlaps.append({&"pair": pair_label, &"rect_a": str(ra), &"rect_b": str(rb)})
 			elif ra.grow(1).intersects(rb):
-				(
-					margin_overlaps
-					. append(
-						{
-							&"pair": pair_label,
-							&"rect_a": str(ra),
-							&"rect_b": str(rb),
-						}
-					)
-				)
-
-
-static func _compare_shortcut_diffs(
-	gate_a: SectorGatePlanner.SectorGate,
-	gate_b: SectorGatePlanner.SectorGate,
-	pair_label: String,
-	diff_collisions: Array[Dictionary],
-) -> void:
-	var walk_a: Dictionary[Vector2i, bool] = {}
-	for cell: Vector2i in gate_a.tunnel_walkable:
-		walk_a[cell] = true
-	var wall_a: Dictionary[Vector2i, bool] = {}
-	for cell: Vector2i in gate_a.tunnel_walls:
-		wall_a[cell] = true
-	var walk_b: Dictionary[Vector2i, bool] = {}
-	for cell: Vector2i in gate_b.tunnel_walkable:
-		walk_b[cell] = true
-	var wall_b: Dictionary[Vector2i, bool] = {}
-	for cell: Vector2i in gate_b.tunnel_walls:
-		wall_b[cell] = true
-
-	var wall_blocks_walkable: int = 0
-	for cell: Vector2i in gate_b.tunnel_walls:
-		if walk_a.has(cell):
-			wall_blocks_walkable += 1
-	for cell: Vector2i in gate_a.tunnel_walls:
-		if walk_b.has(cell):
-			wall_blocks_walkable += 1
-
-	var erased_other_wall: int = 0
-	for cell: Vector2i in gate_b.tunnel_erased_walls:
-		if wall_a.has(cell):
-			erased_other_wall += 1
-	for cell: Vector2i in gate_a.tunnel_erased_walls:
-		if wall_b.has(cell):
-			erased_other_wall += 1
-
-	if wall_blocks_walkable > 0 or erased_other_wall > 0:
-		(
-			diff_collisions
-			. append(
-				{
-					&"pair": pair_label,
-					&"wall_blocks_walkable": wall_blocks_walkable,
-					&"erased_other_wall": erased_other_wall,
-				}
-			)
-		)
+				margin_overlaps.append({&"pair": pair_label, &"rect_a": str(ra), &"rect_b": str(rb)})
 
 
 static func _build_grid_from_baked_chunks(
@@ -448,7 +356,6 @@ static func _is_passable(
 
 static func _simulate_progression(
 	plan: WorldPlan,
-	floors: Dictionary[Vector2i, bool],
 	walls: Dictionary[Vector2i, bool],
 	walkable: Dictionary[Vector2i, bool],
 	unlocked_door_cells: Dictionary[Vector2i, bool],
@@ -456,11 +363,14 @@ static func _simulate_progression(
 	opened_shortcuts: Dictionary[int, bool],
 	unlocked_doors: Dictionary[int, bool],
 	visited: Dictionary[Vector2i, bool],
+	sequence_breaks: Array[String],
 ) -> bool:
 	var start_cell: Vector2i = plan.hero_room.get_center()
 	if not _is_passable(start_cell, walkable, walls, unlocked_door_cells):
 		return true
 
+	var unlocked_sectors: Dictionary[int, bool] = {0: true}
+	var seq_seen: Dictionary[int, bool] = {}
 	visited[start_cell] = true
 	var queue: Array[Vector2i] = [start_cell]
 	var head: int = 0
@@ -471,6 +381,12 @@ static func _simulate_progression(
 		while head < queue.size():
 			var cur: Vector2i = queue[head]
 			head += 1
+			var cur_room: Rect2i = plan.get_room_at(cur)
+			if cur_room.size != Vector2i.ZERO:
+				var cur_sec: int = plan._room_sectors.get(cur_room, 0)
+				if cur_sec > 0 and not unlocked_sectors.has(cur_sec) and not seq_seen.has(cur_sec):
+					seq_seen[cur_sec] = true
+					sequence_breaks.append("S%d@%s" % [cur_sec, str(cur)])
 			for dir: Vector2i in CARDINAL_DIRS:
 				var nb: Vector2i = cur + dir
 				if not visited.has(nb) and _is_passable(nb, walkable, walls, unlocked_door_cells):
@@ -484,70 +400,55 @@ static func _simulate_progression(
 				collected_keys[gate.color] = true
 				progress = true
 
-			if gate.has_shortcut and not opened_shortcuts.has(gate_idx) and visited.has(gate.lever_cell):
-				opened_shortcuts[gate_idx] = true
-				progress = true
-				_apply_shortcut_diffs_to_grid(gate, floors, walls, walkable)
-				for wcell: Vector2i in gate.tunnel_walkable:
-					_try_enqueue_adjacent_visited(wcell, walkable, walls, unlocked_door_cells, visited, queue)
-				for scell: Vector2i in gate.shortcut_wall_cells:
-					_try_enqueue_adjacent_visited(scell, walkable, walls, unlocked_door_cells, visited, queue)
-
 			if not unlocked_doors.has(gate_idx) and collected_keys.has(gate.color) and gate.door_cells.size() >= 2:
-				var left_cell: Vector2i = gate.door_cells[0]
-				var right_cell: Vector2i = gate.door_cells[1]
-				if _has_visited_neighbor(left_cell, visited) or _has_visited_neighbor(right_cell, visited):
+				var cell_a: Vector2i = gate.door_cells[0]
+				var cell_b: Vector2i = gate.door_cells[1]
+				if _has_visited_neighbor(cell_a, visited) or _has_visited_neighbor(cell_b, visited):
 					unlocked_doors[gate_idx] = true
+					var next_sec: int = plan._room_sectors.get(gate.next_room, -1)
+					if next_sec > 0:
+						unlocked_sectors[next_sec] = true
 					progress = true
-					var top_left: Vector2i = left_cell + Vector2i(0, -1)
-					var top_right: Vector2i = right_cell + Vector2i(0, -1)
-					for dcell: Vector2i in [left_cell, right_cell, top_left, top_right]:
-						unlocked_door_cells[dcell] = true
-						walkable[dcell] = true
-						if not visited.has(dcell):
-							visited[dcell] = true
-							queue.append(dcell)
+					var is_horiz_door: bool = gate.door_face == RoomLayout.Face.NORTH or gate.door_face == RoomLayout.Face.SOUTH
+					_unlock_door_cells_in_sim(cell_a, cell_b, is_horiz_door, walls, walkable, unlocked_door_cells, visited, queue)
+
+		for sc_idx: int in range(plan.local_shortcuts.size()):
+			var sc: ShortcutTunnelPlanner.LocalShortcut = plan.local_shortcuts[sc_idx]
+			if not opened_shortcuts.has(sc_idx) and visited.has(sc.lever_cell) and sc.door_cells.size() >= 2:
+				opened_shortcuts[sc_idx] = true
+				progress = true
+				for dcell: Vector2i in sc.door_cells:
+					unlocked_door_cells[dcell] = true
+					walkable[dcell] = true
+					if not visited.has(dcell):
+						visited[dcell] = true
+						queue.append(dcell)
 
 	return false
 
 
-static func _apply_shortcut_diffs_to_grid(
-	gate: SectorGatePlanner.SectorGate,
-	floors: Dictionary[Vector2i, bool],
+static func _unlock_door_cells_in_sim(
+	cell_a: Vector2i,
+	cell_b: Vector2i,
+	is_horiz_door: bool,
 	walls: Dictionary[Vector2i, bool],
 	walkable: Dictionary[Vector2i, bool],
-) -> void:
-	for diff_var: Variant in gate.tunnel_chunk_diffs.values():
-		var diff: Dictionary = diff_var
-		var chunk_erased: Dictionary[Vector2i, bool] = diff[&"erased_walls"]
-		for ecell: Vector2i in chunk_erased:
-			walls.erase(ecell)
-		var chunk_floors: Array[Vector2i] = diff[&"floors"]
-		for fcell: Vector2i in chunk_floors:
-			floors[fcell] = true
-		var chunk_walls: Array[Vector2i] = diff[&"walls"]
-		for wcell: Vector2i in chunk_walls:
-			walls[wcell] = true
-		var chunk_walk: Array[Vector2i] = diff[&"walkable"]
-		for kcell: Vector2i in chunk_walk:
-			walkable[kcell] = true
-
-
-static func _try_enqueue_adjacent_visited(
-	cell: Vector2i,
-	walkable: Dictionary[Vector2i, bool],
-	walls: Dictionary[Vector2i, bool],
 	unlocked_door_cells: Dictionary[Vector2i, bool],
 	visited: Dictionary[Vector2i, bool],
 	queue: Array[Vector2i],
 ) -> void:
-	if visited.has(cell):
-		return
-	if not _is_passable(cell, walkable, walls, unlocked_door_cells):
-		return
-	if _has_visited_neighbor(cell, visited):
-		visited[cell] = true
-		queue.append(cell)
+	var cells: Array[Vector2i] = [cell_a, cell_b]
+	if is_horiz_door:
+		cells.append(cell_a + Vector2i(0, -1))
+		cells.append(cell_b + Vector2i(0, -1))
+	for dcell: Vector2i in cells:
+		unlocked_door_cells[dcell] = true
+		if not is_horiz_door:
+			walls.erase(dcell)
+		walkable[dcell] = true
+		if not visited.has(dcell):
+			visited[dcell] = true
+			queue.append(dcell)
 
 
 static func _has_visited_neighbor(cell: Vector2i, visited: Dictionary[Vector2i, bool]) -> bool:
@@ -591,8 +492,9 @@ static func _collect_gate_progression_failures(
 			uncollected_keys.append(cname)
 		if not unlocked_doors.has(gate_idx):
 			locked_doors.append(cname)
-		if gate.has_shortcut and not opened_shortcuts.has(gate_idx):
-			unopened_shortcuts.append(cname)
+	for sc_idx: int in range(plan.local_shortcuts.size()):
+		if not opened_shortcuts.has(sc_idx):
+			unopened_shortcuts.append("S%d" % plan.local_shortcuts[sc_idx].id)
 
 
 static func _find_broken_shortcuts(
@@ -603,60 +505,46 @@ static func _find_broken_shortcuts(
 	unlocked_door_cells: Dictionary[Vector2i, bool],
 ) -> Array[String]:
 	var broken: Array[String] = []
-	for gate_idx: int in range(plan.sector_gates.size()):
-		var gate: SectorGatePlanner.SectorGate = plan.sector_gates[gate_idx]
-		if (
-			not opened_shortcuts.has(gate_idx)
-			or not gate.has_shortcut
-			or gate.key_room == gate.shortcut_target_room
-			or gate.shortcut_corridor_rects.is_empty()
-			or gate.shortcut_wall_cells.is_empty()
-			or gate.shortcut_waypoints.is_empty()
-		):
+	for sc_idx: int in range(plan.local_shortcuts.size()):
+		var sc: ShortcutTunnelPlanner.LocalShortcut = plan.local_shortcuts[sc_idx]
+		if not opened_shortcuts.has(sc_idx):
 			continue
-		if not _is_shortcut_tunnel_traversable(gate, walkable, walls, unlocked_door_cells):
-			broken.append(_color_name(gate.color))
+		if sc.lever_cell.distance_squared_to(sc.door_cells[0]) > 36:
+			broken.append("S%d(lever_far)" % sc.id)
+		elif not _is_local_shortcut_traversable(sc, walkable, walls, unlocked_door_cells):
+			broken.append("S%d" % sc.id)
 	return broken
 
 
-static func _is_shortcut_tunnel_traversable(
-	gate: SectorGatePlanner.SectorGate,
+static func _is_local_shortcut_traversable(
+	sc: ShortcutTunnelPlanner.LocalShortcut,
 	walkable: Dictionary[Vector2i, bool],
 	walls: Dictionary[Vector2i, bool],
 	unlocked_door_cells: Dictionary[Vector2i, bool],
 ) -> bool:
-	var padded_rects: Array[Rect2i] = []
-	for r: Rect2i in gate.shortcut_corridor_rects:
-		padded_rects.append(r.grow(1))
+	var near_overlap: Rect2i = sc.corridor_rect.intersection(sc.room_near)
+	var far_overlap: Rect2i = sc.corridor_rect.intersection(sc.room_far)
+	var visited: Dictionary[Vector2i, bool] = {}
+	var queue: Array[Vector2i] = []
 
-	var target_cell: Vector2i = gate.shortcut_waypoints[gate.shortcut_waypoints.size() - 1]
-	var t_visited: Dictionary[Vector2i, bool] = {}
-	var t_queue: Array[Vector2i] = []
-	for sw_cell: Vector2i in gate.shortcut_wall_cells:
-		var start_t: Vector2i = sw_cell + Vector2i(0, 1)
-		if _is_passable(start_t, walkable, walls, unlocked_door_cells) and _in_any_rect(start_t, padded_rects):
-			t_visited[start_t] = true
-			t_queue.append(start_t)
+	for cy: int in range(near_overlap.position.y, near_overlap.end.y):
+		for cx: int in range(near_overlap.position.x, near_overlap.end.x):
+			var cell: Vector2i = Vector2i(cx, cy)
+			if _is_passable(cell, walkable, walls, unlocked_door_cells):
+				visited[cell] = true
+				queue.append(cell)
 
 	var head: int = 0
-	while head < t_queue.size():
-		var cur: Vector2i = t_queue[head]
+	while head < queue.size():
+		var cur: Vector2i = queue[head]
 		head += 1
-		if cur == target_cell or cur == gate.gate_entry_cell:
+		if far_overlap.has_point(cur):
 			return true
 		for dir: Vector2i in CARDINAL_DIRS:
 			var nb: Vector2i = cur + dir
-			if not t_visited.has(nb) and _in_any_rect(nb, padded_rects) and _is_passable(nb, walkable, walls, unlocked_door_cells):
-				t_visited[nb] = true
-				t_queue.append(nb)
-
-	return false
-
-
-static func _in_any_rect(cell: Vector2i, rects: Array[Rect2i]) -> bool:
-	for r: Rect2i in rects:
-		if r.has_point(cell):
-			return true
+			if not visited.has(nb) and sc.corridor_rect.has_point(nb) and _is_passable(nb, walkable, walls, unlocked_door_cells):
+				visited[nb] = true
+				queue.append(nb)
 	return false
 
 
@@ -676,6 +564,7 @@ static func _count_wall_on_walkable(
 
 
 static func _count_wall_holes(
+	plan: WorldPlan,
 	walkable: Dictionary[Vector2i, bool],
 	walls: Dictionary[Vector2i, bool],
 	samples: Array[String],
@@ -686,7 +575,7 @@ static func _count_wall_holes(
 			continue
 		for dir: Vector2i in CARDINAL_DIRS:
 			var nb: Vector2i = cell + dir
-			if not walkable.has(nb) and not walls.has(nb):
+			if not walkable.has(nb) and not walls.has(nb) and not plan.shortcut_blocker_cells.has(nb):
 				count += 1
 				if samples.size() < MAX_SAMPLES:
 					samples.append(str(nb))
@@ -699,11 +588,4 @@ static func _format_pair_list(entries: Array[Dictionary]) -> String:
 		var pair_str: String = item[&"pair"]
 		if not parts.has(pair_str):
 			parts.append(pair_str)
-	return "[%s]" % ", ".join(parts)
-
-
-static func _format_diff_list(entries: Array[Dictionary]) -> String:
-	var parts: Array[String] = []
-	for item: Dictionary in entries:
-		parts.append("%s(w=%d,e=%d)" % [item[&"pair"], item[&"wall_blocks_walkable"], item[&"erased_other_wall"]])
 	return "[%s]" % ", ".join(parts)

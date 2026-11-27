@@ -187,8 +187,8 @@ func notify_door_unlocked(gate: SectorGatePlanner.SectorGate, all_color_doors_un
 	_map_overlay.notify_door_unlocked(gate)
 
 
-func notify_shortcut_opened(color: WorldPlan.KeyColor) -> void:
-	_map_overlay.notify_shortcut_opened(color)
+func notify_shortcut_opened(shortcut: ShortcutTunnelPlanner.LocalShortcut) -> void:
+	_map_overlay.notify_shortcut_opened(shortcut)
 	show_event_toast(&"Shortcut Opened!", Color(0.95, 0.90, 0.45, 1.0))
 
 
@@ -201,6 +201,7 @@ func show_event_banner(tag: String, title: String, subtitle: String, accent_colo
 	_event_tag_label.add_theme_color_override(&"font_color", accent_color)
 	_event_title_label.text = title
 	_event_subtitle_label.text = subtitle
+	_event_subtitle_label.visible = not subtitle.is_empty()
 	_event_banner_style.border_color = accent_color
 
 	if _event_banner_tween != null and _event_banner_tween.is_valid():

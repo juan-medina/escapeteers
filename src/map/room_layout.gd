@@ -233,8 +233,9 @@ static func carve_room_layout(plan: WorldPlan, room: Rect2i, shape: WorldPlan.Ro
 		for p: Rect2i in pillars:
 			floor_rects = subtract_rect_from_list(floor_rects, p)
 
+	var r_sector: int = plan._room_sectors.get(room, 0)
 	for r: Rect2i in floor_rects:
-		plan._add_carve_rect(r)
+		plan._add_carve_rect(r, r_sector)
 
 
 static func _build_pillars_for_room(room: Rect2i) -> Array[Rect2i]:
@@ -358,7 +359,7 @@ static func get_usable_corridor_run(plan: WorldPlan, seg: Dictionary) -> Vector2
 static func commit_corridor(plan: WorldPlan, segments: Array[Dictionary], sector_idx: int) -> void:
 	for seg: Dictionary in segments:
 		var rect: Rect2i = seg[&"rect"]
-		plan._add_carve_rect(rect)
+		plan._add_carve_rect(rect, sector_idx)
 		plan._corridor_rects.append(rect)
 		plan._corridor_sectors.append(sector_idx)
 		(
@@ -593,6 +594,8 @@ static func _is_corridor_valid(
 			return false
 		if WorldPlan._intersects_any_rect(rect.grow(1), plan.protected_neck_rects):
 			return false
+		if WorldPlan._intersects_any_rect(rect.grow(1), plan._reserved_pockets):
+			return false
 		if i > 0 and rect.intersects(room_a):
 			return false
 		if i < last_idx and rect.intersects(room_b):
@@ -609,7 +612,7 @@ static func _hits_other_room_or_sector_corridor(
 	room_b: Rect2i,
 	sector_idx: int,
 ) -> bool:
-	var padded: Rect2i = rect.grow(2)
+	var padded: Rect2i = rect.grow(3)
 	if plan.hero_room != room_a and plan.hero_room != room_b and plan.hero_room.intersects(padded):
 		return true
 	for r_id: int in plan._room_grid.get_candidate_ids_for_rect(padded):
@@ -626,27 +629,34 @@ static func _hits_other_room_or_sector_corridor(
 
 static func eliminate_narrow_gaps(plan: WorldPlan) -> void:
 	var bridges_to_add: Array[Rect2i] = []
+	var bridge_sectors: Array[int] = []
 	for i: int in range(plan.carve_rects.size()):
 		var rect_a: Rect2i = plan.carve_rects[i]
+		var sec_a: int = plan._carve_rect_sectors[i]
 		var query_rect: Rect2i = rect_a.grow(3)
 		var candidates: Array[int] = plan.spatial_grid.get_candidate_ids_for_rect(query_rect)
 
 		for j: int in candidates:
 			if j <= i or j >= plan.carve_rects.size():
 				continue
+			if plan._carve_rect_sectors[j] != sec_a:
+				continue
 			var rect_b: Rect2i = plan.carve_rects[j]
 			_try_add_horizontal_bridge(rect_a, rect_b, bridges_to_add)
 			_try_add_horizontal_bridge(rect_b, rect_a, bridges_to_add)
 			_try_add_vertical_bridge(rect_a, rect_b, bridges_to_add)
 			_try_add_vertical_bridge(rect_b, rect_a, bridges_to_add)
+			while bridge_sectors.size() < bridges_to_add.size():
+				bridge_sectors.append(sec_a)
 
-	for bridge: Rect2i in bridges_to_add:
+	for b_idx: int in range(bridges_to_add.size()):
+		var bridge: Rect2i = bridges_to_add[b_idx]
 		if (
 			not WorldPlan._intersects_any_rect(bridge, plan._all_pillars)
 			and not WorldPlan._intersects_any_rect(bridge, plan._cut_corner_rects)
 			and not WorldPlan._intersects_any_rect(bridge, plan.protected_neck_rects)
 		):
-			plan._add_carve_rect(bridge)
+			plan._add_carve_rect(bridge, bridge_sectors[b_idx])
 
 
 static func _try_add_horizontal_bridge(left_rect: Rect2i, right_rect: Rect2i, bridges: Array[Rect2i]) -> void:

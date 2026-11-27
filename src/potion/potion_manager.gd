@@ -71,19 +71,6 @@ func _spawn_coin_at(pos: Vector2, coins: Array[Coin]) -> void:
 	coins.append(coin)
 
 
-func on_shortcut_opened(color: WorldPlan.KeyColor, map: Map, coins: Array[Coin]) -> void:
-	_hud.notify_shortcut_opened(color)
-	for gate: SectorGatePlanner.SectorGate in map.plan.sector_gates:
-		if gate.color == color and gate.has_shortcut:
-			spawn_cell_pickups(gate.shortcut_coin_cells, gate.shortcut_potion_spawns, map, coins)
-			if gate.key_room == gate.shortcut_target_room or gate.shortcut_wall_cells.size() < 2:
-				return
-			var pos_a: Vector2 = map.map_to_local(gate.shortcut_wall_cells[0] + Vector2i(0, -2))
-			var pos_b: Vector2 = map.map_to_local(gate.shortcut_wall_cells[1] + Vector2i(0, -2))
-			spawn_at((pos_a + pos_b) * 0.5, PotionPickup.PotionType.HASTE)
-			return
-
-
 func check_pickups(squad: Array[Hero], leader: Hero, xp_required: float) -> void:
 	var i: int = _potions.size() - 1
 	while i >= 0:

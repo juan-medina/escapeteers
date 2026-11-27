@@ -50,7 +50,6 @@ var _repath_timer: float = 0.0
 var _strafe_sign: float = 1.0
 var _strafe_timer: float = 0.0
 var _map_toggle_timer: float = MAP_CLOSED_DURATION
-var _shortcut_waypoints: Array[Vector2] = []
 
 
 func setup(map: Map, policy: String, max_depth: int, rush_deep_mode: bool = false) -> void:
@@ -63,7 +62,6 @@ func setup(map: Map, policy: String, max_depth: int, rush_deep_mode: bool = fals
 	_last_known_room = map.hero_room
 	_goal_room = Rect2i()
 	_room_path.clear()
-	_shortcut_waypoints.clear()
 	_room_stall_timer = 0.0
 	_stall_room = Rect2i()
 	_min_room_remaining = 999999
@@ -319,14 +317,10 @@ func _update_room_progress(game: Game, map: Map, leader: Hero, delta: float) -> 
 	):
 		_goal_room = _last_known_room
 		_room_path = [_goal_room]
-		_shortcut_waypoints.clear()
 		_room_stall_timer = 0.0
 		_stall_room = _last_known_room
 		_min_room_remaining = 999999
 		return
-
-	if _last_known_room == _goal_room:
-		_shortcut_waypoints.clear()
 
 	if _goal_room == Rect2i() or _is_room_done(game, _goal_room):
 		_assign_next_goal(game, map, leader)
@@ -346,9 +340,6 @@ func _update_room_progress(game: Game, map: Map, leader: Hero, delta: float) -> 
 	if _room_stall_timer >= ROOM_STALL_TIMEOUT:
 		_cached_path = PackedVector2Array()
 		_room_stall_timer = 0.0
-		if not _shortcut_waypoints.is_empty():
-			_shortcut_waypoints.remove_at(0)
-			return
 		if _is_progression_room(game, _goal_room):
 			if _last_known_room == _goal_room:
 				var obj_pos: Vector2 = _get_gate_objective_pos(game, map)
@@ -377,39 +368,19 @@ func _assign_next_goal(game: Game, map: Map, leader: Hero) -> void:
 				break
 	_goal_room = next_target
 	_room_path = chain.slice(0, target_idx + 1) if not chain.is_empty() else [next_target]
-	_shortcut_waypoints.clear()
-	if not _room_path.is_empty():
-		_populate_shortcut_waypoints(map, _last_known_room, _room_path[0])
 	_room_stall_timer = 0.0
 	_stall_room = _last_known_room
 	_min_room_remaining = 999999
 
 
-func _populate_shortcut_waypoints(map: Map, from_room: Rect2i, to_room: Rect2i) -> void:
-	for gate: SectorGatePlanner.SectorGate in map.plan.sector_gates:
-		if not gate.has_shortcut or not gate.shortcut_opened or gate.key_room != from_room or gate.shortcut_target_room != to_room:
-			continue
-		if gate.shortcut_waypoints.is_empty():
-			return
-		_shortcut_waypoints.append(map.map_to_local(gate.shortcut_waypoints[0]))
-		for i: int in range(gate.shortcut_waypoints.size() - 1):
-			var p0: Vector2i = gate.shortcut_waypoints[i]
-			var p1: Vector2i = gate.shortcut_waypoints[i + 1]
-			var diff: Vector2 = Vector2(p1 - p0)
-			var steps: int = maxi(1, ceili(diff.length() / 28.0))
-			for s_idx: int in range(1, steps + 1):
-				var t: float = float(s_idx) / float(steps)
-				var cell: Vector2i = Vector2i((Vector2(p0) + diff * t).round())
-				_shortcut_waypoints.append(map.map_to_local(cell))
-		return
-
-
 func _is_progression_room(game: Game, room: Rect2i) -> bool:
 	for gate: SectorGatePlanner.SectorGate in game._map.plan.sector_gates:
 		var needs_key: bool = gate.has_key and room == gate.key_room and not game._collected_keys.has(gate.color)
-		var needs_lever: bool = gate.has_shortcut and room == gate.key_room and not gate.shortcut_opened and _last_known_room == gate.key_room
 		var needs_door: bool = room == gate.gate_room and game._collected_keys.has(gate.color) and not gate.door_unlocked
-		if needs_key or needs_lever or needs_door:
+		if needs_key or needs_door:
+			return true
+	for shortcut: ShortcutTunnelPlanner.LocalShortcut in game._map.plan.local_shortcuts:
+		if not shortcut.opened and room == shortcut.room_far and _last_known_room == shortcut.room_far:
 			return true
 	return false
 
@@ -440,8 +411,9 @@ func _is_edge_passable(map: Map, room_a: Rect2i, room_b: Rect2i) -> bool:
 		if not gate.door_unlocked:
 			if (room_a == gate.gate_room and room_b == gate.next_room) or (room_b == gate.gate_room and room_a == gate.next_room):
 				return false
-		if gate.has_shortcut and not gate.shortcut_opened:
-			if (room_a == gate.key_room and room_b == gate.shortcut_target_room) or (room_b == gate.key_room and room_a == gate.shortcut_target_room):
+	for shortcut: ShortcutTunnelPlanner.LocalShortcut in map.plan.local_shortcuts:
+		if not shortcut.opened:
+			if (room_a == shortcut.room_near and room_b == shortcut.room_far) or (room_b == shortcut.room_near and room_a == shortcut.room_far):
 				return false
 	return true
 
@@ -599,8 +571,7 @@ func _decide_move_direction(game: Game, map: Map, leader: Hero, delta: float) ->
 		if combat_target != null:
 			return _compute_combat_move(game, map, leader, combat_target, delta)
 
-	if _shortcut_waypoints.is_empty():
-		steer_dest = _find_nearest_coin_or_potion(game, map, leader)
+	steer_dest = _find_nearest_coin_or_potion(game, map, leader)
 	if steer_dest == Vector2.ZERO:
 		steer_dest = _get_gate_objective_pos(game, map)
 	if steer_dest == Vector2.ZERO:
@@ -705,19 +676,24 @@ func _get_gate_objective_pos(game: Game, map: Map) -> Vector2:
 	if active_gate != null:
 		if active_gate.has_key and not game._collected_keys.has(active_gate.color) and _last_known_room == active_gate.key_room:
 			return map.map_to_local(active_gate.key_cell)
-		if game._collected_keys.has(active_gate.color):
-			if active_gate.has_shortcut and not active_gate.shortcut_opened and _last_known_room == active_gate.key_room:
-				return map.map_to_local(active_gate.lever_cell)
-			if _last_known_room == active_gate.gate_room:
-				var door_pos: Vector2 = (map.map_to_local(active_gate.door_cells[0]) + map.map_to_local(active_gate.door_cells[1])) * 0.5
-				return door_pos + Vector2(0.0, 12.0)
+		if game._collected_keys.has(active_gate.color) and _last_known_room == active_gate.gate_room:
+			return _get_door_approach_pos(map, active_gate)
+	for shortcut: ShortcutTunnelPlanner.LocalShortcut in map.plan.local_shortcuts:
+		if not shortcut.opened and _last_known_room == shortcut.room_far:
+			return map.map_to_local(shortcut.lever_cell)
 	for gate: SectorGatePlanner.SectorGate in map.plan.sector_gates:
 		if gate.has_key and not game._collected_keys.has(gate.color) and _last_known_room == gate.key_room:
 			return map.map_to_local(gate.key_cell)
 		if not gate.door_unlocked and _last_known_room == gate.gate_room and game._collected_keys.has(gate.color):
-			var d_pos: Vector2 = (map.map_to_local(gate.door_cells[0]) + map.map_to_local(gate.door_cells[1])) * 0.5
-			return d_pos + Vector2(0.0, 12.0)
+			return _get_door_approach_pos(map, gate)
 	return Vector2.ZERO
+
+
+static func _get_door_approach_pos(map: Map, gate: SectorGatePlanner.SectorGate) -> Vector2:
+	var door_mid: Vector2 = (map.map_to_local(gate.door_cells[0]) + map.map_to_local(gate.door_cells[1])) * 0.5
+	var room_center: Vector2 = map.map_to_local(gate.gate_room.get_center())
+	var inward: Vector2 = (room_center - door_mid).normalized()
+	return door_mid + inward * 12.0
 
 
 func _find_nearest_recruit(game: Game, map: Map, leader: Hero) -> Unknown:
@@ -840,22 +816,11 @@ func _pick_safe_kite_direction(map: Map, pos: Vector2, away_dir: Vector2) -> Vec
 
 
 func _get_exploration_destination(map: Map, leader: Hero) -> Vector2:
-	while not _shortcut_waypoints.is_empty():
-		if leader.global_position.distance_squared_to(_shortcut_waypoints[0]) <= ROOM_ARRIVE_DIST_SQ:
-			_shortcut_waypoints.remove_at(0)
-			_room_stall_timer = 0.0
-		else:
-			return _shortcut_waypoints[0]
-
 	while not _room_path.is_empty():
 		var hop_center: Vector2 = map.clamp_to_walkable(map.map_to_local(_room_path[0].get_center()))
 		var arrived_hop: bool = _last_known_room == _room_path[0] or leader.global_position.distance_squared_to(hop_center) <= ROOM_ARRIVE_DIST_SQ
 		if arrived_hop and _room_path.size() > 1:
-			var popped: Rect2i = _room_path[0]
 			_room_path.remove_at(0)
-			_populate_shortcut_waypoints(map, popped, _room_path[0])
-			if not _shortcut_waypoints.is_empty():
-				return _shortcut_waypoints[0]
 		else:
 			return hop_center
 
@@ -954,13 +919,7 @@ func _update_stuck_recovery(map: Map, leader: Hero, move_dir: Vector2, delta: fl
 
 	if _stuck_timer >= STUCK_UNSTICK_TIME:
 		_stuck_timer = 0.0
-		if not _shortcut_waypoints.is_empty() and _cached_path.size() <= 2:
-			leader.global_position = map.clamp_to_walkable(_shortcut_waypoints[0])
-			if leader.global_position.distance_squared_to(_shortcut_waypoints[0]) <= ROOM_ARRIVE_DIST_SQ:
-				_shortcut_waypoints.remove_at(0)
-				_room_stall_timer = 0.0
-			_cached_path = PackedVector2Array()
-		elif not _cached_path.is_empty():
+		if not _cached_path.is_empty():
 			var step_idx: int = mini(8 if rush_deep else 2, _cached_path.size() - 1)
 			leader.global_position = map.clamp_to_walkable(_cached_path[step_idx])
 			_cached_path = PackedVector2Array()

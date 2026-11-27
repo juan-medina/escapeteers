@@ -66,59 +66,6 @@ func reset(plan: WorldPlan) -> void:
 		_extract_chunked_wall_segments(plan)
 
 
-func build_opened_tunnel_data(plan: WorldPlan, gate: SectorGatePlanner.SectorGate) -> void:
-	var touched: Array[Vector2i] = SectorGatePlanner.collect_rects_chunks(gate.shortcut_corridor_rects, CHUNK_SIZE_TILES, 1)
-	if touched.is_empty():
-		return
-
-	var min_tx: int = touched[0].x * CHUNK_SIZE_TILES
-	var max_tx: int = min_tx + CHUNK_SIZE_TILES
-	var min_ty: int = touched[0].y * CHUNK_SIZE_TILES
-	var max_ty: int = min_ty + CHUNK_SIZE_TILES
-	for coord: Vector2i in touched:
-		var cx0: int = coord.x * CHUNK_SIZE_TILES
-		var cy0: int = coord.y * CHUNK_SIZE_TILES
-		min_tx = mini(min_tx, cx0)
-		max_tx = maxi(max_tx, cx0 + CHUNK_SIZE_TILES)
-		min_ty = mini(min_ty, cy0)
-		max_ty = maxi(max_ty, cy0 + CHUNK_SIZE_TILES)
-
-	var tile_rect: Rect2i = Rect2i(min_tx, min_ty, max_tx - min_tx, max_ty - min_ty)
-	var query_rect: Rect2i = tile_rect.grow(2)
-	var base_count: int = plan.carve_rects.size()
-	for seg: Rect2i in gate.shortcut_corridor_rects:
-		plan._add_carve_rect(seg)
-
-	gate.opened_map_chunk_coords = touched
-	gate.opened_map_floors.clear()
-	gate.opened_map_walls.clear()
-	for coord: Vector2i in touched:
-		var verts: PackedVector2Array = _build_chunk_floor_vertices(coord, plan)
-		if not verts.is_empty():
-			gate.opened_map_floors[coord] = verts
-
-	var opened_segments: Dictionary[Vector2i, PackedVector2Array] = {}
-	var rects: Array[Rect2i] = plan.carve_rects
-	var grid: SpatialGrid = plan.spatial_grid
-	for idx: int in grid.get_candidate_ids_for_rect(query_rect):
-		if idx < 0 or idx >= rects.size():
-			continue
-		var r: Rect2i = rects[idx]
-		if not r.grow(1).intersects(tile_rect):
-			continue
-		_extract_horizontal_edge(r, r.position.y, r.position.y - 1, rects, grid, opened_segments)
-		_extract_horizontal_edge(r, r.end.y, r.end.y, rects, grid, opened_segments)
-		_extract_vertical_edge(r, r.position.x, r.position.x - 1, rects, grid, opened_segments)
-		_extract_vertical_edge(r, r.end.x, r.end.x, rects, grid, opened_segments)
-
-	for coord: Vector2i in touched:
-		if opened_segments.has(coord):
-			gate.opened_map_walls[coord] = opened_segments[coord]
-
-	plan.carve_rects.resize(base_count)
-	SectorGatePlanner.rebuild_spatial_grid(plan)
-
-
 func reveal_chunk(coord: Vector2i, is_explore: bool) -> void:
 	var region: MapRegion = _get_or_create_region(coord)
 	if _chunk_segments.has(coord):
@@ -136,41 +83,6 @@ func explore_chunk(coord: Vector2i) -> void:
 		_dirty_regions[region.coord] = true
 	if _chunk_floor_vertices.has(coord):
 		_append_explored_chunk(region, coord, _chunk_floor_vertices[coord])
-
-
-func apply_shortcut_chunk(coord: Vector2i, gate: SectorGatePlanner.SectorGate, was_revealed: bool, is_explored: bool) -> void:
-	var region: MapRegion = _get_or_create_region(coord)
-	if gate.opened_map_floors.has(coord):
-		_chunk_floor_vertices[coord] = gate.opened_map_floors[coord]
-	if gate.opened_map_walls.has(coord):
-		_chunk_segments[coord] = gate.opened_map_walls[coord]
-	else:
-		_chunk_segments.erase(coord)
-	var new_floors: PackedVector2Array = _chunk_floor_vertices.get(coord, PackedVector2Array())
-	var new_walls: PackedVector2Array = _chunk_segments.get(coord, PackedVector2Array())
-	if not was_revealed:
-		if not new_floors.is_empty():
-			region.unexplored_chunks[coord] = new_floors
-			region.unexplored_dirty = true
-			_dirty_regions[region.coord] = true
-	else:
-		if is_explored:
-			_replace_explored_chunk(region, coord, new_floors)
-		elif not new_floors.is_empty():
-			region.unexplored_chunks[coord] = new_floors
-			region.unexplored_dirty = true
-			_dirty_regions[region.coord] = true
-		elif region.unexplored_chunks.erase(coord):
-			region.unexplored_dirty = true
-			_dirty_regions[region.coord] = true
-		if region.wall_ranges.has(coord):
-			var span: Vector2i = region.wall_ranges[coord]
-			for i: int in range(span.x, span.x + span.y):
-				region.wall_verts[i] = Vector2.ZERO
-			region.wall_ranges.erase(coord)
-			region.walls_dirty = true
-			_dirty_regions[region.coord] = true
-	_append_wall_chunk(region, coord, new_walls)
 
 
 func has_dirty_regions() -> bool:
@@ -275,17 +187,6 @@ func _append_explored_chunk(region: MapRegion, coord: Vector2i, verts: PackedVec
 	region.explored_verts.append_array(verts)
 	region.explored_dirty = true
 	_dirty_regions[region.coord] = true
-
-
-func _replace_explored_chunk(region: MapRegion, coord: Vector2i, verts: PackedVector2Array) -> void:
-	if region.explored_ranges.has(coord):
-		var span: Vector2i = region.explored_ranges[coord]
-		for i: int in range(span.x, span.x + span.y):
-			region.explored_verts[i] = Vector2.ZERO
-		region.explored_ranges.erase(coord)
-		region.explored_dirty = true
-		_dirty_regions[region.coord] = true
-	_append_explored_chunk(region, coord, verts)
 
 
 static func _create_simple_mesh(vertices: PackedVector2Array, primitive: Mesh.PrimitiveType) -> ArrayMesh:

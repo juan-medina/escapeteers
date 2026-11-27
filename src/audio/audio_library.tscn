@@ -179,6 +179,19 @@ bus = &"Sfx"
 stream = ExtResource("45_event_clear")
 bus = &"Sfx"
 
+[node name="KeyPickup" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("36_key_pickup")
+volume_db = 2.0
+bus = &"Sfx"
+
+[node name="DoorUnlock" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("37_door_unlock")
+bus = &"Sfx"
+
+[node name="ShortcutOpen" type="AudioStreamPlayer" parent="ChannelStinger"]
+stream = ExtResource("38_shortcut_open")
+bus = &"Sfx"
+
 [node name="LevelUp" type="AudioStreamPlayer" parent="ChannelStinger"]
 stream = ExtResource("10_level_up")
 bus = &"Sfx"
@@ -209,18 +222,6 @@ bus = &"Sfx"
 
 [node name="PotionXp" type="AudioStreamPlayer" parent="ChannelStinger"]
 stream = ExtResource("42_potion_xp")
-bus = &"Sfx"
-
-[node name="KeyPickup" type="AudioStreamPlayer" parent="ChannelStinger"]
-stream = ExtResource("36_key_pickup")
-bus = &"Sfx"
-
-[node name="DoorUnlock" type="AudioStreamPlayer" parent="ChannelStinger"]
-stream = ExtResource("37_door_unlock")
-bus = &"Sfx"
-
-[node name="ShortcutOpen" type="AudioStreamPlayer" parent="ChannelStinger"]
-stream = ExtResource("38_shortcut_open")
 bus = &"Sfx"
 
 [node name="ChannelAlert" type="Node" parent="."]

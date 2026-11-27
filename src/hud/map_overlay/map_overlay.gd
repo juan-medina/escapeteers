@@ -47,6 +47,17 @@ const PAN_BOUNDS_MARGIN_PX: float = 96.0
 const LABEL_ALL_MIN_ZOOM: float = 1.2
 const PAN_ACTIONS: Array[StringName] = [&"left", &"right", &"up", &"down"]
 const ROOM_LABEL_SCENE: PackedScene = preload("res://hud/map_overlay/room_level_label.tscn")
+const DOOR_COLORS: Array[Color] = [
+	Color(0.25, 0.68, 1.0, 1.0),
+	Color(0.30, 0.92, 0.48, 1.0),
+	Color(1.0, 0.86, 0.25, 1.0),
+	Color(1.0, 0.35, 0.35, 1.0),
+]
+const DOOR_BAR_HALF_THICKNESS: float = 8.0
+const SHORTCUT_BAR_HALF_THICKNESS: float = 6.0
+const SHORTCUT_CHEVRON_GAP: float = 4.0
+const SHORTCUT_CHEVRON_LENGTH: float = 22.0
+const SHORTCUT_CHEVRON_HALF_WIDTH: float = 18.0
 const LABEL_HALF_SIZE: Vector2 = Vector2(16.0, 8.0)
 const LABEL_COLOR_SAFE: Color = Color(0.55, 0.95, 0.62, 1.0)
 const LABEL_COLOR_CAUTION: Color = Color(1.0, 0.82, 0.32, 1.0)
@@ -69,7 +80,7 @@ const HUD_ON_SCREEN_PAD: float = 8.0
 var map_scale: float = 0.0
 
 var _plan: WorldPlan = null
-var _target: CharacterBody2D = null
+var _target: Hero = null
 var _squad_level: int = 1
 var _revealed_chunks: Dictionary[Vector2i, bool] = {}
 var _explored_chunks: Dictionary[Vector2i, bool] = {}
@@ -94,10 +105,10 @@ var _has_revealed_bounds: bool = false
 var _revealed_min_chunk: Vector2i = Vector2i.ZERO
 var _revealed_max_chunk: Vector2i = Vector2i.ZERO
 var _dirty: bool = false
-var _opened_shortcuts: Dictionary[WorldPlan.KeyColor, bool] = {}
 var _collected_keys: Dictionary[WorldPlan.KeyColor, bool] = {}
 var _door_entries: Array[Dictionary] = []
 var _key_entries: Array[Dictionary] = []
+var _shortcut_entries: Array[Dictionary] = []
 var _pulse_time: float = 0.0
 var _hud_door_indicators: Array[Node2D] = []
 var _hud_door_arrows: Array[Node2D] = []
@@ -115,26 +126,21 @@ var _fov_chunks: Dictionary[Vector2i, bool] = {}
 @onready var _unexplored_floor_mesh: MeshInstance2D = $FrameMargin/VBox/MapFrame/MapViewport/Chunks/UnexploredFloorMesh
 @onready var _explored_floor_mesh: MeshInstance2D = $FrameMargin/VBox/MapFrame/MapViewport/Chunks/ExploredFloorMesh
 @onready var _walls_mesh: MeshInstance2D = $FrameMargin/VBox/MapFrame/MapViewport/Chunks/WallsMesh
+@onready var _shortcut_lines_mesh: MeshInstance2D = $FrameMargin/VBox/MapFrame/MapViewport/Chunks/ShortcutLinesMesh
 @onready var _room_labels_container: Node2D = $FrameMargin/VBox/MapFrame/MapViewport/RoomLabels
 @onready var _player_marker: Node2D = $FrameMargin/VBox/MapFrame/MapViewport/PlayerMarker
 @onready var _player_pulse_ring: Line2D = $FrameMargin/VBox/MapFrame/MapViewport/PlayerMarker/PulseRing
-@onready var _door_markers: Array[Sprite2D] = [
-	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/BlueDoorMarker,
-	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/GreenDoorMarker,
-	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/YellowDoorMarker,
-	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/RedDoorMarker,
+@onready var _door_meshes: Array[MeshInstance2D] = [
+	$FrameMargin/VBox/MapFrame/MapViewport/Chunks/BlueDoorMesh,
+	$FrameMargin/VBox/MapFrame/MapViewport/Chunks/GreenDoorMesh,
+	$FrameMargin/VBox/MapFrame/MapViewport/Chunks/YellowDoorMesh,
+	$FrameMargin/VBox/MapFrame/MapViewport/Chunks/RedDoorMesh,
 ]
-@onready var _door_rings: Array[Line2D] = [
-	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/BlueDoorMarker/HighlightRing,
-	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/GreenDoorMarker/HighlightRing,
-	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/YellowDoorMarker/HighlightRing,
-	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/RedDoorMarker/HighlightRing,
-]
-@onready var _key_markers: Array[Sprite2D] = [
-	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/BlueKeyMarker,
-	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/GreenKeyMarker,
-	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/YellowKeyMarker,
-	$FrameMargin/VBox/MapFrame/MapViewport/GateMarkers/RedKeyMarker,
+@onready var _key_markers: Array[Polygon2D] = [
+	$FrameMargin/VBox/MapFrame/MapViewport/Chunks/BlueKeyMarker,
+	$FrameMargin/VBox/MapFrame/MapViewport/Chunks/GreenKeyMarker,
+	$FrameMargin/VBox/MapFrame/MapViewport/Chunks/YellowKeyMarker,
+	$FrameMargin/VBox/MapFrame/MapViewport/Chunks/RedKeyMarker,
 ]
 
 
@@ -228,9 +234,12 @@ func set_hud_edge_indicators(
 	_hud_key_arrows = key_arrows
 
 
-func setup(plan: WorldPlan, target: CharacterBody2D) -> void:
+func setup(plan: WorldPlan, target: Hero) -> void:
 	_target = target
-	_player_marker.rotation = -PI * 0.5
+	if is_instance_valid(_target) and _target.move_direction.length_squared() > 0.001:
+		_player_marker.rotation = _target.move_direction.angle()
+	else:
+		_player_marker.rotation = -PI * 0.5
 	_zoom_px_per_tile = clampf(float(pixels_per_tile), MIN_ZOOM, MAX_ZOOM)
 	_target_zoom = _zoom_px_per_tile
 	_has_zoom_anchor = false
@@ -336,27 +345,12 @@ func notify_door_unlocked(gate: SectorGatePlanner.SectorGate) -> void:
 	_update_gate_markers_visibility()
 
 
-func notify_shortcut_opened(color: WorldPlan.KeyColor) -> void:
-	if _opened_shortcuts.has(color) or _plan == null:
-		return
-	_opened_shortcuts[color] = true
-	var changed: bool = false
-	for gate: SectorGatePlanner.SectorGate in _plan.sector_gates:
-		if gate.color != color or not gate.has_shortcut:
-			continue
-		_visibility.open_shortcut(gate)
-		for coord: Vector2i in gate.opened_map_chunk_coords:
-			var was_revealed: bool = _revealed_chunks.has(coord)
-			if not was_revealed:
-				_record_revealed_chunk(coord)
-			_chunk_meshes.apply_shortcut_chunk(coord, gate, was_revealed, _explored_chunks.has(coord))
-			changed = true
-
-	_visited_fov_chunks.clear()
-	_last_revealed_chunk = Vector2i(2147483647, 2147483647)
-	if changed:
-		_dirty = true
-		_update_gate_markers_visibility()
+func notify_shortcut_opened(shortcut: ShortcutTunnelPlanner.LocalShortcut) -> void:
+	if _plan != null:
+		_visibility.open_shortcut(shortcut)
+		_visited_fov_chunks.clear()
+		_last_revealed_chunk = Vector2i(2147483647, 2147483647)
+	_update_gate_markers_visibility()
 
 
 func get_room_color(room: Rect2i) -> Color:
@@ -615,18 +609,6 @@ func _update_view() -> void:
 	var cam_scaled: Vector2 = (_camera_world_pos * map_scale).round()
 	_chunks_container.position = viewport_center - cam_scaled
 
-	for entry: Dictionary in _door_entries:
-		var marker: Sprite2D = entry[&"marker"]
-		if marker.visible:
-			var world_pos: Vector2 = entry[&"world_pos"]
-			marker.position = viewport_center + (world_pos * map_scale).round() - cam_scaled
-
-	for entry: Dictionary in _key_entries:
-		var marker: Sprite2D = entry[&"marker"]
-		if marker.visible:
-			var world_pos: Vector2 = entry[&"world_pos"]
-			marker.position = viewport_center + (world_pos * map_scale).round() - cam_scaled
-
 	var vp_size: Vector2 = _map_viewport.size
 	var show_all_labels: bool = _zoom_px_per_tile >= LABEL_ALL_MIN_ZOOM
 	for entry: RoomLabelEntry in _discovered_labels:
@@ -641,8 +623,8 @@ func _update_view() -> void:
 			entry.label.position = pos
 
 	_player_marker.position = viewport_center + (_target.global_position * map_scale).round() - cam_scaled
-	if _target.velocity.length_squared() > 0.01:
-		_player_marker.rotation = _target.velocity.angle()
+	if _target.move_direction.length_squared() > 0.001:
+		_player_marker.rotation = _target.move_direction.angle()
 
 
 func _update_discovery() -> void:
@@ -718,18 +700,20 @@ func _build_chunks(plan: WorldPlan) -> void:
 	_next_label_pool_idx = 0
 	for label: Label in _label_pool:
 		label.visible = false
-	_opened_shortcuts.clear()
 	_collected_keys.clear()
 	_door_entries.clear()
 	_key_entries.clear()
+	_shortcut_entries.clear()
 	_pulse_time = 0.0
 	_visited_fov_chunks.clear()
 	_fov_chunks.clear()
-	for marker: Sprite2D in _door_markers:
-		marker.visible = false
-	for ring: Line2D in _door_rings:
-		ring.visible = false
-	for marker: Sprite2D in _key_markers:
+	for i: int in range(_door_meshes.size()):
+		_door_meshes[i].mesh = null
+		_door_meshes[i].visible = false
+		_door_meshes[i].self_modulate = DOOR_COLORS[i]
+	_shortcut_lines_mesh.mesh = null
+	_shortcut_lines_mesh.visible = false
+	for marker: Polygon2D in _key_markers:
 		marker.visible = false
 	for ind: Node2D in _hud_door_indicators:
 		ind.visible = false
@@ -748,64 +732,162 @@ func _build_chunks(plan: WorldPlan) -> void:
 	_visibility.setup(plan)
 	map_scale = _zoom_px_per_tile / TILE_SIZE
 	_chunks_container.scale = Vector2(map_scale, map_scale)
-	_build_gate_markers_and_opened_tunnels(plan)
+	_build_gate_markers(plan)
 
 
-func _build_gate_markers_and_opened_tunnels(plan: WorldPlan) -> void:
+func _build_gate_markers(plan: WorldPlan) -> void:
 	for gate: SectorGatePlanner.SectorGate in plan.sector_gates:
 		var color_idx: int = int(gate.color)
-		if color_idx >= 0 and color_idx < _door_markers.size():
+		if color_idx >= 0 and color_idx < _door_meshes.size():
 			var door_mid: Vector2 = (Vector2(gate.door_cells[0]) + Vector2(gate.door_cells[1])) * 0.5 + Vector2(0.5, 0.5)
 			var door_world: Vector2 = door_mid * TILE_SIZE
-			var marker: Sprite2D = _door_markers[color_idx]
-			var ring: Line2D = _door_rings[color_idx]
-			_door_entries.append({&"gate": gate, &"marker": marker, &"ring": ring, &"world_pos": door_world})
+			var is_horiz: bool = gate.door_face == RoomLayout.Face.NORTH or gate.door_face == RoomLayout.Face.SOUTH
+			var pts: Array[Vector2] = _get_door_line_endpoints(gate.door_cells, is_horiz)
+			(
+				_door_entries
+				. append(
+					{
+						&"gate": gate,
+						&"color_idx": color_idx,
+						&"p0": pts[0],
+						&"p1": pts[1],
+						&"world_pos": door_world,
+						&"visible": false,
+					}
+				)
+			)
 		if gate.has_key and color_idx >= 0 and color_idx < _key_markers.size():
 			var key_mid: Vector2 = Vector2(gate.key_cell) + Vector2(0.5, 0.5)
 			var key_world: Vector2 = key_mid * TILE_SIZE
-			var key_marker: Sprite2D = _key_markers[color_idx]
+			var key_marker: Polygon2D = _key_markers[color_idx]
+			key_marker.position = key_world
 			_key_entries.append({&"gate": gate, &"marker": key_marker, &"world_pos": key_world})
 
-		if not gate.has_shortcut or gate.key_room == gate.shortcut_target_room or gate.shortcut_corridor_rects.is_empty():
-			continue
-		_chunk_meshes.build_opened_tunnel_data(plan, gate)
+	for shortcut: ShortcutTunnelPlanner.LocalShortcut in plan.local_shortcuts:
+		var pts: Array[Vector2] = _get_door_line_endpoints(shortcut.door_cells, shortcut.is_horizontal_door)
+		var open_dir: Vector2
+		if shortcut.is_horizontal_door:
+			open_dir = Vector2(0.0, 1.0) if shortcut.room_far.end.y <= shortcut.door_cells[0].y else Vector2(0.0, -1.0)
+		else:
+			open_dir = Vector2(1.0, 0.0) if shortcut.room_far.end.x <= shortcut.door_cells[0].x else Vector2(-1.0, 0.0)
+		_shortcut_entries.append({&"shortcut": shortcut, &"p0": pts[0], &"p1": pts[1], &"open_dir": open_dir})
+
+
+static func _get_door_line_endpoints(door_cells: Array[Vector2i], is_horizontal: bool) -> Array[Vector2]:
+	var c0: Vector2i = door_cells[0]
+	var c1: Vector2i = door_cells[1]
+	if is_horizontal:
+		var x0: int = mini(c0.x, c1.x)
+		var y_mid: float = (float(c0.y) + 0.5) * TILE_SIZE
+		return [Vector2(float(x0) * TILE_SIZE, y_mid), Vector2(float(x0 + 2) * TILE_SIZE, y_mid)]
+	var y_min: int = mini(c0.y, c1.y)
+	var y_max: int = maxi(c0.y, c1.y)
+	var x_mid: float = (float(c0.x) + 0.5) * TILE_SIZE
+	return [Vector2(x_mid, float(y_min - 1) * TILE_SIZE), Vector2(x_mid, float(y_max + 1) * TILE_SIZE)]
 
 
 func _update_gate_markers_visibility() -> void:
 	if _plan == null:
 		return
+
+	var door_verts_by_color: Array[PackedVector2Array] = [
+		PackedVector2Array(),
+		PackedVector2Array(),
+		PackedVector2Array(),
+		PackedVector2Array(),
+	]
 	for entry: Dictionary in _door_entries:
 		var gate: SectorGatePlanner.SectorGate = entry[&"gate"]
-		var marker: Sprite2D = entry[&"marker"]
-		var ring: Line2D = entry[&"ring"]
+		var color_idx: int = entry[&"color_idx"]
 		var c0: Vector2i = _cell_to_map_chunk(gate.door_cells[0])
 		var c1: Vector2i = _cell_to_map_chunk(gate.door_cells[1])
 		var is_revealed: bool = _revealed_chunks.has(c0) or _revealed_chunks.has(c1)
-		marker.visible = is_revealed and not gate.door_unlocked
-		var is_ready: bool = marker.visible and _collected_keys.has(gate.color)
-		ring.visible = is_ready
-		ring.modulate = Color.WHITE
-		marker.scale = Vector2.ONE
-		marker.self_modulate = Color.WHITE if is_ready else Color(0.75, 0.75, 0.75, 1.0)
+		var is_vis: bool = is_revealed and not gate.door_unlocked
+		entry[&"visible"] = is_vis
+		if is_vis:
+			var verts: PackedVector2Array = door_verts_by_color[color_idx]
+			var p0: Vector2 = entry[&"p0"]
+			var p1: Vector2 = entry[&"p1"]
+			_append_bar_quad(verts, p0, p1, DOOR_BAR_HALF_THICKNESS)
+			door_verts_by_color[color_idx] = verts
+
+	for i: int in range(_door_meshes.size()):
+		var verts: PackedVector2Array = door_verts_by_color[i]
+		if verts.is_empty():
+			_door_meshes[i].mesh = null
+			_door_meshes[i].visible = false
+		else:
+			_door_meshes[i].mesh = _create_triangle_mesh(verts)
+			_door_meshes[i].visible = true
 
 	for entry: Dictionary in _key_entries:
 		var gate: SectorGatePlanner.SectorGate = entry[&"gate"]
-		var marker: Sprite2D = entry[&"marker"]
+		var marker: Polygon2D = entry[&"marker"]
 		var key_chunk: Vector2i = _cell_to_map_chunk(gate.key_cell)
 		marker.visible = _revealed_chunks.has(key_chunk) and not _collected_keys.has(gate.color)
+
+	var sc_verts: PackedVector2Array = PackedVector2Array()
+	for entry: Dictionary in _shortcut_entries:
+		var shortcut: ShortcutTunnelPlanner.LocalShortcut = entry[&"shortcut"]
+		if shortcut.opened:
+			continue
+		var c0: Vector2i = _cell_to_map_chunk(shortcut.door_cells[0])
+		var c1: Vector2i = _cell_to_map_chunk(shortcut.door_cells[1])
+		if not (_revealed_chunks.has(c0) or _revealed_chunks.has(c1)):
+			continue
+		var p0: Vector2 = entry[&"p0"]
+		var p1: Vector2 = entry[&"p1"]
+		var open_dir: Vector2 = entry[&"open_dir"]
+		_append_shortcut_glyph(sc_verts, p0, p1, open_dir)
+
+	if sc_verts.is_empty():
+		_shortcut_lines_mesh.mesh = null
+		_shortcut_lines_mesh.visible = false
+	else:
+		_shortcut_lines_mesh.mesh = _create_triangle_mesh(sc_verts)
+		_shortcut_lines_mesh.visible = true
 
 	_update_hud_edge_indicators()
 
 
+static func _append_bar_quad(verts: PackedVector2Array, p0: Vector2, p1: Vector2, half_thickness: float) -> void:
+	var t: Vector2 = (p1 - p0).normalized()
+	var n: Vector2 = Vector2(-t.y, t.x) * half_thickness
+	verts.append(p0 - n)
+	verts.append(p1 - n)
+	verts.append(p1 + n)
+	verts.append(p0 - n)
+	verts.append(p1 + n)
+	verts.append(p0 + n)
+
+
+static func _append_shortcut_glyph(verts: PackedVector2Array, p0: Vector2, p1: Vector2, open_dir: Vector2) -> void:
+	_append_bar_quad(verts, p0, p1, SHORTCUT_BAR_HALF_THICKNESS)
+	var center: Vector2 = (p0 + p1) * 0.5
+	var perp: Vector2 = Vector2(-open_dir.y, open_dir.x)
+	var tip: Vector2 = center - open_dir * (SHORTCUT_BAR_HALF_THICKNESS + SHORTCUT_CHEVRON_GAP)
+	var base_mid: Vector2 = tip - open_dir * SHORTCUT_CHEVRON_LENGTH
+	verts.append(tip)
+	verts.append(base_mid + perp * SHORTCUT_CHEVRON_HALF_WIDTH)
+	verts.append(base_mid - perp * SHORTCUT_CHEVRON_HALF_WIDTH)
+
+
+static func _create_triangle_mesh(vertices: PackedVector2Array) -> ArrayMesh:
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	var mesh: ArrayMesh = ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
+
+
 func _update_matching_door_pulses() -> void:
 	var pulse: float = 0.5 + 0.5 * sin(_pulse_time * 6.0)
-	for entry: Dictionary in _door_entries:
-		var marker: Sprite2D = entry[&"marker"]
-		var ring: Line2D = entry[&"ring"]
-		if ring.visible:
-			ring.scale = Vector2.ONE * lerpf(0.92, 1.28, pulse)
-			ring.modulate = Color.WHITE
-			marker.scale = Vector2.ONE * lerpf(1.0, 1.12, pulse)
+	for i: int in range(_door_meshes.size()):
+		if _door_meshes[i].visible and _collected_keys.has(i as WorldPlan.KeyColor):
+			_door_meshes[i].self_modulate = DOOR_COLORS[i].lerp(Color.WHITE, pulse * 0.75)
+		else:
+			_door_meshes[i].self_modulate = DOOR_COLORS[i]
 
 
 func _update_player_pulse() -> void:
@@ -827,7 +909,7 @@ func _update_hud_edge_indicators() -> void:
 		maxf(min_bound.y, size.y - HUD_EDGE_MARGIN_BOTTOM),
 	)
 	var pulse: float = 0.5 + 0.5 * sin(_pulse_time * 6.0)
-	for i: int in range(_door_markers.size()):
+	for i: int in range(_door_meshes.size()):
 		var target_color: WorldPlan.KeyColor = i as WorldPlan.KeyColor
 		var best_pos: Vector2 = Vector2.ZERO
 		var has_door: bool = false
@@ -836,8 +918,8 @@ func _update_hud_edge_indicators() -> void:
 		if is_instance_valid(_target):
 			for entry: Dictionary in _door_entries:
 				var gate: SectorGatePlanner.SectorGate = entry[&"gate"]
-				var marker: Sprite2D = entry[&"marker"]
-				if gate.color != target_color or not marker.visible:
+				var is_vis: bool = entry[&"visible"]
+				if gate.color != target_color or not is_vis:
 					continue
 				var world_pos: Vector2 = entry[&"world_pos"]
 				var screen_pos: Vector2 = (size * 0.5) + (world_pos - _target.global_position)
@@ -868,7 +950,7 @@ func _update_hud_edge_indicators() -> void:
 		var has_key: bool = false
 		for entry: Dictionary in _key_entries:
 			var gate: SectorGatePlanner.SectorGate = entry[&"gate"]
-			var marker: Sprite2D = entry[&"marker"]
+			var marker: Polygon2D = entry[&"marker"]
 			if gate.color == target_color and marker.visible:
 				has_key = true
 				key_pos = entry[&"world_pos"]

@@ -21,10 +21,9 @@ class RoomCandidate:
 
 const PATROL_RESPAWN_COOLDOWN_MIN: float = 45.0
 const PATROL_RESPAWN_COOLDOWN_MAX: float = 60.0
-const PATROL_QUOTA_MIN_RATIO: float = 0.50
-const PATROL_QUOTA_MAX_RATIO: float = 0.75
+const PATROL_QUOTA_MIN_RATIO: float = 0.85
+const PATROL_QUOTA_MAX_RATIO: float = 0.90
 const PATROL_MIN_COUNT: int = 3
-const PATROL_MAX_COUNT: int = 30
 const PATROL_OFFSCREEN_MARGIN: Vector2 = Vector2(420.0, 280.0)
 
 var _map: Map = null
@@ -79,7 +78,7 @@ func update_repopulation(camera_pos: Vector2) -> void:
 		_room_next_patrol_time.erase(room)
 		var base_quota: int = _map.get_room_enemy_quota(room)
 		var ratio: float = randf_range(PATROL_QUOTA_MIN_RATIO, PATROL_QUOTA_MAX_RATIO)
-		var patrol_count: int = clampi(roundi(float(base_quota) * ratio), PATROL_MIN_COUNT, PATROL_MAX_COUNT)
+		var patrol_count: int = maxi(PATROL_MIN_COUNT, roundi(float(base_quota) * ratio))
 		_room_patrol_remaining[room] = patrol_count
 		_room_patrol_spawned[room] = 0
 

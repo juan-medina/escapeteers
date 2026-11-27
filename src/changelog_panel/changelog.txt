@@ -4,17 +4,17 @@
 
 [color=#e0e0e0][b]Added[/b][/color]
 - [color=#ffffff][b]Blood Spike Arenas:[/b][/color] Closing spikes, alarm music, and bonus loot.
-- [color=#ffffff][b]Corridor Traps & Loot:[/b][/color] Torches, spikes, and loot line long tunnels.
-- [color=#ffffff][b]Wandering Patrols:[/b][/color] Light monster squads reclaim distant cleared rooms.
+- [color=#ffffff][b]Corridor Traps & Loot:[/b][/color] Torches, spikes, and loot line dungeon passages.
+- [color=#ffffff][b]Wandering Patrols:[/b][/color] Fiercer monster patrols reclaim distant cleared rooms.
 
 [color=#e0e0e0][b]Changed[/b][/color]
-- [color=#ffffff][b]Dungeon Map View:[/b][/color] Full-screen opaque map with pan and zoom.
+- [color=#ffffff][b]Labyrinth & Local Shortcuts:[/b][/color] Four-way mazes with sliding stone shortcut walls.
+- [color=#ffffff][b]Dungeon Map View:[/b][/color] Clean conceptual map with pan and zoom.commasd
 - [color=#ffffff][b]Swordsman Health:[/b][/color] Slightly boosted durability in frontline brawls.
 
 [color=#e0e0e0][b]Fixed[/b][/color]
 - [color=#ffffff][b]Stranded Companions:[/b][/color] Lost heroes now warp safely back to you.
 - [color=#ffffff][b]Draft Dialog Input:[/b][/color] Held movement no longer scrolls hero choices.
-- [color=#ffffff][b]Shortcut Tunnels:[/b][/color] Secret shortcuts no longer overlap or jam.
 
 [color=#ffffff][b]v0.7.0 - 2026-11-24[/b][/color]
 

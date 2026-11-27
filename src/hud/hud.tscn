@@ -55,15 +55,15 @@ border_width_bottom = 1
 border_color = Color(0.2, 0.22, 0.3, 0.6)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_event_banner"]
-content_margin_left = 18.0
-content_margin_top = 6.0
-content_margin_right = 18.0
-content_margin_bottom = 6.0
-bg_color = Color(0.05, 0.02, 0.04, 0.92)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
+content_margin_left = 10.0
+content_margin_top = 3.0
+content_margin_right = 10.0
+content_margin_bottom = 3.0
+bg_color = Color(0.05, 0.03, 0.06, 0.86)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
 border_color = Color(1, 0.28, 0.28, 0.95)
 
 [node name="Hud" type="CanvasLayer" unique_id=1849182746]
@@ -274,13 +274,13 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_event_banner")
 [node name="VBox" type="VBoxContainer" parent="NotificationStack/EventBanner"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 1
+theme_override_constants/separation = 0
 
 [node name="TagLabel" type="Label" parent="NotificationStack/EventBanner/VBox"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.28, 0.28, 1)
-theme_override_fonts/font = ExtResource("5_m6x11")
+theme_override_fonts/font = ExtResource("9_m5x7")
 theme_override_font_sizes/font_size = 16
 text = "! WARNING !"
 horizontal_alignment = 1
@@ -290,7 +290,7 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("5_m6x11")
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 16
 text = "Blood Spike Arena"
 horizontal_alignment = 1
 

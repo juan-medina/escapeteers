@@ -4,15 +4,10 @@
 class_name SpikePlanner
 extends RefCounted
 
-const CORRIDOR_MIN_SPIKE_LEN: int = 10
-const CORRIDOR_END_MARGIN: int = 4
+const CORRIDOR_MIN_SPIKE_LEN: int = 8
+const CORRIDOR_END_MARGIN: int = 3
 const CORRIDOR_SPIKE_INTERVAL: int = 16
 const CORRIDOR_MAX_PATCHES: int = 5
-const SHORTCUT_MIN_SPIKE_LEN: int = 12
-const SHORTCUT_SPIKE_INTERVAL: int = 18
-const SHORTCUT_MAX_PATCHES: int = 10
-const SHORTCUT_WAYPOINT_CLEAR_SQ: int = 9
-const SHORTCUT_SPIKE_SPACING_SQ: int = 16
 
 
 static func plan_spike_traps(plan: WorldPlan) -> void:
@@ -21,7 +16,6 @@ static func plan_spike_traps(plan: WorldPlan) -> void:
 		if not plan.is_event_room(room):
 			_plan_room_spike_traps(plan, room)
 	_plan_corridor_spike_traps(plan)
-	_plan_shortcut_spike_traps(plan)
 
 
 static func _plan_closing_spike_rooms(plan: WorldPlan) -> void:
@@ -148,6 +142,7 @@ static func _plan_corridor_spike_traps(plan: WorldPlan) -> void:
 		var is_horiz: bool = seg[&"is_horizontal"]
 		var fixed_c: int = seg[&"fixed"]
 		var half_w: int = seg[&"half_width"]
+		var is_shortcut: bool = seg.get(&"is_shortcut", false)
 
 		var run: Vector2i = RoomLayout.get_usable_corridor_run(plan, seg)
 		var best_start: int = run.x
@@ -161,16 +156,16 @@ static func _plan_corridor_spike_traps(plan: WorldPlan) -> void:
 			continue
 
 		var mid_c: int = best_start + floori(float(best_len) * 0.5)
-		var mid_y: int = fixed_c if is_horiz else mid_c
-		var approx_depth: int = maxi(1, floori(maxf(0.0, float(-mid_y)) / 50.0))
-		var chance: float = 0.30 if approx_depth <= 1 else (0.45 if approx_depth <= 3 else 0.60)
-		if best_len >= 24:
+		var mid_cell: Vector2i = Vector2i(mid_c, fixed_c) if is_horiz else Vector2i(fixed_c, mid_c)
+		var approx_depth: int = _get_cell_depth(plan, mid_cell)
+		var chance: float = 0.45 if is_shortcut else (0.30 if approx_depth <= 1 else (0.45 if approx_depth <= 3 else 0.60))
+		if not is_shortcut and best_len >= 24:
 			chance = minf(0.85, chance + 0.20)
 		if plan._rng.randf() > chance:
 			continue
 
 		var patch_count: int = 1
-		if best_len >= 18:
+		if not is_shortcut and best_len >= 18:
 			patch_count = clampi(floori(float(best_len) / float(CORRIDOR_SPIKE_INTERVAL)) + 1, 1, CORRIDOR_MAX_PATCHES)
 
 		var side_first: int = -1 if plan._rng.randf() < 0.5 else 1
@@ -182,90 +177,8 @@ static func _plan_corridor_spike_traps(plan: WorldPlan) -> void:
 				usable_end,
 			)
 			var side: int = side_first if (i % 2) == 0 else -side_first
-			var patch_len: int = 3 if patch_count == 1 else 2
+			var patch_len: int = 2 if (is_shortcut or patch_count > 1) else 3
 			_place_corridor_half_block(plan, is_horiz, along_c, fixed_c, half_w, side, patch_len)
-
-
-static func _plan_shortcut_spike_traps(plan: WorldPlan) -> void:
-	for gate: SectorGatePlanner.SectorGate in plan.sector_gates:
-		if not gate.has_shortcut or gate.key_room == gate.shortcut_target_room or gate.shortcut_segments.is_empty():
-			continue
-
-		var runs: Array[Dictionary] = ShortcutTunnelPlanner.get_usable_shortcut_runs(plan, gate)
-		var total_len: int = ShortcutTunnelPlanner.get_total_runs_length(runs)
-		if total_len < SHORTCUT_MIN_SPIKE_LEN:
-			continue
-
-		var patch_count: int = clampi(maxi(1, roundi(float(total_len) / float(SHORTCUT_SPIKE_INTERVAL))), 1, SHORTCUT_MAX_PATCHES)
-		var side_first: int = -1 if plan._rng.randf() < 0.5 else 1
-		for i: int in range(patch_count):
-			var offset: int = clampi(
-				roundi((float(i) + 0.5) * float(total_len) / float(patch_count)) + plan._rng.randi_range(-2, 2),
-				0,
-				total_len - 1,
-			)
-			var sample: Dictionary = ShortcutTunnelPlanner.sample_run_position(runs, offset)
-			var seg: Dictionary = sample[&"seg"]
-			var run_start: int = sample[&"run_start"]
-			var run_end: int = sample[&"run_end"]
-			var raw_coord: int = sample[&"coord"]
-			var along_c: int = clampi(raw_coord, run_start + 1, run_end - 1)
-			var side: int = side_first if (i % 2) == 0 else -side_first
-			_place_shortcut_half_block(plan, gate, seg, along_c, side, 2)
-
-
-static func _place_shortcut_half_block(
-	plan: WorldPlan,
-	gate: SectorGatePlanner.SectorGate,
-	seg: Dictionary,
-	along_center: int,
-	side: int,
-	length: int,
-) -> void:
-	var is_horiz: bool = seg[&"is_horizontal"]
-	var fixed_c: int = seg[&"fixed"]
-	var half_w: int = seg[&"half_width"]
-	var cells: Array[Vector2i] = []
-	var start_along: int = along_center - floori(float(length) * 0.5)
-
-	if half_w == 1:
-		if is_horiz:
-			var y_row: int = fixed_c if side < 0 else (fixed_c + 1)
-			for dx: int in range(length):
-				cells.append(Vector2i(start_along + dx, y_row))
-		else:
-			var x_col: int = (fixed_c - 1) if side < 0 else (fixed_c + 1)
-			for dy: int in range(length):
-				cells.append(Vector2i(x_col, start_along + dy))
-	else:
-		if is_horiz:
-			var y_base: int = (fixed_c - half_w + 1) if side < 0 else (fixed_c + half_w - 1)
-			for dx: int in range(length):
-				for dy: int in range(2):
-					cells.append(Vector2i(start_along + dx, y_base + dy))
-		else:
-			var x_base: int = (fixed_c - half_w) if side < 0 else (fixed_c + half_w - 1)
-			for dy: int in range(length):
-				for dx: int in range(2):
-					cells.append(Vector2i(x_base + dx, start_along + dy))
-
-	for cell: Vector2i in cells:
-		if (
-			not ShortcutTunnelPlanner.is_shortcut_floor_cell(cell, gate)
-			or not ShortcutTunnelPlanner.is_shortcut_floor_cell(cell + Vector2i(0, -1), gate)
-		):
-			return
-		if plan.get_room_at(cell) != Rect2i() or plan.hero_room.grow(4).has_point(cell):
-			return
-		if plan.is_floor(cell) or plan.no_prop_cells.has(cell) or WorldPlan._intersects_any_point(cell, plan.protected_neck_rects):
-			return
-		for wp: Vector2i in gate.shortcut_waypoints:
-			if cell.distance_squared_to(wp) < SHORTCUT_WAYPOINT_CLEAR_SQ:
-				return
-		if WorldPlan._has_cell_near(cell, plan._spike_cells, SHORTCUT_SPIKE_SPACING_SQ):
-			return
-
-	plan._commit_spike_cells(cells)
 
 
 static func _place_corridor_half_block(
@@ -279,7 +192,16 @@ static func _place_corridor_half_block(
 ) -> void:
 	var cells: Array[Vector2i] = []
 	var start_along: int = along_center - int(float(length) * 0.5)
-	if is_horiz:
+	if half_w <= 1:
+		if is_horiz:
+			var y_row: int = fixed_c if side < 0 else (fixed_c + 1)
+			for dx: int in range(length):
+				cells.append(Vector2i(start_along + dx, y_row))
+		else:
+			var x_col: int = fixed_c if side < 0 else (fixed_c + 1)
+			for dy: int in range(length):
+				cells.append(Vector2i(x_col, start_along + dy))
+	elif is_horiz:
 		var y_base: int = (fixed_c - half_w + 1) if side < 0 else (fixed_c + half_w - 1)
 		for dx: int in range(length):
 			for dy: int in range(2):
@@ -293,7 +215,9 @@ static func _place_corridor_half_block(
 	for cell: Vector2i in cells:
 		if plan.hero_room.grow(4).has_point(cell) or plan.get_room_at(cell) != Rect2i():
 			return
-		if plan.no_prop_cells.has(cell) or WorldPlan._intersects_any_point(cell, plan.protected_neck_rects):
+		if plan.no_prop_cells.has(cell):
+			return
+		if half_w > 1 and WorldPlan._intersects_any_point(cell, plan.protected_neck_rects):
 			return
 		if not plan.is_floor(cell) or not plan.is_floor(cell + Vector2i(0, -1)) or plan.has_candle_post_near(cell, 6):
 			return
@@ -326,3 +250,18 @@ static func _try_place_spike_patch(plan: WorldPlan, anchor: Vector2i, offsets: A
 
 	plan._commit_spike_cells(cells)
 	return true
+
+
+static func _get_cell_depth(plan: WorldPlan, cell: Vector2i) -> int:
+	var room: Rect2i = plan.get_room_at(cell)
+	if room.size != Vector2i.ZERO:
+		return plan.get_room_depth(room)
+	var best_room: Rect2i = plan.hero_room
+	var best_dist_sq: int = WorldPlan._dist_sq_to_rect(cell, plan.hero_room)
+	for idx: int in plan._room_grid.get_candidate_ids_for_rect(Rect2i(cell - Vector2i(32, 32), Vector2i(64, 64))):
+		if idx >= 0 and idx < plan.rooms.size():
+			var d_sq: int = WorldPlan._dist_sq_to_rect(cell, plan.rooms[idx])
+			if d_sq < best_dist_sq:
+				best_dist_sq = d_sq
+				best_room = plan.rooms[idx]
+	return maxi(1, plan.get_room_depth(best_room))

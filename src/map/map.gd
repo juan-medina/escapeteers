@@ -8,7 +8,7 @@ signal generation_progress_updated(progress: float)
 signal secret_torches_completed
 signal door_unlocked(gate: SectorGatePlanner.SectorGate)
 signal locked_door_bumped(color: WorldPlan.KeyColor)
-signal shortcut_opened(color: WorldPlan.KeyColor)
+signal shortcut_opened(shortcut: ShortcutTunnelPlanner.LocalShortcut)
 signal event_room_armed(room: Rect2i)
 signal event_room_disarmed(room: Rect2i)
 
@@ -17,7 +17,7 @@ const EXPAND_TRIGGER_DISTANCE_TILES: float = 75.0
 const SECRET_TORCH_COUNT: int = 4
 const SECRET_TORCH_TRIGGER_DIST_SQ: float = 28.0 * 28.0
 const LEVER_TRIGGER_DIST_SQ: float = 18.0 * 18.0
-const DOOR_TRIGGER_DIST_SQ: float = 26.0 * 26.0
+const DOOR_TRIGGER_DIST_SQ: float = 30.0 * 30.0
 const LOCKED_DOOR_TOAST_COOLDOWN: float = 3.0
 const SPIKE_STAY_DOWN_TIME: float = 2.00
 const SPIKE_UP_1_TIME: float = 0.40
@@ -28,8 +28,7 @@ const SPIKE_DOWN_1_TIME: float = 0.10
 const SPIKE_CYCLE_DURATION: float = 3.80
 const COIN_ROOM_CHANCE: float = 0.30
 const POTION_ROOM_CHANCE: float = 0.30
-const SHORTCUT_TILE_BATCH_SIZE: int = 64
-const SHORTCUT_IMMEDIATE_RADIUS_SQ: int = 64
+const SHORTCUT_WALL_SCENE: PackedScene = preload("res://map/shortcut_wall.tscn")
 
 var plan: WorldPlan = WorldPlan.new()
 var streamer: MapStreamer = MapStreamer.new()
@@ -46,24 +45,14 @@ var _secret_torch_cells: Array[Vector2i] = []
 var _secret_torch_index: int = 0
 var _guaranteed_coin_room: Rect2i = Rect2i()
 var _guaranteed_potion_room: Rect2i = Rect2i()
-var _is_activating_lever: bool = false
 var _locked_door_toast_timer: float = 0.0
-var _pending_shortcut_floors: Array[Vector2i] = []
-var _pending_shortcut_floor_atlas: Array[Vector2i] = []
-var _pending_shortcut_erased_walls: Array[Vector2i] = []
-var _pending_shortcut_walls: Array[Vector2i] = []
-var _pending_shortcut_wall_atlas: Array[Vector2i] = []
-var _pending_shortcut_gate: SectorGatePlanner.SectorGate = null
-var _pending_shortcut_chunks: Array[Vector2i] = []
+var _shortcut_walls: Dictionary[int, ShortcutWall] = {}
 
 @onready var light_manager: LightManager = $Lights
 @onready var _floor: TileMapLayer = $Floor
 @onready var _walls: TileMapLayer = $Walls
 @onready var _decorations: TileMapLayer = $Decorations
-@onready var _shortcut_effect: Node2D = $ShortcutEffect
-@onready var _shortcut_left_wall: Sprite2D = $ShortcutEffect/LeftWall
-@onready var _shortcut_right_wall: Sprite2D = $ShortcutEffect/RightWall
-@onready var _shortcut_dust: CPUParticles2D = $ShortcutEffect/DustParticles
+@onready var _shortcut_walls_container: Node2D = $ShortcutWalls
 
 
 func get_hero_spawn_position() -> Vector2:
@@ -177,13 +166,21 @@ func generate_map() -> void:
 	_group_frames = [0, 0, 0, 0]
 	_spike_elapsed = 0.0
 	_expanded_rooms.clear()
-	_is_activating_lever = false
 	_locked_door_toast_timer = 0.0
-	_shortcut_effect.visible = false
+	_shortcut_walls.clear()
+	for child: Node in _shortcut_walls_container.get_children():
+		child.queue_free()
 
 	plan.generate()
 	hero_room = plan.hero_room
 	_expanded_rooms[hero_room] = true
+
+	for sc: ShortcutTunnelPlanner.LocalShortcut in plan.local_shortcuts:
+		var wall: ShortcutWall = SHORTCUT_WALL_SCENE.instantiate() as ShortcutWall
+		wall.position = (_floor.map_to_local(sc.door_cells[0]) + _floor.map_to_local(sc.door_cells[1])) * 0.5
+		_shortcut_walls_container.add_child(wall)
+		wall.setup(sc.is_horizontal_door, plan.get_cell_tile_set(sc.door_cells[0]))
+		_shortcut_walls[sc.id] = wall
 
 	var depth_1_rooms: Array[Rect2i] = plan.get_depth_rooms(1)
 	companion_rooms.append_array(depth_1_rooms)
@@ -212,7 +209,6 @@ func generate_map() -> void:
 			await get_tree().process_frame
 			slice_start_usec = Time.get_ticks_usec()
 
-	SectorGatePlanner.prebake_shortcut_tunnels(plan, chunk_raster)
 	generation_progress_updated.emit(0.75)
 	await get_tree().process_frame
 
@@ -332,15 +328,15 @@ func cancel_secret_torches() -> void:
 
 func update_gates(squad: Array[Hero], collected_keys: Dictionary[WorldPlan.KeyColor, bool], delta: float) -> void:
 	_locked_door_toast_timer = maxf(0.0, _locked_door_toast_timer - delta)
-	if _is_activating_lever:
-		return
+
+	for shortcut: ShortcutTunnelPlanner.LocalShortcut in plan.local_shortcuts:
+		if not shortcut.opened and _is_squad_near(squad, _floor.map_to_local(shortcut.lever_cell), LEVER_TRIGGER_DIST_SQ):
+			_activate_local_shortcut(shortcut)
+			return
 
 	for gate: SectorGatePlanner.SectorGate in plan.sector_gates:
-		if gate.has_shortcut and not gate.shortcut_opened and _is_squad_near(squad, _floor.map_to_local(gate.lever_cell), LEVER_TRIGGER_DIST_SQ):
-			_activate_shortcut_lever(gate)
-			return
 		if not gate.door_unlocked:
-			var door_center: Vector2 = (_floor.map_to_local(gate.door_cells[0]) + _floor.map_to_local(gate.door_cells[1])) * 0.5 + Vector2(0.0, 8.0)
+			var door_center: Vector2 = (_floor.map_to_local(gate.door_cells[0]) + _floor.map_to_local(gate.door_cells[1])) * 0.5
 			if _is_squad_near(squad, door_center, DOOR_TRIGGER_DIST_SQ):
 				if collected_keys.has(gate.color):
 					_unlock_door(gate)
@@ -359,16 +355,53 @@ static func _is_squad_near(squad: Array[Hero], target_pos: Vector2, max_dist_sq:
 func _unlock_door(gate: SectorGatePlanner.SectorGate) -> void:
 	gate.door_unlocked = true
 	var color_idx: int = int(gate.color)
-	var left_cell: Vector2i = gate.door_cells[0]
-	var right_cell: Vector2i = gate.door_cells[1]
-	var top_left: Vector2i = left_cell + Vector2i(0, -1)
-	var top_right: Vector2i = right_cell + Vector2i(0, -1)
+	if gate.door_face == RoomLayout.Face.NORTH or gate.door_face == RoomLayout.Face.SOUTH:
+		var left_cell: Vector2i = gate.door_cells[0]
+		var right_cell: Vector2i = gate.door_cells[1]
+		_open_horizontal_door_cells(
+			left_cell,
+			right_cell,
+			left_cell + Vector2i(0, -1),
+			right_cell + Vector2i(0, -1),
+			TileClassifier.DOOR_OPEN_TOP_LEFT[color_idx],
+			TileClassifier.DOOR_OPEN_TOP_RIGHT[color_idx],
+			TileClassifier.DOOR_OPEN_BOTTOM_LEFT[color_idx],
+			TileClassifier.DOOR_OPEN_BOTTOM_RIGHT[color_idx],
+		)
+	else:
+		_open_vertical_door_cells(gate.door_cells[0], gate.door_cells[1])
 
-	var top_l_atlas: Vector2i = TileClassifier.DOOR_OPEN_TOP_LEFT[color_idx]
-	var top_r_atlas: Vector2i = TileClassifier.DOOR_OPEN_TOP_RIGHT[color_idx]
-	var bot_l_atlas: Vector2i = TileClassifier.DOOR_OPEN_BOTTOM_LEFT[color_idx]
-	var bot_r_atlas: Vector2i = TileClassifier.DOOR_OPEN_BOTTOM_RIGHT[color_idx]
+	Audio.play_sfx(Audio.Sfx.DOOR_UNLOCK)
+	door_unlocked.emit(gate)
 
+
+func _activate_local_shortcut(shortcut: ShortcutTunnelPlanner.LocalShortcut) -> void:
+	shortcut.opened = true
+	_decorations.set_cell(shortcut.lever_cell, TileClassifier.TILE_SET_SOURCE_ID, TileClassifier.LEVER_OPEN, 0)
+	_update_baked_decoration_cell(shortcut.lever_cell, TileClassifier.LEVER_OPEN, 0)
+
+	if _shortcut_walls.has(shortcut.id):
+		_shortcut_walls[shortcut.id].open_animated()
+
+	for cell: Vector2i in shortcut.door_cells:
+		_walkable_cells[cell] = true
+		nav_window.set_cell_walkable(cell, true)
+		_set_baked_walkable(cell, true)
+
+	Audio.play_sfx(Audio.Sfx.SHORTCUT_OPEN)
+	shortcut_opened.emit(shortcut)
+
+
+func _open_horizontal_door_cells(
+	left_cell: Vector2i,
+	right_cell: Vector2i,
+	top_left: Vector2i,
+	top_right: Vector2i,
+	top_l_atlas: Vector2i,
+	top_r_atlas: Vector2i,
+	bot_l_atlas: Vector2i,
+	bot_r_atlas: Vector2i,
+) -> void:
 	_walls.set_cell(top_left, TileClassifier.TILE_SET_SOURCE_ID, top_l_atlas, 0)
 	_walls.set_cell(top_right, TileClassifier.TILE_SET_SOURCE_ID, top_r_atlas, 0)
 	_walls.set_cell(left_cell, TileClassifier.TILE_SET_SOURCE_ID, bot_l_atlas, 0)
@@ -384,296 +417,14 @@ func _unlock_door(gate: SectorGatePlanner.SectorGate) -> void:
 		nav_window.set_cell_walkable(cell, true)
 		_set_baked_walkable(cell, true)
 
-	Audio.play_sfx(Audio.Sfx.DOOR_UNLOCK)
-	door_unlocked.emit(gate)
 
-
-func _activate_shortcut_lever(gate: SectorGatePlanner.SectorGate) -> void:
-	gate.shortcut_opened = true
-	_is_activating_lever = true
-	_decorations.set_cell(gate.lever_cell, TileClassifier.TILE_SET_SOURCE_ID, TileClassifier.LEVER_OPEN, 0)
-	_update_baked_decoration_cell(gate.lever_cell, TileClassifier.LEVER_OPEN, 0)
-
-	var w_left: Vector2i = gate.shortcut_wall_cells[0]
-	var w_right: Vector2i = gate.shortcut_wall_cells[1]
-	var f_left: Vector2i = gate.shortcut_flank_cells[0]
-	var f_right: Vector2i = gate.shortcut_flank_cells[1]
-
-	for c: Vector2i in [w_left, w_right, f_left, f_right]:
-		plan.closed_shortcut_walls.erase(c)
-
-	var atlas_l: Vector2i = _walls.get_cell_atlas_coords(w_left)
-	if atlas_l.x < 0:
-		atlas_l = TileClassifier.get_wall_top_for_cell(plan.run_seed, w_left, plan.get_cell_tile_set(w_left))
-	var atlas_r: Vector2i = _walls.get_cell_atlas_coords(w_right)
-	if atlas_r.x < 0:
-		atlas_r = TileClassifier.get_wall_top_for_cell(plan.run_seed, w_right, plan.get_cell_tile_set(w_right))
-
-	_shortcut_left_wall.region_rect = Rect2(Vector2(atlas_l * 16), Vector2(16, 16))
-	_shortcut_right_wall.region_rect = Rect2(Vector2(atlas_r * 16), Vector2(16, 16))
-	_shortcut_effect.position = (_floor.map_to_local(w_left) + _floor.map_to_local(w_right)) * 0.5
-	_shortcut_left_wall.position = Vector2(-8.0, 0.0)
-	_shortcut_left_wall.scale = Vector2.ONE
-	_shortcut_left_wall.modulate = Color.WHITE
-	_shortcut_right_wall.position = Vector2(8.0, 0.0)
-	_shortcut_right_wall.scale = Vector2.ONE
-	_shortcut_right_wall.modulate = Color.WHITE
-	_shortcut_effect.modulate = Color.WHITE
-	_shortcut_effect.visible = true
-
-	_apply_shortcut_tiles(gate)
-
-	Audio.play_sfx(Audio.Sfx.SHORTCUT_OPEN)
-	shortcut_opened.emit(gate.color)
-
-	get_tree().paused = true
-	var tween: Tween = create_tween()
-	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tween.tween_property(_shortcut_effect, ^"modulate", Color(2.2, 2.2, 2.2, 1.0), 0.12)
-	tween.parallel().tween_property(_shortcut_left_wall, ^"position:x", -10.0, 0.06)
-	tween.parallel().tween_property(_shortcut_right_wall, ^"position:x", 10.0, 0.06)
-	tween.tween_property(_shortcut_left_wall, ^"position:x", -6.0, 0.06)
-	tween.parallel().tween_property(_shortcut_right_wall, ^"position:x", 6.0, 0.06)
-	tween.tween_callback(_shortcut_dust.restart)
-	tween.tween_property(_shortcut_left_wall, ^"position", Vector2(-12.0, -4.0), 0.45)
-	tween.parallel().tween_property(_shortcut_left_wall, ^"scale", Vector2(0.2, 0.2), 0.45)
-	tween.parallel().tween_property(_shortcut_left_wall, ^"modulate:a", 0.0, 0.45)
-	tween.parallel().tween_property(_shortcut_right_wall, ^"position", Vector2(12.0, -4.0), 0.45)
-	tween.parallel().tween_property(_shortcut_right_wall, ^"scale", Vector2(0.2, 0.2), 0.45)
-	tween.parallel().tween_property(_shortcut_right_wall, ^"modulate:a", 0.0, 0.45)
-	tween.tween_interval(0.15)
-	tween.finished.connect(_on_shortcut_effect_finished.bind(gate))
-	var tile_tween: Tween = create_tween()
-	tile_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tile_tween.tween_method(_step_shortcut_tile_batch, 0.0, 1.0, 0.65)
-
-
-func _on_shortcut_effect_finished(gate: SectorGatePlanner.SectorGate) -> void:
-	_shortcut_effect.visible = false
-	_flush_shortcut_tile_batches()
-	_apply_shortcut_walkable(gate)
-
-	_is_activating_lever = false
-	get_tree().paused = false
-
-
-func _step_shortcut_tile_batch(_progress: float) -> void:
-	if not _pending_shortcut_chunks.is_empty():
-		var coord: Vector2i = _pending_shortcut_chunks.pop_back()
-		_process_one_pending_shortcut_chunk(coord)
-	_drain_shortcut_tile_ops(SHORTCUT_TILE_BATCH_SIZE)
-
-
-func _flush_shortcut_tile_batches() -> void:
-	while not _pending_shortcut_chunks.is_empty():
-		var coord: Vector2i = _pending_shortcut_chunks.pop_back()
-		_process_one_pending_shortcut_chunk(coord)
-	_pending_shortcut_gate = null
-	_drain_shortcut_tile_ops(-1)
-
-
-func _drain_shortcut_tile_ops(budget: int) -> void:
-	var unlimited: bool = budget < 0
-	var remaining: int = budget
-	while (unlimited or remaining > 0) and not _pending_shortcut_erased_walls.is_empty():
-		var ecell: Vector2i = _pending_shortcut_erased_walls.pop_back()
-		_walls.erase_cell(ecell)
-		remaining -= 1
-	while (unlimited or remaining > 0) and not _pending_shortcut_floors.is_empty():
-		var fcell: Vector2i = _pending_shortcut_floors.pop_back()
-		var fatlas: Vector2i = _pending_shortcut_floor_atlas.pop_back()
-		_floor.set_cell(fcell, TileClassifier.TILE_SET_SOURCE_ID, fatlas)
-		remaining -= 1
-	while (unlimited or remaining > 0) and not _pending_shortcut_walls.is_empty():
-		var wcell: Vector2i = _pending_shortcut_walls.pop_back()
-		var watlas: Vector2i = _pending_shortcut_wall_atlas.pop_back()
-		_walls.set_cell(wcell, TileClassifier.TILE_SET_SOURCE_ID, watlas, 0)
-		remaining -= 1
-
-
-func _process_one_pending_shortcut_chunk(coord: Vector2i) -> void:
-	var diff: Dictionary = _pending_shortcut_gate.tunnel_chunk_diffs[coord]
-	var chunk_floors: Array[Vector2i] = diff[&"floors"]
-	var chunk_erased: Dictionary[Vector2i, bool] = diff[&"erased_walls"]
-	var chunk_walls: Array[Vector2i] = diff[&"walls"]
-	var chunk_spikes: Array[Vector2i] = diff[&"spikes"]
-	var chunk_torches: Array[Vector2i] = diff[&"torches"]
-	var chunk_erased_torches: Dictionary[Vector2i, bool] = diff[&"erased_torches"]
-	var chunk_lights: Array[Vector2i] = diff[&"lights"]
-	var chunk_erased_lights: Dictionary[Vector2i, bool] = diff[&"erased_lights"]
-	if streamer.is_chunk_loaded(coord):
-		for scell: Vector2i in chunk_spikes:
-			_loaded_spikes[scell] = plan.get_spike_group(scell)
-		for etcell: Vector2i in chunk_erased_torches:
-			_decorations.erase_cell(etcell)
-		for tcell: Vector2i in chunk_torches:
-			var tatlas: Vector2i = _pending_shortcut_gate.tunnel_torches[tcell]
-			var talt: int = _pending_shortcut_gate.tunnel_torch_alt_ids[tcell]
-			_decorations.set_cell(tcell, TileClassifier.TILE_SET_SOURCE_ID, tatlas, talt)
-		for elcell: Vector2i in chunk_erased_lights:
-			light_manager.remove_light_at(elcell)
-		for lcell: Vector2i in chunk_lights:
-			if not light_manager.has_light(lcell):
-				light_manager.add_light(coord, lcell, _decorations.map_to_local(lcell))
-		var anchor_cell: Vector2i = _pending_shortcut_gate.shortcut_wall_cells[0]
-		_apply_or_queue_loaded_shortcut_chunk(chunk_floors, chunk_erased, chunk_walls, _pending_shortcut_gate, anchor_cell)
-	if plan.baked_chunks.has(coord):
-		var data: Dictionary = plan.baked_chunks[coord]
-		_apply_chunk_baked_floors(data, chunk_floors, _pending_shortcut_gate.tunnel_floors)
-		_apply_chunk_baked_walls(data, chunk_erased, chunk_walls, _pending_shortcut_gate.tunnel_walls)
-		_apply_chunk_baked_spikes(data, chunk_spikes)
-		ShortcutTunnelPlanner.apply_baked_chunk_torches_and_lights(data, diff, _pending_shortcut_gate)
-		streamer.sync_loaded_chunk_arrays(coord, data)
-
-
-func _apply_shortcut_tiles(gate: SectorGatePlanner.SectorGate) -> void:
-	_flush_shortcut_tile_batches()
-	_pending_shortcut_gate = gate
-	var anchor_cell: Vector2i = gate.shortcut_wall_cells[0]
-	var min_c: Vector2i = MapStreamer.cell_to_chunk(anchor_cell - Vector2i(8, 8))
-	var max_c: Vector2i = MapStreamer.cell_to_chunk(anchor_cell + Vector2i(8, 8))
-	for coord: Vector2i in gate.tunnel_chunk_diffs:
-		if coord.x >= min_c.x and coord.x <= max_c.x and coord.y >= min_c.y and coord.y <= max_c.y:
-			_process_one_pending_shortcut_chunk(coord)
-		else:
-			_pending_shortcut_chunks.append(coord)
-
-
-func _apply_or_queue_loaded_shortcut_chunk(
-	chunk_floors: Array[Vector2i],
-	chunk_erased: Dictionary[Vector2i, bool],
-	chunk_walls: Array[Vector2i],
-	gate: SectorGatePlanner.SectorGate,
-	anchor_cell: Vector2i,
-) -> void:
-	for fcell: Vector2i in chunk_floors:
-		var fatlas: Vector2i = gate.tunnel_floors[fcell]
-		if _loaded_spikes.has(fcell):
-			var group_id: int = _loaded_spikes[fcell]
-			if group_id >= 0 and group_id < _group_frames.size():
-				var tile_set: int = plan.spike_tile_sets.get(fcell, 1)
-				fatlas = TileClassifier.get_spike_frame(_group_frames[group_id], tile_set)
-		if fcell.distance_squared_to(anchor_cell) <= SHORTCUT_IMMEDIATE_RADIUS_SQ:
-			_floor.set_cell(fcell, TileClassifier.TILE_SET_SOURCE_ID, fatlas)
-		else:
-			_pending_shortcut_floors.append(fcell)
-			_pending_shortcut_floor_atlas.append(fatlas)
-	for ecell: Vector2i in chunk_erased:
-		if ecell.distance_squared_to(anchor_cell) <= SHORTCUT_IMMEDIATE_RADIUS_SQ:
-			_walls.erase_cell(ecell)
-		else:
-			_pending_shortcut_erased_walls.append(ecell)
-	for wcell: Vector2i in chunk_walls:
-		var watlas: Vector2i = gate.tunnel_walls[wcell]
-		if wcell.distance_squared_to(anchor_cell) <= SHORTCUT_IMMEDIATE_RADIUS_SQ:
-			_walls.set_cell(wcell, TileClassifier.TILE_SET_SOURCE_ID, watlas, 0)
-		else:
-			_pending_shortcut_walls.append(wcell)
-			_pending_shortcut_wall_atlas.append(watlas)
-
-
-static func _apply_chunk_baked_floors(
-	data: Dictionary,
-	chunk_floors: Array[Vector2i],
-	tunnel_floors: Dictionary[Vector2i, Vector2i],
-) -> void:
-	if chunk_floors.is_empty():
-		return
-	var floors: Array[Vector2i] = data[&"floors"]
-	var floor_atlas: Array[Vector2i] = data[&"floor_atlas"]
-	var index_by_cell: Dictionary[Vector2i, int] = {}
-	for i: int in range(floors.size()):
-		index_by_cell[floors[i]] = i
-	for fcell: Vector2i in chunk_floors:
-		var fatlas: Vector2i = tunnel_floors[fcell]
-		if index_by_cell.has(fcell):
-			floor_atlas[index_by_cell[fcell]] = fatlas
-		else:
-			index_by_cell[fcell] = floors.size()
-			floors.append(fcell)
-			floor_atlas.append(fatlas)
-
-
-static func _apply_chunk_baked_walls(
-	data: Dictionary,
-	chunk_erased: Dictionary[Vector2i, bool],
-	chunk_walls: Array[Vector2i],
-	tunnel_walls: Dictionary[Vector2i, Vector2i],
-) -> void:
-	var walls: Array[Vector2i] = data[&"walls"]
-	var wall_atlas: Array[Vector2i] = data[&"wall_atlas"]
-	var wall_alt_ids: Array[int] = data[&"wall_alt_ids"]
-
-	if not chunk_erased.is_empty():
-		var write_idx: int = 0
-		for read_idx: int in range(walls.size()):
-			var wcell: Vector2i = walls[read_idx]
-			if chunk_erased.has(wcell):
-				continue
-			if write_idx != read_idx:
-				walls[write_idx] = wcell
-				wall_atlas[write_idx] = wall_atlas[read_idx]
-				wall_alt_ids[write_idx] = wall_alt_ids[read_idx]
-			write_idx += 1
-		if write_idx < walls.size():
-			walls.resize(write_idx)
-			wall_atlas.resize(write_idx)
-			wall_alt_ids.resize(write_idx)
-
-	if chunk_walls.is_empty():
-		return
-	var index_by_cell: Dictionary[Vector2i, int] = {}
-	for i: int in range(walls.size()):
-		index_by_cell[walls[i]] = i
-	for wcell: Vector2i in chunk_walls:
-		var watlas: Vector2i = tunnel_walls[wcell]
-		if index_by_cell.has(wcell):
-			var idx: int = index_by_cell[wcell]
-			wall_atlas[idx] = watlas
-			wall_alt_ids[idx] = 0
-		else:
-			index_by_cell[wcell] = walls.size()
-			walls.append(wcell)
-			wall_atlas.append(watlas)
-			wall_alt_ids.append(0)
-
-
-static func _apply_chunk_baked_spikes(data: Dictionary, chunk_spikes: Array[Vector2i]) -> void:
-	if chunk_spikes.is_empty():
-		return
-	var spikes: Array[Vector2i] = data[&"spikes"]
-	var existing: Dictionary[Vector2i, bool] = {}
-	for scell: Vector2i in spikes:
-		existing[scell] = true
-	for scell: Vector2i in chunk_spikes:
-		if not existing.has(scell):
-			existing[scell] = true
-			spikes.append(scell)
-
-
-func _apply_shortcut_walkable(gate: SectorGatePlanner.SectorGate) -> void:
-	for coord: Vector2i in gate.tunnel_chunk_diffs:
-		var diff: Dictionary = gate.tunnel_chunk_diffs[coord]
-		var chunk_cells: Array[Vector2i] = diff[&"walkable"]
-		if chunk_cells.is_empty():
-			continue
-		for cell: Vector2i in chunk_cells:
-			_walkable_cells[cell] = true
-			nav_window.set_cell_walkable(cell, true)
-		if not plan.baked_chunks.has(coord):
-			streamer.add_loaded_chunk_walkable(coord, chunk_cells)
-			continue
-		var data: Dictionary = plan.baked_chunks[coord]
-		var walk_arr: Array[Vector2i] = data[&"walkable"]
-		var existing: Dictionary[Vector2i, bool] = {}
-		for wcell: Vector2i in walk_arr:
-			existing[wcell] = true
-		for cell: Vector2i in chunk_cells:
-			if not existing.has(cell):
-				existing[cell] = true
-				walk_arr.append(cell)
-		data[&"walkable_rects"] = TileClassifier.build_walkable_rects(coord, walk_arr)
-		streamer.sync_loaded_chunk_arrays(coord, data)
+func _open_vertical_door_cells(top_cell: Vector2i, bottom_cell: Vector2i) -> void:
+	for cell: Vector2i in [top_cell, bottom_cell]:
+		_walls.erase_cell(cell)
+		_update_baked_wall_cell(cell, Vector2i(-1, -1), 0)
+		_walkable_cells[cell] = true
+		nav_window.set_cell_walkable(cell, true)
+		_set_baked_walkable(cell, true)
 
 
 func _update_baked_wall_cell(cell: Vector2i, atlas: Vector2i, alt_id: int) -> void:
