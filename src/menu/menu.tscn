@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://cocbxcwipqvw8"]
 
 [ext_resource type="Script" uid="uid://ddyex34wycqit" path="res://menu/menu.gd" id="1_g18jx"]
-[ext_resource type="PackedScene" path="res://main_menu_panel/main_menu_panel.tscn" id="2_main"]
+[ext_resource type="PackedScene" uid="uid://co338o54a3iqn" path="res://main_menu_panel/main_menu_panel.tscn" id="2_main"]
 [ext_resource type="PackedScene" path="res://hero_select_panel/hero_select_panel.tscn" id="3_hero_select"]
 [ext_resource type="PackedScene" path="res://settings_panel/settings_panel.tscn" id="4_settings"]
 [ext_resource type="PackedScene" path="res://about_panel/about_panel.tscn" id="5_about"]
@@ -40,7 +40,7 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_torch_2")
 }],
-"loop": true,
+"loop": 1,
 "name": &"burn",
 "speed": 8.0
 }]
@@ -69,7 +69,7 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_post_2")
 }],
-"loop": true,
+"loop": 1,
 "name": &"burn",
 "speed": 8.0
 }]
@@ -106,7 +106,6 @@ autoplay = "burn"
 [node name="PointLight2D" type="PointLight2D" parent="Backdrop/WallTorchLeft" unique_id=1078777912]
 color = Color(1, 0.72, 0.35, 1)
 energy = 2.8
-range_layer_min = 0
 range_layer_max = 1
 range_item_cull_mask = 4
 texture = ExtResource("10_light")
@@ -122,7 +121,6 @@ frame = 1
 [node name="PointLight2D" type="PointLight2D" parent="Backdrop/WallTorchRight" unique_id=1078777914]
 color = Color(1, 0.72, 0.35, 1)
 energy = 2.8
-range_layer_min = 0
 range_layer_max = 1
 range_item_cull_mask = 4
 texture = ExtResource("10_light")
@@ -139,7 +137,6 @@ frame = 2
 position = Vector2(0, -10)
 color = Color(1, 0.7, 0.35, 1)
 energy = 2.6
-range_layer_min = 0
 range_layer_max = 1
 range_item_cull_mask = 4
 texture = ExtResource("10_light")
@@ -155,7 +152,6 @@ autoplay = "burn"
 position = Vector2(0, -10)
 color = Color(1, 0.7, 0.35, 1)
 energy = 2.6
-range_layer_min = 0
 range_layer_max = 1
 range_item_cull_mask = 4
 texture = ExtResource("10_light")
@@ -173,7 +169,6 @@ spread = 15.0
 gravity = Vector2(0, 0)
 initial_velocity_min = 14.0
 initial_velocity_max = 32.0
-scale_amount_min = 1.0
 scale_amount_max = 2.0
 color = Color(1, 0.72, 0.24, 0.55)
 
@@ -208,23 +203,23 @@ layout_mode = 2
 visible = false
 layout_mode = 2
 
-[node name="CodexPanel" parent="Center" instance=ExtResource("11_codex")]
+[node name="CodexPanel" parent="Center" unique_id=2115581194 instance=ExtResource("11_codex")]
 visible = false
 layout_mode = 2
 
-[node name="CodexHeroesPanel" parent="Center" instance=ExtResource("12_codex_heroes")]
+[node name="CodexHeroesPanel" parent="Center" unique_id=563650921 instance=ExtResource("12_codex_heroes")]
 visible = false
 layout_mode = 2
 
-[node name="CodexEnemiesPanel" parent="Center" instance=ExtResource("13_codex_enemies")]
+[node name="CodexEnemiesPanel" parent="Center" unique_id=2031126743 instance=ExtResource("13_codex_enemies")]
 visible = false
 layout_mode = 2
 
-[node name="CodexItemsPanel" parent="Center" instance=ExtResource("15_codex_items")]
+[node name="CodexItemsPanel" parent="Center" unique_id=1268620981 instance=ExtResource("15_codex_items")]
 visible = false
 layout_mode = 2
 
-[node name="CodexMechanicsPanel" parent="Center" instance=ExtResource("14_codex_mechanics")]
+[node name="CodexMechanicsPanel" parent="Center" unique_id=263369166 instance=ExtResource("14_codex_mechanics")]
 visible = false
 layout_mode = 2
 
