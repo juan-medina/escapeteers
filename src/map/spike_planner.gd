@@ -8,6 +8,7 @@ const CORRIDOR_MIN_SPIKE_LEN: int = 8
 const CORRIDOR_END_MARGIN: int = 3
 const CORRIDOR_SPIKE_INTERVAL: int = 16
 const CORRIDOR_MAX_PATCHES: int = 5
+const RANGED_EVENT_MAX_ROOM_DIM: int = 30
 
 
 static func plan_spike_traps(plan: WorldPlan) -> void:
@@ -36,6 +37,10 @@ static func _plan_closing_spike_rooms(plan: WorldPlan) -> void:
 			continue
 		if not ClosingSpikeHazard.can_fit_room(room):
 			continue
+		var arch: WorldPlan.RoomArchetype = plan.get_room_archetype(room)
+		if arch == WorldPlan.RoomArchetype.ARCHER_GARRISON or arch == WorldPlan.RoomArchetype.NECRO_CRYPT:
+			if room.size.x > RANGED_EVENT_MAX_ROOM_DIM or room.size.y > RANGED_EVENT_MAX_ROOM_DIM:
+				continue
 		if not sector_candidates.has(sector_idx):
 			sector_candidates[sector_idx] = []
 		sector_candidates[sector_idx].append(room)

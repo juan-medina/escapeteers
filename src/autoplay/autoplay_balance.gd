@@ -10,6 +10,9 @@ const ARCHETYPE_NAMES: Dictionary[int, StringName] = {
 	WorldPlan.RoomArchetype.ARCHER_GARRISON: &"ARCHER_GARRISON",
 	WorldPlan.RoomArchetype.NECRO_CRYPT: &"NECRO_CRYPT",
 }
+const EVENT_TYPE_NAMES: Dictionary[int, StringName] = {
+	WorldPlan.RoomEventType.CLOSING_SPIKES: &"BLOOD_SPIKES",
+}
 
 var _runs: Array[Dictionary] = []
 
@@ -261,7 +264,8 @@ func _on_hero_damaged(amount: float, _current_health: float, hero: Hero) -> void
 	if _cur_map != null and is_instance_valid(hero):
 		var foot_cell: Vector2i = _cur_map.local_to_map(hero.get_hurtbox_position())
 		if _cur_map.is_spike_active_at(foot_cell):
-			_last_attacker_by_hero[hero.get_instance_id()] = &"spike"
+			var is_blood: bool = _cur_map.plan.event_spike_cell_rooms.has(foot_cell)
+			_last_attacker_by_hero[hero.get_instance_id()] = &"blood_spike" if is_blood else &"spike"
 
 
 func _on_hero_died(hero: Hero) -> void:
@@ -319,8 +323,12 @@ func _track_rooms(game: Game, map: Map) -> void:
 		_cur_active_room = room
 		if not _cur_room_records.has(room):
 			var total_max_hp: float = _sum_squad_max_hp(game)
-			var arch: WorldPlan.RoomArchetype = map.plan.get_room_archetype(room)
-			var arch_name: StringName = ARCHETYPE_NAMES.get(arch, &"SLIME_PIT")
+			var event_type: WorldPlan.RoomEventType = map.plan.room_event_types.get(room, WorldPlan.RoomEventType.NONE)
+			var arch_name: StringName = (
+				EVENT_TYPE_NAMES[event_type]
+				if EVENT_TYPE_NAMES.has(event_type)
+				else ARCHETYPE_NAMES.get(map.plan.get_room_archetype(room), &"SLIME_PIT")
+			)
 			_cur_room_records[room] = {
 				&"depth": map.get_room_depth(room),
 				&"archetype": String(arch_name),

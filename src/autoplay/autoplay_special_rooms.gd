@@ -5,9 +5,8 @@ class_name AutoplaySpecialRooms
 extends RefCounted
 
 
-static func is_in_active_special_room(map: Map, leader: Hero, skipped_rooms: Dictionary[Rect2i, bool]) -> bool:
-	var room: Rect2i = map.plan.get_room_at(map.local_to_map(leader.global_position))
-	if room == Rect2i() or skipped_rooms.has(room):
+static func is_active_special_room(map: Map, room: Rect2i) -> bool:
+	if room == Rect2i():
 		return false
 	var event_type: WorldPlan.RoomEventType = map.plan.room_event_types.get(room, WorldPlan.RoomEventType.NONE)
 	match event_type:
@@ -16,6 +15,11 @@ static func is_in_active_special_room(map: Map, leader: Hero, skipped_rooms: Dic
 			return hazard != null and not hazard.is_cleared
 		_:
 			return false
+
+
+static func is_in_active_special_room(map: Map, leader: Hero) -> bool:
+	var room: Rect2i = map.plan.get_room_at(map.local_to_map(leader.global_position))
+	return is_active_special_room(map, room)
 
 
 static func decide_move(bot: AutoplayBot, game: Game, map: Map, leader: Hero, delta: float) -> Vector2:
@@ -28,14 +32,37 @@ static func decide_move(bot: AutoplayBot, game: Game, map: Map, leader: Hero, de
 			return Vector2.ZERO
 
 
+static func _compute_current_safe_rect(hazard: ClosingSpikeHazard) -> Rect2i:
+	var closed_rings: int = 0
+	for i: int in range(hazard.rings.size()):
+		if hazard.rings[i].frame > 0:
+			closed_rings = i + 1
+	if closed_rings >= hazard.rings.size():
+		return hazard.safe_rect
+	var inner_bounds: Rect2i = Rect2i(
+		hazard.room.position.x,
+		hazard.room.position.y + 1,
+		hazard.room.size.x,
+		hazard.room.size.y - 1,
+	)
+	var inset: int = closed_rings * ClosingSpikeHazard.RING_THICKNESS
+	var dynamic_safe: Rect2i = Rect2i(
+		inner_bounds.position + Vector2i(inset, inset),
+		inner_bounds.size - Vector2i(inset * 2, inset * 2),
+	)
+	if dynamic_safe.size.x <= 0 or dynamic_safe.size.y <= 0:
+		return hazard.safe_rect
+	return dynamic_safe
+
+
 static func _decide_closing_spikes_move(bot: AutoplayBot, game: Game, map: Map, leader: Hero, room: Rect2i, delta: float) -> Vector2:
 	var hazard: ClosingSpikeHazard = map.plan.closing_spike_hazards.get(room, null)
 	if hazard == null or hazard.is_cleared:
 		return Vector2.ZERO
 
-	var safe_rect: Rect2i = hazard.safe_rect
-	var inner_safe: Rect2i = safe_rect.grow(-1) if (safe_rect.size.x > 4 and safe_rect.size.y > 4) else safe_rect
-	var safe_center: Vector2 = map.clamp_to_walkable(map.map_to_local(safe_rect.get_center()))
+	var active_safe: Rect2i = _compute_current_safe_rect(hazard)
+	var inner_safe: Rect2i = active_safe.grow(-1) if (active_safe.size.x >= 3 and active_safe.size.y >= 3) else active_safe
+	var safe_center: Vector2 = map.clamp_to_walkable(map.map_to_local(hazard.safe_rect.get_center()))
 	var leader_cell: Vector2i = map.local_to_map(leader.global_position)
 
 	if not inner_safe.has_point(leader_cell):

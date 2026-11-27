@@ -205,3 +205,25 @@ func get_cell_frame(cell: Vector2i) -> int:
 
 func is_cell_active(cell: Vector2i) -> bool:
 	return get_cell_frame(cell) == 3
+
+
+func get_active_safe_rect() -> Rect2i:
+	if not is_armed or is_cleared:
+		return Rect2i()
+	var active_rings: int = 0
+	for i: int in range(rings.size()):
+		if rings[i].state == RingState.ACTIVE:
+			active_rings = i + 1
+	if active_rings <= 0:
+		return Rect2i()
+	if active_rings >= rings.size():
+		return safe_rect
+	var inner_bounds: Rect2i = Rect2i(room.position.x, room.position.y + 1, room.size.x, room.size.y - 1)
+	var inset: int = active_rings * RING_THICKNESS
+	var dynamic_safe: Rect2i = Rect2i(
+		inner_bounds.position + Vector2i(inset, inset),
+		inner_bounds.size - Vector2i(inset * 2, inset * 2),
+	)
+	if dynamic_safe.size.x <= 0 or dynamic_safe.size.y <= 0:
+		return safe_rect
+	return dynamic_safe

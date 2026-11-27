@@ -127,7 +127,7 @@ func _ready() -> void:
 	_map.locked_door_bumped.connect(_on_locked_door_bumped)
 	_map.shortcut_opened.connect(_on_shortcut_opened)
 	_event_director.setup(_hud, _fog, _camera)
-	_map.event_room_armed.connect(_event_director.on_event_armed)
+	_map.event_room_armed.connect(_on_event_room_armed)
 	_map.event_room_disarmed.connect(_event_director.on_event_disarmed)
 	_potion_manager.setup(_characters, _projectiles, _hud, HEAL_EFFECT_SCENE)
 	await _map.generate_map()
@@ -435,6 +435,8 @@ func _spawn_enemy_at(
 		enemy.died.connect(_on_enemy_died.bind(enemy))
 		enemy.death_completed.connect(_on_enemy_death_completed.bind(enemy))
 	enemy.sync_screen_state(_camera.global_position)
+	if room != Rect2i() and room == _map.active_event_room and CombatAction.is_valid_target(_character):
+		enemy.set_target_candidate(_character, true)
 	if is_summoned:
 		enemy.play_summon_intro()
 	_enemies.append(enemy)
@@ -737,6 +739,15 @@ func _on_hero_enemy_hit(enemy: Enemy, damage: float, is_heavy: bool, hero: Hero)
 	Audio.play_sfx(Audio.Sfx.HEAVY_IMPACT if is_heavy else Audio.Sfx.HIT_IMPACT)
 	if not enemy.is_dead and enemy.target == null:
 		enemy.set_target_candidate(hero)
+
+
+func _on_event_room_armed(room: Rect2i) -> void:
+	_event_director.on_event_armed(room)
+	if not CombatAction.is_valid_target(_character):
+		return
+	for enemy: Enemy in _enemies:
+		if not enemy.is_dead and enemy.home_room == room:
+			enemy.set_target_candidate(_character, true)
 
 
 func _get_squad_unit_counts() -> Dictionary[StringName, int]:

@@ -71,7 +71,11 @@ func assign_escort_slot(new_slot_index: int, total_slots: int) -> void:
 
 
 func get_formation_position(leader: Hero) -> Vector2:
-	return _compute_target_position(leader)
+	var pos: Vector2 = _compute_target_position(leader)
+	var safe_rect: Rect2 = Hero.active_hazard_safe_rect
+	if safe_rect.has_area() and safe_rect.has_point(leader.global_position):
+		return pos.clamp(safe_rect.position, safe_rect.end)
+	return pos
 
 
 func teleport_to_leader(hero: Hero, map: Map) -> void:
@@ -103,7 +107,12 @@ func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 
 	hero.speed = leader.speed
 
-	var formation_pos: Vector2 = map.clamp_to_walkable(_compute_target_position(leader))
+	var safe_rect: Rect2 = Hero.active_hazard_safe_rect
+	var stay_in_safe: bool = safe_rect.has_area() and safe_rect.has_point(leader.global_position)
+	var raw_formation_pos: Vector2 = _compute_target_position(leader)
+	if stay_in_safe:
+		raw_formation_pos = raw_formation_pos.clamp(safe_rect.position, safe_rect.end)
+	var formation_pos: Vector2 = map.clamp_to_walkable(raw_formation_pos)
 
 	var move_dest: Vector2 = formation_pos
 	var current_leash: float = hero.get_current_leash()
@@ -114,6 +123,7 @@ func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 		and current_leash > 0.0
 		and hero.active_target is Enemy
 		and CombatAction.is_valid_target(hero.active_target)
+		and (not stay_in_safe or safe_rect.grow(hero.melee_range).has_point(hero.active_target.global_position))
 		and formation_pos.distance_squared_to(hero.active_target.global_position) <= current_leash * current_leash
 	)
 
@@ -130,7 +140,7 @@ func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 					CombatAction.face_target(hero, hero.active_target)
 			else:
 				hero.movement_state = Character.MovementState.NAVIGATING
-				move_dest = target_pos
+				move_dest = target_pos.clamp(safe_rect.position, safe_rect.end) if stay_in_safe else target_pos
 	else:
 		if not CombatAction.is_valid_target(hero.active_target):
 			hero.active_target = null
@@ -159,7 +169,17 @@ func update(hero: Hero, delta: float, squad: Array[Hero], map: Map) -> void:
 		desired_velocity = (to_waypoint / dist_to_waypoint) * target_speed
 
 	var sep_scale: float = 0.4 if dist_to_dest > FAR_CATCHUP_DISTANCE else 1.0
-	desired_velocity += _compute_separation(hero, squad) * sep_scale
+	var sep: Vector2 = _compute_separation(hero, squad) * sep_scale
+	if stay_in_safe:
+		if hero.position.x <= safe_rect.position.x and sep.x < 0.0:
+			sep.x = 0.0
+		elif hero.position.x >= safe_rect.end.x and sep.x > 0.0:
+			sep.x = 0.0
+		if hero.position.y <= safe_rect.position.y and sep.y < 0.0:
+			sep.y = 0.0
+		elif hero.position.y >= safe_rect.end.y and sep.y > 0.0:
+			sep.y = 0.0
+	desired_velocity += sep
 	hero.velocity = hero.velocity.move_toward(desired_velocity, FOLLOW_ACCELERATION * delta)
 
 	if dist_to_dest <= FOLLOW_STOP_DISTANCE and desired_velocity.length_squared() < MIN_MOVEMENT_THRESHOLD_SQUARED:

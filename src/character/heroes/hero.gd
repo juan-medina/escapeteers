@@ -25,6 +25,7 @@ const TELEPORT_VFX_DURATION: float = 0.20
 const _GROUP_HEROES: StringName = &"heroes"
 
 static var active_heroes: Array[Hero] = []
+static var active_hazard_safe_rect: Rect2 = Rect2()
 
 @export var level: int = 1:
 	set(value):
@@ -394,6 +395,10 @@ func _find_closest_enemy() -> Enemy:
 	var leash_sq: float = leash * leash
 	var anchor_pos: Vector2 = get_anchor_position()
 	var enforce_leash: bool = not is_player and not can_ranged and leash > 0.0
+	var restrict_to_safe: bool = (
+		enforce_leash and leader != null and active_hazard_safe_rect.has_area() and active_hazard_safe_rect.has_point(leader.global_position)
+	)
+	var target_safe_rect: Rect2 = active_hazard_safe_rect.grow(melee_range) if restrict_to_safe else Rect2()
 	var self_pos: Vector2 = global_position
 
 	for enemy: Enemy in Enemy.active_enemies:
@@ -405,6 +410,8 @@ func _find_closest_enemy() -> Enemy:
 			if absf(enemy_pos.x - anchor_pos.x) > leash or absf(enemy_pos.y - anchor_pos.y) > leash:
 				continue
 			if anchor_pos.distance_squared_to(enemy_pos) > leash_sq:
+				continue
+			if restrict_to_safe and not target_safe_rect.has_point(enemy_pos):
 				continue
 		else:
 			if absf(enemy_pos.x - self_pos.x) > max_detection or absf(enemy_pos.y - self_pos.y) > max_detection:

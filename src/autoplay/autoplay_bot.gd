@@ -107,12 +107,18 @@ func update(game: Game, map: Map, delta: float) -> void:
 		return
 
 	_update_room_progress(game, map, leader, delta)
-	var move_dir: Vector2 = _decide_move_direction(game, map, leader, delta)
-	move_dir = _apply_spike_avoidance(map, leader.global_position, move_dir)
-	_update_stuck_recovery(map, leader, move_dir, delta)
-	if _sidestep_timer > 0.0:
-		var perp: Vector2 = Vector2(-move_dir.y, move_dir.x) * _sidestep_sign
-		move_dir = (move_dir * 0.35 + perp).normalized() if move_dir.length_squared() > 0.01 else perp
+	var in_special_room: bool = not _is_rushing_gates(map) and AutoplaySpecialRooms.is_in_active_special_room(map, leader)
+	var move_dir: Vector2 = _decide_move_direction(game, map, leader, delta, in_special_room)
+	if in_special_room:
+		_stuck_timer = 0.0
+		_sidestep_timer = 0.0
+		_anchor_pos = leader.global_position
+	else:
+		move_dir = _apply_spike_avoidance(map, leader.global_position, move_dir)
+		_update_stuck_recovery(map, leader, move_dir, delta)
+		if _sidestep_timer > 0.0:
+			var perp: Vector2 = Vector2(-move_dir.y, move_dir.x) * _sidestep_sign
+			move_dir = (move_dir * 0.35 + perp).normalized() if move_dir.length_squared() > 0.01 else perp
 	_apply_movement(move_dir)
 
 
@@ -324,6 +330,10 @@ func _update_room_progress(game: Game, map: Map, leader: Hero, delta: float) -> 
 
 	if _goal_room == Rect2i() or _is_room_done(game, _goal_room):
 		_assign_next_goal(game, map, leader)
+		return
+
+	if AutoplaySpecialRooms.is_in_active_special_room(map, leader) or AutoplaySpecialRooms.is_active_special_room(map, _goal_room):
+		_room_stall_timer = 0.0
 		return
 
 	var rem_goal: int = game._room_remaining_enemies.get(_goal_room, -1)
@@ -548,10 +558,10 @@ func _find_room_chain(map: Map, start_room: Rect2i, target_room: Rect2i) -> Arra
 	return chain
 
 
-func _decide_move_direction(game: Game, map: Map, leader: Hero, delta: float) -> Vector2:
-	var rushing: bool = _is_rushing_gates(map)
-	if not rushing and AutoplaySpecialRooms.is_in_active_special_room(map, leader, _skipped_rooms):
+func _decide_move_direction(game: Game, map: Map, leader: Hero, delta: float, in_special_room: bool) -> Vector2:
+	if in_special_room:
 		return AutoplaySpecialRooms.decide_move(self, game, map, leader, delta)
+	var rushing: bool = _is_rushing_gates(map)
 	var steer_dest: Vector2 = Vector2.ZERO
 	var nearby_recruit: Unknown = _find_nearest_recruit(game, map, leader) if (not rushing or game._squad.size() < 15) else null
 	if nearby_recruit != null:

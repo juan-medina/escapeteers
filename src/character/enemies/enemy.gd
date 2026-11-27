@@ -131,7 +131,7 @@ func sync_screen_state(camera_pos: Vector2) -> void:
 		_status_vfx.set_on_screen(is_on_screen)
 	if is_dead:
 		return
-	if is_on_screen:
+	if is_on_screen or _is_in_active_event_room():
 		_set_sleeping(false)
 		return
 	if _should_sleep_offscreen(diff):
@@ -311,24 +311,27 @@ func get_effective_target_dist_sq(hero_candidate: Hero) -> float:
 	return dist_sq
 
 
-func set_target_candidate(hero_candidate: Hero) -> void:
+func set_target_candidate(hero_candidate: Hero, force: bool = false) -> void:
 	if not CombatAction.is_valid_target(hero_candidate):
 		return
 
 	if target == hero_candidate:
 		return
 
-	var dist_sq: float = global_position.distance_squared_to(hero_candidate.global_position)
-	if dist_sq > detection_range * detection_range:
-		return
+	if not force:
+		var dist_sq: float = global_position.distance_squared_to(hero_candidate.global_position)
+		if dist_sq > detection_range * detection_range:
+			return
 
 	if CombatAction.is_valid_target(target):
+		if force:
+			return
 		var candidate_eff_sq: float = get_effective_target_dist_sq(hero_candidate)
 		var current_eff_sq: float = get_effective_target_dist_sq(target)
 		if candidate_eff_sq >= current_eff_sq * 0.85:
 			return
 
-	if not SquadNavigator.has_line_of_sight(self, hero_candidate.global_position):
+	if not force and not SquadNavigator.has_line_of_sight(self, hero_candidate.global_position):
 		return
 
 	_set_sleeping(false)
@@ -341,6 +344,19 @@ func set_target_candidate(hero_candidate: Hero) -> void:
 	else:
 		target = hero_candidate
 		_navigator.reset()
+
+
+func _find_nearest_active_hero() -> Hero:
+	var best: Hero = null
+	var best_dist_sq: float = INF
+	for hero: Hero in Hero.active_heroes:
+		if not CombatAction.is_valid_target(hero):
+			continue
+		var d_sq: float = global_position.distance_squared_to(hero.global_position)
+		if d_sq < best_dist_sq:
+			best_dist_sq = d_sq
+			best = hero
+	return best
 
 
 func clear_hero_references(hero: Hero) -> void:
@@ -447,6 +463,10 @@ func is_engaged() -> bool:
 	return current_state == State.CHASE or current_state == State.ATTACK or CombatAction.is_valid_target(target)
 
 
+func _is_in_active_event_room() -> bool:
+	return map != null and home_room != Rect2i() and home_room == map.active_event_room
+
+
 func _update_status_visuals() -> void:
 	_status_vfx.set_statuses(_is_stunned(), is_burning(), is_slowed(), is_marked())
 	if _is_stunned():
@@ -507,18 +527,26 @@ func _process_patrol(delta: float) -> void:
 
 
 func _process_chase(delta: float) -> void:
+	var in_active_event: bool = _is_in_active_event_room()
 	if not CombatAction.is_valid_target(target):
-		target = null
-		attack_target = null
-		current_state = State.PATROL
-		_pick_new_patrol_destination()
-		if not is_on_screen and _knockback_velocity.length_squared() <= 1.0 and not is_burning():
-			_set_sleeping(true)
-		return
+		if in_active_event:
+			var next_hero: Hero = _find_nearest_active_hero()
+			if next_hero != null:
+				target = next_hero
+				attack_target = null
+				_navigator.reset()
+		if not CombatAction.is_valid_target(target):
+			target = null
+			attack_target = null
+			current_state = State.PATROL
+			_pick_new_patrol_destination()
+			if not is_on_screen and _knockback_velocity.length_squared() <= 1.0 and not is_burning():
+				_set_sleeping(true)
+			return
 
 	var dist_to_target: float = global_position.distance_to(target.global_position)
 
-	if dist_to_target > detection_range * 1.8:
+	if not in_active_event and dist_to_target > detection_range * 1.8:
 		target = null
 		attack_target = null
 		current_state = State.PATROL
@@ -565,6 +593,10 @@ func _try_kite_away(dist_to_target: float, delta: float) -> bool:
 	var away_dir: Vector2 = (global_position - target.global_position).normalized()
 	if away_dir.length_squared() < 0.01:
 		away_dir = Vector2.LEFT if not flip_h else Vector2.RIGHT
+	if _is_in_active_event_room():
+		var safe_rect: Rect2 = map.active_event_safe_world_rect
+		if safe_rect.has_area() and not safe_rect.has_point(global_position + away_dir * 16.0):
+			return false
 	velocity = (away_dir * speed * _slow_multiplier) + separation_velocity + _knockback_velocity
 	move_and_slide()
 	update_visuals(velocity * delta)

@@ -36,6 +36,8 @@ var hero_room: Rect2i = Rect2i()
 var companion_rooms: Array[Rect2i] = []
 
 var nav_window: NavWindow = NavWindow.new()
+var active_event_safe_world_rect: Rect2 = Rect2()
+var active_event_room: Rect2i = Rect2i()
 var _walkable_cells: Dictionary[Vector2i, bool] = {}
 var _loaded_spikes: Dictionary[Vector2i, int] = {}
 var _group_frames: Array[int] = [0, 0, 0, 0]
@@ -47,12 +49,17 @@ var _guaranteed_coin_room: Rect2i = Rect2i()
 var _guaranteed_potion_room: Rect2i = Rect2i()
 var _locked_door_toast_timer: float = 0.0
 var _shortcut_walls: Dictionary[int, ShortcutWall] = {}
+var _cached_event_safe_cells: Rect2i = Rect2i()
 
 @onready var light_manager: LightManager = $Lights
 @onready var _floor: TileMapLayer = $Floor
 @onready var _walls: TileMapLayer = $Walls
 @onready var _decorations: TileMapLayer = $Decorations
 @onready var _shortcut_walls_container: Node2D = $ShortcutWalls
+
+
+func _exit_tree() -> void:
+	Hero.active_hazard_safe_rect = Rect2()
 
 
 func get_hero_spawn_position() -> Vector2:
@@ -157,6 +164,10 @@ func generate_map() -> void:
 	await get_tree().process_frame
 
 	_floor.clear()
+	_cached_event_safe_cells = Rect2i()
+	active_event_safe_world_rect = Rect2()
+	active_event_room = Rect2i()
+	Hero.active_hazard_safe_rect = Rect2()
 	_walls.clear()
 	_decorations.clear()
 	light_manager.clear()
@@ -277,9 +288,14 @@ func is_spike_active_at(cell: Vector2i) -> bool:
 func _update_event_hazards(delta: float, player_cell: Vector2i) -> void:
 	if player_cell.x == 2147483647:
 		return
+	var next_safe_cells: Rect2i = Rect2i()
+	var next_event_room: Rect2i = Rect2i()
 	for hazard: ClosingSpikeHazard in plan.closing_spike_hazards.values():
 		var was_armed: bool = hazard.is_armed
 		hazard.update_player_presence(delta, player_cell)
+		if hazard.is_armed and not hazard.is_cleared and hazard.room.has_point(player_cell):
+			next_event_room = hazard.room
+			active_event_room = hazard.room
 		if not was_armed and hazard.is_armed:
 			event_room_armed.emit(hazard.room)
 		elif was_armed and not hazard.is_armed:
@@ -292,6 +308,19 @@ func _update_event_hazards(delta: float, player_cell: Vector2i) -> void:
 		var changed_rings: Array[int] = result[&"changed_rings"]
 		for ring_idx: int in changed_rings:
 			_apply_event_spike_ring(hazard, ring_idx)
+		if hazard.is_armed and not hazard.is_cleared and hazard.room.has_point(player_cell):
+			next_safe_cells = hazard.get_active_safe_rect()
+	active_event_room = next_event_room
+
+	if next_safe_cells != _cached_event_safe_cells:
+		_cached_event_safe_cells = next_safe_cells
+		if next_safe_cells.size == Vector2i.ZERO:
+			active_event_safe_world_rect = Rect2()
+		else:
+			var min_pt: Vector2 = _floor.map_to_local(next_safe_cells.position)
+			var max_pt: Vector2 = _floor.map_to_local(next_safe_cells.end - Vector2i.ONE)
+			active_event_safe_world_rect = Rect2(min_pt, max_pt - min_pt).grow(4.0)
+		Hero.active_hazard_safe_rect = active_event_safe_world_rect
 
 
 func _apply_event_spike_ring(hazard: ClosingSpikeHazard, ring_idx: int) -> void:
