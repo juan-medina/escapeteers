@@ -1,0 +1,75 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://cursed_chest/cursed_chest.gd" id="1_chest"]
+[ext_resource type="Script" path="res://character/ground_indicator.gd" id="2_ind"]
+[ext_resource type="Texture2D" uid="uid://bew3b5nrsmhiw" path="res://data/assets/map/tiles/Tileset.png" id="3_tileset"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_closed"]
+atlas = ExtResource("3_tileset")
+region = Rect2(144, 416, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_open_gold"]
+atlas = ExtResource("3_tileset")
+region = Rect2(160, 416, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_open_empty"]
+atlas = ExtResource("3_tileset")
+region = Rect2(176, 416, 16, 16)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_chest"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_closed")
+}],
+"loop": true,
+"name": &"closed",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_open_gold")
+}],
+"loop": true,
+"name": &"open_gold",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_open_empty")
+}],
+"loop": true,
+"name": &"open_empty",
+"speed": 1.0
+}]
+
+[node name="CursedChest" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_chest")
+
+[node name="GroundIndicator" type="Node2D" parent="."]
+position = Vector2(0, 4)
+script = ExtResource("2_ind")
+radius_x = 7.5
+radius_y = 3.8
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+position = Vector2(0, -4)
+sprite_frames = SubResource("SpriteFrames_chest")
+animation = &"closed"
+autoplay = "closed"
+
+[node name="CursedParticles" type="CPUParticles2D" parent="."]
+position = Vector2(0, -4)
+z_index = 1
+amount = 12
+lifetime = 0.9
+emission_shape = 3
+emission_rect_extents = Vector2(6, 3)
+direction = Vector2(0, -1)
+gravity = Vector2(0, -12)
+initial_velocity_min = 6.0
+initial_velocity_max = 16.0
+scale_amount_min = 1.2
+scale_amount_max = 2.2
+color = Color(0.75, 0.3, 1, 0.85)

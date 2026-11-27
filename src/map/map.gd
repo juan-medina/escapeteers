@@ -36,6 +36,7 @@ var hero_room: Rect2i = Rect2i()
 var companion_rooms: Array[Rect2i] = []
 
 var nav_window: NavWindow = NavWindow.new()
+var barriers: RoomBarrierManager = RoomBarrierManager.new()
 var active_event_safe_world_rect: Rect2 = Rect2()
 var active_event_room: Rect2i = Rect2i()
 var _walkable_cells: Dictionary[Vector2i, bool] = {}
@@ -88,6 +89,8 @@ func get_starter_companion_spawn_positions() -> Array[Vector2]:
 
 
 func get_companion_spawn_positions_for_room(room: Rect2i) -> Array[Vector2]:
+	if plan.is_event_room(room):
+		return []
 	var positions: Array[Vector2] = []
 	var spawns: Array = plan.get_companion_spawns_for_room(room)
 	for cell_var: Variant in spawns:
@@ -179,6 +182,7 @@ func generate_map() -> void:
 	_expanded_rooms.clear()
 	_locked_door_toast_timer = 0.0
 	_shortcut_walls.clear()
+	barriers.clear()
 	for child: Node in _shortcut_walls_container.get_children():
 		child.queue_free()
 
@@ -192,6 +196,8 @@ func generate_map() -> void:
 		_shortcut_walls_container.add_child(wall)
 		wall.setup(sc.is_horizontal_door, plan.get_cell_tile_set(sc.door_cells[0]))
 		_shortcut_walls[sc.id] = wall
+
+	barriers.build_for_ambushes(plan, _floor, _shortcut_walls_container, SHORTCUT_WALL_SCENE)
 
 	var depth_1_rooms: Array[Rect2i] = plan.get_depth_rooms(1)
 	companion_rooms.append_array(depth_1_rooms)
@@ -310,7 +316,8 @@ func _update_event_hazards(delta: float, player_cell: Vector2i) -> void:
 			_apply_event_spike_ring(hazard, ring_idx)
 		if hazard.is_armed and not hazard.is_cleared and hazard.room.has_point(player_cell):
 			next_safe_cells = hazard.get_active_safe_rect()
-	active_event_room = next_event_room
+	var locked_room: Rect2i = barriers.get_locked_room()
+	active_event_room = next_event_room if next_event_room != Rect2i() else locked_room
 
 	if next_safe_cells != _cached_event_safe_cells:
 		_cached_event_safe_cells = next_safe_cells
@@ -646,7 +653,7 @@ func _setup_secret_torches() -> void:
 		light_manager.set_light_blinking(_secret_torch_cells[0], true)
 
 
-func get_room_pickups(room: Rect2i, include_event_reward: bool = false) -> Dictionary:
+func get_room_pickups(room: Rect2i, include_event_reward: bool = false, drop_anchor: Vector2 = Vector2.INF) -> Dictionary:
 	var coins: Array[Vector2] = []
 	var potions: Array[Dictionary] = []
 	if room == hero_room or room.size.x < 8 or room.size.y < 8:
@@ -654,10 +661,15 @@ func get_room_pickups(room: Rect2i, include_event_reward: bool = false) -> Dicti
 
 	if plan.is_event_room(room):
 		if include_event_reward:
-			var center_world: Vector2 = _floor.map_to_local(room.get_center())
-			coins.append(clamp_to_walkable(center_world + Vector2(-12.0, 0.0)))
-			var potion_pos: Vector2 = clamp_to_walkable(center_world + Vector2(12.0, 0.0))
-			potions.append({&"pos": potion_pos, &"type": _roll_potion_type(room, 37, 71)})
+			var base_world: Vector2 = drop_anchor if drop_anchor.is_finite() else _floor.map_to_local(room.get_center())
+			if plan.room_event_types.get(room, WorldPlan.RoomEventType.NONE) == WorldPlan.RoomEventType.WAVE_AMBUSH:
+				coins.append(_clamp_world_to_room(base_world + Vector2(-18.0, -8.0), room))
+				coins.append(_clamp_world_to_room(base_world + Vector2(18.0, -8.0), room))
+				potions.append({&"pos": _clamp_world_to_room(base_world + Vector2(-12.0, 10.0), room), &"type": PotionPickup.PotionType.HEALTH})
+				potions.append({&"pos": _clamp_world_to_room(base_world + Vector2(12.0, 10.0), room), &"type": _roll_potion_type(room, 53, 89)})
+			else:
+				coins.append(_clamp_world_to_room(base_world + Vector2(-12.0, 0.0), room))
+				potions.append({&"pos": _clamp_world_to_room(base_world + Vector2(12.0, 0.0), room), &"type": _roll_potion_type(room, 37, 71)})
 		return {&"coins": coins, &"potions": potions}
 
 	var coin_roll: int = TileClassifier.cell_hash(plan.run_seed, room.position.x, room.position.y) % 100
@@ -711,6 +723,15 @@ func _find_pickup_cell_for_room(room: Rect2i, seed_offset: int, avoid_cell: Vect
 		if _is_valid_coin_cell(cell, center, companions):
 			return cell
 	return Vector2i(2147483647, 2147483647)
+
+
+func _clamp_world_to_room(world_pos: Vector2, room: Rect2i) -> Vector2:
+	var inner: Rect2i = room.grow(-2)
+	if inner.size.x > 0 and inner.size.y > 0:
+		var min_pt: Vector2 = _floor.map_to_local(inner.position)
+		var max_pt: Vector2 = _floor.map_to_local(inner.end - Vector2i.ONE)
+		world_pos = world_pos.clamp(min_pt, max_pt)
+	return clamp_to_walkable(world_pos)
 
 
 func _is_valid_coin_cell(cell: Vector2i, center: Vector2i, companions: Array) -> bool:

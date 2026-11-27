@@ -12,6 +12,7 @@ const ARCHETYPE_NAMES: Dictionary[int, StringName] = {
 }
 const EVENT_TYPE_NAMES: Dictionary[int, StringName] = {
 	WorldPlan.RoomEventType.CLOSING_SPIKES: &"BLOOD_SPIKES",
+	WorldPlan.RoomEventType.WAVE_AMBUSH: &"WAVE_AMBUSH",
 }
 
 var _runs: Array[Dictionary] = []
@@ -347,7 +348,16 @@ func _track_rooms(game: Game, map: Map) -> void:
 		var rec: Dictionary = _cur_room_records[tracked_room]
 		if rec[&"cleared"]:
 			continue
-		if game._room_remaining_enemies.has(tracked_room) and game._room_remaining_enemies[tracked_room] <= 0:
+		var room_cleared: bool = false
+		if map.plan.closing_spike_hazards.has(tracked_room):
+			var hazard: ClosingSpikeHazard = map.plan.closing_spike_hazards[tracked_room]
+			room_cleared = hazard != null and hazard.is_cleared
+		elif map.plan.wave_ambushes.has(tracked_room):
+			var ambush: WaveAmbush = map.plan.wave_ambushes[tracked_room]
+			room_cleared = ambush != null and ambush.is_cleared
+		elif game._room_remaining_enemies.has(tracked_room) and game._room_remaining_enemies[tracked_room] <= 0:
+			room_cleared = true
+		if room_cleared:
 			rec[&"cleared"] = true
 			var enter_time: float = rec[&"enter_time"]
 			var raw_entry_hp: float = rec[&"entry_max_hp"]

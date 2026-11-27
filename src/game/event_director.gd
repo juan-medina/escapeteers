@@ -9,12 +9,17 @@ const EVENT_MUSIC_FADE_OUT: float = 0.65
 const EVENT_SHAKE_STRENGTH: float = 4.0
 const EVENT_SHAKE_DURATION: float = 0.25
 const EVENT_WARNING_COLOR: Color = Color(1.0, 0.28, 0.28, 1.0)
+const EVENT_WAVE_COLOR: Color = Color(0.82, 0.42, 1.0, 1.0)
 const EVENT_CLEAR_COLOR: Color = Color(1.0, 0.85, 0.35, 1.0)
+const CURSED_CHEST_SCENE: PackedScene = preload("res://cursed_chest/cursed_chest.tscn")
 
 var _hud: Hud
 var _fog: Fog
 var _camera: Camera2D
 var _active_event_room: Rect2i = Rect2i()
+var _cursed_chests: Array[CursedChest] = []
+var _chests_by_room: Dictionary[Rect2i, CursedChest] = {}
+var _active_ambush: WaveAmbush = null
 var _shake_timer: float = 0.0
 var _shake_duration: float = 0.0
 var _shake_strength: float = 0.0
@@ -26,13 +31,26 @@ func setup(hud: Hud, fog: Fog, camera: Camera2D) -> void:
 	_camera = camera
 
 
-func on_event_armed(room: Rect2i) -> void:
+func on_event_armed(
+	room: Rect2i,
+	title: StringName = &"Blood Spike Arena",
+	subtitle: StringName = &"Clear all enemies to disarm spikes",
+) -> void:
 	_active_event_room = room
 	Audio.play_sfx(Audio.Sfx.EVENT_START)
 	Audio.set_music_track(Audio.MusicTrack.EVENT, EVENT_MUSIC_FADE_IN)
 	_fog.set_event_atmosphere(true)
 	trigger_shake(EVENT_SHAKE_STRENGTH, EVENT_SHAKE_DURATION)
-	_hud.show_event_banner(&"! WARNING !", &"Blood Spike Arena", &"Clear all enemies to disarm spikes", EVENT_WARNING_COLOR)
+	_hud.show_event_banner(&"! WARNING !", title, subtitle, EVENT_WARNING_COLOR)
+
+
+func on_event_wave(wave_num: int, total_waves: int) -> void:
+	Audio.play_sfx(Audio.Sfx.TELEGRAPH)
+	trigger_shake(2.5, 0.18)
+	if wave_num >= total_waves:
+		_hud.show_event_banner(&"! FINAL WAVE !", &"Wave %d / %d" % [wave_num, total_waves], &"Necromancers have arrived!", EVENT_WAVE_COLOR)
+	else:
+		_hud.show_event_banner(&"! WAVE %d / %d !" % [wave_num, total_waves], &"Cursed Ambush", &"Reinforcements incoming!", EVENT_WAVE_COLOR)
 
 
 func on_event_disarmed(room: Rect2i) -> void:
@@ -43,17 +61,250 @@ func on_event_disarmed(room: Rect2i) -> void:
 	_fog.set_event_atmosphere(false)
 
 
-func on_event_cleared(room: Rect2i) -> void:
+func on_event_cleared(
+	room: Rect2i,
+	title: StringName = &"Blood Spike Arena",
+	subtitle: StringName = &"Bonus reward dropped!",
+) -> void:
 	Audio.play_sfx(Audio.Sfx.EVENT_CLEAR)
 	if room == _active_event_room:
 		_active_event_room = Rect2i()
 		Audio.set_music_track(Audio.MusicTrack.GAME, EVENT_MUSIC_FADE_OUT)
 		_fog.set_event_atmosphere(false)
-	_hud.show_event_banner(&"ARENA CLEARED", &"Blood Spike Arena", &"Bonus reward dropped!", EVENT_CLEAR_COLOR)
+	_hud.show_event_banner(&"ARENA CLEARED", title, subtitle, EVENT_CLEAR_COLOR)
+
+
+func get_room_entry_title(map: Map, room: Rect2i) -> String:
+	var room_level: int = clampi(map.get_room_depth(room), 1, 12)
+	var event_type: WorldPlan.RoomEventType = map.plan.room_event_types.get(room, WorldPlan.RoomEventType.NONE)
+	if event_type == WorldPlan.RoomEventType.CLOSING_SPIKES:
+		return &"Blood Spike Arena - Lv. %d" % room_level
+	if event_type == WorldPlan.RoomEventType.WAVE_AMBUSH:
+		return &"Cursed Ambush - Lv. %d" % room_level
+	var arch: StringName = RoomLayout.get_archetype_title(map.plan.get_room_archetype(room))
+	return &"%s - Lv. %d" % [arch, room_level]
+
+
+func handle_map_event_armed(room: Rect2i, game: Game) -> void:
+	on_event_armed(room)
+	if not CombatAction.is_valid_target(game._character):
+		return
+	for enemy: Enemy in game._enemies:
+		if not enemy.is_dead and enemy.home_room == room:
+			enemy.set_target_candidate(game._character, true)
+
+
+func handle_closing_spikes_cleared(game: Game, room: Rect2i) -> void:
+	var hazard: ClosingSpikeHazard = game._map.plan.closing_spike_hazards.get(room, null)
+	if hazard != null and not hazard.is_cleared:
+		hazard.clear()
+		if game._map.active_event_room == room:
+			game._map.active_event_room = Rect2i()
+		var chest: CursedChest = _chests_by_room.get(room, null)
+		if chest != null:
+			chest.unlock_reward()
+		on_event_cleared(room, &"Blood Spike Arena", &"Open the chest to claim your reward!")
+
+
+func get_unclaimed_chest_in_room(room: Rect2i) -> CursedChest:
+	var chest: CursedChest = _chests_by_room.get(room, null)
+	if chest != null and chest.state == CursedChest.ChestState.READY_TO_LOOT:
+		return chest
+	return null
 
 
 func on_player_died() -> void:
 	_active_event_room = Rect2i()
+	_active_ambush = null
+
+
+func spawn_event_chests(map: Map, parent: Node2D) -> void:
+	_cursed_chests.clear()
+	_chests_by_room.clear()
+	_active_ambush = null
+	for hazard: ClosingSpikeHazard in map.plan.closing_spike_hazards.values():
+		_spawn_chest_at(map, parent, hazard.room, hazard.bait_cell)
+	for ambush: WaveAmbush in map.plan.wave_ambushes.values():
+		_spawn_chest_at(map, parent, ambush.room, ambush.bait_cell)
+
+
+func _spawn_chest_at(map: Map, parent: Node2D, room: Rect2i, cell: Vector2i) -> void:
+	var chest: CursedChest = CURSED_CHEST_SCENE.instantiate() as CursedChest
+	parent.add_child(chest)
+	chest.position = map.map_to_local(cell)
+	chest.room = room
+	_cursed_chests.append(chest)
+	_chests_by_room[room] = chest
+
+
+func update_events(game: Game, delta: float) -> void:
+	for i: int in range(_cursed_chests.size() - 1, -1, -1):
+		var chest: CursedChest = _cursed_chests[i]
+		if chest.state == CursedChest.ChestState.WAITING:
+			if PotionManager.is_squad_touching(game._squad, chest.position, CursedChest.TRIGGER_DISTANCE):
+				var ev_type: WorldPlan.RoomEventType = game._map.plan.room_event_types.get(chest.room, WorldPlan.RoomEventType.NONE)
+				if ev_type == WorldPlan.RoomEventType.WAVE_AMBUSH:
+					_start_wave_ambush(game, chest)
+				elif ev_type == WorldPlan.RoomEventType.CLOSING_SPIKES:
+					_start_closing_spikes(game, chest)
+		elif chest.can_claim_reward() and PotionManager.is_squad_touching(game._squad, chest.position, CursedChest.TRIGGER_DISTANCE):
+			_claim_chest_reward(game, chest)
+
+	if _active_ambush == null:
+		return
+
+	var ev: Dictionary = _active_ambush.update(delta)
+	if ev[&"ready_for_pentagrams"]:
+		var roster: Array[StringName] = _active_ambush.build_wave_roster(_active_ambush.current_wave)
+		var player_cell: Vector2i = game._map.local_to_map(game._character.global_position)
+		var cells: Array[Vector2i] = _active_ambush.pick_spawn_cells(game._map.plan, roster.size(), player_cell)
+		var spawns: Array[Dictionary] = []
+		var count: int = mini(roster.size(), cells.size())
+		for i: int in range(count):
+			var pos: Vector2 = game._map.map_to_local(cells[i])
+			spawns.append({&"pos": pos, &"id": roster[i]})
+			var pentagram: Projectile = Projectile.acquire(Game.SUMMON_PENTAGRAM_SCENE)
+			pentagram.global_position = pos
+			game._on_projectile_spawn_requested(pentagram)
+		Audio.play_sfx(Audio.Sfx.NECRO_SUMMON)
+		if _active_ambush.current_wave >= 2:
+			on_event_wave(_active_ambush.current_wave, WaveAmbush.TOTAL_WAVES)
+		_active_ambush.begin_pentagrams(spawns)
+	elif ev[&"ready_to_materialize"]:
+		_materialize_ambush_wave(game, _active_ambush)
+	elif _active_ambush.state == WaveAmbush.State.WAVE_ACTIVE and _active_ambush.wave_remaining <= 0:
+		_check_ambush_wave_clear(game)
+
+
+func handle_ambush_enemy_died(game: Game, enemy: Enemy, room: Rect2i) -> bool:
+	if _active_ambush == null or room != _active_ambush.room:
+		return false
+	if not enemy.is_minion and not enemy.is_patrol_respawn:
+		_active_ambush.wave_remaining = maxi(0, _active_ambush.wave_remaining - 1)
+	_check_ambush_wave_clear(game)
+	return true
+
+
+func _start_closing_spikes(game: Game, chest: CursedChest) -> void:
+	var room: Rect2i = chest.room
+	var hazard: ClosingSpikeHazard = game._map.plan.closing_spike_hazards.get(room, null)
+	if hazard == null or hazard.is_cleared or hazard.is_triggered:
+		return
+	chest.activate()
+	hazard.arm()
+	game._map.active_event_room = room
+	on_event_armed(room, &"Blood Spike Arena", &"Clear all enemies to unlock the chest")
+
+	var quota: int = game._map.get_room_enemy_quota(room)
+	var room_center: Vector2 = game._map.map_to_local(room.get_center())
+	var free_slots: int = Game.MAX_ENEMIES - game._enemies.size()
+	if free_slots < quota:
+		var needed_evict: int = quota - free_slots
+		var dist_sq: float = game._character.global_position.distance_squared_to(room_center)
+		game._reclaim_distant_enemies_for_room(room, dist_sq, needed_evict, game._character.global_position)
+
+	var to_spawn: int = mini(quota, maxi(0, Game.MAX_ENEMIES - game._enemies.size()))
+	var player_cell: Vector2i = game._map.local_to_map(game._character.global_position)
+	var cells: Array[Vector2i] = WaveAmbush.pick_spawn_cells_in_room(game._map.plan, room, to_spawn, player_cell)
+	var depth: int = clampi(game._map.get_room_depth(room), 1, 12)
+	for cell: Vector2i in cells:
+		var pos: Vector2 = game._map.map_to_local(cell)
+		var pentagram: Projectile = Projectile.acquire(Game.SUMMON_PENTAGRAM_SCENE)
+		pentagram.global_position = pos
+		game._on_projectile_spawn_requested(pentagram)
+		var enemy_scene: PackedScene = game._pick_enemy_scene_for_room(room, depth)
+		game._spawn_enemy_at(pos, room, enemy_scene, depth, false, false)
+	if not cells.is_empty():
+		Audio.play_sfx(Audio.Sfx.NECRO_SUMMON)
+	game._room_remaining_enemies[room] = cells.size()
+	game._room_spawned_enemies[room] = cells.size()
+	if cells.is_empty():
+		handle_closing_spikes_cleared(game, room)
+
+
+func _start_wave_ambush(game: Game, chest: CursedChest) -> void:
+	var room: Rect2i = chest.room
+	var ambush: WaveAmbush = game._map.plan.wave_ambushes.get(room, null)
+	if ambush == null or ambush.is_cleared or _active_ambush != null:
+		return
+	chest.activate()
+	var interior: Rect2i = room.grow(-1)
+	for i: int in range(1, game._squad.size()):
+		var follower: Hero = game._squad[i]
+		if not follower.is_dead and not interior.has_point(game._map.local_to_map(follower.global_position)):
+			follower.squad_member.teleport_to_leader(follower, game._map)
+	game._map.barriers.lock_room(room, game._map._walkable_cells, game._map.nav_window)
+	game._map.active_event_room = room
+	on_event_armed(room, &"Cursed Ambush", &"Survive 3 waves to break the seal")
+	ambush.start()
+	_active_ambush = ambush
+
+
+func _materialize_ambush_wave(game: Game, ambush: WaveAmbush) -> void:
+	var room: Rect2i = ambush.room
+	var room_center: Vector2 = game._map.map_to_local(room.get_center())
+	var free_slots: int = Game.MAX_ENEMIES - game._enemies.size()
+	if free_slots < ambush.pending_spawns.size():
+		var needed_evict: int = ambush.pending_spawns.size() - free_slots
+		var dist_sq: float = game._character.global_position.distance_squared_to(room_center)
+		game._reclaim_distant_enemies_for_room(room, dist_sq, needed_evict, game._character.global_position)
+
+	var enemy_level: int = clampi(ambush.depth, 1, 12)
+	var spawned_count: int = 0
+	for entry: Dictionary in ambush.pending_spawns:
+		if game._enemies.size() >= Game.MAX_ENEMIES:
+			break
+		var pos: Vector2 = entry[&"pos"]
+		var enemy_id: StringName = entry[&"id"]
+		game._spawn_enemy_at(pos, room, _scene_for_enemy_id(enemy_id), enemy_level, false, false)
+		game._room_spawned_enemies[room] = game._room_spawned_enemies.get(room, 0) + 1
+		spawned_count += 1
+	ambush.activate_wave(spawned_count)
+
+
+func _check_ambush_wave_clear(game: Game) -> void:
+	if _active_ambush == null or _active_ambush.state != WaveAmbush.State.WAVE_ACTIVE:
+		return
+	var room: Rect2i = _active_ambush.room
+	if _active_ambush.wave_remaining > 0:
+		return
+	if _active_ambush.current_wave >= WaveAmbush.TOTAL_WAVES and game._room_summoned_enemies.get(room, 0) > 0:
+		return
+	if _active_ambush.advance_or_clear():
+		_active_ambush = null
+		game._map.barriers.unlock_room(room, game._map._walkable_cells, game._map.nav_window)
+		game._map.active_event_room = Rect2i()
+		var chest: CursedChest = _chests_by_room.get(room, null)
+		if chest != null:
+			chest.unlock_reward()
+		on_event_cleared(room, &"Cursed Ambush", &"Exits unlocked - Open the chest for loot!")
+		game._patrol_manager.schedule_respawn(room)
+
+
+func _claim_chest_reward(game: Game, chest: CursedChest) -> void:
+	chest.claim_reward()
+	_cursed_chests.erase(chest)
+	_chests_by_room.erase(chest.room)
+	Audio.play_sfx(Audio.Sfx.COIN_PICKUP)
+	var facing: Vector2 = game._character.move_direction
+	if facing.length_squared() < 0.01:
+		facing = (chest.position - game._character.position).normalized()
+	if facing.length_squared() < 0.01:
+		facing = Vector2.DOWN
+	var raw_anchor: Vector2 = chest.position + facing.normalized() * 34.0
+	game._spawn_pickups_for_room(chest.room, true, raw_anchor)
+
+
+static func _scene_for_enemy_id(enemy_id: StringName) -> PackedScene:
+	match enemy_id:
+		&"lava_slime":
+			return Game.LAVA_SLIME_SCENE
+		&"skeleton_archer":
+			return Game.SKELETON_ARCHER_SCENE
+		&"necromancer":
+			return Game.NECROMANCER_SCENE
+		_:
+			return Game.SKELETON_SCENE
 
 
 func trigger_shake(strength: float, duration: float) -> void:

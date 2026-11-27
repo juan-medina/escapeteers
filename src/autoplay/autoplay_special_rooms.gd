@@ -13,6 +13,9 @@ static func is_active_special_room(map: Map, room: Rect2i) -> bool:
 		WorldPlan.RoomEventType.CLOSING_SPIKES:
 			var hazard: ClosingSpikeHazard = map.plan.closing_spike_hazards.get(room, null)
 			return hazard != null and not hazard.is_cleared
+		WorldPlan.RoomEventType.WAVE_AMBUSH:
+			var ambush: WaveAmbush = map.plan.wave_ambushes.get(room, null)
+			return ambush != null and not ambush.is_cleared
 		_:
 			return false
 
@@ -22,14 +25,55 @@ static func is_in_active_special_room(map: Map, leader: Hero) -> bool:
 	return is_active_special_room(map, room)
 
 
+static func is_in_closing_spikes_room(map: Map, leader: Hero) -> bool:
+	var room: Rect2i = map.plan.get_room_at(map.local_to_map(leader.global_position))
+	if room == Rect2i():
+		return false
+	if map.plan.room_event_types.get(room, WorldPlan.RoomEventType.NONE) != WorldPlan.RoomEventType.CLOSING_SPIKES:
+		return false
+	var hazard: ClosingSpikeHazard = map.plan.closing_spike_hazards.get(room, null)
+	return hazard != null and hazard.is_triggered and not hazard.is_cleared
+
+
+static func find_ready_chest_in_room(game: Game, room: Rect2i) -> Vector2:
+	if room == Rect2i():
+		return Vector2.ZERO
+	var chest: CursedChest = game._event_director.get_unclaimed_chest_in_room(room)
+	return chest.position if chest != null else Vector2.ZERO
+
+
 static func decide_move(bot: AutoplayBot, game: Game, map: Map, leader: Hero, delta: float) -> Vector2:
 	var room: Rect2i = map.plan.get_room_at(map.local_to_map(leader.global_position))
 	var event_type: WorldPlan.RoomEventType = map.plan.room_event_types.get(room, WorldPlan.RoomEventType.NONE)
 	match event_type:
 		WorldPlan.RoomEventType.CLOSING_SPIKES:
 			return _decide_closing_spikes_move(bot, game, map, leader, room, delta)
+		WorldPlan.RoomEventType.WAVE_AMBUSH:
+			return _decide_wave_ambush_move(bot, game, map, leader, room, delta)
 		_:
 			return Vector2.ZERO
+
+
+static func _decide_wave_ambush_move(bot: AutoplayBot, game: Game, map: Map, leader: Hero, room: Rect2i, delta: float) -> Vector2:
+	var ambush: WaveAmbush = map.plan.wave_ambushes.get(room, null)
+	if ambush == null or ambush.is_cleared:
+		return Vector2.ZERO
+	if ambush.state == WaveAmbush.State.WAITING:
+		var bait_pos: Vector2 = map.clamp_to_walkable(map.map_to_local(ambush.bait_cell))
+		return bot._steer_toward(map, leader, bait_pos, delta)
+
+	var safe_pickup: Vector2 = _find_safe_pickup(bot, game, map, leader, room)
+	if safe_pickup != Vector2.ZERO:
+		return bot._steer_toward(map, leader, safe_pickup, delta)
+
+	var combat_target: Enemy = bot._find_priority_enemy(game, map, leader)
+	if combat_target != null:
+		return bot._compute_combat_move(game, map, leader, combat_target, delta)
+
+	var center_pos: Vector2 = map.clamp_to_walkable(map.map_to_local(room.get_center()))
+	if leader.global_position.distance_squared_to(center_pos) > 24.0 * 24.0:
+		return bot._steer_toward(map, leader, center_pos, delta)
+	return Vector2.ZERO
 
 
 static func _compute_current_safe_rect(hazard: ClosingSpikeHazard) -> Rect2i:
@@ -59,6 +103,9 @@ static func _decide_closing_spikes_move(bot: AutoplayBot, game: Game, map: Map, 
 	var hazard: ClosingSpikeHazard = map.plan.closing_spike_hazards.get(room, null)
 	if hazard == null or hazard.is_cleared:
 		return Vector2.ZERO
+	if not hazard.is_triggered:
+		var bait_pos: Vector2 = map.clamp_to_walkable(map.map_to_local(hazard.bait_cell))
+		return bot._steer_toward(map, leader, bait_pos, delta)
 
 	var active_safe: Rect2i = _compute_current_safe_rect(hazard)
 	var inner_safe: Rect2i = active_safe.grow(-1) if (active_safe.size.x >= 3 and active_safe.size.y >= 3) else active_safe

@@ -16,6 +16,7 @@ var _row_y: float = 0.0
 var _opened: bool = false
 var _base_pos_a: Vector2 = Vector2.ZERO
 var _base_pos_b: Vector2 = Vector2.ZERO
+var _tween: Tween = null
 
 @onready var _collision: CollisionShape2D = $CollisionShape2D
 @onready var _half_a: Sprite2D = $HalfA
@@ -24,7 +25,7 @@ var _base_pos_b: Vector2 = Vector2.ZERO
 
 
 ## Configures orientation, collision bounds, and biome palette row.
-func setup(is_horizontal: bool, tile_set: int) -> void:
+func setup(is_horizontal: bool, tile_set: int, start_open: bool = false) -> void:
 	_is_horizontal = is_horizontal
 	_row_y = float(clampi(tile_set, 0, TileClassifier.SET_BASE_ROWS.size() - 1)) * ROW_HEIGHT
 
@@ -36,9 +37,11 @@ func setup(is_horizontal: bool, tile_set: int) -> void:
 	_dust.emission_rect_extents = Vector2(14.0, 4.0) if is_horizontal else Vector2(4.0, 14.0)
 	_base_pos_a = Vector2(-16.0, -8.0) if is_horizontal else Vector2(-8.0, -16.0)
 	_base_pos_b = Vector2(0.0, -8.0) if is_horizontal else Vector2(-8.0, 0.0)
-	_half_a.visible = true
-	_half_b.visible = true
-	_apply_retract_progress(0.0)
+	_opened = start_open
+	_collision.disabled = start_open
+	_half_a.visible = not start_open
+	_half_b.visible = not start_open
+	_apply_retract_progress(1.0 if start_open else 0.0)
 
 
 ## Disables collision immediately and slides both wall halves into the flanking walls.
@@ -46,13 +49,32 @@ func open_animated() -> void:
 	if _opened:
 		return
 	_opened = true
+	if _tween != null and _tween.is_valid():
+		_tween.kill()
 	_collision.set_deferred(&"disabled", true)
 	_dust.restart()
 
-	var tween: Tween = create_tween()
-	tween.tween_method(_apply_rumble_progress, 0.0, 1.0, RUMBLE_DURATION)
-	tween.tween_method(_apply_retract_progress, 0.0, 1.0, RETRACT_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-	tween.tween_callback(_on_retract_finished)
+	_tween = create_tween()
+	_tween.tween_method(_apply_rumble_progress, 0.0, 1.0, RUMBLE_DURATION)
+	_tween.tween_method(_apply_retract_progress, 0.0, 1.0, RETRACT_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	_tween.tween_callback(_on_retract_finished)
+
+
+## Enables collision and slides both wall halves inward to seal the opening.
+func close_animated() -> void:
+	if not _opened:
+		return
+	_opened = false
+	if _tween != null and _tween.is_valid():
+		_tween.kill()
+	_collision.set_deferred(&"disabled", false)
+	_half_a.visible = true
+	_half_b.visible = true
+	_dust.restart()
+
+	_tween = create_tween()
+	_tween.tween_method(_apply_retract_progress, 1.0, 0.0, RETRACT_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_tween.tween_method(_apply_rumble_progress, 0.0, 1.0, RUMBLE_DURATION)
 
 
 func _apply_rumble_progress(t: float) -> void:

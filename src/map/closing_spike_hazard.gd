@@ -35,8 +35,10 @@ const RETREAT_RESET_DELAY: float = 1.0
 
 var room: Rect2i = Rect2i()
 var safe_rect: Rect2i = Rect2i()
+var bait_cell: Vector2i = Vector2i.ZERO
 var rings: Array[SpikeRing] = []
 var cell_to_ring: Dictionary[Vector2i, int] = {}
+var is_triggered: bool = false
 var is_armed: bool = false
 var is_cleared: bool = false
 
@@ -91,7 +93,27 @@ static func build_for_room(plan: WorldPlan, room_rect: Rect2i) -> ClosingSpikeHa
 			hazard.rings[ring_idx].cells.append(cell)
 			hazard.cell_to_ring[cell] = ring_idx
 
+	hazard.bait_cell = _pick_bait_cell(plan, hazard.safe_rect, room_rect)
 	return hazard
+
+
+static func _pick_bait_cell(plan: WorldPlan, core_rect: Rect2i, room_rect: Rect2i) -> Vector2i:
+	var target_rect: Rect2i = core_rect if core_rect.size.x > 0 and core_rect.size.y > 0 else room_rect.grow(-3)
+	var center: Vector2i = target_rect.get_center()
+	var best: Vector2i = center
+	var best_dist_sq: int = 2147483647
+	for y: int in range(target_rect.position.y, target_rect.end.y):
+		for x: int in range(target_rect.position.x, target_rect.end.x):
+			var c: Vector2i = Vector2i(x, y)
+			if not plan.is_floor(c) or not plan.is_floor(c + Vector2i(0, -1)):
+				continue
+			if plan.is_candle_post_base(c) or plan.is_candle_post_top(c):
+				continue
+			var d_sq: int = c.distance_squared_to(center)
+			if d_sq < best_dist_sq:
+				best_dist_sq = d_sq
+				best = c
+	return best
 
 
 func should_arm_for_cell(player_cell: Vector2i) -> bool:
@@ -99,6 +121,7 @@ func should_arm_for_cell(player_cell: Vector2i) -> bool:
 
 
 func arm() -> void:
+	is_triggered = true
 	is_armed = true
 	_next_ring_idx = 0
 	_ring_delay_timer = INITIAL_ARM_DELAY
@@ -134,7 +157,7 @@ func trigger_ring(ring_idx: int) -> bool:
 
 
 func update_player_presence(delta: float, player_cell: Vector2i) -> void:
-	if is_cleared:
+	if is_cleared or not is_triggered:
 		return
 	if not is_armed:
 		if should_arm_for_cell(player_cell):

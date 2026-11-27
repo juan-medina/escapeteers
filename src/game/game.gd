@@ -127,7 +127,7 @@ func _ready() -> void:
 	_map.locked_door_bumped.connect(_on_locked_door_bumped)
 	_map.shortcut_opened.connect(_on_shortcut_opened)
 	_event_director.setup(_hud, _fog, _camera)
-	_map.event_room_armed.connect(_on_event_room_armed)
+	_map.event_room_armed.connect(_event_director.handle_map_event_armed.bind(self))
 	_map.event_room_disarmed.connect(_event_director.on_event_disarmed)
 	_potion_manager.setup(_characters, _projectiles, _hud, HEAL_EFFECT_SCENE)
 	await _map.generate_map()
@@ -201,6 +201,8 @@ func _process(delta: float) -> void:
 		_map.update_streaming(_character.global_position, _character.velocity)
 
 	_map.update_spikes(delta, _map.local_to_map(_character.global_position) if not _character.is_dead else Vector2i(2147483647, 2147483647))
+	if not _character.is_dead:
+		_event_director.update_events(self, delta)
 	var potion_xp: float = _potion_manager.update_buffs(delta, _squad, _character)
 	if potion_xp > 0.0:
 		_add_squad_xp(potion_xp)
@@ -244,10 +246,7 @@ func _check_room_entry() -> void:
 		_hud.notify_room_entered(room, &"Starting Chamber")
 		return
 
-	var room_level: int = clampi(_map.get_room_depth(room), 1, 12)
-	var arch: StringName = RoomLayout.get_archetype_title(_map.plan.get_room_archetype(room))
-	var title: String = &"Blood Spike Arena - Lv. %d" % room_level if _map.plan.is_event_room(room) else &"%s - Lv. %d" % [arch, room_level]
-	_hud.notify_room_entered(room, title)
+	_hud.notify_room_entered(room, _event_director.get_room_entry_title(_map, room))
 
 
 func _spawn_initial_characters() -> void:
@@ -268,6 +267,7 @@ func _spawn_initial_characters() -> void:
 		key_node.setup(gate.color)
 		_keys.append(key_node)
 
+	_event_director.spawn_event_chests(_map, _characters)
 	_potion_manager.spawn_cell_pickups(_map.plan.corridor_coin_cells, _map.plan.corridor_potion_spawns, _map, _coins)
 
 
@@ -290,8 +290,8 @@ func _spawn_recruit_at(pos: Vector2) -> Unknown:
 	return ch
 
 
-func _spawn_pickups_for_room(room: Rect2i, include_event_reward: bool = false) -> void:
-	_potion_manager.spawn_pickups(_map.get_room_pickups(room, include_event_reward), _coins)
+func _spawn_pickups_for_room(room: Rect2i, include_event_reward: bool = false, drop_anchor: Vector2 = Vector2.INF) -> void:
+	_potion_manager.spawn_pickups(_map.get_room_pickups(room, include_event_reward, drop_anchor), _coins)
 
 
 func _check_pickups() -> void:
@@ -366,6 +366,10 @@ func _spawn_hero(hero_data: HeroData, pos: Vector2, is_leader: bool) -> Hero:
 func _register_and_populate_rooms(rooms: Array[Rect2i]) -> void:
 	var player_pos: Vector2 = _character.global_position
 	for room: Rect2i in rooms:
+		if _map.plan.is_event_room(room):
+			_room_remaining_enemies[room] = 0
+			_room_spawned_enemies[room] = 0
+			continue
 		if not _room_remaining_enemies.has(room):
 			var quota: int = _map.get_room_enemy_quota(room)
 			_room_remaining_enemies[room] = quota
@@ -564,17 +568,15 @@ func _on_enemy_died(enemy: Enemy) -> void:
 	var room: Rect2i = enemy.home_room
 	if enemy.is_minion:
 		_decrement_room_count(_room_summoned_enemies, room)
+		_event_director.handle_ambush_enemy_died(self, enemy, room)
 	elif enemy.is_patrol_respawn:
 		_patrol_manager.on_patrol_enemy_died(room)
 	else:
-		if _room_remaining_enemies.has(room):
+		if not _event_director.handle_ambush_enemy_died(self, enemy, room) and _room_remaining_enemies.has(room):
 			_room_remaining_enemies[room] = maxi(0, _room_remaining_enemies[room] - 1)
 			if _room_remaining_enemies[room] <= 0:
 				_patrol_manager.schedule_respawn(room)
-				if _map.plan.closing_spike_hazards.has(room) and not _map.plan.closing_spike_hazards[room].is_cleared:
-					_map.plan.closing_spike_hazards[room].clear()
-					_spawn_pickups_for_room(room, true)
-					_event_director.on_event_cleared(room)
+				_event_director.handle_closing_spikes_cleared(self, room)
 		_decrement_room_count(_room_spawned_enemies, room)
 	_add_squad_xp(enemy.xp_value)
 	_reset_combat_cooldown()
@@ -739,15 +741,6 @@ func _on_hero_enemy_hit(enemy: Enemy, damage: float, is_heavy: bool, hero: Hero)
 	Audio.play_sfx(Audio.Sfx.HEAVY_IMPACT if is_heavy else Audio.Sfx.HIT_IMPACT)
 	if not enemy.is_dead and enemy.target == null:
 		enemy.set_target_candidate(hero)
-
-
-func _on_event_room_armed(room: Rect2i) -> void:
-	_event_director.on_event_armed(room)
-	if not CombatAction.is_valid_target(_character):
-		return
-	for enemy: Enemy in _enemies:
-		if not enemy.is_dead and enemy.home_room == room:
-			enemy.set_target_candidate(_character, true)
 
 
 func _get_squad_unit_counts() -> Dictionary[StringName, int]:

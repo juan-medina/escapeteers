@@ -13,6 +13,7 @@ const RANGED_EVENT_MAX_ROOM_DIM: int = 30
 
 static func plan_spike_traps(plan: WorldPlan) -> void:
 	_plan_closing_spike_rooms(plan)
+	_plan_wave_ambush_rooms(plan)
 	for room: Rect2i in plan.rooms:
 		if not plan.is_event_room(room):
 			_plan_room_spike_traps(plan, room)
@@ -63,6 +64,7 @@ static func _plan_closing_spike_rooms(plan: WorldPlan) -> void:
 				continue
 			plan.room_event_types[room] = WorldPlan.RoomEventType.CLOSING_SPIKES
 			plan.closing_spike_hazards[room] = hazard
+			plan.no_prop_cells[hazard.bait_cell] = true
 			for cell: Vector2i in hazard.cell_to_ring:
 				plan.event_spike_cell_rooms[cell] = room
 				plan.spike_tile_sets[cell] = plan.get_cell_tile_set(cell)
@@ -78,6 +80,51 @@ static func _has_event_neighbor(plan: WorldPlan, room: Rect2i) -> bool:
 			if plan.is_event_room(n_room):
 				return true
 	return false
+
+
+static func _plan_wave_ambush_rooms(plan: WorldPlan) -> void:
+	var excluded: Dictionary[Rect2i, bool] = {plan.hero_room: true}
+	for gate: SectorGatePlanner.SectorGate in plan.sector_gates:
+		excluded[gate.gate_room] = true
+		excluded[gate.key_room] = true
+
+	var sector_candidates: Dictionary[int, Array] = {}
+	for room: Rect2i in plan.rooms:
+		if excluded.has(room) or plan.is_event_room(room) or plan.get_room_depth(room) < 2:
+			continue
+		var sector_idx: int = plan._room_sectors.get(room, 0)
+		if sector_idx >= 4:
+			continue
+		var shape: WorldPlan.RoomShape = plan._room_shapes.get(room, WorldPlan.RoomShape.RECTANGLE)
+		if shape != WorldPlan.RoomShape.RECTANGLE and shape != WorldPlan.RoomShape.CUT_CORNERS:
+			continue
+		if not WaveAmbush.can_fit_room(room):
+			continue
+		if not sector_candidates.has(sector_idx):
+			sector_candidates[sector_idx] = []
+		sector_candidates[sector_idx].append(room)
+
+	for sector_idx: int in range(4):
+		if not sector_candidates.has(sector_idx):
+			continue
+		var list: Array = sector_candidates[sector_idx]
+		for i: int in range(list.size() - 1, 0, -1):
+			var swap_idx: int = plan._rng.randi_range(0, i)
+			var tmp: Rect2i = list[i]
+			list[i] = list[swap_idx]
+			list[swap_idx] = tmp
+		for r_var: Variant in list:
+			var room: Rect2i = r_var
+			if _has_event_neighbor(plan, room):
+				continue
+			var ambush: WaveAmbush = WaveAmbush.build_for_room(plan, room)
+			if ambush.exits.is_empty():
+				continue
+			plan.room_event_types[room] = WorldPlan.RoomEventType.WAVE_AMBUSH
+			plan.wave_ambushes[room] = ambush
+			plan.no_prop_cells[ambush.bait_cell] = true
+			plan.no_prop_cells[ambush.bait_cell + Vector2i(1, 0)] = true
+			break
 
 
 static func _plan_room_spike_traps(plan: WorldPlan, room: Rect2i) -> void:

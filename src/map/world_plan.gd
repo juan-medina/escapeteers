@@ -39,6 +39,7 @@ enum FloorPattern {
 enum RoomEventType {
 	NONE,
 	CLOSING_SPIKES,
+	WAVE_AMBUSH,
 }
 
 const WORLD_SIZE_TILES: int = 4096
@@ -75,6 +76,7 @@ var no_prop_cells: Dictionary[Vector2i, bool] = {}
 var protected_neck_rects: Array[Rect2i] = []
 var room_event_types: Dictionary[Rect2i, RoomEventType] = {}
 var closing_spike_hazards: Dictionary[Rect2i, ClosingSpikeHazard] = {}
+var wave_ambushes: Dictionary[Rect2i, WaveAmbush] = {}
 var event_spike_cell_rooms: Dictionary[Vector2i, Rect2i] = {}
 var corridor_coin_cells: Array[Vector2i] = []
 var corridor_potion_spawns: Array[Dictionary] = []
@@ -128,6 +130,7 @@ func generate(seed_val: int = 0, max_depth: int = 12) -> void:
 	protected_neck_rects.clear()
 	room_event_types.clear()
 	closing_spike_hazards.clear()
+	wave_ambushes.clear()
 	event_spike_cell_rooms.clear()
 	corridor_coin_cells.clear()
 	corridor_potion_spawns.clear()
@@ -348,6 +351,8 @@ func get_room_enemy_quota(room: Rect2i) -> int:
 
 
 func get_companion_spawns_for_room(room: Rect2i) -> Array:
+	if is_event_room(room):
+		return []
 	if _room_companion_spawns.has(room):
 		return _room_companion_spawns[room]
 	var spawns: Array[Vector2i] = _compute_companion_spawns_for_room(room)

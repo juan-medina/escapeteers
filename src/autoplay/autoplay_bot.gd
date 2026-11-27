@@ -108,8 +108,9 @@ func update(game: Game, map: Map, delta: float) -> void:
 
 	_update_room_progress(game, map, leader, delta)
 	var in_special_room: bool = not _is_rushing_gates(map) and AutoplaySpecialRooms.is_in_active_special_room(map, leader)
+	var in_closing_spikes: bool = in_special_room and AutoplaySpecialRooms.is_in_closing_spikes_room(map, leader)
 	var move_dir: Vector2 = _decide_move_direction(game, map, leader, delta, in_special_room)
-	if in_special_room:
+	if in_closing_spikes:
 		_stuck_timer = 0.0
 		_sidestep_timer = 0.0
 		_anchor_pos = leader.global_position
@@ -402,11 +403,12 @@ func _is_room_done(game: Game, room: Rect2i) -> bool:
 		return false
 	if _is_rushing_gates(game._map) or _skipped_rooms.has(room):
 		return true
+	if AutoplaySpecialRooms.is_active_special_room(game._map, room) or game._event_director.get_unclaimed_chest_in_room(room) != null:
+		return false
+	var no_recruits: bool = not _has_recruit_in_room(game, room)
 	if room == game._map.hero_room:
-		return not _has_recruit_in_room(game, room)
-	if game._room_remaining_enemies.has(room):
-		return game._room_remaining_enemies[room] <= 0 and not _has_recruit_in_room(game, room)
-	return false
+		return no_recruits
+	return no_recruits and game._room_remaining_enemies.has(room) and game._room_remaining_enemies[room] <= 0
 
 
 func _get_active_sector_gate(map: Map) -> SectorGatePlanner.SectorGate:
@@ -572,6 +574,8 @@ func _decide_move_direction(game: Game, map: Map, leader: Hero, delta: float, in
 			steer_dest = nearby_key.global_position
 		else:
 			steer_dest = _find_nearest_potion(game, map, leader, true)
+			if steer_dest == Vector2.ZERO:
+				steer_dest = AutoplaySpecialRooms.find_ready_chest_in_room(game, _last_known_room)
 
 	if steer_dest != Vector2.ZERO:
 		return _steer_toward(map, leader, steer_dest, delta)
