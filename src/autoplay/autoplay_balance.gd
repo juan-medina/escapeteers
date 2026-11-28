@@ -14,6 +14,7 @@ const EVENT_TYPE_NAMES: Dictionary[int, StringName] = {
 	WorldPlan.RoomEventType.CLOSING_SPIKES: &"BLOOD_SPIKES",
 	WorldPlan.RoomEventType.WAVE_AMBUSH: &"WAVE_AMBUSH",
 	WorldPlan.RoomEventType.CURSED_OBELISKS: &"CURSED_OBELISKS",
+	WorldPlan.RoomEventType.RUNE_PLATES: &"RUNE_PLATES",
 }
 
 var _runs: Array[Dictionary] = []
@@ -359,6 +360,9 @@ func _track_rooms(game: Game, map: Map) -> void:
 		elif map.plan.obelisk_encounters.has(tracked_room):
 			var encounter: ObeliskEncounter = map.plan.obelisk_encounters[tracked_room]
 			room_cleared = encounter != null and encounter.is_cleared
+		elif map.plan.rune_encounters.has(tracked_room):
+			var rune_enc: RunePlateEncounter = map.plan.rune_encounters[tracked_room]
+			room_cleared = rune_enc != null and rune_enc.is_cleared
 		elif game._room_remaining_enemies.has(tracked_room) and game._room_remaining_enemies[tracked_room] <= 0:
 			room_cleared = true
 		if room_cleared:

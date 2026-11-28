@@ -19,6 +19,9 @@ static func is_active_special_room(map: Map, room: Rect2i) -> bool:
 		WorldPlan.RoomEventType.CURSED_OBELISKS:
 			var enc: ObeliskEncounter = map.plan.obelisk_encounters.get(room, null)
 			return enc != null and not enc.is_cleared
+		WorldPlan.RoomEventType.RUNE_PLATES:
+			var rune_enc: RunePlateEncounter = map.plan.rune_encounters.get(room, null)
+			return rune_enc != null and not rune_enc.is_cleared
 		_:
 			return false
 
@@ -55,8 +58,46 @@ static func decide_move(bot: AutoplayBot, game: Game, map: Map, leader: Hero, de
 			return _decide_wave_ambush_move(bot, game, map, leader, room, delta)
 		WorldPlan.RoomEventType.CURSED_OBELISKS:
 			return _decide_obelisk_move(bot, game, map, leader, room, delta)
+		WorldPlan.RoomEventType.RUNE_PLATES:
+			return _decide_rune_plates_move(bot, game, map, leader, room, delta)
 		_:
 			return Vector2.ZERO
+
+
+static func _decide_rune_plates_move(bot: AutoplayBot, game: Game, map: Map, leader: Hero, room: Rect2i, delta: float) -> Vector2:
+	var enc: RunePlateEncounter = map.plan.rune_encounters.get(room, null)
+	if enc == null or enc.is_cleared:
+		return Vector2.ZERO
+	if not enc.is_triggered:
+		var bait_pos: Vector2 = map.clamp_to_walkable(map.map_to_local(enc.bait_cell))
+		return bot._steer_toward(map, leader, bait_pos, delta)
+
+	var plates: Array[RunePlate] = game._event_director.get_active_rune_plates_in_room(room)
+	if plates.is_empty():
+		return Vector2.ZERO
+
+	var target_plate: RunePlate = null
+	for plate: RunePlate in plates:
+		if plate.progress > 0.0:
+			target_plate = plate
+			break
+	if target_plate == null:
+		target_plate = plates[0]
+		var min_dist_sq: float = leader.global_position.distance_squared_to(target_plate.global_position)
+		for i: int in range(1, plates.size()):
+			var d_sq: float = leader.global_position.distance_squared_to(plates[i].global_position)
+			if d_sq < min_dist_sq:
+				min_dist_sq = d_sq
+				target_plate = plates[i]
+
+	var safe_pickup: Vector2 = _find_safe_pickup(bot, game, map, leader, room)
+	if safe_pickup != Vector2.ZERO:
+		if target_plate.progress <= 0.0 or target_plate.is_point_inside(safe_pickup):
+			return bot._steer_toward(map, leader, safe_pickup, delta)
+
+	if leader.global_position.distance_squared_to(target_plate.global_position) > 16.0 * 16.0:
+		return bot._steer_toward(map, leader, target_plate.global_position, delta)
+	return Vector2.ZERO
 
 
 static func _decide_obelisk_move(bot: AutoplayBot, game: Game, map: Map, leader: Hero, room: Rect2i, delta: float) -> Vector2:

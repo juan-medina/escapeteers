@@ -24,6 +24,7 @@ var _squad_preset_cursor: int = 0
 @onready var _blood_spikes_btn: Button = $Center/Panel/VBox/WarpGrid/BloodSpikesBtn
 @onready var _wave_ambush_btn: Button = $Center/Panel/VBox/WarpGrid/WaveAmbushBtn
 @onready var _obelisk_btn: Button = $Center/Panel/VBox/WarpGrid/ObeliskBtn
+@onready var _rune_plates_btn: Button = $Center/Panel/VBox/WarpGrid/RunePlatesBtn
 @onready var _god_mode_btn: Button = $Center/Panel/VBox/ToolsGrid/GodModeBtn
 
 
@@ -90,6 +91,7 @@ func _refresh_status() -> void:
 	_blood_spikes_btn.text = "Blood Spikes (%d)" % _collect_event_rooms(WorldPlan.RoomEventType.CLOSING_SPIKES).size()
 	_wave_ambush_btn.text = "Cursed Ambush (%d)" % _collect_event_rooms(WorldPlan.RoomEventType.WAVE_AMBUSH).size()
 	_obelisk_btn.text = "Cursed Obelisks (%d)" % _collect_event_rooms(WorldPlan.RoomEventType.CURSED_OBELISKS).size()
+	_rune_plates_btn.text = "Rune Plates (%d)" % _collect_event_rooms(WorldPlan.RoomEventType.RUNE_PLATES).size()
 
 
 func _collect_event_rooms(event_type: WorldPlan.RoomEventType) -> Array[Rect2i]:
@@ -118,6 +120,9 @@ func _is_event_room_uncleared(plan: WorldPlan, room: Rect2i, event_type: WorldPl
 		WorldPlan.RoomEventType.CURSED_OBELISKS:
 			var enc: ObeliskEncounter = plan.obelisk_encounters.get(room, null)
 			return enc != null and not enc.is_cleared
+		WorldPlan.RoomEventType.RUNE_PLATES:
+			var rune_enc: RunePlateEncounter = plan.rune_encounters.get(room, null)
+			return rune_enc != null and not rune_enc.is_cleared
 		_:
 			return false
 
@@ -136,6 +141,10 @@ func _on_warp_wave_ambush_pressed() -> void:
 
 func _on_warp_obelisks_pressed() -> void:
 	_warp_to_event_type(WorldPlan.RoomEventType.CURSED_OBELISKS, &"Cursed Obelisk")
+
+
+func _on_warp_rune_plates_pressed() -> void:
+	_warp_to_event_type(WorldPlan.RoomEventType.RUNE_PLATES, &"Rune Plates")
 
 
 func _warp_to_event_type(event_type: WorldPlan.RoomEventType, label_name: StringName) -> void:
@@ -196,6 +205,11 @@ func _pick_landing_cell(room: Rect2i) -> Vector2i:
 		var enc: ObeliskEncounter = plan.obelisk_encounters[room]
 		excluded[enc.bait_cell] = true
 		for c: Vector2i in enc.obelisk_cells:
+			excluded[c] = true
+	if plan.rune_encounters.has(room):
+		var rune_enc: RunePlateEncounter = plan.rune_encounters[room]
+		excluded[rune_enc.bait_cell] = true
+		for c: Vector2i in rune_enc.plate_cells:
 			excluded[c] = true
 
 	var inner: Rect2i = room.grow(-2)
@@ -325,6 +339,9 @@ func _on_clear_room_pressed() -> void:
 	for obelisk: CursedObelisk in obelisks:
 		if not obelisk.is_dead:
 			obelisk.take_damage(999999.0, false)
+	var plates: Array[RunePlate] = _game._event_director.get_active_rune_plates_in_room(room)
+	for plate: RunePlate in plates:
+		plate.step_charge(999.0, true)
 	for enemy: Enemy in _game._enemies.duplicate():
 		if is_instance_valid(enemy) and not enemy.is_dead and enemy.home_room == room:
 			enemy.is_damage_immune = false

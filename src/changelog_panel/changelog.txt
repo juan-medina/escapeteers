@@ -7,6 +7,7 @@
   - [b]Blood Spike Arenas:[/b] Survive closing perimeter spikes.
   - [b]Cursed Ambush:[/b] Outlast three locked-in monster waves.
   - [b]Cursed Obelisks:[/b] Shatter four shielding orbs to break enemy immunity.
+  - [b]Rune Plates:[/b] Hold three arcane circles to purge the room.
 - [color=#ffffff][b]Floating Combat Text:[/b][/color] Merged damage bursts, heals, and immune cues.
 - [color=#ffffff][b]Corridor Traps & Loot:[/b][/color] Torches, spikes, and loot line dungeon passages.
 - [color=#ffffff][b]Wandering Patrols:[/b][/color] Monster patrols reclaim distant cleared rooms.
@@ -17,7 +18,7 @@
 - [color=#ffffff][b]Swordsman Health:[/b][/color] Slightly boosted frontline durability.
 
 [color=#e0e0e0][b]Fixed[/b][/color]
-- [color=#ffffff][b]Stranded Companions:[/b][/color] Lost heroes warp safely back to you.
+- [color=#ffffff][b]Stranded Companions:[/b][/color] Lost heroes warp safely back to you.ay
 - [color=#ffffff][b]Draft Dialog Input:[/b][/color] Held movement no longer scrolls hero choices.
 
 [color=#ffffff][b]v0.7.0 - 2026-11-24[/b][/color]

@@ -668,7 +668,7 @@ func get_room_pickups(room: Rect2i, include_event_reward: bool = false, drop_anc
 				coins.append(_clamp_world_to_room(base_world + Vector2(18.0, -8.0), room))
 				potions.append({&"pos": _clamp_world_to_room(base_world + Vector2(-12.0, 10.0), room), &"type": PotionPickup.PotionType.HEALTH})
 				potions.append({&"pos": _clamp_world_to_room(base_world + Vector2(12.0, 10.0), room), &"type": _roll_potion_type(room, 53, 89)})
-			elif event_type == WorldPlan.RoomEventType.CURSED_OBELISKS:
+			elif event_type == WorldPlan.RoomEventType.CURSED_OBELISKS or event_type == WorldPlan.RoomEventType.RUNE_PLATES:
 				coins.append(_clamp_world_to_room(base_world + Vector2(-14.0, -6.0), room))
 				potions.append({&"pos": _clamp_world_to_room(base_world + Vector2(14.0, -6.0), room), &"type": PotionPickup.PotionType.HEALTH})
 				potions.append({&"pos": _clamp_world_to_room(base_world + Vector2(0.0, 10.0), room), &"type": _roll_potion_type(room, 41, 79)})

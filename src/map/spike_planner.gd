@@ -12,64 +12,115 @@ const RANGED_EVENT_MAX_ROOM_DIM: int = 30
 
 
 static func plan_spike_traps(plan: WorldPlan) -> void:
-	_plan_closing_spike_rooms(plan)
-	_plan_wave_ambush_rooms(plan)
-	_plan_obelisk_rooms(plan)
+	_plan_special_event_rooms(plan)
 	for room: Rect2i in plan.rooms:
 		if not plan.is_event_room(room):
 			_plan_room_spike_traps(plan, room)
 	_plan_corridor_spike_traps(plan)
 
 
-static func _plan_closing_spike_rooms(plan: WorldPlan) -> void:
-	var excluded: Dictionary[Rect2i, bool] = {plan.hero_room: true}
-	for gate: SectorGatePlanner.SectorGate in plan.sector_gates:
-		excluded[gate.gate_room] = true
-		excluded[gate.key_room] = true
-
-	var sector_candidates: Dictionary[int, Array] = {}
-	for room: Rect2i in plan.rooms:
-		if excluded.has(room) or plan.get_room_depth(room) < 2:
-			continue
-		var sector_idx: int = plan._room_sectors.get(room, 0)
-		if sector_idx >= 4:
-			continue
-		var shape: WorldPlan.RoomShape = plan._room_shapes.get(room, WorldPlan.RoomShape.RECTANGLE)
-		if shape != WorldPlan.RoomShape.RECTANGLE and shape != WorldPlan.RoomShape.CUT_CORNERS:
-			continue
-		if not ClosingSpikeHazard.can_fit_room(room):
-			continue
-		var arch: WorldPlan.RoomArchetype = plan.get_room_archetype(room)
-		if arch == WorldPlan.RoomArchetype.ARCHER_GARRISON or arch == WorldPlan.RoomArchetype.NECRO_CRYPT:
-			if room.size.x > RANGED_EVENT_MAX_ROOM_DIM or room.size.y > RANGED_EVENT_MAX_ROOM_DIM:
-				continue
-		if not sector_candidates.has(sector_idx):
-			sector_candidates[sector_idx] = []
-		sector_candidates[sector_idx].append(room)
+static func _plan_special_event_rooms(plan: WorldPlan) -> void:
+	var sector_candidates: Dictionary[int, Array] = _collect_shuffled_event_candidates(plan, 16)
+	var event_order: Array[WorldPlan.RoomEventType] = [
+		WorldPlan.RoomEventType.CLOSING_SPIKES,
+		WorldPlan.RoomEventType.WAVE_AMBUSH,
+		WorldPlan.RoomEventType.CURSED_OBELISKS,
+		WorldPlan.RoomEventType.RUNE_PLATES,
+	]
+	for i: int in range(event_order.size() - 1, 0, -1):
+		var swap_idx: int = plan._rng.randi_range(0, i)
+		var tmp: WorldPlan.RoomEventType = event_order[i]
+		event_order[i] = event_order[swap_idx]
+		event_order[swap_idx] = tmp
 
 	for sector_idx: int in range(4):
 		if not sector_candidates.has(sector_idx):
 			continue
-		var list: Array = sector_candidates[sector_idx]
-		for i: int in range(list.size() - 1, 0, -1):
-			var swap_idx: int = plan._rng.randi_range(0, i)
-			var tmp: Rect2i = list[i]
-			list[i] = list[swap_idx]
-			list[swap_idx] = tmp
-		for r_var: Variant in list:
-			var room: Rect2i = r_var
-			if _has_event_neighbor(plan, room):
-				continue
+		var candidates: Array = sector_candidates[sector_idx]
+		var used_types: Dictionary[WorldPlan.RoomEventType, bool] = {}
+		var placed: int = 0
+		for slot: int in range(2):
+			var start_idx: int = (sector_idx * 2 + slot) % event_order.size()
+			for step: int in range(event_order.size()):
+				var ev_type: WorldPlan.RoomEventType = event_order[(start_idx + step) % event_order.size()]
+				if used_types.has(ev_type):
+					continue
+				if _try_place_event_type_in_sector(plan, candidates, ev_type):
+					used_types[ev_type] = true
+					placed += 1
+					break
+			if placed >= 2:
+				break
+
+
+static func _try_place_event_type_in_sector(plan: WorldPlan, candidates: Array, event_type: WorldPlan.RoomEventType) -> bool:
+	for r_var: Variant in candidates:
+		var room: Rect2i = r_var
+		if plan.is_event_room(room) or _has_event_neighbor(plan, room):
+			continue
+		if _try_place_event_room(plan, room, event_type):
+			return true
+	return false
+
+
+static func _try_place_event_room(plan: WorldPlan, room: Rect2i, event_type: WorldPlan.RoomEventType) -> bool:
+	match event_type:
+		WorldPlan.RoomEventType.CLOSING_SPIKES:
+			if not ClosingSpikeHazard.can_fit_room(room):
+				return false
+			var arch: WorldPlan.RoomArchetype = plan.get_room_archetype(room)
+			if arch == WorldPlan.RoomArchetype.ARCHER_GARRISON or arch == WorldPlan.RoomArchetype.NECRO_CRYPT:
+				if room.size.x > RANGED_EVENT_MAX_ROOM_DIM or room.size.y > RANGED_EVENT_MAX_ROOM_DIM:
+					return false
 			var hazard: ClosingSpikeHazard = ClosingSpikeHazard.build_for_room(plan, room)
 			if hazard.rings.size() < 2 or hazard.cell_to_ring.is_empty():
-				continue
+				return false
 			plan.room_event_types[room] = WorldPlan.RoomEventType.CLOSING_SPIKES
 			plan.closing_spike_hazards[room] = hazard
 			plan.no_prop_cells[hazard.bait_cell] = true
 			for cell: Vector2i in hazard.cell_to_ring:
 				plan.event_spike_cell_rooms[cell] = room
 				plan.spike_tile_sets[cell] = plan.get_cell_tile_set(cell)
-			break
+			return true
+		WorldPlan.RoomEventType.WAVE_AMBUSH:
+			if not WaveAmbush.can_fit_room(room):
+				return false
+			var ambush: WaveAmbush = WaveAmbush.build_for_room(plan, room)
+			if ambush.exits.is_empty():
+				return false
+			plan.room_event_types[room] = WorldPlan.RoomEventType.WAVE_AMBUSH
+			plan.wave_ambushes[room] = ambush
+			plan.no_prop_cells[ambush.bait_cell] = true
+			plan.no_prop_cells[ambush.bait_cell + Vector2i(1, 0)] = true
+			return true
+		WorldPlan.RoomEventType.CURSED_OBELISKS:
+			if not ObeliskEncounter.can_fit_room(room):
+				return false
+			var ob_enc: ObeliskEncounter = ObeliskEncounter.build_for_room(plan, room)
+			if ob_enc.obelisk_cells.size() != 4:
+				return false
+			plan.room_event_types[room] = WorldPlan.RoomEventType.CURSED_OBELISKS
+			plan.obelisk_encounters[room] = ob_enc
+			plan.no_prop_cells[ob_enc.bait_cell] = true
+			for cell: Vector2i in ob_enc.obelisk_cells:
+				plan.no_prop_cells[cell] = true
+			return true
+		WorldPlan.RoomEventType.RUNE_PLATES:
+			if not RunePlateEncounter.can_fit_room(room):
+				return false
+			var rune_enc: RunePlateEncounter = RunePlateEncounter.build_for_room(plan, room)
+			if rune_enc.plate_cells.size() != RunePlateEncounter.PLATE_COUNT:
+				return false
+			plan.room_event_types[room] = WorldPlan.RoomEventType.RUNE_PLATES
+			plan.rune_encounters[room] = rune_enc
+			plan.no_prop_cells[rune_enc.bait_cell] = true
+			for cell: Vector2i in rune_enc.plate_cells:
+				for dy: int in range(-1, 2):
+					for dx: int in range(-1, 2):
+						plan.no_prop_cells[cell + Vector2i(dx, dy)] = true
+			return true
+		_:
+			return false
 
 
 static func _has_event_neighbor(plan: WorldPlan, room: Rect2i) -> bool:
@@ -113,45 +164,6 @@ static func _collect_shuffled_event_candidates(plan: WorldPlan, min_dim: int) ->
 			list[i] = list[swap_idx]
 			list[swap_idx] = tmp
 	return sector_candidates
-
-
-static func _plan_wave_ambush_rooms(plan: WorldPlan) -> void:
-	var sector_candidates: Dictionary[int, Array] = _collect_shuffled_event_candidates(plan, 18)
-	for sector_idx: int in range(4):
-		if not sector_candidates.has(sector_idx):
-			continue
-		for r_var: Variant in sector_candidates[sector_idx]:
-			var room: Rect2i = r_var
-			if _has_event_neighbor(plan, room):
-				continue
-			var ambush: WaveAmbush = WaveAmbush.build_for_room(plan, room)
-			if ambush.exits.is_empty():
-				continue
-			plan.room_event_types[room] = WorldPlan.RoomEventType.WAVE_AMBUSH
-			plan.wave_ambushes[room] = ambush
-			plan.no_prop_cells[ambush.bait_cell] = true
-			plan.no_prop_cells[ambush.bait_cell + Vector2i(1, 0)] = true
-			break
-
-
-static func _plan_obelisk_rooms(plan: WorldPlan) -> void:
-	var sector_candidates: Dictionary[int, Array] = _collect_shuffled_event_candidates(plan, ObeliskEncounter.MIN_ROOM_DIM)
-	for sector_idx: int in range(4):
-		if not sector_candidates.has(sector_idx):
-			continue
-		for r_var: Variant in sector_candidates[sector_idx]:
-			var room: Rect2i = r_var
-			if _has_event_neighbor(plan, room):
-				continue
-			var encounter: ObeliskEncounter = ObeliskEncounter.build_for_room(plan, room)
-			if encounter.obelisk_cells.size() != 4:
-				continue
-			plan.room_event_types[room] = WorldPlan.RoomEventType.CURSED_OBELISKS
-			plan.obelisk_encounters[room] = encounter
-			plan.no_prop_cells[encounter.bait_cell] = true
-			for cell: Vector2i in encounter.obelisk_cells:
-				plan.no_prop_cells[cell] = true
-			break
 
 
 static func _plan_room_spike_traps(plan: WorldPlan, room: Rect2i) -> void:

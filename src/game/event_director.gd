@@ -13,6 +13,7 @@ const EVENT_WAVE_COLOR: Color = Color(0.82, 0.42, 1.0, 1.0)
 const EVENT_CLEAR_COLOR: Color = Color(1.0, 0.85, 0.35, 1.0)
 const CURSED_CHEST_SCENE: PackedScene = preload("res://cursed_chest/cursed_chest.tscn")
 const CURSED_OBELISK_SCENE: PackedScene = preload("res://cursed_obelisk/cursed_obelisk.tscn")
+const RUNE_PLATE_SCENE: PackedScene = preload("res://rune_plate/rune_plate.tscn")
 
 var _hud: Hud
 var _fog: Fog
@@ -22,6 +23,9 @@ var _cursed_chests: Array[CursedChest] = []
 var _chests_by_room: Dictionary[Rect2i, CursedChest] = {}
 var _obelisks_by_room: Dictionary[Rect2i, Array] = {}
 var _active_obelisk_rooms: Array[Rect2i] = []
+var _runes_by_room: Dictionary[Rect2i, Array] = {}
+var _active_rune_rooms: Array[Rect2i] = []
+var _charging_plate_by_room: Dictionary[Rect2i, RunePlate] = {}
 var _active_ambush: WaveAmbush = null
 var _shake_timer: float = 0.0
 var _shake_duration: float = 0.0
@@ -86,6 +90,8 @@ func get_room_entry_title(map: Map, room: Rect2i) -> String:
 		return &"Cursed Ambush - Lv. %d" % room_level
 	if event_type == WorldPlan.RoomEventType.CURSED_OBELISKS:
 		return &"Cursed Obelisks - Lv. %d" % room_level
+	if event_type == WorldPlan.RoomEventType.RUNE_PLATES:
+		return &"Rune Plates - Lv. %d" % room_level
 	var arch: StringName = RoomLayout.get_archetype_title(map.plan.get_room_archetype(room))
 	return &"%s - Lv. %d" % [arch, room_level]
 
@@ -115,6 +121,8 @@ func handle_event_room_enemies_cleared(game: Game, room: Rect2i) -> bool:
 	if event_type == WorldPlan.RoomEventType.CURSED_OBELISKS:
 		_try_clear_obelisk_room(game, room)
 		return true
+	if event_type == WorldPlan.RoomEventType.RUNE_PLATES:
+		return true
 	return false
 
 
@@ -129,8 +137,19 @@ func get_active_obelisks_in_room(room: Rect2i) -> Array[CursedObelisk]:
 	return alive
 
 
-func is_active_obelisk_room(room: Rect2i) -> bool:
-	return _active_obelisk_rooms.has(room)
+func get_active_rune_plates_in_room(room: Rect2i) -> Array[RunePlate]:
+	var active_plates: Array[RunePlate] = []
+	if not _runes_by_room.has(room):
+		return active_plates
+	for plate_var: Variant in _runes_by_room[room]:
+		var plate: RunePlate = plate_var
+		if plate != null and plate.state != RunePlate.PlateState.DORMANT and plate.state != RunePlate.PlateState.COMPLETED:
+			active_plates.append(plate)
+	return active_plates
+
+
+func is_active_open_event_room(room: Rect2i) -> bool:
+	return _active_obelisk_rooms.has(room) or _active_rune_rooms.has(room)
 
 
 func get_unclaimed_chest_in_room(room: Rect2i) -> CursedChest:
@@ -144,6 +163,8 @@ func on_player_died() -> void:
 	_active_event_room = Rect2i()
 	_active_ambush = null
 	_active_obelisk_rooms.clear()
+	_active_rune_rooms.clear()
+	_charging_plate_by_room.clear()
 
 
 func spawn_event_chests(map: Map, parent: Node2D) -> void:
@@ -151,6 +172,9 @@ func spawn_event_chests(map: Map, parent: Node2D) -> void:
 	_chests_by_room.clear()
 	_obelisks_by_room.clear()
 	_active_obelisk_rooms.clear()
+	_runes_by_room.clear()
+	_active_rune_rooms.clear()
+	_charging_plate_by_room.clear()
 	_active_ambush = null
 	for hazard: ClosingSpikeHazard in map.plan.closing_spike_hazards.values():
 		_spawn_chest_at(map, parent, hazard.room, hazard.bait_cell)
@@ -159,6 +183,20 @@ func spawn_event_chests(map: Map, parent: Node2D) -> void:
 	for encounter: ObeliskEncounter in map.plan.obelisk_encounters.values():
 		_spawn_chest_at(map, parent, encounter.room, encounter.bait_cell)
 		_spawn_obelisks_for_encounter(map, parent, encounter)
+	for rune_enc: RunePlateEncounter in map.plan.rune_encounters.values():
+		_spawn_chest_at(map, parent, rune_enc.room, rune_enc.bait_cell)
+		_spawn_runes_for_encounter(map, parent, rune_enc)
+
+
+func _spawn_runes_for_encounter(map: Map, parent: Node2D, encounter: RunePlateEncounter) -> void:
+	var spawned: Array[RunePlate] = []
+	for cell: Vector2i in encounter.plate_cells:
+		var plate: RunePlate = RUNE_PLATE_SCENE.instantiate() as RunePlate
+		parent.add_child(plate)
+		plate.position = map.map_to_local(cell)
+		plate.room = encounter.room
+		spawned.append(plate)
+	_runes_by_room[encounter.room] = spawned
 
 
 func _spawn_obelisks_for_encounter(map: Map, parent: Node2D, encounter: ObeliskEncounter) -> void:
@@ -193,11 +231,15 @@ func update_events(game: Game, delta: float) -> void:
 					_start_closing_spikes(game, chest)
 				elif ev_type == WorldPlan.RoomEventType.CURSED_OBELISKS:
 					_start_obelisk_encounter(game, chest)
+				elif ev_type == WorldPlan.RoomEventType.RUNE_PLATES:
+					_start_rune_encounter(game, chest)
 		elif chest.can_claim_reward() and PotionManager.is_squad_touching(game._squad, chest.position, CursedChest.TRIGGER_DISTANCE):
 			_claim_chest_reward(game, chest)
 
 	if not _active_obelisk_rooms.is_empty():
 		_update_obelisk_rooms(game)
+	if not _active_rune_rooms.is_empty():
+		_update_rune_rooms(game, delta)
 
 	if _active_ambush == null:
 		return
@@ -389,6 +431,156 @@ func _try_clear_obelisk_room(game: Game, room: Rect2i) -> void:
 	if chest != null:
 		chest.unlock_reward()
 	on_event_cleared(room, &"Cursed Obelisk Chamber", &"Open the chest to claim your reward!")
+	game._patrol_manager.schedule_respawn(room)
+
+
+func _start_rune_encounter(game: Game, chest: CursedChest) -> void:
+	var room: Rect2i = chest.room
+	var encounter: RunePlateEncounter = game._map.plan.rune_encounters.get(room, null)
+	if encounter == null or encounter.is_cleared or encounter.is_triggered:
+		return
+	chest.activate()
+	encounter.is_triggered = true
+	encounter.spawn_timer = encounter.get_trickle_interval()
+	game._map.active_event_room = room
+	if not _active_rune_rooms.has(room):
+		_active_rune_rooms.append(room)
+
+	for plate_var: Variant in _runes_by_room.get(room, []):
+		var plate: RunePlate = plate_var
+		if plate != null:
+			plate.activate()
+			if not plate.completed.is_connected(_on_rune_plate_completed):
+				plate.completed.connect(_on_rune_plate_completed.bind(game, room))
+
+	on_event_armed(room, &"Rune Plates Chamber", &"Hold 3 runes to purge - switching resets progress!")
+	_spawn_rune_enemies(game, encounter, RunePlateEncounter.OPENING_SPAWN_COUNT)
+
+
+func _update_rune_rooms(game: Game, delta: float) -> void:
+	for room: Rect2i in _active_rune_rooms.duplicate():
+		var encounter: RunePlateEncounter = game._map.plan.rune_encounters.get(room, null)
+		if encounter == null or encounter.is_cleared:
+			_active_rune_rooms.erase(room)
+			continue
+		if game._current_room == room:
+			if _active_event_room != room:
+				_active_event_room = room
+				Audio.set_music_track(Audio.MusicTrack.EVENT, EVENT_MUSIC_FADE_IN)
+				_fog.set_event_atmosphere(true)
+		elif _active_event_room == room:
+			on_event_disarmed(room)
+
+		var plates: Array[RunePlate] = get_active_rune_plates_in_room(room)
+		var stepped_plate: RunePlate = null
+		if game._current_room == room:
+			for plate: RunePlate in plates:
+				if plate.is_point_inside(game._character.global_position):
+					stepped_plate = plate
+					break
+
+		if stepped_plate != null:
+			var prev: RunePlate = _charging_plate_by_room.get(room, null)
+			if prev != null and prev != stepped_plate and prev.state != RunePlate.PlateState.COMPLETED and prev.progress > 0.0:
+				prev.reset_progress()
+				trigger_shake(2.0, 0.12)
+				Audio.play_sfx(Audio.Sfx.SPIKE_TRAP)
+			_charging_plate_by_room[room] = stepped_plate
+
+		for plate: RunePlate in plates:
+			if plate.step_charge(delta, plate == stepped_plate):
+				break
+
+		if encounter.is_cleared:
+			continue
+		var tracked: RunePlate = _charging_plate_by_room.get(room, null)
+		if tracked != null and tracked.progress <= 0.0:
+			_charging_plate_by_room.erase(room)
+
+		if game._current_room == room:
+			encounter.spawn_timer -= delta
+			if encounter.spawn_timer <= 0.0:
+				encounter.spawn_timer = encounter.get_trickle_interval()
+				var alive_in_room: int = 0
+				for enemy: Enemy in game._enemies:
+					if not enemy.is_dead and enemy.home_room == room:
+						alive_in_room += 1
+				var max_alive: int = encounter.get_max_alive()
+				if alive_in_room < max_alive:
+					_spawn_rune_enemies(game, encounter, mini(RunePlateEncounter.TRICKLE_SPAWN_COUNT, max_alive - alive_in_room))
+
+
+func _spawn_rune_enemies(game: Game, encounter: RunePlateEncounter, count: int) -> void:
+	if count <= 0:
+		return
+	var room: Rect2i = encounter.room
+	var free_slots: int = Game.MAX_ENEMIES - game._enemies.size()
+	if free_slots < count:
+		var room_center: Vector2 = game._map.map_to_local(room.get_center())
+		var dist_sq: float = game._character.global_position.distance_squared_to(room_center)
+		game._reclaim_distant_enemies_for_room(room, dist_sq, count - free_slots, game._character.global_position)
+
+	var roster: Array[StringName] = encounter.build_spawn_roster(count)
+	var player_cell: Vector2i = game._map.local_to_map(game._character.global_position)
+	var cells: Array[Vector2i] = WaveAmbush.pick_spawn_cells_in_room(game._map.plan, room, roster.size(), player_cell)
+	var depth: int = clampi(encounter.depth, 1, 12)
+	var spawn_count: int = mini(roster.size(), cells.size())
+	for i: int in range(spawn_count):
+		if game._enemies.size() >= Game.MAX_ENEMIES:
+			break
+		var pos: Vector2 = game._map.map_to_local(cells[i])
+		var pentagram: Projectile = Projectile.acquire(Game.SUMMON_PENTAGRAM_SCENE)
+		pentagram.global_position = pos
+		game._on_projectile_spawn_requested(pentagram)
+		game._spawn_enemy_at(pos, room, _scene_for_enemy_id(roster[i]), depth, false, false)
+		var spawned_enemy: Enemy = game._enemies[game._enemies.size() - 1]
+		spawned_enemy.stay_in_home_room = true
+		if encounter.total_spawned >= RunePlateEncounter.MAX_XP_GRANTS:
+			spawned_enemy.xp_value = 0.0
+		encounter.total_spawned += 1
+	if spawn_count > 0:
+		Audio.play_sfx(Audio.Sfx.NECRO_SUMMON)
+
+
+func _on_rune_plate_completed(plate: RunePlate, game: Game, room: Rect2i) -> void:
+	if _charging_plate_by_room.get(room, null) == plate:
+		_charging_plate_by_room.erase(room)
+
+	var shock_sq: float = RunePlate.SHOCKWAVE_RADIUS * RunePlate.SHOCKWAVE_RADIUS
+	for enemy: Enemy in game._enemies:
+		if enemy.is_dead or enemy.home_room != room:
+			continue
+		var diff: Vector2 = enemy.global_position - plate.global_position
+		if diff.length_squared() <= shock_sq:
+			var push_dir: Vector2 = diff.normalized() if diff.length_squared() > 0.01 else Vector2.UP
+			enemy.apply_knockback(push_dir * RunePlate.SHOCKWAVE_KNOCKBACK)
+	trigger_shake(3.0, 0.22)
+
+	var remaining: int = get_active_rune_plates_in_room(room).size()
+	if remaining > 0:
+		_hud.show_event_toast(&"Rune %d / 3 Charged!" % (RunePlateEncounter.PLATE_COUNT - remaining), Color(0.45, 1.0, 0.72, 1.0))
+		return
+
+	var encounter: RunePlateEncounter = game._map.plan.rune_encounters.get(room, null)
+	if encounter == null or encounter.is_cleared:
+		return
+	encounter.clear()
+	_active_rune_rooms.erase(room)
+	_charging_plate_by_room.erase(room)
+	if game._map.active_event_room == room:
+		game._map.active_event_room = Rect2i()
+
+	for enemy: Enemy in game._enemies.duplicate():
+		if is_instance_valid(enemy) and not enemy.is_dead and enemy.home_room == room:
+			enemy.xp_value = 0.0
+			enemy.is_damage_immune = false
+			enemy.take_damage(999999.0, false)
+
+	trigger_shake(4.5, 0.30)
+	var chest: CursedChest = _chests_by_room.get(room, null)
+	if chest != null:
+		chest.unlock_reward()
+	on_event_cleared(room, &"Rune Plates Chamber", &"Ritual purged - Open the chest for loot!")
 	game._patrol_manager.schedule_respawn(room)
 
 

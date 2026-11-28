@@ -1,0 +1,72 @@
+[gd_scene format=3 uid="uid://cltugd8jjec0e"]
+
+[ext_resource type="Script" uid="uid://16bibjtms5pv" path="res://rune_plate/rune_plate.gd" id="1_plate"]
+[ext_resource type="Script" uid="uid://2po3p1oan02" path="res://rune_plate/rune_ring.gd" id="2_ring"]
+[ext_resource type="Texture2D" uid="uid://cd8wqoflbfbrv" path="res://map/light_texture.tres" id="3_light"]
+[ext_resource type="Texture2D" uid="uid://bcdffd77n000l" path="res://data/assets/map/props/ritual_circle_00.png" id="4_c00"]
+[ext_resource type="Texture2D" uid="uid://di215h3rj38cw" path="res://data/assets/map/props/ritual_circle_01.png" id="5_c01"]
+[ext_resource type="Texture2D" uid="uid://c2a8dowrts27n" path="res://data/assets/map/props/ritual_circle_10.png" id="6_c10"]
+[ext_resource type="Texture2D" uid="uid://but2jj481y2sp" path="res://data/assets/map/props/ritual_circle_11.png" id="7_c11"]
+
+[node name="RunePlate" type="Node2D" unique_id=607380047]
+z_index = -1
+script = ExtResource("1_plate")
+
+[node name="RuneRing" type="Node2D" parent="." unique_id=259262865]
+z_index = -1
+script = ExtResource("2_ring")
+
+[node name="RitualCircle" type="Node2D" parent="." unique_id=1787304970]
+
+[node name="TL" type="Sprite2D" parent="RitualCircle" unique_id=1074089454]
+position = Vector2(-8, -8)
+texture = ExtResource("4_c00")
+
+[node name="TR" type="Sprite2D" parent="RitualCircle" unique_id=1645654963]
+position = Vector2(8, -8)
+texture = ExtResource("5_c01")
+
+[node name="BL" type="Sprite2D" parent="RitualCircle" unique_id=1877360082]
+position = Vector2(-8, 8)
+texture = ExtResource("6_c10")
+
+[node name="BR" type="Sprite2D" parent="RitualCircle" unique_id=620008564]
+position = Vector2(8, 8)
+texture = ExtResource("7_c11")
+
+[node name="RuneParticles" type="CPUParticles2D" parent="." unique_id=1262518166]
+z_index = 1
+emitting = false
+amount = 14
+lifetime = 0.85
+emission_shape = 1
+emission_sphere_radius = 28.0
+direction = Vector2(0, -1)
+gravity = Vector2(0, -18)
+initial_velocity_min = 6.0
+initial_velocity_max = 18.0
+scale_amount_min = 1.2
+scale_amount_max = 2.2
+color = Color(0.55, 0.92, 1, 0.85)
+
+[node name="BurstParticles" type="CPUParticles2D" parent="." unique_id=340977223]
+z_index = 2
+emitting = false
+amount = 24
+lifetime = 0.55
+one_shot = true
+explosiveness = 0.92
+spread = 180.0
+gravity = Vector2(0, -10)
+initial_velocity_min = 36.0
+initial_velocity_max = 92.0
+scale_amount_min = 1.5
+scale_amount_max = 3.0
+color = Color(0.5, 1, 0.72, 0.95)
+
+[node name="RuneLight" type="PointLight2D" parent="." unique_id=1429523190]
+enabled = false
+color = Color(0.35, 0.82, 1, 1)
+energy = 0.35
+texture = ExtResource("3_light")
+texture_scale = 1.8

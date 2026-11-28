@@ -612,7 +612,7 @@ func _update_enemies() -> void:
 			continue
 
 		var dist_sq: float = enemy.global_position.distance_squared_to(camera_pos)
-		if dist_sq > ENEMY_DESPAWN_DIST_SQ and not _event_director.is_active_obelisk_room(enemy.home_room):
+		if dist_sq > ENEMY_DESPAWN_DIST_SQ and not _event_director.is_active_open_event_room(enemy.home_room):
 			_despawn_enemy(enemy)
 			i -= 1
 			continue

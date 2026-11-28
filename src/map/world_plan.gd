@@ -41,6 +41,7 @@ enum RoomEventType {
 	CLOSING_SPIKES,
 	WAVE_AMBUSH,
 	CURSED_OBELISKS,
+	RUNE_PLATES,
 }
 
 const WORLD_SIZE_TILES: int = 4096
@@ -79,6 +80,7 @@ var room_event_types: Dictionary[Rect2i, RoomEventType] = {}
 var closing_spike_hazards: Dictionary[Rect2i, ClosingSpikeHazard] = {}
 var wave_ambushes: Dictionary[Rect2i, WaveAmbush] = {}
 var obelisk_encounters: Dictionary[Rect2i, ObeliskEncounter] = {}
+var rune_encounters: Dictionary[Rect2i, RunePlateEncounter] = {}
 var event_spike_cell_rooms: Dictionary[Vector2i, Rect2i] = {}
 var corridor_coin_cells: Array[Vector2i] = []
 var corridor_potion_spawns: Array[Dictionary] = []
@@ -134,6 +136,7 @@ func generate(seed_val: int = 0, max_depth: int = 12) -> void:
 	closing_spike_hazards.clear()
 	wave_ambushes.clear()
 	obelisk_encounters.clear()
+	rune_encounters.clear()
 	event_spike_cell_rooms.clear()
 	corridor_coin_cells.clear()
 	corridor_potion_spawns.clear()
