@@ -16,10 +16,12 @@ const EVENT_BANNER_HOLD: float = 1.6
 const EVENT_BANNER_FADE_OUT: float = 0.4
 const KEY_COLLECTED_COLOR: Color = Color(1.0, 1.0, 1.0, 1.0)
 const KEY_USED_COLOR: Color = Color(0.45, 0.48, 0.52, 0.20)
-const RESCUE_TEXT_COLOR: Color = Color(0.88, 0.96, 1.0, 1.0)
-const RESCUE_FLASH_COLOR: Color = Color(0.45, 1.0, 0.72, 1.0)
-const FALLEN_TEXT_COLOR: Color = Color(0.95, 0.52, 0.52, 1.0)
-const FALLEN_FLASH_COLOR: Color = Color(1.0, 0.22, 0.22, 1.0)
+const RESCUE_FLASH_MODULATE: Color = Color(0.55, 1.60, 0.85, 1.0)
+const FALLEN_FLASH_MODULATE: Color = Color(1.70, 0.45, 0.45, 1.0)
+const PILL_POP_SCALE: Vector2 = Vector2(1.30, 1.30)
+const PILL_POP_SCALE_DURATION: float = 0.36
+const PILL_FLASH_HOLD: float = 0.28
+const PILL_FLASH_FADE: float = 0.65
 
 var _current_level: int = 1
 var _target_xp: float = 0.0
@@ -184,9 +186,9 @@ func update_escapee_progress(
 	_map_overlay.set_run_counts(rescued, total, fallen)
 
 	if pop_rescue:
-		_rescue_pop_tween = _play_pill_pop(_rescue_pop_tween, _rescue_box, _rescue_label, RESCUE_FLASH_COLOR, RESCUE_TEXT_COLOR)
+		_rescue_pop_tween = _play_pill_pop(_rescue_pop_tween, _rescue_box, RESCUE_FLASH_MODULATE)
 	if pop_fallen and show_fallen:
-		_fallen_pop_tween = _play_pill_pop(_fallen_pop_tween, _fallen_box, _fallen_label, FALLEN_FLASH_COLOR, FALLEN_TEXT_COLOR)
+		_fallen_pop_tween = _play_pill_pop(_fallen_pop_tween, _fallen_box, FALLEN_FLASH_MODULATE)
 
 
 func update_run_time(elapsed_seconds: float) -> void:
@@ -210,19 +212,17 @@ func finalize_run_stats(stats: RunStats, squad: Array[Hero], class_levels: Dicti
 func _play_pill_pop(
 	active_tween: Tween,
 	box: Control,
-	label: Label,
-	flash_color: Color,
-	base_color: Color,
+	flash_modulate: Color,
 ) -> Tween:
 	if active_tween != null and active_tween.is_valid():
 		active_tween.kill()
 	box.pivot_offset = box.size * 0.5
-	box.scale = Vector2(1.22, 1.22)
-	label.add_theme_color_override(&"font_color", flash_color)
+	box.scale = PILL_POP_SCALE
+	box.modulate = flash_modulate
 	var tween: Tween = create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(box, ^"scale", Vector2.ONE, 0.24).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.tween_method(label.add_theme_color_override.bind(&"font_color"), flash_color, base_color, 0.35)
+	tween.tween_property(box, ^"scale", Vector2.ONE, PILL_POP_SCALE_DURATION).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(box, ^"modulate", Color.WHITE, PILL_FLASH_FADE).set_delay(PILL_FLASH_HOLD)
 	return tween
 
 
