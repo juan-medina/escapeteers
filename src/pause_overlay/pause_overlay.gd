@@ -32,7 +32,8 @@ func initialize() -> void:
 	_codex_mechanics_panel.initialize()
 
 
-func open_game_over() -> void:
+func open_game_over(stats: RunStats, score: RunScore) -> void:
+	_game_over_dialog.populate(stats, score)
 	_open_panel(_game_over_dialog)
 
 

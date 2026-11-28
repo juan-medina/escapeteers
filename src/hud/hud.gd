@@ -16,6 +16,10 @@ const EVENT_BANNER_HOLD: float = 1.6
 const EVENT_BANNER_FADE_OUT: float = 0.4
 const KEY_COLLECTED_COLOR: Color = Color(1.0, 1.0, 1.0, 1.0)
 const KEY_USED_COLOR: Color = Color(0.45, 0.48, 0.52, 0.20)
+const RESCUE_TEXT_COLOR: Color = Color(0.88, 0.96, 1.0, 1.0)
+const RESCUE_FLASH_COLOR: Color = Color(0.45, 1.0, 0.72, 1.0)
+const FALLEN_TEXT_COLOR: Color = Color(0.95, 0.52, 0.52, 1.0)
+const FALLEN_FLASH_COLOR: Color = Color(1.0, 0.22, 0.22, 1.0)
 
 var _current_level: int = 1
 var _target_xp: float = 0.0
@@ -26,6 +30,8 @@ var _toast_tweens: Array[Tween] = [null, null, null]
 var _toast_order: Array[int] = []
 var _event_banner_tween: Tween = null
 var _event_banner_style: StyleBoxFlat = null
+var _rescue_pop_tween: Tween = null
+var _fallen_pop_tween: Tween = null
 var _last_haste_secs: int = -1
 var _last_fury_secs: int = -1
 
@@ -43,6 +49,11 @@ var _last_fury_secs: int = -1
 @onready var _xp_badge: HBoxContainer = $Margin/HBox/BuffBar/XpBadge
 @onready var _map_hint: Label = $MapHint
 @onready var _movement_hint: Label = $MovementHint
+@onready var _rescue_box: HBoxContainer = $EscapeePill/HBox/RescueBox
+@onready var _rescue_label: Label = $EscapeePill/HBox/RescueBox/Label
+@onready var _escapee_divider: ColorRect = $EscapeePill/HBox/Divider
+@onready var _fallen_box: HBoxContainer = $EscapeePill/HBox/FallenBox
+@onready var _fallen_label: Label = $EscapeePill/HBox/FallenBox/Label
 @onready var _notification_stack: VBoxContainer = $NotificationStack
 @onready var _event_banner: PanelContainer = $NotificationStack/EventBanner
 @onready var _event_tag_label: Label = $NotificationStack/EventBanner/VBox/TagLabel
@@ -151,6 +162,68 @@ func setup_map(plan: WorldPlan, target: Hero) -> void:
 	_reset_keys()
 	update_potion_buffs(0.0, 0.0)
 	_map_overlay.setup(plan, target)
+
+
+func setup_run_tracker(total_escapees: int, room_escapees: Dictionary[Rect2i, int]) -> void:
+	_map_overlay.set_room_escapee_counts(room_escapees)
+	update_escapee_progress(0, total_escapees, 0, false, false)
+
+
+func update_escapee_progress(
+	rescued: int,
+	total: int,
+	fallen: int,
+	pop_rescue: bool = false,
+	pop_fallen: bool = false,
+) -> void:
+	_rescue_label.text = &"%d/%d" % [rescued, total]
+	var show_fallen: bool = fallen > 0
+	_escapee_divider.visible = show_fallen
+	_fallen_box.visible = show_fallen
+	_fallen_label.text = &"%d" % fallen
+	_map_overlay.set_run_counts(rescued, total, fallen)
+
+	if pop_rescue:
+		_rescue_pop_tween = _play_pill_pop(_rescue_pop_tween, _rescue_box, _rescue_label, RESCUE_FLASH_COLOR, RESCUE_TEXT_COLOR)
+	if pop_fallen and show_fallen:
+		_fallen_pop_tween = _play_pill_pop(_fallen_pop_tween, _fallen_box, _fallen_label, FALLEN_FLASH_COLOR, FALLEN_TEXT_COLOR)
+
+
+func update_run_time(elapsed_seconds: float) -> void:
+	_map_overlay.set_run_time(elapsed_seconds)
+
+
+func set_room_unrescued_escapees(room: Rect2i, remaining: int) -> void:
+	_map_overlay.set_room_unrescued_escapees(room, remaining)
+
+
+func add_fallen_marker(world_pos: Vector2, class_color: Color) -> void:
+	_map_overlay.add_tombstone_marker(world_pos, class_color)
+
+
+func finalize_run_stats(stats: RunStats, squad: Array[Hero], class_levels: Dictionary[StringName, int]) -> void:
+	stats.record_room_discovered(_map_overlay.get_discovered_room_count())
+	stats.record_exploration(_map_overlay.get_explored_percent())
+	stats.finalize_snapshot(squad, class_levels, _damage_meter.get_run_class_damages(), _damage_meter.get_run_combat_duration())
+
+
+func _play_pill_pop(
+	active_tween: Tween,
+	box: Control,
+	label: Label,
+	flash_color: Color,
+	base_color: Color,
+) -> Tween:
+	if active_tween != null and active_tween.is_valid():
+		active_tween.kill()
+	box.pivot_offset = box.size * 0.5
+	box.scale = Vector2(1.22, 1.22)
+	label.add_theme_color_override(&"font_color", flash_color)
+	var tween: Tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(box, ^"scale", Vector2.ONE, 0.24).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_method(label.add_theme_color_override.bind(&"font_color"), flash_color, base_color, 0.35)
+	return tween
 
 
 func update_potion_buffs(haste_remaining: float, fury_remaining: float, heal_active: bool = false, xp_active: bool = false) -> void:

@@ -315,6 +315,7 @@ func _on_reveal_map_pressed() -> void:
 	for room: Rect2i in _game._map.plan.rooms:
 		overlay.mark_room_discovered(room)
 	overlay.mark_room_discovered(_game._map.hero_room)
+	overlay.sync_exploration_from_chunks()
 	overlay._update_gate_markers_visibility()
 	overlay._dirty = true
 	if overlay.visible:

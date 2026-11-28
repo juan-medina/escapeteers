@@ -1,0 +1,40 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game_over_dialog/class_breakdown_row.gd" id="1_row"]
+[ext_resource type="FontFile" uid="uid://dlxxgod8ydjxc" path="res://data/assets/pixel_ui_theme/m3x6.ttf" id="2_m3x6"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fill"]
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[node name="ClassBreakdownRow" type="HBoxContainer"]
+custom_minimum_size = Vector2(240, 11)
+theme_override_constants/separation = 5
+script = ExtResource("1_row")
+
+[node name="ClassLabel" type="Label" parent="."]
+custom_minimum_size = Vector2(52, 0)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "KNT Lv.1"
+
+[node name="DamageBar" type="ProgressBar" parent="."]
+custom_minimum_size = Vector2(48, 5)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_styles/fill = SubResource("StyleBoxFlat_fill")
+max_value = 100.0
+show_percentage = false
+
+[node name="StatsLabel" type="Label" parent="."]
+custom_minimum_size = Vector2(82, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.88, 0.94, 1)
+theme_override_fonts/font = ExtResource("2_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "0  0/s"
+horizontal_alignment = 2

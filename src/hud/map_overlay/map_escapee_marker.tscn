@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://biom466o56pdg"]
+
+[ext_resource type="FontFile" uid="uid://dlxxgod8ydjxc" path="res://data/assets/pixel_ui_theme/m3x6.ttf" id="1_m3x6"]
+
+[node name="MapEscapeeMarker" type="Label" unique_id=920310588]
+custom_minimum_size = Vector2(20, 12)
+offset_right = 20.0
+offset_bottom = 12.0
+theme_override_colors/font_color = Color(0.55, 0.95, 1, 1)
+theme_override_colors/font_outline_color = Color(0.03, 0.03, 0.05, 1)
+theme_override_constants/outline_size = 1
+theme_override_fonts/font = ExtResource("1_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "?"
+horizontal_alignment = 1
+vertical_alignment = 1

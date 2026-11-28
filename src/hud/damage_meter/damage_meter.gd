@@ -25,10 +25,12 @@ const SPIKE_COLOR: Color = Color(0.72, 0.75, 0.82)
 
 var _in_combat: bool = false
 var _combat_duration: float = 0.0
+var _completed_combat_duration: float = 0.0
 var _time_since_last_hit: float = COMBAT_TIMEOUT
 var _refresh_timer: float = 0.0
 var _total_encounter_damage: float = 0.0
 var _class_damages: Dictionary[StringName, float] = {}
+var _run_class_damages: Dictionary[StringName, float] = {}
 var _squad_counts: Dictionary[StringName, int] = {}
 var _row_pool: Array[DamageMeterRow] = []
 var _entry_pool: Array[MeterEntry] = []
@@ -51,6 +53,7 @@ func _process(delta: float) -> void:
 	if _time_since_last_hit >= COMBAT_TIMEOUT:
 		_in_combat = false
 		_combat_duration = maxf(1.0, _combat_duration - COMBAT_TIMEOUT)
+		_completed_combat_duration += _combat_duration
 		_refresh_display()
 		return
 
@@ -73,10 +76,19 @@ func record_damage(class_id: StringName, amount: float) -> void:
 	_in_combat = true
 	_time_since_last_hit = 0.0
 	_class_damages[class_id] = _class_damages.get(class_id, 0.0) + amount
+	_run_class_damages[class_id] = _run_class_damages.get(class_id, 0.0) + amount
 	_total_encounter_damage += amount
 
 	if is_new_encounter:
 		_refresh_display()
+
+
+func get_run_class_damages() -> Dictionary[StringName, float]:
+	return _run_class_damages.duplicate()
+
+
+func get_run_combat_duration() -> float:
+	return _completed_combat_duration + (_combat_duration if _in_combat else 0.0)
 
 
 func update_squad(squad: Array[Hero]) -> void:

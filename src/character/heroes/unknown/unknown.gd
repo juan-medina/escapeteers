@@ -9,6 +9,7 @@ const FLICKER_AMP: float = 0.12
 const HINT_LIGHT_ENERGY: float = 2.0
 
 var forced_hero_id: StringName = &""
+var home_room: Rect2i = Rect2i()
 
 var _flicker_time: float = 0.0
 

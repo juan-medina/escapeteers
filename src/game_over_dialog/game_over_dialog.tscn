@@ -3,31 +3,275 @@
 [ext_resource type="Script" path="res://game_over_dialog/game_over_dialog.gd" id="1_gov"]
 [ext_resource type="FontFile" uid="uid://bg6arvysy4jwv" path="res://data/assets/pixel_ui_theme/m6x11plus.ttf" id="2_m6x11plus"]
 [ext_resource type="PackedScene" path="res://codex_panel/unread_badge.tscn" id="3_badge"]
+[ext_resource type="FontFile" uid="uid://bst61g6fxq6sj" path="res://data/assets/pixel_ui_theme/m6x11.ttf" id="4_m6x11"]
+[ext_resource type="FontFile" uid="uid://coftxjtdkqsnn" path="res://data/assets/pixel_ui_theme/m5x7.ttf" id="5_m5x7"]
+[ext_resource type="FontFile" uid="uid://dlxxgod8ydjxc" path="res://data/assets/pixel_ui_theme/m3x6.ttf" id="6_m3x6"]
 
 [node name="GameOverDialog" type="PanelContainer" node_paths=PackedStringArray("first_focus")]
 process_mode = 3
+custom_minimum_size = Vector2(540, 0)
 script = ExtResource("1_gov")
 first_focus = NodePath("VBox/Buttons/Retry")
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 5
 alignment = 1
 
-[node name="Title" type="Label" parent="VBox"]
+[node name="Header" type="VBoxContainer" parent="VBox"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="VBox/Header"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_m6x11plus")
 theme_override_font_sizes/font_size = 18
 text = "Game Over"
 horizontal_alignment = 1
 
-[node name="Body" type="Label" parent="VBox"]
+[node name="Body" type="Label" parent="VBox/Header"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
+theme_override_fonts/font = ExtResource("6_m3x6")
+theme_override_font_sizes/font_size = 16
 text = "Your leader has fallen."
 horizontal_alignment = 1
-autowrap_mode = 2
 
-[node name="HSeparator" type="HSeparator" parent="VBox"]
+[node name="TopSeparator" type="HSeparator" parent="VBox"]
+layout_mode = 2
+
+[node name="Content" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ScoreColumn" type="VBoxContainer" parent="VBox/Content"]
+custom_minimum_size = Vector2(224, 0)
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="ScoreHeader" type="Label" parent="VBox/Content/ScoreColumn"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_fonts/font = ExtResource("4_m6x11")
+theme_override_font_sizes/font_size = 16
+text = "SCORE CARD"
+
+[node name="ScoreRows" type="VBoxContainer" parent="VBox/Content/ScoreColumn"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="TotalSeparator" type="HSeparator" parent="VBox/Content/ScoreColumn"]
+layout_mode = 2
+
+[node name="TotalRow" type="HBoxContainer" parent="VBox/Content/ScoreColumn"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBox/Content/ScoreColumn/TotalRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("4_m6x11")
+theme_override_font_sizes/font_size = 16
+text = "TOTAL SCORE"
+
+[node name="TotalValue" type="Label" parent="VBox/Content/ScoreColumn/TotalRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_fonts/font = ExtResource("4_m6x11")
+theme_override_font_sizes/font_size = 16
+text = "0"
+horizontal_alignment = 2
+
+[node name="BestRow" type="HBoxContainer" parent="VBox/Content/ScoreColumn"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBox/Content/ScoreColumn/BestRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.62, 0.68, 0.78, 1)
+theme_override_fonts/font = ExtResource("6_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "BEST SCORE"
+
+[node name="BestValue" type="Label" parent="VBox/Content/ScoreColumn/BestRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.75, 0.84, 1)
+theme_override_fonts/font = ExtResource("5_m5x7")
+theme_override_font_sizes/font_size = 16
+text = "0"
+horizontal_alignment = 2
+
+[node name="SummarySeparator" type="HSeparator" parent="VBox/Content/ScoreColumn"]
+layout_mode = 2
+
+[node name="SummaryHeader" type="Label" parent="VBox/Content/ScoreColumn"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.76, 0.92, 1)
+theme_override_fonts/font = ExtResource("6_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "RUN SUMMARY"
+
+[node name="TimeRow" type="HBoxContainer" parent="VBox/Content/ScoreColumn"]
+layout_mode = 2
+
+[node name="Key" type="Label" parent="VBox/Content/ScoreColumn/TimeRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.72, 0.76, 0.84, 1)
+theme_override_fonts/font = ExtResource("6_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "Run Time"
+
+[node name="Value" type="Label" parent="VBox/Content/ScoreColumn/TimeRow"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_m5x7")
+theme_override_font_sizes/font_size = 16
+text = "00:00"
+horizontal_alignment = 2
+
+[node name="RoomsRow" type="HBoxContainer" parent="VBox/Content/ScoreColumn"]
+layout_mode = 2
+
+[node name="Key" type="Label" parent="VBox/Content/ScoreColumn/RoomsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.72, 0.76, 0.84, 1)
+theme_override_fonts/font = ExtResource("6_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "Rooms Discovered"
+
+[node name="Value" type="Label" parent="VBox/Content/ScoreColumn/RoomsRow"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_m5x7")
+theme_override_font_sizes/font_size = 16
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="EscapeesRow" type="HBoxContainer" parent="VBox/Content/ScoreColumn"]
+layout_mode = 2
+
+[node name="Key" type="Label" parent="VBox/Content/ScoreColumn/EscapeesRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.72, 0.76, 0.84, 1)
+theme_override_fonts/font = ExtResource("6_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "Escapees"
+
+[node name="Value" type="Label" parent="VBox/Content/ScoreColumn/EscapeesRow"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_m5x7")
+theme_override_font_sizes/font_size = 16
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="TrapRow" type="HBoxContainer" parent="VBox/Content/ScoreColumn"]
+layout_mode = 2
+
+[node name="Key" type="Label" parent="VBox/Content/ScoreColumn/TrapRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.72, 0.76, 0.84, 1)
+theme_override_fonts/font = ExtResource("6_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "Trap Damage Taken"
+
+[node name="Value" type="Label" parent="VBox/Content/ScoreColumn/TrapRow"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_m5x7")
+theme_override_font_sizes/font_size = 16
+text = "0"
+horizontal_alignment = 2
+
+[node name="MvpRow" type="HBoxContainer" parent="VBox/Content/ScoreColumn"]
+layout_mode = 2
+
+[node name="Key" type="Label" parent="VBox/Content/ScoreColumn/MvpRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.72, 0.76, 0.84, 1)
+theme_override_fonts/font = ExtResource("6_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "MVP Class"
+
+[node name="Value" type="Label" parent="VBox/Content/ScoreColumn/MvpRow"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_m5x7")
+theme_override_font_sizes/font_size = 16
+text = "None"
+horizontal_alignment = 2
+
+[node name="ColumnSeparator" type="VSeparator" parent="VBox/Content"]
+layout_mode = 2
+
+[node name="BreakdownColumn" type="VBoxContainer" parent="VBox/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 3
+
+[node name="ClassHeaderRow" type="HBoxContainer" parent="VBox/Content/BreakdownColumn"]
+layout_mode = 2
+
+[node name="Header" type="Label" parent="VBox/Content/BreakdownColumn/ClassHeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.92, 1, 1)
+theme_override_fonts/font = ExtResource("4_m6x11")
+theme_override_font_sizes/font_size = 16
+text = "CLASS BREAKDOWN"
+
+[node name="Columns" type="Label" parent="VBox/Content/BreakdownColumn/ClassHeaderRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.62, 0.72, 1)
+theme_override_fonts/font = ExtResource("6_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "DMG   DPS"
+horizontal_alignment = 2
+
+[node name="ClassRows" type="VBoxContainer" parent="VBox/Content/BreakdownColumn"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="RollCallSeparator" type="HSeparator" parent="VBox/Content/BreakdownColumn"]
+layout_mode = 2
+
+[node name="RollCallHeader" type="Label" parent="VBox/Content/BreakdownColumn"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.76, 0.92, 1)
+theme_override_fonts/font = ExtResource("6_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "SQUAD ROLL CALL"
+
+[node name="LeaderLabel" type="RichTextLabel" parent="VBox/Content/BreakdownColumn"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_fonts/normal_font = ExtResource("6_m3x6")
+theme_override_font_sizes/normal_font_size = 16
+bbcode_enabled = true
+text = "Leader: None"
+fit_content = true
+scroll_active = false
+
+[node name="LivingLabel" type="RichTextLabel" parent="VBox/Content/BreakdownColumn"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_fonts/normal_font = ExtResource("6_m3x6")
+theme_override_font_sizes/normal_font_size = 16
+bbcode_enabled = true
+text = "Living (0): None"
+fit_content = true
+scroll_active = false
+
+[node name="FallenLabel" type="RichTextLabel" parent="VBox/Content/BreakdownColumn"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_fonts/normal_font = ExtResource("6_m3x6")
+theme_override_font_sizes/normal_font_size = 16
+bbcode_enabled = true
+text = "Fallen (0): None"
+fit_content = true
+scroll_active = false
+
+[node name="BottomSeparator" type="HSeparator" parent="VBox"]
 layout_mode = 2
 
 [node name="Buttons" type="HBoxContainer" parent="VBox"]

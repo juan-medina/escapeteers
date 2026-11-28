@@ -1,30 +1,16 @@
 [gd_scene format=3 uid="uid://c6sfl12l8kd1o"]
 
-[ext_resource type="Script" path="res://hud/hud.gd" id="1_hud"]
+[ext_resource type="Script" uid="uid://b36ilkn35odvd" path="res://hud/hud.gd" id="1_hud"]
 [ext_resource type="PackedScene" path="res://hud/damage_meter/damage_meter.tscn" id="2_meter"]
-[ext_resource type="PackedScene" path="res://hud/map_overlay/map_overlay.tscn" id="3_map"]
+[ext_resource type="PackedScene" uid="uid://b5lsgvbfd70re" path="res://hud/map_overlay/map_overlay.tscn" id="3_map"]
 [ext_resource type="PackedScene" path="res://hud/squad_grid/squad_grid.tscn" id="4_squad_grid"]
 [ext_resource type="FontFile" uid="uid://bst61g6fxq6sj" path="res://data/assets/pixel_ui_theme/m6x11.ttf" id="5_m6x11"]
 [ext_resource type="Texture2D" uid="uid://bew3b5nrsmhiw" path="res://data/assets/map/tiles/Tileset.png" id="6_tileset"]
-[ext_resource type="Texture2D" path="res://data/assets/hud/door_icon.png" id="7_door_icon"]
-[ext_resource type="Texture2D" path="res://data/assets/hud/key_icon.png" id="8_key_icon"]
+[ext_resource type="Texture2D" uid="uid://dk18all5cr5cd" path="res://data/assets/hud/door_icon.png" id="7_door_icon"]
+[ext_resource type="Texture2D" uid="uid://cmfakype08jbm" path="res://data/assets/hud/key_icon.png" id="8_key_icon"]
 [ext_resource type="FontFile" uid="uid://coftxjtdkqsnn" path="res://data/assets/pixel_ui_theme/m5x7.ttf" id="9_m5x7"]
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_blue_key"]
-atlas = ExtResource("6_tileset")
-region = Rect2(160, 464, 16, 16)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_green_key"]
-atlas = ExtResource("6_tileset")
-region = Rect2(128, 480, 16, 16)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_yellow_key"]
-atlas = ExtResource("6_tileset")
-region = Rect2(112, 480, 16, 16)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_red_key"]
-atlas = ExtResource("6_tileset")
-region = Rect2(144, 464, 16, 16)
+[ext_resource type="Texture2D" uid="uid://fxsy6pxgyh0q" path="res://data/assets/character/heroes/unknown/unknown.png" id="10_unknown"]
+[ext_resource type="Texture2D" uid="uid://catd67boj0lvn" path="res://data/assets/map/props/tombstone.png" id="11_tombstone"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_health_potion"]
 atlas = ExtResource("6_tileset")
@@ -42,17 +28,21 @@ region = Rect2(208, 384, 16, 16)
 atlas = ExtResource("6_tileset")
 region = Rect2(224, 368, 16, 16)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_room_toast"]
-content_margin_left = 8.0
-content_margin_top = 2.0
-content_margin_right = 8.0
-content_margin_bottom = 2.0
-bg_color = Color(0.06, 0.06, 0.09, 0.88)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.2, 0.22, 0.3, 0.6)
+[sub_resource type="AtlasTexture" id="AtlasTexture_blue_key"]
+atlas = ExtResource("6_tileset")
+region = Rect2(160, 464, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_green_key"]
+atlas = ExtResource("6_tileset")
+region = Rect2(128, 480, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_yellow_key"]
+atlas = ExtResource("6_tileset")
+region = Rect2(112, 480, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_red_key"]
+atlas = ExtResource("6_tileset")
+region = Rect2(144, 464, 16, 16)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_event_banner"]
 content_margin_left = 10.0
@@ -65,6 +55,34 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(1, 0.28, 0.28, 0.95)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_room_toast"]
+content_margin_left = 8.0
+content_margin_top = 2.0
+content_margin_right = 8.0
+content_margin_bottom = 2.0
+bg_color = Color(0.06, 0.06, 0.09, 0.88)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.22, 0.3, 0.6)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_escapee_pill"]
+content_margin_left = 6.0
+content_margin_top = 2.0
+content_margin_right = 6.0
+content_margin_bottom = 2.0
+bg_color = Color(0.06, 0.06, 0.1, 0.78)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.22, 0.3, 0.6)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
 
 [node name="Hud" type="CanvasLayer" unique_id=1849182746]
 layer = 10
@@ -104,125 +122,122 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
 text = "0 / 50"
 
-[node name="BuffBar" type="HBoxContainer" parent="Margin/HBox"]
+[node name="BuffBar" type="HBoxContainer" parent="Margin/HBox" unique_id=191417384]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="HealBadge" type="HBoxContainer" parent="Margin/HBox/BuffBar"]
+[node name="HealBadge" type="HBoxContainer" parent="Margin/HBox/BuffBar" unique_id=1487137354]
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="Icon" type="TextureRect" parent="Margin/HBox/BuffBar/HealBadge"]
+[node name="Icon" type="TextureRect" parent="Margin/HBox/BuffBar/HealBadge" unique_id=1788243512]
 custom_minimum_size = Vector2(16, 16)
 layout_mode = 2
 texture = SubResource("AtlasTexture_health_potion")
 stretch_mode = 3
 
-[node name="TimerLabel" type="Label" parent="Margin/HBox/BuffBar/HealBadge"]
+[node name="TimerLabel" type="Label" parent="Margin/HBox/BuffBar/HealBadge" unique_id=1192318273]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.38, 0.42, 1)
 theme_override_fonts/font = ExtResource("5_m6x11")
 theme_override_font_sizes/font_size = 16
 text = "+HP"
 
-[node name="HasteBadge" type="HBoxContainer" parent="Margin/HBox/BuffBar"]
+[node name="HasteBadge" type="HBoxContainer" parent="Margin/HBox/BuffBar" unique_id=1184731577]
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="Icon" type="TextureRect" parent="Margin/HBox/BuffBar/HasteBadge"]
+[node name="Icon" type="TextureRect" parent="Margin/HBox/BuffBar/HasteBadge" unique_id=368457886]
 custom_minimum_size = Vector2(16, 16)
 layout_mode = 2
 texture = SubResource("AtlasTexture_haste_potion")
 stretch_mode = 3
 
-[node name="TimerLabel" type="Label" parent="Margin/HBox/BuffBar/HasteBadge"]
+[node name="TimerLabel" type="Label" parent="Margin/HBox/BuffBar/HasteBadge" unique_id=472178851]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.35, 0.85, 1, 1)
 theme_override_fonts/font = ExtResource("5_m6x11")
 theme_override_font_sizes/font_size = 16
 text = "12s"
 
-[node name="FuryBadge" type="HBoxContainer" parent="Margin/HBox/BuffBar"]
+[node name="FuryBadge" type="HBoxContainer" parent="Margin/HBox/BuffBar" unique_id=730499527]
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="Icon" type="TextureRect" parent="Margin/HBox/BuffBar/FuryBadge"]
+[node name="Icon" type="TextureRect" parent="Margin/HBox/BuffBar/FuryBadge" unique_id=791317120]
 custom_minimum_size = Vector2(16, 16)
 layout_mode = 2
 texture = SubResource("AtlasTexture_fury_potion")
 stretch_mode = 3
 
-[node name="TimerLabel" type="Label" parent="Margin/HBox/BuffBar/FuryBadge"]
+[node name="TimerLabel" type="Label" parent="Margin/HBox/BuffBar/FuryBadge" unique_id=1858830906]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.84, 0.28, 1)
 theme_override_fonts/font = ExtResource("5_m6x11")
 theme_override_font_sizes/font_size = 16
 text = "12s"
 
-[node name="XpBadge" type="HBoxContainer" parent="Margin/HBox/BuffBar"]
+[node name="XpBadge" type="HBoxContainer" parent="Margin/HBox/BuffBar" unique_id=1157787791]
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="Icon" type="TextureRect" parent="Margin/HBox/BuffBar/XpBadge"]
+[node name="Icon" type="TextureRect" parent="Margin/HBox/BuffBar/XpBadge" unique_id=37974938]
 custom_minimum_size = Vector2(16, 16)
 layout_mode = 2
 texture = SubResource("AtlasTexture_xp_potion")
 stretch_mode = 3
 
-[node name="TimerLabel" type="Label" parent="Margin/HBox/BuffBar/XpBadge"]
+[node name="TimerLabel" type="Label" parent="Margin/HBox/BuffBar/XpBadge" unique_id=1150306192]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.82, 0.48, 1, 1)
 theme_override_fonts/font = ExtResource("5_m6x11")
 theme_override_font_sizes/font_size = 16
 text = "+XP"
 
-[node name="KeyBar" type="HBoxContainer" parent="Margin/HBox"]
+[node name="KeyBar" type="HBoxContainer" parent="Margin/HBox" unique_id=700547941]
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="BlueKey" type="TextureRect" parent="Margin/HBox/KeyBar"]
+[node name="BlueKey" type="TextureRect" parent="Margin/HBox/KeyBar" unique_id=174957298]
 visible = false
 custom_minimum_size = Vector2(16, 16)
 layout_mode = 2
 texture = SubResource("AtlasTexture_blue_key")
 stretch_mode = 3
 
-[node name="GreenKey" type="TextureRect" parent="Margin/HBox/KeyBar"]
+[node name="GreenKey" type="TextureRect" parent="Margin/HBox/KeyBar" unique_id=966596379]
 visible = false
 custom_minimum_size = Vector2(16, 16)
 layout_mode = 2
 texture = SubResource("AtlasTexture_green_key")
 stretch_mode = 3
 
-[node name="YellowKey" type="TextureRect" parent="Margin/HBox/KeyBar"]
+[node name="YellowKey" type="TextureRect" parent="Margin/HBox/KeyBar" unique_id=335764658]
 visible = false
 custom_minimum_size = Vector2(16, 16)
 layout_mode = 2
 texture = SubResource("AtlasTexture_yellow_key")
 stretch_mode = 3
 
-[node name="RedKey" type="TextureRect" parent="Margin/HBox/KeyBar"]
+[node name="RedKey" type="TextureRect" parent="Margin/HBox/KeyBar" unique_id=729289707]
 visible = false
 custom_minimum_size = Vector2(16, 16)
 layout_mode = 2
 texture = SubResource("AtlasTexture_red_key")
 stretch_mode = 3
 
-[node name="DamageMeter" parent="." instance=ExtResource("2_meter")]
+[node name="DamageMeter" parent="." unique_id=113990778 instance=ExtResource("2_meter")]
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -154.0
-offset_top = 28.0
 offset_right = -16.0
-offset_bottom = 54.0
-grow_horizontal = 0
 
-[node name="SquadGrid" parent="." instance=ExtResource("4_squad_grid")]
+[node name="SquadGrid" parent="." unique_id=324483417 instance=ExtResource("4_squad_grid")]
 
 [node name="MapHint" type="Label" parent="." unique_id=581938210]
 anchors_preset = 2
@@ -249,10 +264,10 @@ offset_bottom = -26.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 0.85)
-horizontal_alignment = 1
 text = "WASD / Cursors / Controller or touch to move"
+horizontal_alignment = 1
 
-[node name="NotificationStack" type="VBoxContainer" parent="."]
+[node name="NotificationStack" type="VBoxContainer" parent="." unique_id=295313734]
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
@@ -264,237 +279,302 @@ grow_horizontal = 2
 mouse_filter = 2
 theme_override_constants/separation = 3
 
-[node name="EventBanner" type="PanelContainer" parent="NotificationStack"]
+[node name="EventBanner" type="PanelContainer" parent="NotificationStack" unique_id=2034361790]
 visible = false
 layout_mode = 2
 size_flags_horizontal = 4
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_event_banner")
 
-[node name="VBox" type="VBoxContainer" parent="NotificationStack/EventBanner"]
+[node name="VBox" type="VBoxContainer" parent="NotificationStack/EventBanner" unique_id=211636250]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="TagLabel" type="Label" parent="NotificationStack/EventBanner/VBox"]
+[node name="TagLabel" type="Label" parent="NotificationStack/EventBanner/VBox" unique_id=1138745288]
 layout_mode = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.28, 0.28, 1)
 theme_override_fonts/font = ExtResource("9_m5x7")
 theme_override_font_sizes/font_size = 16
 text = "! WARNING !"
 horizontal_alignment = 1
 
-[node name="TitleLabel" type="Label" parent="NotificationStack/EventBanner/VBox"]
+[node name="TitleLabel" type="Label" parent="NotificationStack/EventBanner/VBox" unique_id=1682949333]
 layout_mode = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("5_m6x11")
 theme_override_font_sizes/font_size = 16
 text = "Blood Spike Arena"
 horizontal_alignment = 1
 
-[node name="SubtitleLabel" type="Label" parent="NotificationStack/EventBanner/VBox"]
+[node name="SubtitleLabel" type="Label" parent="NotificationStack/EventBanner/VBox" unique_id=932082664]
 layout_mode = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.88, 0.84, 0.84, 0.95)
 theme_override_fonts/font = ExtResource("9_m5x7")
 theme_override_font_sizes/font_size = 16
 text = "Clear all enemies to stop the spikes"
 horizontal_alignment = 1
 
-[node name="Toast0" type="PanelContainer" parent="NotificationStack"]
+[node name="Toast0" type="PanelContainer" parent="NotificationStack" unique_id=1577859622]
 visible = false
 layout_mode = 2
 size_flags_horizontal = 4
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_room_toast")
 
-[node name="Label" type="Label" parent="NotificationStack/Toast0"]
+[node name="Label" type="Label" parent="NotificationStack/Toast0" unique_id=1008576607]
 layout_mode = 2
-mouse_filter = 2
 theme_override_fonts/font = ExtResource("5_m6x11")
 theme_override_font_sizes/font_size = 16
 text = "Slime Pit - Lv. 1"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Toast1" type="PanelContainer" parent="NotificationStack"]
+[node name="Toast1" type="PanelContainer" parent="NotificationStack" unique_id=517277487]
 visible = false
 layout_mode = 2
 size_flags_horizontal = 4
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_room_toast")
 
-[node name="Label" type="Label" parent="NotificationStack/Toast1"]
+[node name="Label" type="Label" parent="NotificationStack/Toast1" unique_id=176524428]
 layout_mode = 2
-mouse_filter = 2
 theme_override_fonts/font = ExtResource("5_m6x11")
 theme_override_font_sizes/font_size = 16
 text = "Slime Pit - Lv. 1"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Toast2" type="PanelContainer" parent="NotificationStack"]
+[node name="Toast2" type="PanelContainer" parent="NotificationStack" unique_id=1184224750]
 visible = false
 layout_mode = 2
 size_flags_horizontal = 4
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_room_toast")
 
-[node name="Label" type="Label" parent="NotificationStack/Toast2"]
+[node name="Label" type="Label" parent="NotificationStack/Toast2" unique_id=1069326173]
 layout_mode = 2
-mouse_filter = 2
 theme_override_fonts/font = ExtResource("5_m6x11")
 theme_override_font_sizes/font_size = 16
 text = "Slime Pit - Lv. 1"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="EdgeIndicators" type="Node2D" parent="."]
+[node name="EdgeIndicators" type="Node2D" parent="." unique_id=1108616452]
 
-[node name="BlueDoorIndicator" type="Node2D" parent="EdgeIndicators"]
+[node name="BlueDoorIndicator" type="Node2D" parent="EdgeIndicators" unique_id=1187932957]
 visible = false
 modulate = Color(0.25, 0.68, 1, 0.95)
 
-[node name="Icon" type="Sprite2D" parent="EdgeIndicators/BlueDoorIndicator"]
+[node name="Icon" type="Sprite2D" parent="EdgeIndicators/BlueDoorIndicator" unique_id=1339222181]
 texture = ExtResource("7_door_icon")
 
-[node name="Arrow" type="Node2D" parent="EdgeIndicators/BlueDoorIndicator"]
+[node name="Arrow" type="Node2D" parent="EdgeIndicators/BlueDoorIndicator" unique_id=1562609087]
 
-[node name="Fill" type="Polygon2D" parent="EdgeIndicators/BlueDoorIndicator/Arrow"]
+[node name="Fill" type="Polygon2D" parent="EdgeIndicators/BlueDoorIndicator/Arrow" unique_id=862411055]
 polygon = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 
-[node name="Outline" type="Line2D" parent="EdgeIndicators/BlueDoorIndicator/Arrow"]
+[node name="Outline" type="Line2D" parent="EdgeIndicators/BlueDoorIndicator/Arrow" unique_id=1270966671]
 points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 closed = true
 width = 1.0
 default_color = Color(0.09, 0.11, 0.15, 0.95)
 
-[node name="GreenDoorIndicator" type="Node2D" parent="EdgeIndicators"]
+[node name="GreenDoorIndicator" type="Node2D" parent="EdgeIndicators" unique_id=1498619966]
 visible = false
 modulate = Color(0.3, 0.92, 0.48, 0.95)
 
-[node name="Icon" type="Sprite2D" parent="EdgeIndicators/GreenDoorIndicator"]
+[node name="Icon" type="Sprite2D" parent="EdgeIndicators/GreenDoorIndicator" unique_id=870826526]
 texture = ExtResource("7_door_icon")
 
-[node name="Arrow" type="Node2D" parent="EdgeIndicators/GreenDoorIndicator"]
+[node name="Arrow" type="Node2D" parent="EdgeIndicators/GreenDoorIndicator" unique_id=1133505105]
 
-[node name="Fill" type="Polygon2D" parent="EdgeIndicators/GreenDoorIndicator/Arrow"]
+[node name="Fill" type="Polygon2D" parent="EdgeIndicators/GreenDoorIndicator/Arrow" unique_id=16050291]
 polygon = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 
-[node name="Outline" type="Line2D" parent="EdgeIndicators/GreenDoorIndicator/Arrow"]
+[node name="Outline" type="Line2D" parent="EdgeIndicators/GreenDoorIndicator/Arrow" unique_id=1280194354]
 points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 closed = true
 width = 1.0
 default_color = Color(0.09, 0.11, 0.15, 0.95)
 
-[node name="YellowDoorIndicator" type="Node2D" parent="EdgeIndicators"]
+[node name="YellowDoorIndicator" type="Node2D" parent="EdgeIndicators" unique_id=914489197]
 visible = false
 modulate = Color(1, 0.86, 0.25, 0.95)
 
-[node name="Icon" type="Sprite2D" parent="EdgeIndicators/YellowDoorIndicator"]
+[node name="Icon" type="Sprite2D" parent="EdgeIndicators/YellowDoorIndicator" unique_id=476320106]
 texture = ExtResource("7_door_icon")
 
-[node name="Arrow" type="Node2D" parent="EdgeIndicators/YellowDoorIndicator"]
+[node name="Arrow" type="Node2D" parent="EdgeIndicators/YellowDoorIndicator" unique_id=2143136522]
 
-[node name="Fill" type="Polygon2D" parent="EdgeIndicators/YellowDoorIndicator/Arrow"]
+[node name="Fill" type="Polygon2D" parent="EdgeIndicators/YellowDoorIndicator/Arrow" unique_id=51710159]
 polygon = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 
-[node name="Outline" type="Line2D" parent="EdgeIndicators/YellowDoorIndicator/Arrow"]
+[node name="Outline" type="Line2D" parent="EdgeIndicators/YellowDoorIndicator/Arrow" unique_id=2001021261]
 points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 closed = true
 width = 1.0
 default_color = Color(0.09, 0.11, 0.15, 0.95)
 
-[node name="RedDoorIndicator" type="Node2D" parent="EdgeIndicators"]
+[node name="RedDoorIndicator" type="Node2D" parent="EdgeIndicators" unique_id=1376427333]
 visible = false
 modulate = Color(1, 0.35, 0.35, 0.95)
 
-[node name="Icon" type="Sprite2D" parent="EdgeIndicators/RedDoorIndicator"]
+[node name="Icon" type="Sprite2D" parent="EdgeIndicators/RedDoorIndicator" unique_id=1030352940]
 texture = ExtResource("7_door_icon")
 
-[node name="Arrow" type="Node2D" parent="EdgeIndicators/RedDoorIndicator"]
+[node name="Arrow" type="Node2D" parent="EdgeIndicators/RedDoorIndicator" unique_id=1792532746]
 
-[node name="Fill" type="Polygon2D" parent="EdgeIndicators/RedDoorIndicator/Arrow"]
+[node name="Fill" type="Polygon2D" parent="EdgeIndicators/RedDoorIndicator/Arrow" unique_id=674440566]
 polygon = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 
-[node name="Outline" type="Line2D" parent="EdgeIndicators/RedDoorIndicator/Arrow"]
+[node name="Outline" type="Line2D" parent="EdgeIndicators/RedDoorIndicator/Arrow" unique_id=1825714872]
 points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 closed = true
 width = 1.0
 default_color = Color(0.09, 0.11, 0.15, 0.95)
 
-[node name="BlueKeyIndicator" type="Node2D" parent="EdgeIndicators"]
+[node name="BlueKeyIndicator" type="Node2D" parent="EdgeIndicators" unique_id=572515894]
 visible = false
 modulate = Color(0.25, 0.68, 1, 0.95)
 
-[node name="Icon" type="Sprite2D" parent="EdgeIndicators/BlueKeyIndicator"]
+[node name="Icon" type="Sprite2D" parent="EdgeIndicators/BlueKeyIndicator" unique_id=1592300061]
 texture = ExtResource("8_key_icon")
 
-[node name="Arrow" type="Node2D" parent="EdgeIndicators/BlueKeyIndicator"]
+[node name="Arrow" type="Node2D" parent="EdgeIndicators/BlueKeyIndicator" unique_id=122594447]
 
-[node name="Fill" type="Polygon2D" parent="EdgeIndicators/BlueKeyIndicator/Arrow"]
+[node name="Fill" type="Polygon2D" parent="EdgeIndicators/BlueKeyIndicator/Arrow" unique_id=1470762790]
 polygon = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 
-[node name="Outline" type="Line2D" parent="EdgeIndicators/BlueKeyIndicator/Arrow"]
+[node name="Outline" type="Line2D" parent="EdgeIndicators/BlueKeyIndicator/Arrow" unique_id=1655645447]
 points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 closed = true
 width = 1.0
 default_color = Color(0.09, 0.11, 0.15, 0.95)
 
-[node name="GreenKeyIndicator" type="Node2D" parent="EdgeIndicators"]
+[node name="GreenKeyIndicator" type="Node2D" parent="EdgeIndicators" unique_id=2000526732]
 visible = false
 modulate = Color(0.3, 0.92, 0.48, 0.95)
 
-[node name="Icon" type="Sprite2D" parent="EdgeIndicators/GreenKeyIndicator"]
+[node name="Icon" type="Sprite2D" parent="EdgeIndicators/GreenKeyIndicator" unique_id=859026824]
 texture = ExtResource("8_key_icon")
 
-[node name="Arrow" type="Node2D" parent="EdgeIndicators/GreenKeyIndicator"]
+[node name="Arrow" type="Node2D" parent="EdgeIndicators/GreenKeyIndicator" unique_id=593343881]
 
-[node name="Fill" type="Polygon2D" parent="EdgeIndicators/GreenKeyIndicator/Arrow"]
+[node name="Fill" type="Polygon2D" parent="EdgeIndicators/GreenKeyIndicator/Arrow" unique_id=876049692]
 polygon = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 
-[node name="Outline" type="Line2D" parent="EdgeIndicators/GreenKeyIndicator/Arrow"]
+[node name="Outline" type="Line2D" parent="EdgeIndicators/GreenKeyIndicator/Arrow" unique_id=1232830955]
 points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 closed = true
 width = 1.0
 default_color = Color(0.09, 0.11, 0.15, 0.95)
 
-[node name="YellowKeyIndicator" type="Node2D" parent="EdgeIndicators"]
+[node name="YellowKeyIndicator" type="Node2D" parent="EdgeIndicators" unique_id=1338906557]
 visible = false
 modulate = Color(1, 0.86, 0.25, 0.95)
 
-[node name="Icon" type="Sprite2D" parent="EdgeIndicators/YellowKeyIndicator"]
+[node name="Icon" type="Sprite2D" parent="EdgeIndicators/YellowKeyIndicator" unique_id=1004068303]
 texture = ExtResource("8_key_icon")
 
-[node name="Arrow" type="Node2D" parent="EdgeIndicators/YellowKeyIndicator"]
+[node name="Arrow" type="Node2D" parent="EdgeIndicators/YellowKeyIndicator" unique_id=1936417160]
 
-[node name="Fill" type="Polygon2D" parent="EdgeIndicators/YellowKeyIndicator/Arrow"]
+[node name="Fill" type="Polygon2D" parent="EdgeIndicators/YellowKeyIndicator/Arrow" unique_id=1157379281]
 polygon = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 
-[node name="Outline" type="Line2D" parent="EdgeIndicators/YellowKeyIndicator/Arrow"]
+[node name="Outline" type="Line2D" parent="EdgeIndicators/YellowKeyIndicator/Arrow" unique_id=1926565307]
 points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 closed = true
 width = 1.0
 default_color = Color(0.09, 0.11, 0.15, 0.95)
 
-[node name="RedKeyIndicator" type="Node2D" parent="EdgeIndicators"]
+[node name="RedKeyIndicator" type="Node2D" parent="EdgeIndicators" unique_id=1071757996]
 visible = false
 modulate = Color(1, 0.35, 0.35, 0.95)
 
-[node name="Icon" type="Sprite2D" parent="EdgeIndicators/RedKeyIndicator"]
+[node name="Icon" type="Sprite2D" parent="EdgeIndicators/RedKeyIndicator" unique_id=1201978878]
 texture = ExtResource("8_key_icon")
 
-[node name="Arrow" type="Node2D" parent="EdgeIndicators/RedKeyIndicator"]
+[node name="Arrow" type="Node2D" parent="EdgeIndicators/RedKeyIndicator" unique_id=1724441805]
 
-[node name="Fill" type="Polygon2D" parent="EdgeIndicators/RedKeyIndicator/Arrow"]
+[node name="Fill" type="Polygon2D" parent="EdgeIndicators/RedKeyIndicator/Arrow" unique_id=1734617621]
 polygon = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 
-[node name="Outline" type="Line2D" parent="EdgeIndicators/RedKeyIndicator/Arrow"]
+[node name="Outline" type="Line2D" parent="EdgeIndicators/RedKeyIndicator/Arrow" unique_id=588176704]
 points = PackedVector2Array(14, 0, 8.5, -3.5, 10, 0, 8.5, 3.5)
 closed = true
 width = 1.0
 default_color = Color(0.09, 0.11, 0.15, 0.95)
 
-[node name="MapOverlay" parent="." instance=ExtResource("3_map")]
+[node name="EscapeePill" type="PanelContainer" parent="." unique_id=931353735]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -84.0
+offset_top = -30.0
+offset_right = -16.0
+offset_bottom = -8.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_escapee_pill")
+
+[node name="HBox" type="HBoxContainer" parent="EscapeePill" unique_id=141906112]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="RescueBox" type="HBoxContainer" parent="EscapeePill/HBox" unique_id=165330611]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="Icon" type="TextureRect" parent="EscapeePill/HBox/RescueBox" unique_id=963934297]
+custom_minimum_size = Vector2(12, 18)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("10_unknown")
+stretch_mode = 3
+
+[node name="Label" type="Label" parent="EscapeePill/HBox/RescueBox" unique_id=1642569892]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.96, 1, 1)
+theme_override_fonts/font = ExtResource("9_m5x7")
+theme_override_font_sizes/font_size = 16
+text = "0/0"
+vertical_alignment = 1
+
+[node name="Divider" type="ColorRect" parent="EscapeePill/HBox" unique_id=1034003307]
+visible = false
+custom_minimum_size = Vector2(1, 14)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+color = Color(0.35, 0.38, 0.48, 0.65)
+
+[node name="FallenBox" type="HBoxContainer" parent="EscapeePill/HBox" unique_id=948413236]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="Icon" type="TextureRect" parent="EscapeePill/HBox/FallenBox" unique_id=2083139571]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("11_tombstone")
+stretch_mode = 3
+
+[node name="Label" type="Label" parent="EscapeePill/HBox/FallenBox" unique_id=1043033445]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.52, 0.52, 1)
+theme_override_fonts/font = ExtResource("9_m5x7")
+theme_override_font_sizes/font_size = 16
+text = "0"
+vertical_alignment = 1
+
+[node name="MapOverlay" parent="." unique_id=1226659338 instance=ExtResource("3_map")]

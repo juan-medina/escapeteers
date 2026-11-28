@@ -244,3 +244,93 @@ func _compute_separation(hero: Hero, squad: Array[Hero]) -> Vector2:
 			push += (diff / dist) * (SEPARATION_SPEED * strength)
 
 	return push
+
+
+static func rebalance_slots(squad: Array[Hero]) -> void:
+	if squad.size() <= 1:
+		return
+
+	var backline: Array[Hero] = []
+	var frontline: Array[Hero] = []
+
+	for i: int in range(1, squad.size()):
+		var hero: Hero = squad[i]
+		if _is_backline_hero(hero):
+			backline.append(hero)
+		else:
+			frontline.append(hero)
+
+	backline.sort_custom(_compare_hero_formation_priority)
+	frontline.sort_custom(_compare_hero_formation_priority)
+
+	squad.resize(1)
+	squad.append_array(backline)
+	squad.append_array(frontline)
+
+	var ring: int = 0
+	var backline_idx: int = 0
+	var frontline_idx: int = 0
+	var total_assigned: int = 0
+	while backline_idx < backline.size() or frontline_idx < frontline.size():
+		var ring_cap: int = RING_BASE_CAPACITY * (ring + 1)
+		var ring_backline: Array[Hero] = []
+		var ring_frontline: Array[Hero] = []
+		while backline_idx < backline.size() and (ring_backline.size() + ring_frontline.size()) < ring_cap:
+			ring_backline.append(backline[backline_idx])
+			backline_idx += 1
+		while frontline_idx < frontline.size() and (ring_backline.size() + ring_frontline.size()) < ring_cap:
+			ring_frontline.append(frontline[frontline_idx])
+			frontline_idx += 1
+		var b_count: int = ring_backline.size()
+		var f_count: int = ring_frontline.size()
+		var b_angles: Array[float] = _calculate_arc_angles(b_count, false)
+		var f_angles: Array[float] = _calculate_arc_angles(f_count, true)
+		for i: int in range(b_count):
+			var follower: Hero = ring_backline[i]
+			follower.squad_member.assign_formation_slot(ring, b_angles[i], total_assigned, false)
+			total_assigned += 1
+		for i: int in range(f_count):
+			var follower: Hero = ring_frontline[i]
+			follower.squad_member.assign_formation_slot(ring, f_angles[i], total_assigned, true)
+			total_assigned += 1
+		ring += 1
+
+
+static func _is_backline_hero(hero: Hero) -> bool:
+	var role: HeroData.Role = hero.hero_data.role
+	return role == HeroData.Role.HEALER or role == HeroData.Role.RANGED
+
+
+static func _get_hero_formation_priority(hero: Hero) -> int:
+	match hero.hero_data.role:
+		HeroData.Role.HEALER:
+			return 0
+		HeroData.Role.RANGED:
+			return 1
+		HeroData.Role.HYBRID:
+			return 2
+		_:
+			return 3
+
+
+static func _compare_hero_formation_priority(a: Hero, b: Hero) -> bool:
+	return _get_hero_formation_priority(a) < _get_hero_formation_priority(b)
+
+
+static func _calculate_arc_angles(count: int, is_front: bool) -> Array[float]:
+	var angles: Array[float] = []
+	if count <= 0:
+		return angles
+
+	var center_angle: float = 0.0 if is_front else PI
+	if count == 1:
+		angles.append(center_angle)
+		return angles
+
+	var max_span: float = PI * 0.75
+	var arc_span: float = minf(max_span, float(count - 1) * 0.6)
+	var start_angle: float = center_angle - (arc_span * 0.5)
+	var step_size: float = arc_span / float(count - 1)
+	for i: int in range(count):
+		angles.append(start_angle + float(i) * step_size)
+	return angles

@@ -94,6 +94,7 @@ var _spike_hit_cooldowns: Dictionary[Character, float] = {}
 var _current_room: Rect2i = Rect2i()
 var _last_player_cell: Vector2i = Vector2i(2147483647, 2147483647)
 var _enemy_scan_tick: int = 0
+var _run_tracker: RunTracker = RunTracker.new()
 
 @onready var _camera: Camera2D = $Camera2D
 @onready var _characters: Node2D = $Characters
@@ -143,6 +144,7 @@ func _ready() -> void:
 	_hud.update_squad(_squad)
 	_hud.setup_map(_map.plan, _character)
 	_check_room_entry()
+	_run_tracker.start_run(_map, _hud, starting_data.id)
 
 	Transition.set_loading_progress(0.92)
 	await get_tree().process_frame
@@ -190,6 +192,7 @@ func _process(delta: float) -> void:
 	_camera.position = _character.position
 	_event_director.update(delta)
 	if not _character.is_dead:
+		_run_tracker.advance_time(delta, _hud)
 		_patrol_manager.advance_time(delta)
 		if _character.is_moving:
 			_hud.dismiss_movement_hint()
@@ -257,7 +260,7 @@ func _check_room_entry() -> void:
 func _spawn_initial_characters() -> void:
 	_starter_recruits.clear()
 	for pos: Vector2 in _map.get_starter_companion_spawn_positions():
-		_starter_recruits.append(_spawn_recruit_at(pos))
+		_starter_recruits.append(_spawn_recruit_at(pos, _map.hero_room))
 
 	for room: Rect2i in _map.companion_rooms:
 		_spawn_companions_for_room(room)
@@ -283,13 +286,14 @@ func _spawn_companions_for_room(room: Rect2i) -> void:
 	for pos: Vector2 in _map.get_companion_spawn_positions_for_room(room):
 		if (_squad.size() + _unrecruited_characters.size()) >= MAX_CHARACTERS:
 			break
-		_spawn_recruit_at(pos)
+		_spawn_recruit_at(pos, room)
 
 
-func _spawn_recruit_at(pos: Vector2) -> Unknown:
+func _spawn_recruit_at(pos: Vector2, room: Rect2i) -> Unknown:
 	var ch: Unknown = UNKNOWN_SCENE.instantiate() as Unknown
 	_characters.add_child(ch)
 	ch.position = pos
+	ch.home_room = room
 	ch.y_sort_enabled = true
 	_unrecruited_characters.append(ch)
 	return ch
@@ -342,7 +346,9 @@ func _on_shortcut_opened(shortcut: ShortcutTunnelPlanner.LocalShortcut) -> void:
 
 func _spawn_hero(hero_data: HeroData, pos: Vector2, is_leader: bool) -> Hero:
 	Codex.discover(Codex.Category.HEROES, hero_data.id)
-	var hero_level: int = _class_levels.get(hero_data.id, 1)
+	if not _class_levels.has(hero_data.id):
+		_class_levels[hero_data.id] = 1
+	var hero_level: int = _class_levels[hero_data.id]
 	var hero: Hero = hero_data.scene.instantiate() as Hero
 	hero_data.apply_to_hero(hero, hero_level)
 	_potion_manager.apply_buffs_to_hero(hero)
@@ -664,6 +670,7 @@ func _on_hero_died(hero: Hero) -> void:
 	_clear_dead_hero_references(hero)
 	_rebalance_escort_slots()
 	_hud.update_squad(_squad)
+	_run_tracker.record_companion_death(hero, _map, _characters, _hud)
 
 
 func _on_player_died() -> void:
@@ -688,7 +695,8 @@ func _clear_dead_hero_references(dead_hero: Hero) -> void:
 func _on_player_death_completed() -> void:
 	Audio.play_sfx(Audio.Sfx.GAME_OVER)
 	Audio.stop_music()
-	_pause_overlay.open_game_over()
+	var score: RunScore = _run_tracker.build_game_over_score(_squad, _class_levels, _hud)
+	_pause_overlay.open_game_over(_run_tracker.stats, score)
 
 
 func _check_recruitment() -> void:
@@ -704,6 +712,7 @@ func _check_recruitment() -> void:
 			if candidate.is_touching(member):
 				_unrecruited_characters.remove_at(i)
 				var recruit_pos: Vector2 = candidate.position
+				_run_tracker.begin_recruit(candidate)
 				var forced_id: StringName = candidate.forced_hero_id
 				var starter_idx: int = _starter_recruits.find(candidate)
 				if starter_idx != -1:
@@ -737,6 +746,7 @@ func _on_hero_recruited(hero_data: HeroData) -> void:
 	_spawn_hero(hero_data, _pending_recruit_pos, false)
 	_rebalance_escort_slots()
 	_hud.update_squad(_squad)
+	_run_tracker.complete_rescue(_hud)
 
 
 func _on_hero_enemy_hit(enemy: Enemy, damage: float, is_heavy: bool, hero: Hero) -> void:
@@ -811,94 +821,8 @@ func _on_class_leveled_up(hero_data: HeroData) -> void:
 		_open_next_level_up()
 
 
-static func _is_backline_hero(hero: Hero) -> bool:
-	var role: HeroData.Role = hero.hero_data.role
-	return role == HeroData.Role.HEALER or role == HeroData.Role.RANGED
-
-
-static func _get_hero_formation_priority(hero: Hero) -> int:
-	match hero.hero_data.role:
-		HeroData.Role.HEALER:
-			return 0
-		HeroData.Role.RANGED:
-			return 1
-		HeroData.Role.HYBRID:
-			return 2
-		_:
-			return 3
-
-
-static func _compare_hero_formation_priority(a: Hero, b: Hero) -> bool:
-	return _get_hero_formation_priority(a) < _get_hero_formation_priority(b)
-
-
-static func _calculate_arc_angles(count: int, is_front: bool) -> Array[float]:
-	var angles: Array[float] = []
-	if count <= 0:
-		return angles
-
-	var center_angle: float = 0.0 if is_front else PI
-	if count == 1:
-		angles.append(center_angle)
-		return angles
-
-	var max_span: float = PI * 0.75
-	var arc_span: float = minf(max_span, float(count - 1) * 0.6)
-	var start_angle: float = center_angle - (arc_span * 0.5)
-	var step_size: float = arc_span / float(count - 1)
-	for i: int in range(count):
-		angles.append(start_angle + float(i) * step_size)
-	return angles
-
-
 func _rebalance_escort_slots() -> void:
-	if _squad.size() <= 1:
-		return
-
-	var backline: Array[Hero] = []
-	var frontline: Array[Hero] = []
-
-	for i: int in range(1, _squad.size()):
-		var hero: Hero = _squad[i]
-		if _is_backline_hero(hero):
-			backline.append(hero)
-		else:
-			frontline.append(hero)
-
-	backline.sort_custom(_compare_hero_formation_priority)
-	frontline.sort_custom(_compare_hero_formation_priority)
-
-	_squad.resize(1)
-	_squad.append_array(backline)
-	_squad.append_array(frontline)
-
-	var ring: int = 0
-	var backline_idx: int = 0
-	var frontline_idx: int = 0
-	var total_assigned: int = 0
-	while backline_idx < backline.size() or frontline_idx < frontline.size():
-		var ring_cap: int = SquadMember.RING_BASE_CAPACITY * (ring + 1)
-		var ring_backline: Array[Hero] = []
-		var ring_frontline: Array[Hero] = []
-		while backline_idx < backline.size() and (ring_backline.size() + ring_frontline.size()) < ring_cap:
-			ring_backline.append(backline[backline_idx])
-			backline_idx += 1
-		while frontline_idx < frontline.size() and (ring_backline.size() + ring_frontline.size()) < ring_cap:
-			ring_frontline.append(frontline[frontline_idx])
-			frontline_idx += 1
-		var b_count: int = ring_backline.size()
-		var f_count: int = ring_frontline.size()
-		var b_angles: Array[float] = _calculate_arc_angles(b_count, false)
-		var f_angles: Array[float] = _calculate_arc_angles(f_count, true)
-		for i: int in range(b_count):
-			var follower: Hero = ring_backline[i]
-			follower.squad_member.assign_formation_slot(ring, b_angles[i], total_assigned, false)
-			total_assigned += 1
-		for i: int in range(f_count):
-			var follower: Hero = ring_frontline[i]
-			follower.squad_member.assign_formation_slot(ring, f_angles[i], total_assigned, true)
-			total_assigned += 1
-		ring += 1
+	SquadMember.rebalance_slots(_squad)
 
 
 func _reset_combat_cooldown() -> void:
@@ -966,7 +890,9 @@ func _update_spike_hazards(delta: float) -> void:
 
 	for member: Hero in _squad:
 		if not member.is_dead:
-			_check_character_spike(member)
+			var hero_spike_dmg: float = _check_character_spike(member)
+			if hero_spike_dmg > 0.0:
+				_run_tracker.record_trap_damage(hero_spike_dmg)
 
 	for enemy: Enemy in _enemies:
 		if not enemy.is_dead and enemy.visible and enemy.is_physics_processing():
@@ -976,6 +902,8 @@ func _update_spike_hazards(delta: float) -> void:
 
 
 func _check_character_spike(character: Character, is_enemy: bool = false) -> float:
+	if not is_enemy and Hero.god_mode:
+		return 0.0
 	if _spike_hit_cooldowns.has(character):
 		return 0.0
 	var foot_cell: Vector2i = _map.local_to_map(character.get_hurtbox_position())

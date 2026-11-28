@@ -373,3 +373,56 @@ func _subtract_intervals(base_min: int, base_max: int, blockers: Array[Vector2i]
 
 static func _compare_intervals_asc(a: Vector2i, b: Vector2i) -> bool:
 	return a.x < b.x
+
+
+static func append_bar_quad(verts: PackedVector2Array, p0: Vector2, p1: Vector2, half_thickness: float) -> void:
+	var t: Vector2 = (p1 - p0).normalized()
+	var n: Vector2 = Vector2(-t.y, t.x) * half_thickness
+	verts.append(p0 - n)
+	verts.append(p1 - n)
+	verts.append(p1 + n)
+	verts.append(p0 - n)
+	verts.append(p1 + n)
+	verts.append(p0 + n)
+
+
+static func append_shortcut_glyph(
+	verts: PackedVector2Array,
+	p0: Vector2,
+	p1: Vector2,
+	open_dir: Vector2,
+	half_thickness: float,
+	chevron_gap: float,
+	chevron_length: float,
+	chevron_half_width: float,
+) -> void:
+	append_bar_quad(verts, p0, p1, half_thickness)
+	var center: Vector2 = (p0 + p1) * 0.5
+	var perp: Vector2 = Vector2(-open_dir.y, open_dir.x)
+	var tip: Vector2 = center - open_dir * (half_thickness + chevron_gap)
+	var base_mid: Vector2 = tip - open_dir * chevron_length
+	verts.append(tip)
+	verts.append(base_mid + perp * chevron_half_width)
+	verts.append(base_mid - perp * chevron_half_width)
+
+
+static func create_triangle_mesh(vertices: PackedVector2Array) -> ArrayMesh:
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	var mesh: ArrayMesh = ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
+
+
+static func get_door_line_endpoints(door_cells: Array[Vector2i], is_horizontal: bool) -> Array[Vector2]:
+	var c0: Vector2i = door_cells[0]
+	var c1: Vector2i = door_cells[1]
+	if is_horizontal:
+		var x0: int = mini(c0.x, c1.x)
+		var y_mid: float = (float(c0.y) + 0.5) * TILE_SIZE
+		return [Vector2(float(x0) * TILE_SIZE, y_mid), Vector2(float(x0 + 2) * TILE_SIZE, y_mid)]
+	var y_min: int = mini(c0.y, c1.y)
+	var y_max: int = maxi(c0.y, c1.y)
+	var x_mid: float = (float(c0.x) + 0.5) * TILE_SIZE
+	return [Vector2(x_mid, float(y_min - 1) * TILE_SIZE), Vector2(x_mid, float(y_max + 1) * TILE_SIZE)]

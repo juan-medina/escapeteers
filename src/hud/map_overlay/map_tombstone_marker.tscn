@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://bunasievxcqj5"]
+
+[node name="MapTombstoneMarker" type="Node2D" unique_id=404463573]
+
+[node name="Outline" type="Polygon2D" parent="." unique_id=1364833502]
+color = Color(0.05, 0.06, 0.09, 0.95)
+polygon = PackedVector2Array(-3.5, 4.5, -3.5, -1.5, -2.5, -3.5, 0, -4.5, 2.5, -3.5, 3.5, -1.5, 3.5, 4.5)
+
+[node name="Stone" type="Polygon2D" parent="." unique_id=1484259737]
+color = Color(0.64, 0.69, 0.77, 1)
+polygon = PackedVector2Array(-2.5, 3.5, -2.5, -1, -1.5, -2.5, 0, -3.5, 1.5, -2.5, 2.5, -1, 2.5, 3.5)
+
+[node name="Accent" type="Polygon2D" parent="." unique_id=704291050]
+polygon = PackedVector2Array(0, -1.8, 1.8, 0, 0, 1.8, -1.8, 0)

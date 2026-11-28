@@ -12,6 +12,8 @@
 - [color=#ffffff][b]Floating Combat Text:[/b][/color] Merged damage bursts, heals, and immune cues.
 - [color=#ffffff][b]Corridor Traps & Loot:[/b][/color] Torches, spikes, and loot line dungeon passages.
 - [color=#ffffff][b]Wandering Patrols:[/b][/color] Monster patrols reclaim distant cleared rooms.
+- [color=#ffffff][b]Escapee Tracker & Tombstones:[/b][/color] Spot missing escapees and fallen hero memorials.
+- [color=#ffffff][b]Game Over Score Card:[/b][/color] Arcade score, personal best, and squad breakdown.
 
 [color=#e0e0e0][b]Changed[/b][/color]
 - [color=#ffffff][b]Labyrinth & Local Shortcuts:[/b][/color] Four-way mazes with sliding stone shortcut walls.

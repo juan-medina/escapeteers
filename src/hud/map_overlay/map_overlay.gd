@@ -116,10 +116,12 @@ var _hud_key_indicators: Array[Node2D] = []
 var _hud_key_arrows: Array[Node2D] = []
 var _chunk_meshes: MapChunkMeshes = MapChunkMeshes.new()
 var _visibility: MapVisibility = MapVisibility.new()
+var _run_markers: MapRunMarkers = MapRunMarkers.new()
 var _visited_fov_chunks: Dictionary[Vector2i, bool] = {}
 var _fov_chunks: Dictionary[Vector2i, bool] = {}
 
 @onready var _zoom_label: Label = $FrameMargin/VBox/HeaderBar/ZoomLabel
+@onready var _summary_label: Label = $FrameMargin/VBox/SummaryBar/SummaryLabel
 @onready var _controls_hint: Label = $FrameMargin/VBox/FooterBar/ControlsHint
 @onready var _map_viewport: Control = $FrameMargin/VBox/MapFrame/MapViewport
 @onready var _chunks_container: Node2D = $FrameMargin/VBox/MapFrame/MapViewport/Chunks
@@ -128,6 +130,8 @@ var _fov_chunks: Dictionary[Vector2i, bool] = {}
 @onready var _walls_mesh: MeshInstance2D = $FrameMargin/VBox/MapFrame/MapViewport/Chunks/WallsMesh
 @onready var _shortcut_lines_mesh: MeshInstance2D = $FrameMargin/VBox/MapFrame/MapViewport/Chunks/ShortcutLinesMesh
 @onready var _room_labels_container: Node2D = $FrameMargin/VBox/MapFrame/MapViewport/RoomLabels
+@onready var _escapee_markers_container: Node2D = $FrameMargin/VBox/MapFrame/MapViewport/EscapeeMarkers
+@onready var _tombstone_markers_container: Node2D = $FrameMargin/VBox/MapFrame/MapViewport/TombstoneMarkers
 @onready var _player_marker: Node2D = $FrameMargin/VBox/MapFrame/MapViewport/PlayerMarker
 @onready var _player_pulse_ring: Line2D = $FrameMargin/VBox/MapFrame/MapViewport/PlayerMarker/PulseRing
 @onready var _door_meshes: Array[MeshInstance2D] = [
@@ -148,6 +152,7 @@ func _ready() -> void:
 	visible = false
 	set_process(false)
 	_chunk_meshes.bind_layers(_unexplored_floor_mesh, _explored_floor_mesh, _walls_mesh)
+	_run_markers.bind_ui(_summary_label, _escapee_markers_container, _tombstone_markers_container)
 	InputManager.input_mode_changed.connect(_on_input_mode_changed)
 	_update_controls_hint(InputManager.current_mode)
 
@@ -317,8 +322,41 @@ func mark_room_discovered(room: Rect2i) -> void:
 	label.visible = false
 	label.text = "Start" if depth <= 0 else (("! Lv.%d" % depth) if active_event else ("Lv.%d" % depth))
 	_discovered_labels.append(RoomLabelEntry.new(room, label, world_center, depth, is_event, active_event))
+	_run_markers.on_room_discovered(room, world_center)
 	if visible:
 		_refresh_discovered_labels()
+
+
+func set_run_counts(rescued: int, total: int, fallen: int) -> void:
+	_run_markers.set_run_counts(rescued, total, fallen)
+
+
+func set_run_time(elapsed_seconds: float) -> void:
+	_run_markers.set_run_time(elapsed_seconds)
+
+
+func set_room_escapee_counts(counts: Dictionary[Rect2i, int]) -> void:
+	_run_markers.set_room_escapee_counts(counts, _discovered_labels)
+
+
+func set_room_unrescued_escapees(room: Rect2i, remaining: int) -> void:
+	_run_markers.set_room_unrescued_escapees(room, remaining, _discovered_rooms.has(room))
+
+
+func add_tombstone_marker(world_pos: Vector2, class_color: Color) -> void:
+	_run_markers.add_tombstone_marker(world_pos, class_color)
+
+
+func get_discovered_room_count() -> int:
+	return _discovered_rooms.size()
+
+
+func get_explored_percent() -> int:
+	return _run_markers.get_explored_percent()
+
+
+func sync_exploration_from_chunks() -> void:
+	_run_markers.sync_explored_chunks(_explored_chunks, _chunk_meshes._chunk_floor_vertices)
 
 
 func set_squad_level(squad_level: int) -> void:
@@ -622,6 +660,8 @@ func _update_view() -> void:
 		if on_viewport:
 			entry.label.position = pos
 
+	_run_markers.update_positions(viewport_center, cam_scaled, map_scale, vp_size)
+
 	_player_marker.position = viewport_center + (_target.global_position * map_scale).round() - cam_scaled
 	if _target.move_direction.length_squared() > 0.001:
 		_player_marker.rotation = _target.move_direction.angle()
@@ -640,15 +680,7 @@ func _update_discovery() -> void:
 
 
 func _reveal_chunks_at(origin_tile: Vector2i) -> void:
-	(
-		_visibility
-		. compute_fov(
-			origin_tile,
-			reveal_chunk_radius * CHUNK_SIZE_TILES,
-			explore_chunk_radius * CHUNK_SIZE_TILES,
-			_fov_chunks,
-		)
-	)
+	_visibility.compute_fov(origin_tile, reveal_chunk_radius * CHUNK_SIZE_TILES, explore_chunk_radius * CHUNK_SIZE_TILES, _fov_chunks)
 	var markers_changed: bool = false
 	for coord: Vector2i in _fov_chunks:
 		var is_explore: bool = _fov_chunks[coord]
@@ -660,6 +692,15 @@ func _reveal_chunks_at(origin_tile: Vector2i) -> void:
 		if is_explore and not _explored_chunks.has(coord):
 			_explored_chunks[coord] = true
 			_chunk_meshes.explore_chunk(coord)
+			var auto_chunks: Array[Vector2i] = _run_markers.record_explored_chunk(coord, _chunk_meshes._chunk_floor_vertices)
+			for auto_coord: Vector2i in auto_chunks:
+				if not _revealed_chunks.has(auto_coord):
+					_record_revealed_chunk(auto_coord)
+					markers_changed = true
+					_chunk_meshes.reveal_chunk(auto_coord, true)
+				if not _explored_chunks.has(auto_coord):
+					_explored_chunks[auto_coord] = true
+					_chunk_meshes.explore_chunk(auto_coord)
 
 	if markers_changed:
 		_update_gate_markers_visibility()
@@ -700,6 +741,7 @@ func _build_chunks(plan: WorldPlan) -> void:
 	_next_label_pool_idx = 0
 	for label: Label in _label_pool:
 		label.visible = false
+	_run_markers.reset()
 	_collected_keys.clear()
 	_door_entries.clear()
 	_key_entries.clear()
@@ -729,6 +771,7 @@ func _build_chunks(plan: WorldPlan) -> void:
 			label.visible = false
 		return
 
+	_run_markers.setup_exploration(plan, _chunk_meshes._chunk_floor_vertices)
 	_visibility.setup(plan)
 	map_scale = _zoom_px_per_tile / TILE_SIZE
 	_chunks_container.scale = Vector2(map_scale, map_scale)
@@ -742,20 +785,11 @@ func _build_gate_markers(plan: WorldPlan) -> void:
 			var door_mid: Vector2 = (Vector2(gate.door_cells[0]) + Vector2(gate.door_cells[1])) * 0.5 + Vector2(0.5, 0.5)
 			var door_world: Vector2 = door_mid * TILE_SIZE
 			var is_horiz: bool = gate.door_face == RoomLayout.Face.NORTH or gate.door_face == RoomLayout.Face.SOUTH
-			var pts: Array[Vector2] = _get_door_line_endpoints(gate.door_cells, is_horiz)
-			(
-				_door_entries
-				. append(
-					{
-						&"gate": gate,
-						&"color_idx": color_idx,
-						&"p0": pts[0],
-						&"p1": pts[1],
-						&"world_pos": door_world,
-						&"visible": false,
-					}
-				)
-			)
+			var pts: Array[Vector2] = MapChunkMeshes.get_door_line_endpoints(gate.door_cells, is_horiz)
+			var d_entry: Dictionary = {
+				&"gate": gate, &"color_idx": color_idx, &"p0": pts[0], &"p1": pts[1], &"world_pos": door_world, &"visible": false
+			}
+			_door_entries.append(d_entry)
 		if gate.has_key and color_idx >= 0 and color_idx < _key_markers.size():
 			var key_mid: Vector2 = Vector2(gate.key_cell) + Vector2(0.5, 0.5)
 			var key_world: Vector2 = key_mid * TILE_SIZE
@@ -764,26 +798,13 @@ func _build_gate_markers(plan: WorldPlan) -> void:
 			_key_entries.append({&"gate": gate, &"marker": key_marker, &"world_pos": key_world})
 
 	for shortcut: ShortcutTunnelPlanner.LocalShortcut in plan.local_shortcuts:
-		var pts: Array[Vector2] = _get_door_line_endpoints(shortcut.door_cells, shortcut.is_horizontal_door)
+		var pts: Array[Vector2] = MapChunkMeshes.get_door_line_endpoints(shortcut.door_cells, shortcut.is_horizontal_door)
 		var open_dir: Vector2
 		if shortcut.is_horizontal_door:
 			open_dir = Vector2(0.0, 1.0) if shortcut.room_far.end.y <= shortcut.door_cells[0].y else Vector2(0.0, -1.0)
 		else:
 			open_dir = Vector2(1.0, 0.0) if shortcut.room_far.end.x <= shortcut.door_cells[0].x else Vector2(-1.0, 0.0)
 		_shortcut_entries.append({&"shortcut": shortcut, &"p0": pts[0], &"p1": pts[1], &"open_dir": open_dir})
-
-
-static func _get_door_line_endpoints(door_cells: Array[Vector2i], is_horizontal: bool) -> Array[Vector2]:
-	var c0: Vector2i = door_cells[0]
-	var c1: Vector2i = door_cells[1]
-	if is_horizontal:
-		var x0: int = mini(c0.x, c1.x)
-		var y_mid: float = (float(c0.y) + 0.5) * TILE_SIZE
-		return [Vector2(float(x0) * TILE_SIZE, y_mid), Vector2(float(x0 + 2) * TILE_SIZE, y_mid)]
-	var y_min: int = mini(c0.y, c1.y)
-	var y_max: int = maxi(c0.y, c1.y)
-	var x_mid: float = (float(c0.x) + 0.5) * TILE_SIZE
-	return [Vector2(x_mid, float(y_min - 1) * TILE_SIZE), Vector2(x_mid, float(y_max + 1) * TILE_SIZE)]
 
 
 func _update_gate_markers_visibility() -> void:
@@ -808,7 +829,7 @@ func _update_gate_markers_visibility() -> void:
 			var verts: PackedVector2Array = door_verts_by_color[color_idx]
 			var p0: Vector2 = entry[&"p0"]
 			var p1: Vector2 = entry[&"p1"]
-			_append_bar_quad(verts, p0, p1, DOOR_BAR_HALF_THICKNESS)
+			MapChunkMeshes.append_bar_quad(verts, p0, p1, DOOR_BAR_HALF_THICKNESS)
 			door_verts_by_color[color_idx] = verts
 
 	for i: int in range(_door_meshes.size()):
@@ -817,7 +838,7 @@ func _update_gate_markers_visibility() -> void:
 			_door_meshes[i].mesh = null
 			_door_meshes[i].visible = false
 		else:
-			_door_meshes[i].mesh = _create_triangle_mesh(verts)
+			_door_meshes[i].mesh = MapChunkMeshes.create_triangle_mesh(verts)
 			_door_meshes[i].visible = true
 
 	for entry: Dictionary in _key_entries:
@@ -838,47 +859,28 @@ func _update_gate_markers_visibility() -> void:
 		var p0: Vector2 = entry[&"p0"]
 		var p1: Vector2 = entry[&"p1"]
 		var open_dir: Vector2 = entry[&"open_dir"]
-		_append_shortcut_glyph(sc_verts, p0, p1, open_dir)
+		(
+			MapChunkMeshes
+			. append_shortcut_glyph(
+				sc_verts,
+				p0,
+				p1,
+				open_dir,
+				SHORTCUT_BAR_HALF_THICKNESS,
+				SHORTCUT_CHEVRON_GAP,
+				SHORTCUT_CHEVRON_LENGTH,
+				SHORTCUT_CHEVRON_HALF_WIDTH,
+			)
+		)
 
 	if sc_verts.is_empty():
 		_shortcut_lines_mesh.mesh = null
 		_shortcut_lines_mesh.visible = false
 	else:
-		_shortcut_lines_mesh.mesh = _create_triangle_mesh(sc_verts)
+		_shortcut_lines_mesh.mesh = MapChunkMeshes.create_triangle_mesh(sc_verts)
 		_shortcut_lines_mesh.visible = true
 
 	_update_hud_edge_indicators()
-
-
-static func _append_bar_quad(verts: PackedVector2Array, p0: Vector2, p1: Vector2, half_thickness: float) -> void:
-	var t: Vector2 = (p1 - p0).normalized()
-	var n: Vector2 = Vector2(-t.y, t.x) * half_thickness
-	verts.append(p0 - n)
-	verts.append(p1 - n)
-	verts.append(p1 + n)
-	verts.append(p0 - n)
-	verts.append(p1 + n)
-	verts.append(p0 + n)
-
-
-static func _append_shortcut_glyph(verts: PackedVector2Array, p0: Vector2, p1: Vector2, open_dir: Vector2) -> void:
-	_append_bar_quad(verts, p0, p1, SHORTCUT_BAR_HALF_THICKNESS)
-	var center: Vector2 = (p0 + p1) * 0.5
-	var perp: Vector2 = Vector2(-open_dir.y, open_dir.x)
-	var tip: Vector2 = center - open_dir * (SHORTCUT_BAR_HALF_THICKNESS + SHORTCUT_CHEVRON_GAP)
-	var base_mid: Vector2 = tip - open_dir * SHORTCUT_CHEVRON_LENGTH
-	verts.append(tip)
-	verts.append(base_mid + perp * SHORTCUT_CHEVRON_HALF_WIDTH)
-	verts.append(base_mid - perp * SHORTCUT_CHEVRON_HALF_WIDTH)
-
-
-static func _create_triangle_mesh(vertices: PackedVector2Array) -> ArrayMesh:
-	var arrays: Array = []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = vertices
-	var mesh: ArrayMesh = ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	return mesh
 
 
 func _update_matching_door_pulses() -> void:
@@ -930,15 +932,7 @@ func _update_hud_edge_indicators() -> void:
 					best_off_screen = is_off
 					best_dist_sq = d_sq
 					best_pos = world_pos
-		_update_hud_indicator(
-			has_door,
-			best_pos,
-			_hud_door_indicators[i],
-			_hud_door_arrows[i],
-			on_screen_rect,
-			min_bound,
-			max_bound,
-		)
+		_update_hud_indicator(has_door, best_pos, _hud_door_indicators[i], _hud_door_arrows[i], on_screen_rect, min_bound, max_bound)
 		if _hud_door_indicators[i].visible and _collected_keys.has(target_color):
 			_hud_door_indicators[i].scale = Vector2.ONE * lerpf(1.0, 1.16, pulse)
 		else:

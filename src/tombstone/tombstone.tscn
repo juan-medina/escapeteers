@@ -1,0 +1,51 @@
+[gd_scene format=3 uid="uid://bgf2pte3ai8od"]
+
+[ext_resource type="Script" uid="uid://da47rt8e3tiew" path="res://tombstone/tombstone.gd" id="1_tombstone"]
+[ext_resource type="Texture2D" uid="uid://catd67boj0lvn" path="res://data/assets/map/props/tombstone.png" id="2_sprite"]
+[ext_resource type="FontFile" uid="uid://dlxxgod8ydjxc" path="res://data/assets/pixel_ui_theme/m3x6.ttf" id="3_m3x6"]
+[ext_resource type="Texture2D" uid="uid://cd8wqoflbfbrv" path="res://map/light_texture.tres" id="4_light"]
+
+[node name="Tombstone" type="Node2D" unique_id=1349372298]
+y_sort_enabled = true
+script = ExtResource("1_tombstone")
+
+[node name="Shadow" type="Polygon2D" parent="." unique_id=1041111057]
+position = Vector2(0, 5)
+color = Color(0, 0, 0, 0.35)
+polygon = PackedVector2Array(-6, 0, -4, -2, 0, -2.5, 4, -2, 6, 0, 4, 2, 0, 2.5, -4, 2)
+
+[node name="Sprite" type="Sprite2D" parent="." unique_id=1143710242]
+position = Vector2(0, -3)
+texture = ExtResource("2_sprite")
+
+[node name="ClassCrest" type="Polygon2D" parent="." unique_id=1367883178]
+position = Vector2(0, -3)
+polygon = PackedVector2Array(0, -2, 2, 0, 0, 2, -2, 0)
+
+[node name="ClassLabel" type="Label" parent="." unique_id=1287922229]
+custom_minimum_size = Vector2(32, 10)
+offset_left = -16.0
+offset_top = 4.0
+offset_right = 16.0
+offset_bottom = 14.0
+theme_override_colors/font_color = Color(0.85, 0.88, 0.94, 0.85)
+theme_override_colors/font_outline_color = Color(0.03, 0.03, 0.05, 0.95)
+theme_override_constants/outline_size = 1
+theme_override_fonts/font = ExtResource("3_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "KNT"
+horizontal_alignment = 1
+
+[node name="MemorialLight" type="PointLight2D" parent="." unique_id=214122972]
+position = Vector2(0, -3)
+enabled = false
+color = Color(0.75, 0.85, 1, 1)
+energy = 0.28
+texture = ExtResource("4_light")
+texture_scale = 0.75
+
+[node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="." unique_id=135875562]
+rect = Rect2(-48, -48, 96, 96)
+
+[connection signal="screen_entered" from="VisibleOnScreenNotifier2D" to="." method="_on_screen_entered"]
+[connection signal="screen_exited" from="VisibleOnScreenNotifier2D" to="." method="_on_screen_exited"]

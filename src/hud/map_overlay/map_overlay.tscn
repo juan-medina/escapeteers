@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://csawcvlkf4574" path="res://hud/map_overlay/map_overlay.gd" id="1_overlay"]
 [ext_resource type="FontFile" uid="uid://bst61g6fxq6sj" path="res://data/assets/pixel_ui_theme/m6x11.ttf" id="4_m6x11"]
 [ext_resource type="FontFile" uid="uid://dlxxgod8ydjxc" path="res://data/assets/pixel_ui_theme/m3x6.ttf" id="5_m3x6"]
+[ext_resource type="FontFile" uid="uid://coftxjtdkqsnn" path="res://data/assets/pixel_ui_theme/m5x7.ttf" id="6_m5x7"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_map_frame"]
 content_margin_left = 1.0
@@ -17,18 +18,17 @@ border_width_bottom = 1
 border_color = Color(0.58, 0.48, 0.28, 1)
 
 [node name="MapOverlay" type="Control" unique_id=136559416]
-visible = false
 process_mode = 3
+visible = false
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 0
 script = ExtResource("1_overlay")
 
-[node name="Backdrop" type="ColorRect" parent="."]
+[node name="Backdrop" type="ColorRect" parent="." unique_id=905847352]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -38,7 +38,7 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.035, 0.04, 0.065, 1)
 
-[node name="FrameMargin" type="MarginContainer" parent="."]
+[node name="FrameMargin" type="MarginContainer" parent="." unique_id=764051951]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -51,24 +51,24 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 8
 
-[node name="VBox" type="VBoxContainer" parent="FrameMargin"]
+[node name="VBox" type="VBoxContainer" parent="FrameMargin" unique_id=640893796]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 4
 
-[node name="HeaderBar" type="HBoxContainer" parent="FrameMargin/VBox"]
+[node name="HeaderBar" type="HBoxContainer" parent="FrameMargin/VBox" unique_id=1978245706]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 8
 
-[node name="TitleLabel" type="Label" parent="FrameMargin/VBox/HeaderBar"]
+[node name="TitleLabel" type="Label" parent="FrameMargin/VBox/HeaderBar" unique_id=1689381467]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.85, 0.52, 1)
 theme_override_fonts/font = ExtResource("4_m6x11")
 theme_override_font_sizes/font_size = 16
 text = "DUNGEON MAP"
 
-[node name="ZoomLabel" type="Label" parent="FrameMargin/VBox/HeaderBar"]
+[node name="ZoomLabel" type="Label" parent="FrameMargin/VBox/HeaderBar" unique_id=1928863516]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.65, 0.72, 0.82, 1)
 theme_override_fonts/font = ExtResource("5_m3x6")
@@ -76,104 +76,104 @@ theme_override_font_sizes/font_size = 16
 text = "100%"
 vertical_alignment = 1
 
-[node name="Spacer" type="Control" parent="FrameMargin/VBox/HeaderBar"]
+[node name="Spacer" type="Control" parent="FrameMargin/VBox/HeaderBar" unique_id=1484906804]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 
-[node name="Legend" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar"]
+[node name="Legend" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar" unique_id=353826008]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 6
 
-[node name="ExploredItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend"]
+[node name="ExploredItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend" unique_id=1210148708]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 3
 
-[node name="Swatch" type="ColorRect" parent="FrameMargin/VBox/HeaderBar/Legend/ExploredItem"]
+[node name="Swatch" type="ColorRect" parent="FrameMargin/VBox/HeaderBar/Legend/ExploredItem" unique_id=372820608]
 custom_minimum_size = Vector2(6, 6)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 color = Color(0.15, 0.3, 0.45, 1)
 
-[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/ExploredItem"]
+[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/ExploredItem" unique_id=397072860]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
 theme_override_fonts/font = ExtResource("5_m3x6")
 theme_override_font_sizes/font_size = 16
 text = "Explored"
 
-[node name="FrontierItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend"]
+[node name="FrontierItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend" unique_id=1848726213]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 3
 
-[node name="Swatch" type="ColorRect" parent="FrameMargin/VBox/HeaderBar/Legend/FrontierItem"]
+[node name="Swatch" type="ColorRect" parent="FrameMargin/VBox/HeaderBar/Legend/FrontierItem" unique_id=1866835330]
 custom_minimum_size = Vector2(6, 6)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 color = Color(0.3, 0.14, 0.21, 1)
 
-[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/FrontierItem"]
+[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/FrontierItem" unique_id=1975182313]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
 theme_override_fonts/font = ExtResource("5_m3x6")
 theme_override_font_sizes/font_size = 16
 text = "Frontier"
 
-[node name="EventItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend"]
+[node name="EventItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend" unique_id=663763875]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 2
 
-[node name="Icon" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/EventItem"]
+[node name="Icon" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/EventItem" unique_id=1458533150]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.38, 0.65, 1)
 theme_override_fonts/font = ExtResource("5_m3x6")
 theme_override_font_sizes/font_size = 16
 text = "!"
 
-[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/EventItem"]
+[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/EventItem" unique_id=695340118]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
 theme_override_fonts/font = ExtResource("5_m3x6")
 theme_override_font_sizes/font_size = 16
 text = "Event"
 
-[node name="DoorItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend"]
+[node name="DoorItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend" unique_id=1954718842]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 3
 
-[node name="Swatch" type="ColorRect" parent="FrameMargin/VBox/HeaderBar/Legend/DoorItem"]
+[node name="Swatch" type="ColorRect" parent="FrameMargin/VBox/HeaderBar/Legend/DoorItem" unique_id=1246164343]
 custom_minimum_size = Vector2(10, 3)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 color = Color(0.25, 0.68, 1, 1)
 
-[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/DoorItem"]
+[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/DoorItem" unique_id=2101363454]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
 theme_override_fonts/font = ExtResource("5_m3x6")
 theme_override_font_sizes/font_size = 16
 text = "Door"
 
-[node name="ShortcutItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend"]
+[node name="ShortcutItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend" unique_id=732336703]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 3
 
-[node name="Glyph" type="Control" parent="FrameMargin/VBox/HeaderBar/Legend/ShortcutItem"]
+[node name="Glyph" type="Control" parent="FrameMargin/VBox/HeaderBar/Legend/ShortcutItem" unique_id=1332063235]
 custom_minimum_size = Vector2(11, 8)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 
-[node name="Bar" type="ColorRect" parent="FrameMargin/VBox/HeaderBar/Legend/ShortcutItem/Glyph"]
+[node name="Bar" type="ColorRect" parent="FrameMargin/VBox/HeaderBar/Legend/ShortcutItem/Glyph" unique_id=1470520910]
 layout_mode = 0
 offset_left = 1.0
 offset_right = 3.0
@@ -181,131 +181,185 @@ offset_bottom = 8.0
 mouse_filter = 2
 color = Color(0.98, 0.88, 0.45, 1)
 
-[node name="Arrow" type="Polygon2D" parent="FrameMargin/VBox/HeaderBar/Legend/ShortcutItem/Glyph"]
+[node name="Arrow" type="Polygon2D" parent="FrameMargin/VBox/HeaderBar/Legend/ShortcutItem/Glyph" unique_id=239312806]
 color = Color(0.98, 0.88, 0.45, 1)
 polygon = PackedVector2Array(5, 4, 10, 1, 10, 7)
 
-[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/ShortcutItem"]
+[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/ShortcutItem" unique_id=1646917917]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
 theme_override_fonts/font = ExtResource("5_m3x6")
 theme_override_font_sizes/font_size = 16
 text = "Shortcut"
 
-[node name="KeyItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend"]
+[node name="KeyItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend" unique_id=2066156979]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 3
 
-[node name="Glyph" type="Control" parent="FrameMargin/VBox/HeaderBar/Legend/KeyItem"]
+[node name="Glyph" type="Control" parent="FrameMargin/VBox/HeaderBar/Legend/KeyItem" unique_id=1368000605]
 custom_minimum_size = Vector2(8, 8)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 
-[node name="Diamond" type="Polygon2D" parent="FrameMargin/VBox/HeaderBar/Legend/KeyItem/Glyph"]
+[node name="Diamond" type="Polygon2D" parent="FrameMargin/VBox/HeaderBar/Legend/KeyItem/Glyph" unique_id=2080430194]
 color = Color(1, 0.86, 0.25, 1)
 polygon = PackedVector2Array(4, 0, 8, 4, 4, 8, 0, 4)
 
-[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/KeyItem"]
+[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/KeyItem" unique_id=742104965]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
 theme_override_fonts/font = ExtResource("5_m3x6")
 theme_override_font_sizes/font_size = 16
 text = "Key"
 
-[node name="MapFrame" type="PanelContainer" parent="FrameMargin/VBox"]
+[node name="EscapeeItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend" unique_id=417786284]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Icon" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/EscapeeItem" unique_id=1374592309]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.95, 1, 1)
+theme_override_fonts/font = ExtResource("5_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "?"
+
+[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/EscapeeItem" unique_id=552853672]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
+theme_override_fonts/font = ExtResource("5_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "Escapee"
+
+[node name="FallenItem" type="HBoxContainer" parent="FrameMargin/VBox/HeaderBar/Legend" unique_id=1054822715]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="Glyph" type="Control" parent="FrameMargin/VBox/HeaderBar/Legend/FallenItem" unique_id=644068321]
+custom_minimum_size = Vector2(7, 8)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="Stone" type="Polygon2D" parent="FrameMargin/VBox/HeaderBar/Legend/FallenItem/Glyph" unique_id=1797439804]
+color = Color(0.68, 0.72, 0.8, 1)
+polygon = PackedVector2Array(1, 8, 1, 3, 2, 1, 3.5, 0, 5, 1, 6, 3, 6, 8)
+
+[node name="Label" type="Label" parent="FrameMargin/VBox/HeaderBar/Legend/FallenItem" unique_id=1836631848]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
+theme_override_fonts/font = ExtResource("5_m3x6")
+theme_override_font_sizes/font_size = 16
+text = "Fallen"
+
+[node name="SummaryBar" type="HBoxContainer" parent="FrameMargin/VBox" unique_id=746204825]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="SummaryLabel" type="Label" parent="FrameMargin/VBox/SummaryBar" unique_id=686943098]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.84, 0.9, 0.98, 1)
+theme_override_fonts/font = ExtResource("6_m5x7")
+theme_override_font_sizes/font_size = 16
+text = "Escapees: 0 / 0  |  Fallen: 0  |  Explored: 0%  |  00:00"
+
+[node name="MapFrame" type="PanelContainer" parent="FrameMargin/VBox" unique_id=1541659874]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_map_frame")
 
-[node name="MapViewport" type="Control" parent="FrameMargin/VBox/MapFrame"]
+[node name="MapViewport" type="Control" parent="FrameMargin/VBox/MapFrame" unique_id=204981701]
 clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-mouse_filter = 0
 
 [node name="Chunks" type="Node2D" parent="FrameMargin/VBox/MapFrame/MapViewport" unique_id=1676614325]
 
-[node name="UnexploredFloorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+[node name="UnexploredFloorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks" unique_id=1681214888]
 self_modulate = Color(0.3, 0.14, 0.21, 1)
 
-[node name="ExploredFloorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+[node name="ExploredFloorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks" unique_id=1345853049]
 self_modulate = Color(0.15, 0.3, 0.45, 1)
 
-[node name="WallsMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+[node name="WallsMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks" unique_id=1840979535]
 self_modulate = Color(0.88, 0.76, 0.44, 1)
 
-[node name="ShortcutLinesMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+[node name="ShortcutLinesMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks" unique_id=1705906975]
 visible = false
 self_modulate = Color(0.98, 0.88, 0.45, 1)
 
-[node name="BlueDoorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+[node name="BlueDoorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks" unique_id=171679515]
 visible = false
 self_modulate = Color(0.25, 0.68, 1, 1)
 
-[node name="GreenDoorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+[node name="GreenDoorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks" unique_id=1952668887]
 visible = false
 self_modulate = Color(0.3, 0.92, 0.48, 1)
 
-[node name="YellowDoorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+[node name="YellowDoorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks" unique_id=1238107827]
 visible = false
 self_modulate = Color(1, 0.86, 0.25, 1)
 
-[node name="RedDoorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+[node name="RedDoorMesh" type="MeshInstance2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks" unique_id=443798500]
 visible = false
 self_modulate = Color(1, 0.35, 0.35, 1)
 
-[node name="BlueKeyMarker" type="Polygon2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+[node name="BlueKeyMarker" type="Polygon2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks" unique_id=580715929]
 visible = false
 color = Color(0.25, 0.68, 1, 1)
 polygon = PackedVector2Array(0, -20, 20, 0, 0, 20, -20, 0)
 
-[node name="GreenKeyMarker" type="Polygon2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+[node name="GreenKeyMarker" type="Polygon2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks" unique_id=742595067]
 visible = false
 color = Color(0.3, 0.92, 0.48, 1)
 polygon = PackedVector2Array(0, -20, 20, 0, 0, 20, -20, 0)
 
-[node name="YellowKeyMarker" type="Polygon2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+[node name="YellowKeyMarker" type="Polygon2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks" unique_id=1704969848]
 visible = false
 color = Color(1, 0.86, 0.25, 1)
 polygon = PackedVector2Array(0, -20, 20, 0, 0, 20, -20, 0)
 
-[node name="RedKeyMarker" type="Polygon2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks"]
+[node name="RedKeyMarker" type="Polygon2D" parent="FrameMargin/VBox/MapFrame/MapViewport/Chunks" unique_id=1898944072]
 visible = false
 color = Color(1, 0.35, 0.35, 1)
 polygon = PackedVector2Array(0, -20, 20, 0, 0, 20, -20, 0)
 
-[node name="RoomLabels" type="Node2D" parent="FrameMargin/VBox/MapFrame/MapViewport"]
+[node name="RoomLabels" type="Node2D" parent="FrameMargin/VBox/MapFrame/MapViewport" unique_id=652157232]
+
+[node name="EscapeeMarkers" type="Node2D" parent="FrameMargin/VBox/MapFrame/MapViewport" unique_id=454102017]
+
+[node name="TombstoneMarkers" type="Node2D" parent="FrameMargin/VBox/MapFrame/MapViewport" unique_id=71073270]
 
 [node name="PlayerMarker" type="Node2D" parent="FrameMargin/VBox/MapFrame/MapViewport" unique_id=740950094]
 rotation = -1.5707964
 
-[node name="PulseRing" type="Line2D" parent="FrameMargin/VBox/MapFrame/MapViewport/PlayerMarker"]
+[node name="PulseRing" type="Line2D" parent="FrameMargin/VBox/MapFrame/MapViewport/PlayerMarker" unique_id=823533261]
 points = PackedVector2Array(0, -8, 6, -6, 8, 0, 6, 6, 0, 8, -6, 6, -8, 0, -6, -6)
 closed = true
 width = 1.0
 default_color = Color(0.32, 0.92, 1, 1)
 
-[node name="Arrow" type="Polygon2D" parent="FrameMargin/VBox/MapFrame/MapViewport/PlayerMarker"]
+[node name="Arrow" type="Polygon2D" parent="FrameMargin/VBox/MapFrame/MapViewport/PlayerMarker" unique_id=1325158729]
 color = Color(0.25, 0.92, 1, 1)
 polygon = PackedVector2Array(6, 0, -5, -4.5, -2.5, 0, -5, 4.5)
 
-[node name="Outline" type="Line2D" parent="FrameMargin/VBox/MapFrame/MapViewport/PlayerMarker"]
+[node name="Outline" type="Line2D" parent="FrameMargin/VBox/MapFrame/MapViewport/PlayerMarker" unique_id=549600304]
 points = PackedVector2Array(6, 0, -5, -4.5, -2.5, 0, -5, 4.5)
 closed = true
 width = 1.0
-default_color = Color(1, 1, 1, 1)
 
-[node name="FooterBar" type="HBoxContainer" parent="FrameMargin/VBox"]
+[node name="FooterBar" type="HBoxContainer" parent="FrameMargin/VBox" unique_id=1056366687]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 8
 
-[node name="ControlsHint" type="Label" parent="FrameMargin/VBox/FooterBar"]
+[node name="ControlsHint" type="Label" parent="FrameMargin/VBox/FooterBar" unique_id=909454908]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
 text = "WASD / Drag: Pan  |  Wheel / +/-: Zoom  |  Space: Center  |  TAB / M: Close"
