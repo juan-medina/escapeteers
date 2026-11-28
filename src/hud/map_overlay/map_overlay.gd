@@ -772,6 +772,12 @@ func _build_chunks(plan: WorldPlan) -> void:
 		return
 
 	_run_markers.setup_exploration(plan, _chunk_meshes._chunk_floor_vertices)
+	for start_coord: Vector2i in _run_markers.complete_room(plan.hero_room):
+		_record_revealed_chunk(start_coord)
+		_chunk_meshes.reveal_chunk(start_coord, true)
+		_explored_chunks[start_coord] = true
+		_chunk_meshes.explore_chunk(start_coord)
+	_dirty = _chunk_meshes.has_dirty_regions()
 	_visibility.setup(plan)
 	map_scale = _zoom_px_per_tile / TILE_SIZE
 	_chunks_container.scale = Vector2(map_scale, map_scale)

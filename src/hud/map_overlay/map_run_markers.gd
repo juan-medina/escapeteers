@@ -154,6 +154,24 @@ func record_explored_chunk(coord: Vector2i, floor_chunks: Dictionary[Vector2i, P
 	return auto_completed
 
 
+func complete_room(room: Rect2i) -> Array[Vector2i]:
+	var completed: Array[Vector2i] = []
+	if not _room_chunks.has(room) or _completed_rooms.has(room):
+		return completed
+	_completed_rooms[room] = true
+	var room_chunk_arr: Array = _room_chunks[room]
+	_room_explored_counts[room] = room_chunk_arr.size()
+	for c_var: Variant in room_chunk_arr:
+		if c_var is Vector2i:
+			var rc: Vector2i = c_var
+			if not _explored_floor_chunks.has(rc):
+				_explored_floor_chunks[rc] = true
+				completed.append(rc)
+	_summary_explored_pct = get_explored_percent()
+	_update_summary_label()
+	return completed
+
+
 func sync_explored_chunks(explored_chunks: Dictionary[Vector2i, bool], floor_chunks: Dictionary[Vector2i, PackedVector2Array]) -> void:
 	for coord: Vector2i in explored_chunks:
 		if floor_chunks.has(coord):
@@ -163,11 +181,11 @@ func sync_explored_chunks(explored_chunks: Dictionary[Vector2i, bool], floor_chu
 
 
 func get_explored_percent() -> int:
-	if _total_floor_chunks <= 0:
+	if _total_floor_chunks <= 0 or _explored_floor_chunks.is_empty():
 		return 0
 	if _explored_floor_chunks.size() >= _total_floor_chunks:
 		return 100
-	return clampi(roundi((float(_explored_floor_chunks.size()) / float(_total_floor_chunks)) * 100.0), 0, 99)
+	return clampi(roundi((float(_explored_floor_chunks.size()) / float(_total_floor_chunks)) * 100.0), 1, 99)
 
 
 func set_run_counts(rescued: int, total: int, fallen: int) -> void:
