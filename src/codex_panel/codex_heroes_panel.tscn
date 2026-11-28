@@ -1,6 +1,6 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://dttihlaiqwcjl"]
 
-[ext_resource type="Script" path="res://codex_panel/codex_heroes_panel.gd" id="1_panel"]
+[ext_resource type="Script" uid="uid://2qkfe16qbvva" path="res://codex_panel/codex_heroes_panel.gd" id="1_panel"]
 [ext_resource type="PackedScene" path="res://codex_panel/codex_entry_card.tscn" id="2_card"]
 [ext_resource type="PackedScene" path="res://codex_panel/codex_details_panel.tscn" id="3_details"]
 [ext_resource type="FontFile" uid="uid://bg6arvysy4jwv" path="res://data/assets/pixel_ui_theme/m6x11plus.ttf" id="4_m6x11plus"]
@@ -16,68 +16,68 @@ action = &"back"
 [sub_resource type="Shortcut" id="Shortcut_back"]
 events = [SubResource("InputEventAction_pause"), SubResource("InputEventAction_back")]
 
-[node name="CodexHeroesPanel" type="PanelContainer" node_paths=PackedStringArray("cards_container", "details_panel", "first_focus", "back_button")]
+[node name="CodexHeroesPanel" type="PanelContainer" unique_id=1922494905 node_paths=PackedStringArray("cards_container", "details_panel", "back_button", "first_focus")]
 script = ExtResource("1_panel")
 cards_container = NodePath("VBox/Grid")
 details_panel = NodePath("VBox/CodexDetailsPanel")
-first_focus = NodePath("VBox/Grid/Card1")
 back_button = NodePath("VBox/Buttons/Back")
+first_focus = NodePath("VBox/Grid/Card1")
 
-[node name="VBox" type="VBoxContainer" parent="."]
+[node name="VBox" type="VBoxContainer" parent="." unique_id=1550507004]
 layout_mode = 2
 theme_override_constants/separation = 4
 alignment = 1
 
-[node name="Title" type="Label" parent="VBox"]
+[node name="Title" type="Label" parent="VBox" unique_id=345420215]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("4_m6x11plus")
 theme_override_font_sizes/font_size = 18
 text = "Codex - Heroes"
 horizontal_alignment = 1
 
-[node name="Grid" type="GridContainer" parent="VBox"]
+[node name="Grid" type="GridContainer" parent="VBox" unique_id=1078605784]
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/h_separation = 6
 theme_override_constants/v_separation = 4
 columns = 5
 
-[node name="Card1" parent="VBox/Grid" instance=ExtResource("2_card")]
+[node name="Card1" parent="VBox/Grid" unique_id=408671787 instance=ExtResource("2_card")]
 layout_mode = 2
 focus_neighbor_left = NodePath("../Card5")
 focus_neighbor_right = NodePath("../Card2")
 focus_neighbor_bottom = NodePath("../Card6")
 entry_id = &"armored_axeman"
 
-[node name="Card2" parent="VBox/Grid" instance=ExtResource("2_card")]
+[node name="Card2" parent="VBox/Grid" unique_id=662816162 instance=ExtResource("2_card")]
 layout_mode = 2
 focus_neighbor_left = NodePath("../Card1")
 focus_neighbor_right = NodePath("../Card3")
 focus_neighbor_bottom = NodePath("../Card7")
 entry_id = &"knight"
 
-[node name="Card3" parent="VBox/Grid" instance=ExtResource("2_card")]
+[node name="Card3" parent="VBox/Grid" unique_id=1960811331 instance=ExtResource("2_card")]
 layout_mode = 2
 focus_neighbor_left = NodePath("../Card2")
 focus_neighbor_right = NodePath("../Card4")
 focus_neighbor_bottom = NodePath("../Card8")
 entry_id = &"knight_templar"
 
-[node name="Card4" parent="VBox/Grid" instance=ExtResource("2_card")]
+[node name="Card4" parent="VBox/Grid" unique_id=810634914 instance=ExtResource("2_card")]
 layout_mode = 2
 focus_neighbor_left = NodePath("../Card3")
 focus_neighbor_right = NodePath("../Card5")
 focus_neighbor_bottom = NodePath("../Card9")
 entry_id = &"swordsman"
 
-[node name="Card5" parent="VBox/Grid" instance=ExtResource("2_card")]
+[node name="Card5" parent="VBox/Grid" unique_id=1549868409 instance=ExtResource("2_card")]
 layout_mode = 2
 focus_neighbor_left = NodePath("../Card4")
 focus_neighbor_right = NodePath("../Card6")
 focus_neighbor_bottom = NodePath("../Card9")
 entry_id = &"archer"
 
-[node name="Card6" parent="VBox/Grid" instance=ExtResource("2_card")]
+[node name="Card6" parent="VBox/Grid" unique_id=772338675 instance=ExtResource("2_card")]
 layout_mode = 2
 focus_neighbor_left = NodePath("../Card5")
 focus_neighbor_top = NodePath("../Card1")
@@ -85,7 +85,7 @@ focus_neighbor_right = NodePath("../Card7")
 focus_neighbor_bottom = NodePath("../../Buttons/Back")
 entry_id = &"wizard"
 
-[node name="Card7" parent="VBox/Grid" instance=ExtResource("2_card")]
+[node name="Card7" parent="VBox/Grid" unique_id=1633597847 instance=ExtResource("2_card")]
 layout_mode = 2
 focus_neighbor_left = NodePath("../Card6")
 focus_neighbor_top = NodePath("../Card2")
@@ -93,7 +93,7 @@ focus_neighbor_right = NodePath("../Card8")
 focus_neighbor_bottom = NodePath("../../Buttons/Back")
 entry_id = &"priest"
 
-[node name="Card8" parent="VBox/Grid" instance=ExtResource("2_card")]
+[node name="Card8" parent="VBox/Grid" unique_id=480174269 instance=ExtResource("2_card")]
 layout_mode = 2
 focus_neighbor_left = NodePath("../Card7")
 focus_neighbor_top = NodePath("../Card3")
@@ -101,7 +101,7 @@ focus_neighbor_right = NodePath("../Card9")
 focus_neighbor_bottom = NodePath("../../Buttons/Back")
 entry_id = &"soldier"
 
-[node name="Card9" parent="VBox/Grid" instance=ExtResource("2_card")]
+[node name="Card9" parent="VBox/Grid" unique_id=367601236 instance=ExtResource("2_card")]
 layout_mode = 2
 focus_neighbor_left = NodePath("../Card8")
 focus_neighbor_top = NodePath("../Card4")
@@ -109,15 +109,14 @@ focus_neighbor_right = NodePath("../Card1")
 focus_neighbor_bottom = NodePath("../../Buttons/Back")
 entry_id = &"torchero"
 
-[node name="CodexDetailsPanel" parent="VBox" instance=ExtResource("3_details")]
-layout_mode = 2
+[node name="CodexDetailsPanel" parent="VBox" unique_id=1642604092 instance=ExtResource("3_details")]
 
-[node name="Buttons" type="HBoxContainer" parent="VBox"]
+[node name="Buttons" type="HBoxContainer" parent="VBox" unique_id=555746237]
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/separation = 8
 
-[node name="Back" type="Button" parent="VBox/Buttons" groups=["ui_return"]]
+[node name="Back" type="Button" parent="VBox/Buttons" unique_id=319475160 groups=["ui_return"]]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 focus_neighbor_top = NodePath("../../Grid/Card1")

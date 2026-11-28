@@ -137,7 +137,7 @@ static func is_squad_touching(squad: Array[Hero], pos: Vector2, dist: float) -> 
 
 
 func _apply_effect(potion_type: PotionPickup.PotionType, squad: Array[Hero], leader: Hero, xp_required: float) -> void:
-	Codex.discover_item(PotionPickup.get_codex_id(potion_type))
+	Codex.discover(Codex.Category.ITEMS, PotionPickup.get_codex_id(potion_type))
 	_hud.show_event_toast(PotionPickup.get_toast_text(potion_type), PotionPickup.get_display_color(potion_type))
 	match potion_type:
 		PotionPickup.PotionType.HEALTH:

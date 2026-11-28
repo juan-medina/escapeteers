@@ -10,15 +10,15 @@ func _setup_card(card: CodexEntryCard) -> void:
 
 
 func _is_entry_discovered(entry_id: StringName) -> bool:
-	return Codex.is_hero_discovered(entry_id)
+	return Codex.is_discovered(Codex.Category.HEROES, entry_id)
 
 
 func _is_entry_unread(entry_id: StringName) -> bool:
-	return Codex.is_hero_unread(entry_id)
+	return Codex.is_unread(Codex.Category.HEROES, entry_id)
 
 
 func _mark_entry_viewed(entry_id: StringName) -> void:
-	Codex.mark_hero_viewed(entry_id)
+	Codex.mark_viewed(Codex.Category.HEROES, entry_id)
 
 
 func _show_entry_details(entry_id: StringName) -> void:

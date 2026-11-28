@@ -7,6 +7,7 @@ extends MenuPanel
 signal heroes_requested
 signal enemies_requested
 signal items_requested
+signal events_requested
 signal mechanics_requested
 
 @onready var _heroes_button: Button = $VBox/ButtonsVBox/Heroes
@@ -15,6 +16,8 @@ signal mechanics_requested
 @onready var _enemies_badge: Control = $VBox/ButtonsVBox/Enemies/UnreadBadge
 @onready var _items_button: Button = $VBox/ButtonsVBox/Items
 @onready var _items_badge: Control = $VBox/ButtonsVBox/Items/UnreadBadge
+@onready var _events_button: Button = $VBox/ButtonsVBox/Events
+@onready var _events_badge: Control = $VBox/ButtonsVBox/Events/UnreadBadge
 @onready var _mechanics_button: Button = $VBox/ButtonsVBox/Mechanics
 
 
@@ -34,9 +37,10 @@ func reset_focus_target() -> void:
 
 
 func _sync_badges() -> void:
-	_heroes_badge.visible = Codex.has_unread_heroes()
-	_enemies_badge.visible = Codex.has_unread_enemies()
-	_items_badge.visible = Codex.has_unread_items()
+	_heroes_badge.visible = Codex.has_unread(Codex.Category.HEROES)
+	_enemies_badge.visible = Codex.has_unread(Codex.Category.ENEMIES)
+	_items_badge.visible = Codex.has_unread(Codex.Category.ITEMS)
+	_events_badge.visible = Codex.has_unread(Codex.Category.EVENTS)
 
 
 func _on_heroes_pressed() -> void:
@@ -52,6 +56,11 @@ func _on_enemies_pressed() -> void:
 func _on_items_pressed() -> void:
 	first_focus = _items_button
 	items_requested.emit()
+
+
+func _on_events_pressed() -> void:
+	first_focus = _events_button
+	events_requested.emit()
 
 
 func _on_mechanics_pressed() -> void:

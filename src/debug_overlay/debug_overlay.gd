@@ -21,11 +21,11 @@ var _warp_indices: Dictionary[int, int] = {}
 var _squad_preset_cursor: int = 0
 
 @onready var _status_label: Label = $Center/Panel/VBox/StatusLabel
-@onready var _blood_spikes_btn: Button = $Center/Panel/VBox/WarpGrid/BloodSpikesBtn
-@onready var _wave_ambush_btn: Button = $Center/Panel/VBox/WarpGrid/WaveAmbushBtn
-@onready var _obelisk_btn: Button = $Center/Panel/VBox/WarpGrid/ObeliskBtn
-@onready var _rune_plates_btn: Button = $Center/Panel/VBox/WarpGrid/RunePlatesBtn
-@onready var _god_mode_btn: Button = $Center/Panel/VBox/ToolsGrid/GodModeBtn
+@onready var _blood_spikes_btn: Button = $Center/Panel/VBox/ColumnsRow/WarpCol/BloodSpikesBtn
+@onready var _wave_ambush_btn: Button = $Center/Panel/VBox/ColumnsRow/WarpCol/WaveAmbushBtn
+@onready var _obelisk_btn: Button = $Center/Panel/VBox/ColumnsRow/WarpCol/ObeliskBtn
+@onready var _rune_plates_btn: Button = $Center/Panel/VBox/ColumnsRow/WarpCol/RunePlatesBtn
+@onready var _god_mode_btn: Button = $Center/Panel/VBox/ColumnsRow/ToolsCol/GodModeBtn
 
 
 func is_debug_enabled() -> bool:
@@ -66,7 +66,7 @@ func _open() -> void:
 	get_tree().paused = true
 	visible = true
 	_refresh_status()
-	Audio.grab_focus_silent(_obelisk_btn)
+	Audio.grab_focus_silent(_blood_spikes_btn)
 
 
 func _close() -> void:

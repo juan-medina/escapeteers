@@ -351,7 +351,7 @@ func set_target_candidate(hero_candidate: Hero, force: bool = false) -> void:
 		target = hero_candidate
 		current_state = State.CHASE
 		_navigator.reset()
-		Codex.discover_enemy(enemy_id)
+		Codex.discover(Codex.Category.ENEMIES, enemy_id)
 	else:
 		target = hero_candidate
 		_navigator.reset()

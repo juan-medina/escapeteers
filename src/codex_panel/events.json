@@ -1,0 +1,58 @@
+{
+	"closing_spikes": {
+		"name": "Blood Spike Arena",
+		"tag": "Trap Arena",
+		"color": "#ff5c5c",
+		"anim_name": "closing_spikes",
+		"icon_scale": 2.0,
+		"description": "A cursed arena ringed with dormant blood spikes waiting to snap shut.",
+		"trigger": "Touch the center cursed chest to start (skippable if left alone).",
+		"hazard_title": "Closing Blood Spikes",
+		"hazard_desc": "Outer spike rings erupt inward toward the center, dealing heavy HP damage to heroes while summoned monsters attack. Monsters are unharmed by blood spikes.",
+		"reward_title": "Clear & Reward",
+		"reward_desc": "Defeat every enemy in the chamber to disarm the spikes and unlock the cursed chest for bonus potions and coins.",
+		"unlock_hint": "Undiscovered event room. Enter a Blood Spike Arena chamber in the dungeon to record it."
+	},
+	"wave_ambush": {
+		"name": "Cursed Ambush",
+		"tag": "Lock-In Waves",
+		"color": "#d17aff",
+		"anim_name": "wave_ambush",
+		"icon_scale": 1.0,
+		"description": "A suspiciously empty vault built to trap unwary fellowships inside.",
+		"trigger": "Touch the center cursed chest to seal all exits (skippable if left alone).",
+		"hazard_title": "Three Escalating Waves",
+		"hazard_desc": "Sliding stone barriers lock every doorway while three pentagram waves materialize, culminating in double Necromancers and escorts.",
+		"reward_title": "Clear & Reward",
+		"reward_desc": "Survive all three waves to unseal the exits and unlock the cursed chest for bonus potions and coins.",
+		"unlock_hint": "Undiscovered event room. Enter a Cursed Ambush chamber in the dungeon to record it."
+	},
+	"cursed_obelisks": {
+		"name": "Cursed Obelisks",
+		"tag": "Shield Pylons",
+		"color": "#b388ff",
+		"anim_name": "cursed_obelisks",
+		"icon_scale": 2.0,
+		"description": "Four corner orb pedestals surround a cursed chest; exits stay open throughout.",
+		"trigger": "Touch the center cursed chest to awaken all four obelisks and their guards.",
+		"hazard_title": "Immunity Auras",
+		"hazard_desc": "Active obelisks project purple tethers that grant nearby guards full damage immunity, though knockback, slow, and stun still work. Shatter all four orbs to expose them.",
+		"reward_title": "Clear & Reward",
+		"reward_desc": "Destroy every obelisk and clear the remaining guards to unlock the cursed chest for bonus loot.",
+		"unlock_hint": "Undiscovered event room. Enter a Cursed Obelisk chamber in the dungeon to record it."
+	},
+	"rune_plates": {
+		"name": "Rune Plates",
+		"tag": "Hold-the-Zone",
+		"color": "#59d9ff",
+		"anim_name": "rune_plates",
+		"icon_scale": 1.0,
+		"description": "Three dormant arcane circles form a triangle around a cursed chest; exits stay open.",
+		"trigger": "Touch the center cursed chest to awaken the circles and begin a steady enemy trickle.",
+		"hazard_title": "Arcane Capture Circles",
+		"hazard_desc": "Stand inside any uncharged circle to fill it. Progress decays slowly outside and resets completely if you step onto a different circle. Each completed rune unleashes a knockback shockwave.",
+		"reward_title": "Clear & Reward",
+		"reward_desc": "Completing the third rune triggers an arcane purge that banishes remaining foes and unlocks the cursed chest for bonus loot.",
+		"unlock_hint": "Undiscovered event room. Enter a Rune Plates chamber in the dungeon to record it."
+	}
+}

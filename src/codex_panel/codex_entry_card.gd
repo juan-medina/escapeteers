@@ -52,6 +52,15 @@ func setup_item(item_name: String, color: Color, frames: SpriteFrames, anim_name
 	_preview_sprite.scale = Vector2(2.0, 2.0)
 
 
+func setup_event(event_name: String, color: Color, frames: SpriteFrames, anim_name: StringName, icon_scale: float = 1.0) -> void:
+	_sprite_frames = frames
+	_anim_name = anim_name
+	_display_name = event_name
+	_display_color = color
+	_preview_sprite.sprite_frames = _sprite_frames
+	_preview_sprite.scale = Vector2(icon_scale, icon_scale)
+
+
 func refresh_state(discovered: bool, unread: bool) -> void:
 	_discovered = discovered
 	if _discovered:

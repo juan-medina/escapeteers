@@ -1,0 +1,112 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://ddm8ml3jbdfy6"]
+
+[ext_resource type="Texture2D" uid="uid://bew3b5nrsmhiw" path="res://data/assets/map/tiles/Tileset.png" id="1_tileset"]
+[ext_resource type="Texture2D" uid="uid://dxd1l4xdfahtw" path="res://data/assets/character/enemies/necromancer/necromancer.png" id="2_necro"]
+[ext_resource type="Texture2D" uid="uid://dppdneod7ec02" path="res://data/assets/map/props/orb_pedestal.png" id="3_orb0"]
+[ext_resource type="Texture2D" uid="uid://5fdqigis8um2" path="res://data/assets/map/props/orb_pedestal_f1.png" id="4_orb1"]
+[ext_resource type="Texture2D" uid="uid://ci5j0q1xbndvg" path="res://data/assets/map/props/orb_pedestal_f2.png" id="5_orb2"]
+[ext_resource type="Texture2D" uid="uid://chv6e84n1rdw6" path="res://data/assets/map/props/ritual_circle.png" id="6_ritual"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_spike_3"]
+atlas = ExtResource("1_tileset")
+region = Rect2(32, 160, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_spike_2"]
+atlas = ExtResource("1_tileset")
+region = Rect2(16, 160, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_spike_1"]
+atlas = ExtResource("1_tileset")
+region = Rect2(0, 160, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_spike_0"]
+atlas = ExtResource("1_tileset")
+region = Rect2(0, 144, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_pent_2"]
+atlas = ExtResource("2_necro")
+region = Rect2(236, 840, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_pent_3"]
+atlas = ExtResource("2_necro")
+region = Rect2(336, 840, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_pent_4"]
+atlas = ExtResource("2_necro")
+region = Rect2(436, 840, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_pent_5"]
+atlas = ExtResource("2_necro")
+region = Rect2(536, 840, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_pent_6"]
+atlas = ExtResource("2_necro")
+region = Rect2(636, 840, 32, 32)
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 2.5,
+"texture": SubResource("AtlasTexture_spike_3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_spike_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_spike_1")
+}, {
+"duration": 2.0,
+"texture": SubResource("AtlasTexture_spike_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_spike_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_spike_2")
+}],
+"loop": 1,
+"name": &"closing_spikes",
+"speed": 4.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("3_orb0")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_orb1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_orb2")
+}],
+"loop": 1,
+"name": &"cursed_obelisks",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("6_ritual")
+}],
+"loop": 1,
+"name": &"rune_plates",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_pent_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_pent_3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_pent_4")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_pent_5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_pent_6")
+}],
+"loop": 1,
+"name": &"wave_ambush",
+"speed": 6.0
+}]

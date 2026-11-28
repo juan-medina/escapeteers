@@ -1,22 +1,23 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://cwl8lalnb1lnu"]
 
-[ext_resource type="Script" path="res://pause_overlay/pause_overlay.gd" id="1_eh0lt"]
+[ext_resource type="Script" uid="uid://wwmh518baecp" path="res://pause_overlay/pause_overlay.gd" id="1_eh0lt"]
 [ext_resource type="PackedScene" path="res://pause_panel/pause_panel.tscn" id="2_2626e"]
 [ext_resource type="PackedScene" path="res://settings_panel/settings_panel.tscn" id="3_5xdq4"]
 [ext_resource type="PackedScene" path="res://game_over_dialog/game_over_dialog.tscn" id="4_game_over"]
-[ext_resource type="PackedScene" path="res://codex_panel/codex_panel.tscn" id="5_codex"]
-[ext_resource type="PackedScene" path="res://codex_panel/codex_heroes_panel.tscn" id="6_codex_heroes"]
+[ext_resource type="PackedScene" uid="uid://dlh2s5ny1na8" path="res://codex_panel/codex_panel.tscn" id="5_codex"]
+[ext_resource type="PackedScene" uid="uid://dttihlaiqwcjl" path="res://codex_panel/codex_heroes_panel.tscn" id="6_codex_heroes"]
 [ext_resource type="PackedScene" path="res://codex_panel/codex_enemies_panel.tscn" id="7_codex_enemies"]
 [ext_resource type="PackedScene" path="res://codex_panel/codex_mechanics_panel.tscn" id="8_codex_mechanics"]
 [ext_resource type="PackedScene" path="res://codex_panel/codex_items_panel.tscn" id="9_codex_items"]
+[ext_resource type="PackedScene" path="res://codex_panel/codex_events_panel.tscn" id="10_codex_events"]
 
-[node name="PauseOverlay" type="CanvasLayer"]
+[node name="PauseOverlay" type="CanvasLayer" unique_id=1762389661]
 process_mode = 3
 layer = 64
 visible = false
 script = ExtResource("1_eh0lt")
 
-[node name="ColorRect" type="ColorRect" parent="."]
+[node name="ColorRect" type="ColorRect" parent="." unique_id=165190052]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -24,42 +25,46 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.6)
 
-[node name="Center" type="CenterContainer" parent="."]
+[node name="Center" type="CenterContainer" parent="." unique_id=252673606]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="PausePanel" parent="Center" instance=ExtResource("2_2626e")]
+[node name="PausePanel" parent="Center" unique_id=717405829 instance=ExtResource("2_2626e")]
 visible = false
 layout_mode = 2
 
-[node name="SettingsPanel" parent="Center" instance=ExtResource("3_5xdq4")]
+[node name="SettingsPanel" parent="Center" unique_id=687775256 instance=ExtResource("3_5xdq4")]
 visible = false
 layout_mode = 2
 
-[node name="GameOverDialog" parent="Center" instance=ExtResource("4_game_over")]
+[node name="GameOverDialog" parent="Center" unique_id=674233466 instance=ExtResource("4_game_over")]
 visible = false
 layout_mode = 2
 
-[node name="CodexPanel" parent="Center" instance=ExtResource("5_codex")]
+[node name="CodexPanel" parent="Center" unique_id=1885865622 instance=ExtResource("5_codex")]
 visible = false
 layout_mode = 2
 
-[node name="CodexHeroesPanel" parent="Center" instance=ExtResource("6_codex_heroes")]
+[node name="CodexHeroesPanel" parent="Center" unique_id=1852246771 instance=ExtResource("6_codex_heroes")]
 visible = false
 layout_mode = 2
 
-[node name="CodexEnemiesPanel" parent="Center" instance=ExtResource("7_codex_enemies")]
+[node name="CodexEnemiesPanel" parent="Center" unique_id=580473763 instance=ExtResource("7_codex_enemies")]
 visible = false
 layout_mode = 2
 
-[node name="CodexItemsPanel" parent="Center" instance=ExtResource("9_codex_items")]
+[node name="CodexItemsPanel" parent="Center" unique_id=1471673164 instance=ExtResource("9_codex_items")]
 visible = false
 layout_mode = 2
 
-[node name="CodexMechanicsPanel" parent="Center" instance=ExtResource("8_codex_mechanics")]
+[node name="CodexEventsPanel" parent="Center" unique_id=155312210 instance=ExtResource("10_codex_events")]
+visible = false
+layout_mode = 2
+
+[node name="CodexMechanicsPanel" parent="Center" unique_id=272298792 instance=ExtResource("8_codex_mechanics")]
 visible = false
 layout_mode = 2
 
@@ -70,10 +75,12 @@ layout_mode = 2
 [connection signal="codex_requested" from="Center/GameOverDialog" to="." method="_on_game_over_codex_requested"]
 [connection signal="back_requested" from="Center/CodexPanel" to="." method="_on_codex_back_requested"]
 [connection signal="enemies_requested" from="Center/CodexPanel" to="." method="_on_codex_enemies_requested"]
+[connection signal="events_requested" from="Center/CodexPanel" to="." method="_on_codex_events_requested"]
 [connection signal="heroes_requested" from="Center/CodexPanel" to="." method="_on_codex_heroes_requested"]
 [connection signal="items_requested" from="Center/CodexPanel" to="." method="_on_codex_items_requested"]
 [connection signal="mechanics_requested" from="Center/CodexPanel" to="." method="_on_codex_mechanics_requested"]
 [connection signal="back_requested" from="Center/CodexHeroesPanel" to="." method="_on_codex_subpanel_back_requested"]
 [connection signal="back_requested" from="Center/CodexEnemiesPanel" to="." method="_on_codex_subpanel_back_requested"]
 [connection signal="back_requested" from="Center/CodexItemsPanel" to="." method="_on_codex_subpanel_back_requested"]
+[connection signal="back_requested" from="Center/CodexEventsPanel" to="." method="_on_codex_subpanel_back_requested"]
 [connection signal="back_requested" from="Center/CodexMechanicsPanel" to="." method="_on_codex_subpanel_back_requested"]

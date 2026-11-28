@@ -116,6 +116,7 @@ func _ready() -> void:
 	await HeroData.initialize()
 	await EnemyData.initialize()
 	await CodexItemsPanel.initialize_data()
+	await CodexEventsPanel.initialize_data()
 	await CodexMechanicsPanel.initialize_data()
 	_recruit_panel.initialize()
 	_level_up_panel.initialize()
@@ -247,6 +248,10 @@ func _check_room_entry() -> void:
 		return
 
 	_hud.notify_room_entered(room, _event_director.get_room_entry_title(_map, room))
+	var event_type: WorldPlan.RoomEventType = _map.plan.room_event_types.get(room, WorldPlan.RoomEventType.NONE)
+	var event_codex_id: StringName = EventDirector.get_codex_id(event_type)
+	if not event_codex_id.is_empty():
+		Codex.discover(Codex.Category.EVENTS, event_codex_id)
 
 
 func _spawn_initial_characters() -> void:
@@ -303,7 +308,7 @@ func _check_pickups() -> void:
 			_coins.remove_at(i)
 			coin.queue_free()
 			_reroll_coins += 1
-			Codex.discover_item(&"reroll_coin")
+			Codex.discover(Codex.Category.ITEMS, &"reroll_coin")
 			Audio.play_sfx(Audio.Sfx.COIN_PICKUP)
 
 	_potion_manager.check_pickups(_squad, _character, _xp_required)
@@ -336,7 +341,7 @@ func _on_shortcut_opened(shortcut: ShortcutTunnelPlanner.LocalShortcut) -> void:
 
 
 func _spawn_hero(hero_data: HeroData, pos: Vector2, is_leader: bool) -> Hero:
-	Codex.discover_hero(hero_data.id)
+	Codex.discover(Codex.Category.HEROES, hero_data.id)
 	var hero_level: int = _class_levels.get(hero_data.id, 1)
 	var hero: Hero = hero_data.scene.instantiate() as Hero
 	hero_data.apply_to_hero(hero, hero_level)
@@ -735,7 +740,7 @@ func _on_hero_recruited(hero_data: HeroData) -> void:
 
 
 func _on_hero_enemy_hit(enemy: Enemy, damage: float, is_heavy: bool, hero: Hero) -> void:
-	Codex.discover_enemy(enemy.enemy_id)
+	Codex.discover(Codex.Category.ENEMIES, enemy.enemy_id)
 	if damage > 0.0:
 		_hud.record_damage(hero.hero_data.id, damage)
 		Audio.play_sfx(Audio.Sfx.HEAVY_IMPACT if is_heavy else Audio.Sfx.HIT_IMPACT)

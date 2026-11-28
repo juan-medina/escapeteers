@@ -101,6 +101,36 @@ func show_item(item: Dictionary) -> void:
 	_skill2_box.visible = false
 
 
+func show_event(event_data: Dictionary) -> void:
+	var event_color: Color = Color.from_string(CharacterData._str_val(event_data, &"color"), Color.WHITE)
+	var tag: String = CharacterData._str_val(event_data, &"tag")
+	_name_label.text = CharacterData._str_val(event_data, &"name")
+	_name_label.add_theme_color_override(&"font_color", event_color)
+	_tag_label.text = "[%s]" % tag
+	_tag_label.add_theme_color_override(&"font_color", event_color)
+	_tag_label.visible = not tag.is_empty()
+
+	var desc: String = CharacterData._str_val(event_data, &"description")
+	_overview_label.text = desc
+	_overview_label.visible = not desc.is_empty()
+
+	var trigger: String = CharacterData._str_val(event_data, &"trigger")
+	if trigger.is_empty():
+		_behavior_row.visible = false
+	else:
+		_behavior_name_label.text = &"Trigger:"
+		_behavior_desc_label.text = trigger
+		_behavior_row.visible = true
+
+	var hazard_title: String = CharacterData._str_val(event_data, &"hazard_title")
+	var hazard_desc: String = CharacterData._str_val(event_data, &"hazard_desc")
+	var reward_title: String = CharacterData._str_val(event_data, &"reward_title")
+	var reward_desc: String = CharacterData._str_val(event_data, &"reward_desc")
+	_h_separator.visible = not hazard_title.is_empty() or not reward_title.is_empty()
+	_set_event_section(_skill1_box, _skill1_title, _skill1_desc, hazard_title, hazard_desc)
+	_set_event_section(_skill2_box, _skill2_title, _skill2_desc, reward_title, reward_desc)
+
+
 func show_locked(hint: String) -> void:
 	_name_label.text = &"???"
 	_name_label.add_theme_color_override(&"font_color", LOCKED_TITLE_COLOR)
@@ -136,4 +166,14 @@ func _set_skill_slot(box: VBoxContainer, title_label: Label, desc_label: Label, 
 	var skill_desc: String = CharacterData._str_val(skill, &"description")
 	desc_label.text = skill_desc
 	desc_label.visible = not skill_desc.is_empty()
+	box.visible = true
+
+
+func _set_event_section(box: VBoxContainer, title_label: Label, desc_label: Label, section_title: String, section_desc: String) -> void:
+	if section_title.is_empty():
+		box.visible = false
+		return
+	title_label.text = "%s:" % section_title
+	desc_label.text = section_desc
+	desc_label.visible = not section_desc.is_empty()
 	box.visible = true

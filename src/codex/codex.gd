@@ -5,15 +5,27 @@ extends Node
 
 signal unread_changed
 
+enum Category {
+	HEROES,
+	ENEMIES,
+	ITEMS,
+	EVENTS,
+}
+
 const SAVE_PATH: StringName = &"user://codex.cfg"
 const SECTION_PROGRESS: StringName = &"progress"
-const KEY_DISCOVERED_HEROES: StringName = &"discovered_heroes"
-const KEY_VIEWED_HEROES: StringName = &"viewed_heroes"
-const KEY_DISCOVERED_ENEMIES: StringName = &"discovered_enemies"
-const KEY_VIEWED_ENEMIES: StringName = &"viewed_enemies"
-const KEY_DISCOVERED_ITEMS: StringName = &"discovered_items"
-const KEY_VIEWED_ITEMS: StringName = &"viewed_items"
-
+const DISCOVERED_KEYS: Dictionary[Category, StringName] = {
+	Category.HEROES: &"discovered_heroes",
+	Category.ENEMIES: &"discovered_enemies",
+	Category.ITEMS: &"discovered_items",
+	Category.EVENTS: &"discovered_events",
+}
+const VIEWED_KEYS: Dictionary[Category, StringName] = {
+	Category.HEROES: &"viewed_heroes",
+	Category.ENEMIES: &"viewed_enemies",
+	Category.ITEMS: &"viewed_items",
+	Category.EVENTS: &"viewed_events",
+}
 const DEFAULT_HERO_IDS: Array[StringName] = [
 	&"archer",
 	&"armored_axeman",
@@ -25,121 +37,71 @@ const DEFAULT_HERO_IDS: Array[StringName] = [
 	&"wizard",
 ]
 
-var _discovered_heroes: Dictionary[StringName, bool] = {}
-var _viewed_heroes: Dictionary[StringName, bool] = {}
-var _discovered_enemies: Dictionary[StringName, bool] = {}
-var _viewed_enemies: Dictionary[StringName, bool] = {}
-var _discovered_items: Dictionary[StringName, bool] = {}
-var _viewed_items: Dictionary[StringName, bool] = {}
+var _discovered: Dictionary[Category, Dictionary] = {}
+var _viewed: Dictionary[Category, Dictionary] = {}
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	for category: Category in DISCOVERED_KEYS:
+		_discovered[category] = {}
+		_viewed[category] = {}
 	_seed_default_heroes()
 	_load()
 
 
-func is_hero_discovered(hero_id: StringName) -> bool:
-	return _discovered_heroes.has(hero_id)
+func is_discovered(category: Category, entry_id: StringName) -> bool:
+	var discovered_set: Dictionary = _discovered[category]
+	return discovered_set.has(entry_id)
 
 
-func is_hero_unread(hero_id: StringName) -> bool:
-	return _discovered_heroes.has(hero_id) and not _viewed_heroes.has(hero_id)
+func is_unread(category: Category, entry_id: StringName) -> bool:
+	var discovered_set: Dictionary = _discovered[category]
+	var viewed_set: Dictionary = _viewed[category]
+	return discovered_set.has(entry_id) and not viewed_set.has(entry_id)
 
 
-func is_enemy_discovered(enemy_id: StringName) -> bool:
-	return _discovered_enemies.has(enemy_id)
-
-
-func is_enemy_unread(enemy_id: StringName) -> bool:
-	return _discovered_enemies.has(enemy_id) and not _viewed_enemies.has(enemy_id)
-
-
-func is_item_discovered(item_id: StringName) -> bool:
-	return _discovered_items.has(item_id)
-
-
-func is_item_unread(item_id: StringName) -> bool:
-	return _discovered_items.has(item_id) and not _viewed_items.has(item_id)
-
-
-func has_unread_heroes() -> bool:
-	for hero_id: StringName in _discovered_heroes:
-		if not _viewed_heroes.has(hero_id):
-			return true
-	return false
-
-
-func has_unread_enemies() -> bool:
-	for enemy_id: StringName in _discovered_enemies:
-		if not _viewed_enemies.has(enemy_id):
-			return true
-	return false
-
-
-func has_unread_items() -> bool:
-	for item_id: StringName in _discovered_items:
-		if not _viewed_items.has(item_id):
+func has_unread(category: Category) -> bool:
+	var discovered_set: Dictionary = _discovered[category]
+	var viewed_set: Dictionary = _viewed[category]
+	for entry_id: Variant in discovered_set:
+		if not viewed_set.has(entry_id):
 			return true
 	return false
 
 
 func has_any_unread() -> bool:
-	return has_unread_heroes() or has_unread_enemies() or has_unread_items()
+	for category: Category in DISCOVERED_KEYS:
+		if has_unread(category):
+			return true
+	return false
 
 
-func discover_hero(hero_id: StringName) -> void:
-	if hero_id.is_empty() or _discovered_heroes.has(hero_id):
+func discover(category: Category, entry_id: StringName) -> void:
+	var discovered_set: Dictionary = _discovered[category]
+	if entry_id.is_empty() or discovered_set.has(entry_id):
 		return
-	_discovered_heroes[hero_id] = true
+	discovered_set[entry_id] = true
 	_save()
 	unread_changed.emit()
 
 
-func discover_enemy(enemy_id: StringName) -> void:
-	if enemy_id.is_empty() or _discovered_enemies.has(enemy_id):
+func mark_viewed(category: Category, entry_id: StringName) -> void:
+	var discovered_set: Dictionary = _discovered[category]
+	var viewed_set: Dictionary = _viewed[category]
+	if not discovered_set.has(entry_id) or viewed_set.has(entry_id):
 		return
-	_discovered_enemies[enemy_id] = true
-	_save()
-	unread_changed.emit()
-
-
-func discover_item(item_id: StringName) -> void:
-	if item_id.is_empty() or _discovered_items.has(item_id):
-		return
-	_discovered_items[item_id] = true
-	_save()
-	unread_changed.emit()
-
-
-func mark_hero_viewed(hero_id: StringName) -> void:
-	if not _discovered_heroes.has(hero_id) or _viewed_heroes.has(hero_id):
-		return
-	_viewed_heroes[hero_id] = true
-	_save()
-	unread_changed.emit()
-
-
-func mark_enemy_viewed(enemy_id: StringName) -> void:
-	if not _discovered_enemies.has(enemy_id) or _viewed_enemies.has(enemy_id):
-		return
-	_viewed_enemies[enemy_id] = true
-	_save()
-	unread_changed.emit()
-
-
-func mark_item_viewed(item_id: StringName) -> void:
-	if not _discovered_items.has(item_id) or _viewed_items.has(item_id):
-		return
-	_viewed_items[item_id] = true
+	viewed_set[entry_id] = true
 	_save()
 	unread_changed.emit()
 
 
 func _seed_default_heroes() -> void:
+	var discovered_heroes: Dictionary = _discovered[Category.HEROES]
+	var viewed_heroes: Dictionary = _viewed[Category.HEROES]
 	for hero_id: StringName in DEFAULT_HERO_IDS:
-		_discovered_heroes[hero_id] = true
-		_viewed_heroes[hero_id] = true
+		discovered_heroes[hero_id] = true
+		viewed_heroes[hero_id] = true
 
 
 func _load() -> void:
@@ -151,30 +113,24 @@ func _load() -> void:
 		_seed_default_heroes()
 		return
 
-	_read_id_set(config, KEY_DISCOVERED_HEROES, _discovered_heroes)
-	_read_id_set(config, KEY_VIEWED_HEROES, _viewed_heroes)
-	_read_id_set(config, KEY_DISCOVERED_ENEMIES, _discovered_enemies)
-	_read_id_set(config, KEY_VIEWED_ENEMIES, _viewed_enemies)
-	_read_id_set(config, KEY_DISCOVERED_ITEMS, _discovered_items)
-	_read_id_set(config, KEY_VIEWED_ITEMS, _viewed_items)
+	for category: Category in DISCOVERED_KEYS:
+		_read_id_set(config, DISCOVERED_KEYS[category], _discovered[category])
+		_read_id_set(config, VIEWED_KEYS[category], _viewed[category])
 	_seed_default_heroes()
 
 
 func _save() -> void:
 	var config: ConfigFile = ConfigFile.new()
-	config.set_value(SECTION_PROGRESS, KEY_DISCOVERED_HEROES, _dict_to_packed_array(_discovered_heroes))
-	config.set_value(SECTION_PROGRESS, KEY_VIEWED_HEROES, _dict_to_packed_array(_viewed_heroes))
-	config.set_value(SECTION_PROGRESS, KEY_DISCOVERED_ENEMIES, _dict_to_packed_array(_discovered_enemies))
-	config.set_value(SECTION_PROGRESS, KEY_VIEWED_ENEMIES, _dict_to_packed_array(_viewed_enemies))
-	config.set_value(SECTION_PROGRESS, KEY_DISCOVERED_ITEMS, _dict_to_packed_array(_discovered_items))
-	config.set_value(SECTION_PROGRESS, KEY_VIEWED_ITEMS, _dict_to_packed_array(_viewed_items))
+	for category: Category in DISCOVERED_KEYS:
+		config.set_value(SECTION_PROGRESS, DISCOVERED_KEYS[category], _dict_to_packed_array(_discovered[category]))
+		config.set_value(SECTION_PROGRESS, VIEWED_KEYS[category], _dict_to_packed_array(_viewed[category]))
 
 	var err: Error = config.save(SAVE_PATH)
 	if err != OK:
 		printerr(&"Codex: Failed to save progress to %s. Error: %d !" % [SAVE_PATH, err])
 
 
-func _read_id_set(config: ConfigFile, key: StringName, target: Dictionary[StringName, bool]) -> void:
+func _read_id_set(config: ConfigFile, key: StringName, target: Dictionary) -> void:
 	var raw: Variant = config.get_value(SECTION_PROGRESS, key, PackedStringArray())
 	if raw is PackedStringArray:
 		var packed: PackedStringArray = raw
@@ -190,8 +146,8 @@ func _read_id_set(config: ConfigFile, key: StringName, target: Dictionary[String
 					target[StringName(item_str)] = true
 
 
-static func _dict_to_packed_array(dict: Dictionary[StringName, bool]) -> PackedStringArray:
+static func _dict_to_packed_array(dict: Dictionary) -> PackedStringArray:
 	var arr: PackedStringArray = PackedStringArray()
-	for id: StringName in dict:
-		arr.append(String(id))
+	for id_var: Variant in dict:
+		arr.append(str(id_var))
 	return arr

@@ -34,6 +34,7 @@ var _codex_return_panel: UiPanel = null
 @onready var _codex_heroes_panel: CodexHeroesPanel = $Center/CodexHeroesPanel
 @onready var _codex_enemies_panel: CodexEnemiesPanel = $Center/CodexEnemiesPanel
 @onready var _codex_items_panel: CodexItemsPanel = $Center/CodexItemsPanel
+@onready var _codex_events_panel: CodexEventsPanel = $Center/CodexEventsPanel
 @onready var _codex_mechanics_panel: CodexMechanicsPanel = $Center/CodexMechanicsPanel
 
 
@@ -42,11 +43,13 @@ func _ready() -> void:
 	await HeroData.initialize()
 	await EnemyData.initialize()
 	await CodexItemsPanel.initialize_data()
+	await CodexEventsPanel.initialize_data()
 	await CodexMechanicsPanel.initialize_data()
 	_hero_select_panel.initialize()
 	_codex_heroes_panel.initialize()
 	_codex_enemies_panel.initialize()
 	_codex_items_panel.initialize()
+	_codex_events_panel.initialize()
 	_codex_mechanics_panel.initialize()
 	get_tree().create_timer(NOTIFICATION_DELAY).timeout.connect(InputManager.enable_notifications)
 	if not _eula_screen.is_accepted():
@@ -186,6 +189,10 @@ func _on_codex_enemies_requested() -> void:
 
 func _on_codex_items_requested() -> void:
 	show_panel(_codex_items_panel)
+
+
+func _on_codex_events_requested() -> void:
+	show_panel(_codex_events_panel)
 
 
 func _on_codex_mechanics_requested() -> void:

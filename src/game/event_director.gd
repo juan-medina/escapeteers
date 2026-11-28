@@ -657,6 +657,20 @@ func _claim_chest_reward(game: Game, chest: CursedChest) -> void:
 	game._spawn_pickups_for_room(chest.room, true, raw_anchor)
 
 
+static func get_codex_id(event_type: WorldPlan.RoomEventType) -> StringName:
+	match event_type:
+		WorldPlan.RoomEventType.CLOSING_SPIKES:
+			return &"closing_spikes"
+		WorldPlan.RoomEventType.WAVE_AMBUSH:
+			return &"wave_ambush"
+		WorldPlan.RoomEventType.CURSED_OBELISKS:
+			return &"cursed_obelisks"
+		WorldPlan.RoomEventType.RUNE_PLATES:
+			return &"rune_plates"
+		_:
+			return &""
+
+
 static func _scene_for_enemy_id(enemy_id: StringName) -> PackedScene:
 	match enemy_id:
 		&"lava_slime":

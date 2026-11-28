@@ -1,6 +1,6 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://dlh2s5ny1na8"]
 
-[ext_resource type="Script" path="res://codex_panel/codex_panel.gd" id="1_panel"]
+[ext_resource type="Script" uid="uid://cc76687maskcg" path="res://codex_panel/codex_panel.gd" id="1_panel"]
 [ext_resource type="FontFile" uid="uid://bg6arvysy4jwv" path="res://data/assets/pixel_ui_theme/m6x11plus.ttf" id="2_m6x11plus"]
 [ext_resource type="PackedScene" path="res://codex_panel/unread_badge.tscn" id="3_badge"]
 
@@ -15,65 +15,74 @@ action = &"back"
 [sub_resource type="Shortcut" id="Shortcut_back"]
 events = [SubResource("InputEventAction_pause"), SubResource("InputEventAction_back")]
 
-[node name="CodexPanel" type="PanelContainer" node_paths=PackedStringArray("first_focus", "back_button")]
+[node name="CodexPanel" type="PanelContainer" unique_id=1416024049 node_paths=PackedStringArray("back_button", "first_focus")]
 script = ExtResource("1_panel")
-first_focus = NodePath("VBox/ButtonsVBox/Heroes")
 back_button = NodePath("VBox/ButtonsVBox/Back")
+first_focus = NodePath("VBox/ButtonsVBox/Heroes")
 
-[node name="VBox" type="VBoxContainer" parent="."]
+[node name="VBox" type="VBoxContainer" parent="." unique_id=1845551236]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="Title" type="Label" parent="VBox"]
+[node name="Title" type="Label" parent="VBox" unique_id=979620521]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_m6x11plus")
 theme_override_font_sizes/font_size = 18
 text = "Codex"
 horizontal_alignment = 1
 
-[node name="ButtonsVBox" type="VBoxContainer" parent="VBox"]
+[node name="ButtonsVBox" type="VBoxContainer" parent="VBox" unique_id=402429284]
 layout_mode = 2
 theme_override_constants/separation = 6
 alignment = 1
 
-[node name="Heroes" type="Button" parent="VBox/ButtonsVBox"]
+[node name="Heroes" type="Button" parent="VBox/ButtonsVBox" unique_id=322998383]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Heroes"
 
-[node name="UnreadBadge" parent="VBox/ButtonsVBox/Heroes" instance=ExtResource("3_badge")]
+[node name="UnreadBadge" parent="VBox/ButtonsVBox/Heroes" unique_id=498478704 instance=ExtResource("3_badge")]
 layout_mode = 1
 
-[node name="Enemies" type="Button" parent="VBox/ButtonsVBox"]
+[node name="Enemies" type="Button" parent="VBox/ButtonsVBox" unique_id=1753196145]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Enemies"
 
-[node name="UnreadBadge" parent="VBox/ButtonsVBox/Enemies" instance=ExtResource("3_badge")]
+[node name="UnreadBadge" parent="VBox/ButtonsVBox/Enemies" unique_id=341200004 instance=ExtResource("3_badge")]
 layout_mode = 1
 
-[node name="Items" type="Button" parent="VBox/ButtonsVBox"]
+[node name="Items" type="Button" parent="VBox/ButtonsVBox" unique_id=2041925524]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Items"
 
-[node name="UnreadBadge" parent="VBox/ButtonsVBox/Items" instance=ExtResource("3_badge")]
+[node name="UnreadBadge" parent="VBox/ButtonsVBox/Items" unique_id=625433292 instance=ExtResource("3_badge")]
 layout_mode = 1
 
-[node name="Mechanics" type="Button" parent="VBox/ButtonsVBox"]
+[node name="Events" type="Button" parent="VBox/ButtonsVBox" unique_id=1844880980]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Events"
+
+[node name="UnreadBadge" parent="VBox/ButtonsVBox/Events" unique_id=65228623 instance=ExtResource("3_badge")]
+layout_mode = 1
+
+[node name="Mechanics" type="Button" parent="VBox/ButtonsVBox" unique_id=740930445]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Mechanics"
 
-[node name="HSeparator" type="HSeparator" parent="VBox/ButtonsVBox"]
+[node name="HSeparator" type="HSeparator" parent="VBox/ButtonsVBox" unique_id=1432651963]
 layout_mode = 2
 
-[node name="Back" type="Button" parent="VBox/ButtonsVBox" groups=["ui_return"]]
+[node name="Back" type="Button" parent="VBox/ButtonsVBox" unique_id=858414918 groups=["ui_return"]]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -83,5 +92,6 @@ text = "Back"
 [connection signal="pressed" from="VBox/ButtonsVBox/Heroes" to="." method="_on_heroes_pressed"]
 [connection signal="pressed" from="VBox/ButtonsVBox/Enemies" to="." method="_on_enemies_pressed"]
 [connection signal="pressed" from="VBox/ButtonsVBox/Items" to="." method="_on_items_pressed"]
+[connection signal="pressed" from="VBox/ButtonsVBox/Events" to="." method="_on_events_pressed"]
 [connection signal="pressed" from="VBox/ButtonsVBox/Mechanics" to="." method="_on_mechanics_pressed"]
 [connection signal="pressed" from="VBox/ButtonsVBox/Back" to="." method="_on_back_pressed"]
